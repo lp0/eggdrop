@@ -1164,7 +1164,7 @@ static int gotjoin (char * from, char * chname) {
    } else if (!channel_pending(chan)) {
       strcpy(uhost,from);
       nick = splitnick(&uhost);
-      detect_chan_flood(nick, uhost, from, chan, FLOOD_JOIN, NULL);
+      detect_chan_flood(nick, uhost, from, chan, FLOOD_JOIN, nick);
       /* grab last time joined before we update it */
       u = get_user_by_host(from);
       get_user_flagrec(u,&fr,chname);
