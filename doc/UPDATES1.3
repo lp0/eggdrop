@@ -1,35 +1,61 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.12
+Foundby   Fixedby   What....
+          Mloe      socks firewall fixes
+Absnthe	  easton    display of invalid nick char was wrong
+Giga      Beldin    bots was checking nickname for bogus username
+Daklop/Beldin       botflag +i added, isolates the party line across a botlink
+                    (i.e. bota<->botb will not transfer partyline info 
+		    between them, all else (share/botlink/unlink/notes) still
+		    pass)
+Tori      Beldin    relayed chinfo's were losing the channel
+Daklop    Beldin    lets make botattr only work on un-direct-linked bots,
+                    fixing several nasty cases
+          easton    .chinfo fixes
+Wylie     Beldin    bot was still accepting assocs for chans > GLOBAL_CHANS
+Wylie     Beldin    away note respone missing nick
+          Ernst     more "SENTKICK" checks before kicking, to avoid sending
+                    the same kick more than once (making the bot flood off)
+          Ernst     support for mass-kicks for irc networks that allows it
+                    (see "kick-method" in eggdrop.conf.dist file)
+          Ernst     on "Avalanche" floods, don't kick masters/friends
+          Ernst     use text from language-file on "that was fun..." kick
+          Ernst     calling of need-op right after being deopped
+          Ernst     fixed make trying to install in "OME/eggdrop"
+          Ernst     SHELL variable added in Makefile.in 
+          Ernst     included "weedfix" patch fixes some bugs in weed script
+
 1.3.11
 Foundby   Fixedby   What....
 reaper    Beldin    newsplit doesnt need to set what's 0 to 0 (this is what
                     was really causeing the no-args botnet crash, only
-		    join actually didnt handle no args correctly)
+                    join actually didnt handle no args correctly)
           Beldin    +chrec was check existing chanrec vs setter not setee
-Ernesto B Beldin    laston times were not accurately documented 
+Ernst     Beldin    laston times were not accurately documented 
 wheely    Beldin    shouldnt be able to su to users without partyline access
                     (unless an owner ;)
           Absinthe  remote boots were totally disabled on a setting of 1
 wheely    Beldin    chof binding called whilst relaying had an invalid idx 
           vod       getparty in bot_part should check vs -1 not 0
-Ernesto B Beldin    setuser * HOSTS wasnt sharing
+Ernst     Beldin    setuser * HOSTS wasn't sharing
 wheely    Beldin    tcl_setchan was broadcast parts from channels > GLOBALCHANS
 Roger S   Beldin    console flags for a user were'nt being unset on certain
                     .su's
           Beldin    and shared channel-changes immediately after a shared
-	            newuser were being ignored
-		    
+                    newuser were being ignored
+
 1.3.10
 Foundby   Fixedby   What....
           reaper    userfile writing error neaten
-Ernesto B Beldin    chanlist wasnt returning non-userlisted people on -ve mtchs
+Ernst     Beldin    chanlist wasnt returning non-userlisted people on -ve mtchs
           Kirk      %{cols=} settings which didnt fill a line were lost, 
-	            (beldin "I modded this slightly so you can still have
-		             tags after %{end}")
+                    (beldin "I modded this slightly so you can still have
+                     tags after %{end}")
 Waulok    Beldin    +/-host for +t's with chan +m wasnt allowing them to 
                     change non-bots
-Ernesto B Beldin    time binding args were not formatting properly
+Ernst     Beldin    time binding args were not formatting properly
 Xtoper    Beldin    added check to remove redundant channel entries from
                     userfiles, (where are they actually coming from???)
           reaper    .module was still being logged as modulestat
@@ -42,7 +68,7 @@ fasticus  Beldin    receiving in unlink for a non-linked bot would crash the
 Blacky    Beldin    added checks for tcl8.1 in the configure file, removed 
                     7.4 (does anyone use it anymore)
         HP-UX guy   Fixed the silly mistakes in manually applying the patch
-	
+
 1.3.9
 Foundby   Fixedby   What....
           deadgrrrl xtra_tcl_set typo
@@ -57,7 +83,7 @@ KingKurly Kirk      setting sticky bans using * as the first character of the
           Kirk      mapping of listening ports has been changed, to stop the
                     problem with eggdrop grabbing more ports when rehashing 
                     when it couldn't get the specified listening port
-	  Beldin    learn to delete from link lists kirk :P
+          Beldin    learn to delete from link lists kirk :P
           Kirk/Beldin revenge wasn't setting the channel deop flag correctly
                     on users who weren't in the userlist (do it properly)
           Beldin    added .modules command for report module listings
@@ -83,14 +109,14 @@ Melvan/Daklop Beldin console still not saving correctly (masktype changed)
 1.3.7
 Foundby   Fixedby   What....
 Toblerone Kirk      pub & pubm messages were being passed n!u@h not u@h
-Ernest B. Kirk      +/-cycle added
+Ernst     Kirk      +/-cycle added
 Daklop    Beldin    lastons were back-the-front
-          Ernest B. buildstatic failure to execute bug
+          Ernst     buildstatic failure to execute bug
 Daklop    Beldin    glad I didnt release 1.3.6 public (no sharing at all :/)
 TheGhost  Beldin    channels should default to +cycle, and +/-cycle should
                     only effect cycling
           Kirk      .su fix
-	  
+
 1.3.6 (patch released for testing only)
 Foundby   Fixedby   What....
 tdmarti   Beldin    tcl_addbot was still using old bot address storage method
@@ -102,7 +128,7 @@ tdmarti   Beldin    failed .su wast changing back the .nick of dcc_
 BB        Beldin    .match +<unknown flag> will tell you that now :P
 deadgrrrl Beldin    filedb's were not being updated correctly when files were
                     dcc sent, this was do to module version # mismatches, 
-		    several other cases of this found & fixed
+                    several other cases of this found & fixed
           Darkdruid new getops-2.0 
 wheely    Beldin    tcl_setchan wasnt broadcasting a part for localbot chans
 reaper    Beldin    dcc & pub binds were triggering always with udef flags

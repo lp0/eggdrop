@@ -46,9 +46,8 @@ va_dcl
    va_end(va);
    for (i = 0; i < dcc_total; i++) 
       if ((dcc[i].type == &DCC_BOT) && (i != x)
-	  && (b_numver(i) < NEAT_BOTNET)) {
-	 tputs(dcc[i].sock, s, l);
-      }
+	  && (b_numver(i) < NEAT_BOTNET)) 
+       tputs(dcc[i].sock, s, l);
 }
 #endif
 
@@ -145,15 +144,18 @@ va_dcl
 }
 
 /* ditto for tandem bots */
-void send_tand_but(int x, char * buf, int len)
-{
-   int i;
+void send_tand_but(int x, char * buf, int len) {
+   int i, iso = 0;
 
+   if (len < 0) {
+      len = -len;
+      iso = 1;
+   }
    for (i = 0; i < dcc_total; i++) 
      if ((dcc[i].type == &DCC_BOT) && (i != x)
-	 && (b_numver(i) >= NEAT_BOTNET)) {
+	 && (b_numver(i) >= NEAT_BOTNET)
+	 && (!iso || !(bot_flags(dcc[i].user) & BOT_ISOLATE)))
        tputs(dcc[i].sock, buf, len);
-     }
 }
 
 void botnet_send_bye () {
@@ -175,7 +177,7 @@ void botnet_send_chan (int idx, char * botnick, char * user,
       } else {
 	 i = simple_sprintf(OBUF,"c %s %D %s\n",botnick,chan,data);
       }
-      send_tand_but(idx,OBUF,i);
+      send_tand_but(idx,OBUF,-i);
 #ifndef NO_OLD_BOTNET	    
       tandout_but(idx,"chan %s%s%s %d %s\n", user?user:"", 
 		  user?"@":"",botnick, chan, data);
@@ -193,7 +195,7 @@ void botnet_send_act (int idx, char * botnick, char * user,
       } else {
 	 i = simple_sprintf(OBUF,"a %s %D %s\n",botnick,chan,data);
       }
-      send_tand_but(idx,OBUF,i);
+      send_tand_but(idx,OBUF,-i);
 #ifndef NO_OLD_BOTNET	    
       tandout_but(idx,"actchan %s%s%s %d %s\n", user?user:"",
 		  user?"@":"",botnick, chan, data);
@@ -206,7 +208,7 @@ void botnet_send_chat (int idx, char * botnick, char * data) {
    
    if (tands > 0) {
       i = simple_sprintf(OBUF,"ct %s %s\n",botnick,data);
-      send_tand_but(idx,OBUF,i);
+      send_tand_but(idx,OBUF,-i);
 #ifndef NO_OLD_BOTNET
       tandout_but(idx,"chat %s %s\n",botnick,data);
 #endif
@@ -387,23 +389,25 @@ void botnet_send_reject (int idx, char * fromp, char * frombot, char * top,
    int l;
    char to[NOTENAMELEN+1], from[NOTENAMELEN+1];
    
-   if (tobot) {
-      simple_sprintf(to,"%s@%s",top,tobot);
-      top = to;
-   }
-   if (frombot) {
-      simple_sprintf(from,"%s@%s",fromp,frombot);
-      fromp = from;
-   }
-   if (!reason)
-     reason = "";
+   if (!(bot_flags(dcc[idx].user) & BOT_ISOLATE)) {
+      if (tobot) {
+	 simple_sprintf(to,"%s@%s",top,tobot);
+	 top = to;
+      }
+      if (frombot) {
+	 simple_sprintf(from,"%s@%s",fromp,frombot);
+	 fromp = from;
+      }
+      if (!reason)
+	reason = "";
 #ifndef NO_OLD_BOTNET
-   if (b_numver(idx) < NEAT_BOTNET)
-     l = simple_sprintf(OBUF,"reject %s %s %s\n", fromp, top, reason);
-   else
+      if (b_numver(idx) < NEAT_BOTNET)
+	l = simple_sprintf(OBUF,"reject %s %s %s\n", fromp, top, reason);
+      else
 #endif
-     l = simple_sprintf(OBUF,"r %s %s %s\n", fromp, top, reason);
-   tputs(dcc[idx].sock, OBUF, l);
+	l = simple_sprintf(OBUF,"r %s %s %s\n", fromp, top, reason);
+      tputs(dcc[idx].sock, OBUF, l);
+   }
 }
 			 
 void botnet_send_zapf (int idx, char * a, char * b, char * c) {
@@ -484,7 +488,7 @@ void botnet_send_idle (int idx, char * bot, int sock, int idle, char * away) {
    if (tands > 0) {
       l = simple_sprintf(OBUF,"i %s %D %D %s\n", bot, sock, idle, 
 			 away ? away : "");
-      send_tand_but(idx,OBUF,l);
+      send_tand_but(idx,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       if (away && away[0]) 
 	tandout_but(idx,"away %s %d %s\n", bot, sock, away);
@@ -501,7 +505,7 @@ void botnet_send_away (int idx, char * bot, int sock,
       l = simple_sprintf(OBUF,"aw %s%s %D %s\n", 
 			 ((idx >=0) && linking) ? "!":"",
 			 bot, sock, msg ? msg : "");
-      send_tand_but(idx,OBUF,l);
+      send_tand_but(idx,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       if (msg) {
 	 
@@ -543,7 +547,7 @@ void botnet_send_join_idx (int useridx, int oldchan) {
 			 botnetnick, dcc[useridx].nick,
 			 dcc[useridx].u.chat->channel, geticon(useridx),
 			 dcc[useridx].sock, dcc[useridx].host);
-      send_tand_but(-1,OBUF,l);
+      send_tand_but(-1,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       tandout_but(-1,"join %s %s %d %c%d %s\n", botnetnick, 
 		  dcc[useridx].nick, dcc[useridx].u.chat->channel,
@@ -571,7 +575,7 @@ void botnet_send_join_party (int idx, int linking, int useridx, int oldchan) {
 			 party[useridx].bot, party[useridx].nick,
 			 party[useridx].chan, party[useridx].flag,
 			 party[useridx].sock, safe_str(party[useridx].from));
-      send_tand_but(idx,OBUF,l);
+      send_tand_but(idx,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       tandout_but(idx,"join %s %s %d %c%d %s\n", party[useridx].bot,
 		  party[useridx].nick, party[useridx].chan,
@@ -599,7 +603,7 @@ void botnet_send_part_idx (int useridx,char * reason) {
 		      dcc[useridx].nick,dcc[useridx].sock,
 		      reason?reason:"");
    if (tands > 0) {
-      send_tand_but(-1,OBUF,l);
+      send_tand_but(-1,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       tandout_but(-1,"part %s %s %d\n", botnetnick,
 		  dcc[useridx].nick, dcc[useridx].sock);
@@ -621,7 +625,7 @@ void botnet_send_part_party (int idx, int partyidx, char * reason,
 			 silent ? "!" : "", party[partyidx].bot,
 			 party[partyidx].nick, party[partyidx].sock,
 			 reason?reason:"");
-      send_tand_but(idx,OBUF,l);
+      send_tand_but(idx,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       tandout_but(idx,"part %s %s %d\n", party[partyidx].bot,
 		  party[partyidx].nick, party[partyidx].sock);
@@ -642,7 +646,7 @@ void botnet_send_nkch(int useridx, char * oldnick) {
    if (tands > 0) {
       l = simple_sprintf(OBUF,"nc %s %D %s\n", botnetnick,
 			 dcc[useridx].sock, dcc[useridx].nick);
-      send_tand_but(-1,OBUF,l);
+      send_tand_but(-1,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       tandout_but(-1,"part %s %s %d\n", botnetnick,
 		  dcc[useridx].nick, dcc[useridx].sock);
@@ -662,7 +666,7 @@ void botnet_send_nkch_part(int butidx, int useridx, char * oldnick) {
    if (tands > 0) {
       l = simple_sprintf(OBUF,"nc %s %D %s\n", party[useridx].bot,
 			 party[useridx].sock, party[useridx].nick);
-      send_tand_but(butidx,OBUF,l);
+      send_tand_but(butidx,OBUF,-l);
 #ifndef NO_OLD_BOTNET
       tandout_but(butidx,"part %s %s %d\n", party[useridx].bot,
 		  party[useridx].nick, party[useridx].sock);

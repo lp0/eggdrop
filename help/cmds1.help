@@ -116,6 +116,8 @@ See also:  +user, +bot, -bot
    %bNOTE:%b This command is NOT used to replace .chattr,
    it modifies botflags such as +s, +h, +a, +u... bot specific
    flags only.
+   %bNOTE:%b You can't use this command on bots which are directly
+   linked to your bot at the current moment.
 
 See also: whois, chattr
 %{help=botinfo}%{+t}

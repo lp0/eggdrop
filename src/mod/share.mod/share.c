@@ -396,7 +396,7 @@ static void share_chchinfo (int idx, char * par) {
 		  "Info line change from %s denied.  Channel %s not shared.",
 		  dcc[idx].nick, chan);
 	 else {
-	    shareout_but(cst,idx, "chchinfo %s %s\n", hand, par);
+	    shareout_but(cst,idx, "chchinfo %s %s %s\n", hand, chan, par);
 	    noshare = 1;
 	    set_handle_chaninfo(userlist, hand, chan, par);
 	    noshare = 0;

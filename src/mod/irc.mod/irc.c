@@ -29,6 +29,9 @@ static int modesperline = 3;
 static int mode_buf_len = 200; 
 /* use ircu's short 354 /who responses */
 static int use_354 = 0;
+/* how many kicks does the irc network support at once?
+   0 = as many as possible.  Ernst 18/3/98 */
+static int kick_method = 1;
 
 #include "chan.c"
 #include "mode.c"
@@ -360,7 +363,7 @@ static void check_expired_chanstuff()
    struct flag_record fr = {
       FR_GLOBAL|FR_CHAN, 0, 0, 0, 0, 0
    };
-   static count = 4;
+   static int count = 4;
    int ok = 0;
    
    if (!server_online)
@@ -589,6 +592,7 @@ static tcl_ints myints[] =
      {"modes-per-line", &modesperline, 0},
      {"mode-buf-length" , &mode_buf_len, 0},
      {"use-354", &use_354, 0},
+     {"kick-method", &kick_method, 0},
      {0,0}
 };
 

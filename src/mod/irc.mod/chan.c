@@ -224,8 +224,10 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	    while (m->nick[0]) {
 	       sprintf(s, "%s!%s", m->nick, m->userhost);
 	       if (wild_match(h, s) && 
-		   (m->joined >= chan->floodtime[which]))
-		 dprintf(DP_SERVER, "KICK %s %s :lemmingbot\n", chan->name, m->nick);
+		   (m->joined >= chan->floodtime[which]) && (!chan_sentkick(m))) {
+		  m->flags |= SENTKICK;
+		  dprintf(DP_SERVER, "KICK %s %s :lemmingbot\n", chan->name, m->nick);
+	       }
 	       m = m->next;
 	    }
 	 }
@@ -314,6 +316,78 @@ static void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick)
 }
 
 /* since i was getting a ban list, i assume i'm chop */
+
+/* kicks any user (except friends/masters) with certain mask from channel
+   with a specified comment.  Ernst 18/3/98 */
+static void kick_all (struct chanset_t * chan, char * hostmask, char * comment)
+{
+   memberlist *m;
+   char kickchan[512], kicknick[512], s[UHOSTLEN];
+   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
+   int k, l, flushed;
+   context;
+
+   k = 0; flushed = 0; kickchan[0] = 0; kicknick[0] = 0;
+   m = chan->channel.member;
+   while (m->nick[0]) {
+      get_user_flagrec(m->user, &fr, chan->name);
+      sprintf(s, "%s!%s", m->nick, m->userhost);
+      if (!chan_sentkick(m) && wild_match(hostmask, s) &&
+	  !match_my_nick(m->nick) &&
+	  !glob_master(fr) && !chan_master(fr) &&
+	  !glob_friend(fr) && !chan_friend(fr)) {
+	 if (!flushed) {
+	    /* we need to kick someone, flush eventual bans first */
+	    context;
+	    flush_mode(chan, QUICK);
+	    flushed += 1;
+	 }
+	 m->flags |= SENTKICK;
+	 if (kickchan[0])
+	    strcat(kickchan, ",");
+	 if (kicknick[0])
+	    strcat(kicknick, ",");
+	 strcat(kickchan, chan->name);
+	 strcat(kicknick, m->nick);
+	 k += 1;
+	 l = strlen(kickchan) + strlen(kicknick) + strlen(IRC_BANNED) + strlen(comment) + 5;
+	 if ((kick_method != 0 && k == kick_method) || l > 480) {
+	    dprintf(DP_SERVER, "KICK %s %s :%s\n", kickchan, kicknick, comment);
+	    k = 0; kickchan[0] = 0; kicknick[0] = 0;
+	 }
+      }
+      m = m->next;
+   }
+   if (k > 0)
+      dprintf(DP_SERVER, "KICK %s %s :%s\n", kickchan, kicknick, comment);
+
+   context;
+}
+
+/* enforce all bot bans in a given channel.  Ernst 18/3/98 */
+static void enforce_bans (struct chanset_t * chan)
+{
+   struct banrec *u;
+   int i;
+   char c[512];  /* the ban comment */
+
+   context;
+   for (i = 0; i < 2; i++) {
+      if (i == 0)
+	 u = global_bans;
+      else
+	 u = chan->bans;
+      /* go through all bans, kicking the users */
+      while (u) {
+	 c[0] = 0;
+	 if (u->desc)
+	    sprintf(c, "%s: %s", IRC_BANNED, u->desc);
+	 kick_all(chan, u->banmask, c ? c : IRC_BANNED);
+	 u = u->next;
+      }
+   }
+   context;
+}
 
 /* recheck_bans makes sure that all who are 'banned' on the userlist are
    actually in fact banned on the channel */
@@ -406,15 +480,9 @@ static void recheck_channel (struct chanset_t * chan, int dobans)
 	   /* op them! */
 	   add_mode(chan, '+', 'o', m->nick);
 	 /* now lets check 'em vs bans */
-	 /* if we're enforcing bans */
-	 if (channel_enforcebans(chan) &&
-	     /* & they match a ban */
-	     (u_match_ban(global_bans,s) || u_match_ban(chan->bans, s)))
-	   /* bewm */
-	   refresh_ban_kick(chan, s, m->nick);
-	 /* ^ will use the ban comment */
-	 /* otherwise...are they +k ? */
-	 else if (chan_kick(fr) || glob_kick(fr)) {
+	 /* this is done by recheck_bans later Ernst 18/3/98 */
+	 /* are they +k ? */
+	 if (chan_kick(fr) || glob_kick(fr)) {
 	    quickban(chan, m->userhost);
 	    p = get_user(&USERENTRY_COMMENT,m->user);
 	    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick, 
@@ -1089,12 +1157,13 @@ static int gotjoin (char * from, char * chname)
 	       else
 		 putlog(LOG_JOIN, chname, 
 			"%s (%s) joined %s.", nick, uhost, chname);
-	       if (me_op(chan)) for (p = m->nick; *p; p++)
-		 if (((unsigned char )*p) < 32) {
-		    dprintf(DP_MODE, "KICK %s %s :bogus username\n",
-			    chname, nick);
-		    return 0;
-		 }
+	       if (me_op(chan)) 
+		 for (p = m->userhost; *p; p++)
+		   if (((unsigned char )*p) < 32) {
+		      dprintf(DP_MODE, "KICK %s %s :bogus username\n",
+			      chname, nick);
+		      return 0;
+		   }
 	       /* ok, the op-on-join,etc, tests...first only both if Im opped */
 	       if (me_op(chan)) {
 		  /* are they a chan op, or global op without chan deop */
@@ -1289,6 +1358,9 @@ static int gotnick (char * from, char * msg)
 	 }
 	 check_tcl_nick(nick, uhost, u, chan->name, msg);
 	 detect_chan_flood(nick, uhost, from, chan, FLOOD_NICK, 0);
+	 /* any pending kick to the old nick is lost. Ernst 18/3/98 */
+	 if (chan_sentkick(m))
+	    m->flags &= ~SENTKICK;
 	 /* banned? */
 	 /* compose a nick!user@host for the new nick */
 	 sprintf(s1, "%s!%s", msg, uhost);
@@ -1363,6 +1435,8 @@ static int gotmsg (char * from, char * msg)
    struct chanset_t *chan;
    int ignoring;
    struct userrec * u;
+   memberlist *m;
+   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    
    if (!strchr("&#@$",msg[0])) 
      return 0;
@@ -1377,13 +1451,22 @@ static int gotmsg (char * from, char * msg)
    nick = splitnick(&uhost);
    /* only check if flood-ctcp is active */
    if (flud_ctcp_thr && detect_avalanche(msg)) {
+      u = get_user_by_host(from);
+      get_user_flagrec(u, &fr, chan->name);
       /* discard -- kick user if it was to the channel */
-      if (me_op(chan)) 
-	dprintf(DP_SERVER, "KICK %s %s :that was fun, let's do it again!\n",
-	      realto, nick);
+      if (me_op(chan) &&
+	  !chan_friend(fr) && !glob_friend(fr) &&
+	  !chan_master(fr) && !glob_master(fr)) {
+	 m = ismember(chan, nick);
+	 if (m && !chan_sentkick(m)) {
+	    m->flags |= SENTKICK;
+	    dprintf(DP_SERVER, "KICK %s %s :I %s\n",
+		    realto, nick, IRC_FUNKICK);
+	 }
+      }
       if (!ignoring) {
-	 putlog(LOG_MODES, "*", "Avalanche from %s!%s - ignoring",
-		nick, uhost);
+	 putlog(LOG_MODES, "*", "Avalanche from %s!%s in %s - ignoring",
+		nick, uhost, realto);
 	 p = strchr(uhost, '@');
 	 if (p)
 	   p++;
@@ -1421,14 +1504,15 @@ static int gotmsg (char * from, char * msg)
 	       if (!ignoring || trigger_on_ignore) {
 		 if (!check_tcl_ctcp(nick, uhost, u, to, code, ctcp))
 		    update_idle(realto, nick);
-		  if (!ignoring) 
-		    /* hell! log DCC, it's too a channel damnit! */
-		    if (strcmp(code, "ACTION") == 0) {
-		       putlog(LOG_PUBLIC, realto, "Action: %s %s", nick, ctcp);
-		    } else {
-		       putlog(LOG_PUBLIC, realto, "CTCP %s: %s from %s (%s) to %s",
-			      code, ctcp, nick, from, to);
-		    }
+		  if (!ignoring) {
+		     /* hell! log DCC, it's too a channel damnit! */
+		     if (strcmp(code, "ACTION") == 0) {
+			putlog(LOG_PUBLIC, realto, "Action: %s %s", nick, ctcp);
+		     } else {
+			putlog(LOG_PUBLIC, realto, "CTCP %s: %s from %s (%s) to %s",
+			       code, ctcp, nick, from, to);
+		     }
+		  }
 	       }
 	    }
 	 }
@@ -1462,7 +1546,9 @@ static int gotnotice (char * from, char * msg)
    char *to, *realto, *nick, buf2[512], *p, *p1, buf[512], *uhost = buf;
    char *ctcp, *code;
    struct userrec * u;
+   memberlist *m;
    struct chanset_t * chan;
+   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    int ignoring;
 
    if (!strchr("#&+@",*msg))
@@ -1475,9 +1561,19 @@ static int gotnotice (char * from, char * msg)
    strcpy(uhost,from);
    nick = splitnick(&uhost);
    if (flud_ctcp_thr && detect_avalanche(msg)) {
+      u = get_user_by_host(from);
+      get_user_flagrec(u, &fr, chan->name);
       /* discard -- kick user if it was to the channel */
-      if (me_op(chan)) dprintf(DP_SERVER, "KICK %s %s :%s\n", 
-	      realto, nick, IRC_FUNKICK);
+      if (me_op(chan) &&
+          !chan_friend(fr) && !glob_friend(fr) &&
+          !chan_master(fr) && !glob_master(fr)) {
+	 m = ismember(chan, nick);
+	 if (m || !chan_sentkick(m)) {
+	   m->flags |= SENTKICK;
+           dprintf(DP_SERVER, "KICK %s %s :II %s\n",
+		   realto, nick, IRC_FUNKICK);
+	 }
+      }
       if (!ignoring)
 	putlog(LOG_MODES, "*", "Avalanche from %s", from);
       return 0;

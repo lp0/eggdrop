@@ -518,7 +518,7 @@ else
 fi
 
 
-ac_default_prefix=\$HOME/eggdrop
+ac_default_prefix=\${HOME}/eggdrop
 
 
 echo ""

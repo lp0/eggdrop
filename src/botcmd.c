@@ -87,6 +87,8 @@ static void bot_chan (int idx, char * msg)
    int i, chan;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    from = newsplit(&msg);
    p = newsplit(&msg);
 #ifndef NO_OLD_BOTNET
@@ -138,6 +140,8 @@ static void bot_chat (int idx, char * par)
    int i;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    from = newsplit(&par);
    if (strchr(from, '@') != NULL) {
       fake_alert(idx,"bot",from);
@@ -160,6 +164,8 @@ static void bot_actchan (int idx, char * par)
    int i, chan;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    from = newsplit(&par);
    p = strchr(from, '@');
    if (p == NULL) {
@@ -242,7 +248,7 @@ static void bot_priv (int idx, char * par)
 	      break;
 	    case NOTE_AWAY:
 	      botnet_send_priv(idx,botnetnick,from,NULL,
-			       "%s",BOT_NOTEISAWAY);
+			       "%s %s",to, BOT_NOTEISAWAY);
 	      break;
 	    case NOTE_FWD:
 	      botnet_send_priv(idx,botnetnick,from,NULL,
@@ -263,8 +269,7 @@ static void bot_priv (int idx, char * par)
    }
 }
 
-static void bot_bye (int idx, char * par)
-{
+static void bot_bye (int idx, char * par) {
    char s[1024];
   
    context;
@@ -390,8 +395,7 @@ static void remote_tell_who (int idx, char * nick, int chan)
 }
 
 /* who <from@bot> <tobot> <chan#> */
-static void bot_who (int idx, char * par)
-{
+static void bot_who (int idx, char * par) {
    char *from, *to, *p;
    int i, chan;
    
@@ -425,8 +429,7 @@ static void bot_endlink (int idx, char * par) {
 }
 
 /* info? <from@bot>   -> send priv */
-static void bot_infoq (int idx, char * par)
-{
+static void bot_infoq (int idx, char * par) {
    char s[161];
    struct chanset_t *chan;
    chan = chanset;
@@ -454,21 +457,18 @@ static void bot_infoq (int idx, char * par)
    botnet_send_infoq(idx,par);
 }
 
-static void bot_ping (int idx, char * par)
-{
+static void bot_ping (int idx, char * par) {
    context;
    botnet_send_pong(idx);
 }
 
-static void bot_pong (int idx, char * par)
-{
+static void bot_pong (int idx, char * par) {
    context;
    dcc[idx].status &= ~STAT_PINGED;
 }
 
 /* link <from@bot> <who> <to-whom> */
-static void bot_link (int idx, char * par)
-{
+static void bot_link (int idx, char * par) {
    char *from, *bot, *rfrom;
    int i;
    
@@ -548,8 +548,7 @@ static void bot_unlink (int idx, char * par) {
 }
 
 /* bot next share? */
-static void bot_update (int idx, char * par) 
-{
+static void bot_update (int idx, char * par) {
    char * bot, x;
    int vnum;
    
@@ -569,8 +568,7 @@ static void bot_update (int idx, char * par)
 }
 
 /* newbot next share? */
-static void bot_nlinked (int idx, char * par)
-{
+static void bot_nlinked (int idx, char * par) {
    char *newbot, *next, *p, s[1024], x;
    int bogus = 0, i;
    struct userrec * u;
@@ -655,8 +653,7 @@ static void bot_nlinked (int idx, char * par)
 }
 
 #ifndef NO_OLD_BOTNET
-static void bot_linked (int idx, char * par)
-{
+static void bot_linked (int idx, char * par) {
    char s[1024];
    
    context;
@@ -670,8 +667,7 @@ static void bot_linked (int idx, char * par)
 }
 #endif
 
-static void bot_unlinked (int idx, char * par)
-{
+static void bot_unlinked (int idx, char * par) {
    int i;
    char * bot;
    
@@ -682,8 +678,8 @@ static void bot_unlinked (int idx, char * par)
 				   * BOGUS! */
       fake_alert(idx,"direction",bot);
    else if (i >= 0) {		/* valid bot downstream of idx */
-      if (par[0]) 
-	 chatout("*** (%s) %s\n",lastbot(bot),par);
+      if (par[0])
+	chatout("*** (%s) %s\n",lastbot(bot),par);
       botnet_send_unlinked(idx, bot, par);
       unvia(idx, findbot(bot));
       rembot(bot);
@@ -691,8 +687,7 @@ static void bot_unlinked (int idx, char * par)
    /* otherwise it's not even a valid bot, so just ignore! */
 }
 
-static void bot_trace (int idx, char * par)
-{
+static void bot_trace (int idx, char * par) {
    char *from, *dest;
    int i;
    /* trace <from@bot> <dest> <chain:chain..> */
@@ -709,8 +704,7 @@ static void bot_trace (int idx, char * par)
    }
 }
 
-static void bot_traced (int idx, char * par)
-{
+static void bot_traced (int idx, char * par) {
    char *to, *p;
    int i, sock;
    /* traced <to@bot> <chain:chain..> */
@@ -741,13 +735,14 @@ static void bot_traced (int idx, char * par)
 	   p = par+1;
       }
       for (i = 0; i < dcc_total; i++)
-	 if ((dcc[i].type->flags & DCT_CHAT)
+	 if ((dcc[i].type->flags & DCT_CHAT) 
 	     && (strcasecmp(dcc[i].nick, to) == 0) &&
-	     ((sock == (-1)) || (sock == dcc[i].sock)))
-	  if (t) {
-	    dprintf(i, "%s -> %s (%lu secs)\n", BOT_TRACERESULT, p, now - t);
-	  } else
-	    dprintf(i, "%s -> %s\n", BOT_TRACERESULT, p);
+	     ((sock == (-1)) || (sock == dcc[i].sock))) {
+	    if (t) {
+	       dprintf(i, "%s -> %s (%lu secs)\n", BOT_TRACERESULT, p, now - t);
+	    } else 
+	      dprintf(i, "%s -> %s\n", BOT_TRACERESULT, p);
+	 }
    } else {
       i = nextbot(p);
       if (p != to) 
@@ -758,13 +753,14 @@ static void bot_traced (int idx, char * par)
 }
 
 /* reject <from> <bot> */
-static void bot_reject (int idx, char * par)
-{
+static void bot_reject (int idx, char * par) {
    char *from, *who, *destbot, *frombot;
    struct userrec * u;
    int i;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    from = newsplit(&par);
    frombot = strchr(from, '@');
    if (frombot)
@@ -842,8 +838,7 @@ static void bot_reject (int idx, char * par)
    }
 }
 
-static void bot_thisbot (int idx, char * par)
-{
+static void bot_thisbot (int idx, char * par) {
    context;
    if (strcasecmp(par, dcc[idx].nick) != 0) {
       char s[1024];
@@ -868,8 +863,7 @@ static void bot_thisbot (int idx, char * par)
    strcpy(dcc[idx].nick, par);
 }
 
-static void bot_handshake (int idx, char * par)
-{
+static void bot_handshake (int idx, char * par) {
    struct userrec * u = get_user_by_handle(userlist,dcc[idx].nick);
    /* only set a new password if no old one exists */
    context;
@@ -882,8 +876,7 @@ static void bot_handshake (int idx, char * par)
 
 /* used to send a direct msg from Tcl on one bot to Tcl on another 
  * zapf <frombot> <tobot> <code [param]>   */
-static void bot_zapf (int idx, char * par)
-{
+static void bot_zapf (int idx, char * par) {
    char *from, *to;
    int i;
    
@@ -909,8 +902,7 @@ static void bot_zapf (int idx, char * par)
 
 /* used to send a global msg from Tcl on one bot to every other bot 
  * zapf-broad <frombot> <code [param]> */
-static void bot_zapfbroad (int idx, char * par)
-{
+static void bot_zapfbroad (int idx, char * par) {
    char *from, *opcode;
    int i;
    
@@ -928,14 +920,14 @@ static void bot_zapfbroad (int idx, char * par)
 }
 
 /* show motd to someone */
-static void bot_motd (int idx, char * par)
-{
+static void bot_motd (int idx, char * par) {
    FILE *vv;
    char *s = TBUF, *who, *p;
    int i;
    struct flag_record fr = { USER_BOT, 0, 0, 0, 0, 0 };
    
    context;
+   
    who = newsplit(&par);
    if (!par[0] || !strcasecmp(par, botnetnick)) {
       int irc = 0;
@@ -984,8 +976,7 @@ static void bot_motd (int idx, char * par)
 /* these are still here, so that they will pass the relevant 
  * requests through even if no filesys is loaded */
 /* filereject <bot:filepath> <sock:nick@bot> <reason...> */
-static void bot_filereject (int idx, char * par)
-{
+static void bot_filereject (int idx, char * par) {
    char *path, *to, *tobot, *p;
    int i;
    
@@ -1016,8 +1007,7 @@ static void bot_filereject (int idx, char * par)
 }
 
 /* filereq <sock:nick@bot> <bot:file> */
-static void bot_filereq (int idx, char * tobot)
-{
+static void bot_filereq (int idx, char * tobot) {
    char *from, *path;
    int i;
    
@@ -1044,8 +1034,7 @@ static void bot_filereq (int idx, char * tobot)
 }
 
 /* filesend <bot:path> <sock:nick@bot> <IP#> <port> <size> */
-static void bot_filesend (int idx, char * par)
-{
+static void bot_filesend (int idx, char * par) {
    char *botpath, *to, *tobot, *nick;
    int i;
    char *nfn;
@@ -1084,8 +1073,7 @@ static void bot_filesend (int idx, char * par)
    }
 }
 
-static void bot_error (int idx, char * par)
-{
+static void bot_error (int idx, char * par) {
    context;
    putlog(LOG_MISC | LOG_BOTS, "*", "%s: %s", dcc[idx].nick, par);
 }
@@ -1096,6 +1084,8 @@ static void bot_nickchange (int idx, char * par ) {
    int sock, i;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    bot = newsplit(&par);
 #ifndef NO_OLD_BOTNET
    if (b_numver(idx) < NEAT_BOTNET) {
@@ -1122,13 +1112,14 @@ static void bot_nickchange (int idx, char * par ) {
 }   
 
 /* join <bot> <nick> <chan> <flag><sock> <from> */
-static void bot_join (int idx, char * par)
-{
+static void bot_join (int idx, char * par) {
    char *bot, *nick, *x, *y;
    struct userrec * u;
    int i, sock, chan, i2, linking = 0;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    bot = newsplit(&par);
 #ifndef NO_OLD_BOTNET
    if (b_numver(idx) >= NEAT_BOTNET)
@@ -1200,14 +1191,15 @@ static void bot_join (int idx, char * par)
 }
 
 /* part <bot> <nick> <sock> [etc..] */
-static void bot_part (int idx, char * par)
-{
+static void bot_part (int idx, char * par) {
    char *bot, *nick, *etc;
    struct userrec * u;
    int sock, partyidx;
    int silent = 0;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;   
    bot = newsplit(&par);
    if (bot[0] == '!') {
       silent = 1;
@@ -1251,12 +1243,13 @@ static void bot_part (int idx, char * par)
 
 /* away <bot> <sock> <message> */
 /* null message = unaway */
-static void bot_away (int idx, char * par)
-{
+static void bot_away (int idx, char * par) {
    char *bot, *etc;
    int sock, partyidx, linking = 0;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    bot = newsplit(&par);
 #ifndef NO_OLD_BOTNET
    if (b_numver(idx) >= NEAT_BOTNET)
@@ -1301,12 +1294,13 @@ static void bot_away (int idx, char * par)
 
 /* (a courtesy info to help during connect bursts) */
 /* idle <bot> <sock> <#secs> [away msg]*/
-static void bot_idle (int idx, char * par)
-{
+static void bot_idle (int idx, char * par) {
    char *bot, *work;
    int sock, idle;
    
    context;
+   if (bot_flags(dcc[idx].user) & BOT_ISOLATE)
+     return;
    bot = newsplit(&par);
    work = newsplit(&par);
 #ifndef NO_OLD_BOTNET
@@ -1333,8 +1327,7 @@ static void bot_idle (int idx, char * par)
 }
 
 #ifndef NO_OLD_BOTNET
-static void bot_ufno (int idx, char * par)
-{
+static void bot_ufno (int idx, char * par) {
    context;
    putlog(LOG_BOTS, "*", "%s %s: %s", USERF_REJECTED, dcc[idx].nick, par);
    dcc[idx].status &= ~STAT_OFFERED;
@@ -1342,8 +1335,7 @@ static void bot_ufno (int idx, char * par)
       dcc[idx].status &= ~STAT_SHARE;
 }
 
-static void bot_old_userfile (int idx, char * par) 
-{
+static void bot_old_userfile (int idx, char * par)  {
    context;
    putlog(LOG_BOTS, "*", "%s %s",USERF_OLDSHARE, dcc[idx].nick);
    dprintf(idx, "uf-no %s\n", USERF_ANTIQUESHARE);

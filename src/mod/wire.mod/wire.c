@@ -453,16 +453,15 @@ context;
       w2 = w2->next;
    }
 
-   if (wlast) 
+   if (wlast) {
       if (w->next)
          wlast->next = w->next;
       else
          wlast->next = 0;
+   } else if (!w->next)
+	wirelist = 0;
    else
-      if (!w->next)
-         wirelist = 0;
-      else
-         wirelist = w->next;
+     wirelist = w->next;
 
    nfree(w->crypt);
    nfree(w->key);

@@ -6,6 +6,8 @@
 prefix = @prefix@
 DEST=@DEST@
 
+SHELL=/bin/sh
+
 # things you can put here:
 #   -Wall            if you're using gcc and it supports it (configure
 #                      usually detects this anyway now)

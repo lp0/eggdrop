@@ -567,7 +567,7 @@ static void minutely_checks()
 {
    /* called once a minute... but if we're the only one on the   *
     * channel, we only wanna send out "lusers" once every 5 mins */
-   static count = 4;
+   static int count = 4;
    int ok = 0;
    struct chanset_t *chan;
    

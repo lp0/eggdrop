@@ -599,8 +599,19 @@ loadmodule ctcp
 # join & maintain channels stuff, this is the module. 
 loadmodule irc
 
-# define this if you want to bounce all server bans 
+# [0/1] define this if you want to bounce all server bans 
 set bounce-bans 0
+
+# kick-method defines how kicks (when enforcing bans) should be made:
+#    0 = kick all nicks at once in one command
+#    X = kick X users at a time
+# This option depends on what your IRC network allows.  If you are not sure,
+# leave the value "1".  Some values that you may try (not certain):
+#  Dalnet   = 1	  <- kick one at a time (just like it always has been)
+#  Efnet    = 0	  <- kick the whole bunch at one time
+#  IRCnet   = 4   <- kick 4 nicks per bunch (new in ircd 2.9.5)
+#  Undernet = 0
+set kick-method 1
 
 # [0/1] let users introduce themselves to the bot via 'hello'?
 set learn-users 1

@@ -34,6 +34,10 @@
 #     added an option to remove users from unwanted channels
 # <Ec|ipse 28oct97>:
 #     upgrade for v4 userfiles, with v3 converter
+# <Ernst 8mar98>:
+#     fixed bug "list element in braces followed by X instead of space"
+#       (the use of "lrange" where you aren't sure if it's a list is bad)
+#     fixed --CONSOLE item not being included, creating "user" --CONSOLE
 
 set exempt {*ban *ignore}
 set exemptops 0 ; set exemptmasters 0 ; set exemptfriends 0
@@ -217,7 +221,7 @@ proc convertUserFile {fname} {
         if {![info exists xtraList($oldhandle)]} {
           set xtraList($oldhandle) [string trim [string range $line 1 end]]
         } {
-          append xtraList($oldhandle) [string trim [string range $line 1 end]]
+          set xtraList($oldhandle) "$xtraList($oldhandle) [string trim [string range $line 1 end]]"
         }
       } elseif {$handle == "!!"} {
         # laston
@@ -287,23 +291,52 @@ proc loadUserFile {fname} {
         set BotAddr($oldhandle) [lindex $line 1]
       } elseif {$handle == "--PASS"} {
         # pass
-        set pass [string trim [lrange $line 1 end]]
+        set pass [string trim [string range $line [expr [string first " " $line] + 1] end]]
         set User($oldhandle) [lreplace $User($oldhandle) 1 1 $pass]
       } elseif {$handle == "--DCCDIR"} {
         # dccdir
-        set dccdir [string trim [lrange $line 1 end]]
+        set first [string first " " $line]
+        if {$first != -1} {
+            set dccdir [string trim [string range $line [expr $first + 1] end]]
+        } {
+            set dccdir ""
+        }
         set User($oldhandle) [lreplace $User($oldhandle) 2 2 $dccdir]
       } elseif {$handle == "--COMMENT"} {
         # comment
-        set comment [string trim [lrange $line 1 end]]
+        set first [string first " " $line]
+        if {$first != -1} {
+            set comment [string trim [string range $line [expr $first + 1] end]]
+        } {
+            set comment ""
+        }
         set User($oldhandle) [lreplace $User($oldhandle) 4 4 $comment]
       } elseif {$handle == "--INFO"} {
         # user info line
-        set info [string trim [lrange $line 1 end]]
+        set first [string first " " $line]
+        if {$first != -1} {
+            set info [string trim [string range $line [expr $first + 1] end]]
+        } {
+            set info ""
+        }
         set User($oldhandle) [lreplace $User($oldhandle) 5 5 $info]
+      } elseif {$handle == "--CONSOLE"} {
+        # console
+        set first [string first " " $line]
+        if {$first != -1} {
+            set console [string trim [string range $line [expr $first + 1] end]]
+        } {
+            set console ""
+        }
+        set User($oldhandle) [lreplace $User($oldhandle) 6 6 $console]
       } elseif {$handle == "--XTRA"} {
         # xtra field
-        set xtraList [string trim [lrange $line 1 end]]
+        set first [string first " " $line]
+        if {$first != -1} {
+            set xtraList [string trim [string range $line [expr $first + 1] end]]
+        } {
+            set xtraList ""
+        }
         lappend Xtra($oldhandle) [lrange $xtraList 0 end]
       } elseif {$handle == "--LASTON"} {
         # laston
@@ -314,7 +347,7 @@ proc loadUserFile {fname} {
       } else {
         # begin of new user
         scan $line "%s %s %s" handle dash attr
-        set User($handle) [list $attr {} {} {} {} {}]
+        set User($handle) [list $attr {} {} {} {} {} {}]
         set Hostmask($handle) {}
         set Channel($handle) {}
         set oldhandle $handle
@@ -368,6 +401,7 @@ proc saveUserFile fname {
     if {[lindex $User($i) 3] != {}} { puts $fd "--XTRA EMAIL [lindex $User($i) 3]" }
     if {[lindex $User($i) 4] != {}} { puts $fd "--COMMENT [lindex $User($i) 4]" }
     if {[lindex $User($i) 5] != {}} { puts $fd "--INFO [lindex $User($i) 5]" }
+    if {[lindex $User($i) 6] != {}} { puts $fd "--CONSOLE [lindex $User($i) 6]" }
     if {[info exists LastOn($i)]} {
       puts $fd "--LASTON [lindex $LastOn($i) 0]"
     }

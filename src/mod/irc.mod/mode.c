@@ -161,8 +161,9 @@ static void real_add_mode (struct chanset_t * chan,
 	    ok = 1;
       if (!ok)
 	 flush_mode(chan, NORMAL);	/* full buffer!  flush modes */
-      if ((mode == 'b') && (plus == '+'))
-	recheck_channel(chan,0);
+      if ((mode == 'b') && (plus == '+') && channel_enforcebans(chan))
+        enforce_bans(chan);
+/*	recheck_channel(chan,0); */
       return;
    }
    /* +k ? store key */
@@ -377,18 +378,27 @@ static void got_deop (struct chanset_t * chan, char * nick, char * from,
       dprintf(DP_MODE, "WHO %s\n", m->nick);
       m->flags |= SENTVOICE;
    }
-   if (match_my_nick(who) && channel_revenge(chan)) {
-      /* deopped ME!  take revenge */
-      if (!glob_friend(user) && !chan_friend(user) && nick[0] &&
-	  !match_my_nick(nick)) {
-	 simple_sprintf(s2, "deopped %s", botname);
-	take_revenge(chan, s1, s2);
+   /* was the bot deopped? */
+   if (match_my_nick(who)) {
+      /* cancel any pending kicks.  Ernst 18/3/98 */
+      memberlist *m = chan->channel.member;
+      while (m->nick[0]) {
+	 if (chan_sentkick(m))
+	    m->flags &= ~SENTKICK;
+	 m = m->next;
       }
-      if (!nick[0])
-	putlog(LOG_MODES, chan->name, "TS resync deopped me on %s :(",
-	       chan->name);
       if (chan->need_op[0])
-	do_tcl("need-op", chan->need_op);
+	 do_tcl("need-op", chan->need_op);
+      if (!nick[0])
+	 putlog(LOG_MODES, chan->name, "TS resync deopped me on %s :(",
+	       chan->name);
+      /* take revenge */
+      if (channel_revenge(chan))
+	 if (!glob_friend(user) && !chan_friend(user) && nick[0] &&
+	    !match_my_nick(nick)) {
+	    simple_sprintf(s2, "deopped %s", botname);
+	    take_revenge(chan, s1, s2);
+	 }
    }
    m->flags &= ~(FAKEOP | CHANOP | SENTDEOP);
 }
@@ -495,15 +505,8 @@ static void got_ban (struct chanset_t * chan, char * nick, char * from,
 	 }
       }
    }
-   if (check && channel_enforcebans(chan)) {
-      m = chan->channel.member;
-      while (m->nick[0]) {
-	 sprintf(s, "%s!%s", m->nick, m->userhost);
-	 if (wild_match(who, s) && !match_my_nick(m->nick))
-	   dprintf(DP_SERVER, "KICK %s %s :banned\n", chan->name, m->nick);
-	 m = m->next;
-      }
-   }   
+   if (check && channel_enforcebans(chan))
+      kick_all(chan, who, IRC_BANNED);
    /* is it a server ban from nowhere? */
    if (reversing || 
        (bounce_bans && (!nick[0]) && 

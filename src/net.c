@@ -280,11 +280,8 @@ static int proxy_connect (int sock, char * host, int port, int proxy)
    if (proxy == PROXY_SOCKS) {
       /* numeric IP? */
       if ((host[strlen(host) - 1] >= '0') && (host[strlen(host) - 1] <= '9')) {
-	 IP ip = (IP) inet_addr(host);
-	 x[0] = (ip >> 24);
-	 x[1] = (ip >> 16) & 0xff;
-	 x[2] = (ip >> 8) & 0xff;
-	 x[3] = ip & 0xff;
+	 IP ip = htonl((IP) inet_addr(host));
+	 my_memcpy(x, (char *)ip, 4);
       } else {
 	 /* no, must be host.domain */
 	 alarm(10);
@@ -533,17 +530,16 @@ static int sockread (char * s, int * len)
 	    if (socklist[i].flags & (SOCK_LISTEN | SOCK_CONNECT)) {
 	       /* listening socket -- don't read, just return activity */
 	       /* same for connection attempt */
-	       if (!(socklist[i].flags & SOCK_STRONGCONN)) {
-		  debug1("net: connect! sock %d", socklist[i].sock);
-		  s[0] = 0;
-		  *len = 0;
-		  return i;
-	       }
 	       /* (for strong connections, require a read to succeed first) */
 	       if ((firewall[0]) && (firewall[0] != '!') &&
 		   (socklist[i].flags & SOCK_CONNECT)) {
 		  /* hang around to get the return code from proxy */
 		  grab = 8;
+	       } else if (!(socklist[i].flags & SOCK_STRONGCONN)) {
+		  debug1("net: connect! sock %d", socklist[i].sock);
+		  s[0] = 0;
+		  *len = 0;
+		  return i;
 	       }
 	    }
 	    if ((socklist[i].sock == STDOUT) && !backgrd)
@@ -551,6 +547,11 @@ static int sockread (char * s, int * len)
 	    else
 	       x = read(socklist[i].sock, s, grab);
 	    if (x <= 0) {	/* eof */
+	       if (x == EAGAIN) {
+		  s[0] = 0;
+		  *len = 0;
+		  return -3;
+	       }
 	       *len = socklist[i].sock;
 	       socklist[i].flags &= ~SOCK_CONNECT;
 	       debug1("net: eof!(read) socket %d", socklist[i].sock);

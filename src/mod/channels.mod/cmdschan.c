@@ -299,9 +299,13 @@ static void cmd_chinfo (struct userrec * u, int idx, char * par)
       dprintf(idx, "No such user.\n");
       return;
    }
-   if ((par[0] == '#') || (par[0] == '+') || (par[0] == '&'))
+   if ((par[0] == '#') || (par[0] == '+') || (par[0] == '&')) {
       chname = newsplit(&par);
-   else
+      if (!findchan(chname)) {
+         dprintf(idx, "No such channel.\n");
+         return;
+      }
+   } else
       chname = 0;
    if (u1->flags & USER_BOT) {
       dprintf(idx, "Useful only for users.\n");
@@ -322,7 +326,7 @@ static void cmd_chinfo (struct userrec * u, int idx, char * par)
    }
    putlog(LOG_CMDS, "*", "#%s# chinfo %s %s %s", dcc[idx].nick, handle, 
 	  chname?chname:par, chname?par:"");
-   if (strcasecmp(par, "none") == 0)
+   if (!strcasecmp(par, "none"))
       par[0] = 0;
    if (chname) {
       set_handle_chaninfo(userlist, handle, chname, par);

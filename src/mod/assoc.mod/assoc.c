@@ -35,8 +35,7 @@ static void botnet_send_assoc (int idx, int chan, char * nick,
    botnet_send_zapf_broad(idx,botnetnick,"assoc",x);
 }
 
-static int assoc_expmem()
-{
+static int assoc_expmem() {
    assoc_t *a = assoc;
    int size = 0;
 
@@ -54,20 +53,21 @@ static void link_assoc (char * bot, char * via) {
       int idx = nextbot(bot);
       assoc_t *a = assoc;
       
-      context;
-      while (a != NULL) {
-	 if (a->name[0]) {
-	    simple_sprintf(x,"assoc %D %s %s", a->channel, botnetnick,
-			   a->name);
-	    botnet_send_zapf(idx, botnetnick, dcc[idx].nick, x);
+      if (!(bot_flags(dcc[idx].user) & BOT_ISOLATE)) {
+	 context;
+	 while (a != NULL) {
+	    if (a->name[0]) {
+	       simple_sprintf(x,"assoc %D %s %s", a->channel, botnetnick,
+			      a->name);
+	       botnet_send_zapf(idx, botnetnick, dcc[idx].nick, x);
+	    }
+	    a = a->next;
 	 }
-	 a = a->next;
       }
    }
 }
 
-static void kill_assoc (int chan)
-{
+static void kill_assoc (int chan) {
    assoc_t *a = assoc, *last = NULL;
 
    context;
@@ -86,8 +86,7 @@ static void kill_assoc (int chan)
    }
 }
 
-static void kill_all_assoc()
-{
+static void kill_all_assoc() {
    assoc_t *a = assoc, *x;
 
    context;
@@ -99,8 +98,7 @@ static void kill_all_assoc()
    assoc = NULL;
 }
 
-static void add_assoc (char * name, int chan)
-{
+static void add_assoc (char * name, int chan) {
    assoc_t *a = assoc, *b, *old = NULL;
 
    context;
@@ -147,8 +145,7 @@ static void add_assoc (char * name, int chan)
       old->next = b;
 }
 
-static int get_assoc (char * name)
-{
+static int get_assoc (char * name) {
    assoc_t *a = assoc;
 
    context;
@@ -160,8 +157,7 @@ static int get_assoc (char * name)
    return -1;
 }
 
-static char *get_assoc_name (int chan)
-{
+static char *get_assoc_name (int chan) {
    assoc_t *a = assoc;
 
    context;
@@ -173,8 +169,7 @@ static char *get_assoc_name (int chan)
    return NULL;
 }
 
-static void dump_assoc (int idx)
-{
+static void dump_assoc (int idx) {
    assoc_t *a = assoc;
 
    context;
@@ -193,8 +188,7 @@ static void dump_assoc (int idx)
 }
 
 
-static int cmd_assoc (struct userrec * u, int idx, char * par)
-{
+static int cmd_assoc (struct userrec * u, int idx, char * par) {
    char * num;
    int chan;
 
@@ -259,8 +253,7 @@ static int cmd_assoc (struct userrec * u, int idx, char * par)
    return 0;
 }
 
-static int tcl_killassoc STDVAR
-{
+static int tcl_killassoc STDVAR {
    int chan;
    
    context;
@@ -279,8 +272,7 @@ static int tcl_killassoc STDVAR
    return TCL_OK;
 }
 
-static int tcl_assoc STDVAR
-{
+static int tcl_assoc STDVAR {
    int chan;
    char name[21], *p;
 
@@ -322,7 +314,7 @@ static void zapf_assoc (char * botnick, char * code, char * par) {
    int linking = 0, chan;
    
    context;
-   if (idx >= 0) {
+   if ((idx >= 0) && !(bot_flags(dcc[idx].user) & BOT_ISOLATE)) {
       if (!strcasecmp(dcc[idx].nick, botnick))
 	linking = b_status(idx) & STAT_LINKING;
       s = newsplit(&par);
@@ -353,8 +345,7 @@ static void zapf_assoc (char * botnick, char * code, char * par) {
 }
       
 /* a report on the module status */
-static void assoc_report (int idx, int details)
-{
+static void assoc_report (int idx, int details)  {
    assoc_t *a = assoc;
    int size = 0, count = 0;;
 
@@ -370,30 +361,25 @@ static void assoc_report (int idx, int details)
    }
 }
 
-static cmd_t mydcc[] =
-{
+static cmd_t mydcc[] = {
    {"assoc", "", cmd_assoc, NULL},
 };
 
-static cmd_t mybot[] =
-{
+static cmd_t mybot[] = {
    {"assoc", "", (Function) zapf_assoc, NULL},
 };
 
-static cmd_t mylink[] =
-{
+static cmd_t mylink[] = {
    {"*", "", (Function) link_assoc, "assoc"},
 };
 
-static tcl_cmds mytcl[] =
-{
+static tcl_cmds mytcl[] = {
    {"assoc", tcl_assoc},
    {"killassoc", tcl_killassoc},
    {0, 0}
 };
 
-static char *assoc_close()
-{
+static char *assoc_close() {
    context;
    rem_builtins(H_dcc, mydcc,1);
    rem_builtins(H_bot, mybot,1);
@@ -406,16 +392,14 @@ static char *assoc_close()
 
 char *assoc_start ();
 
-static Function assoc_table[] =
-{
+static Function assoc_table[] = {
    (Function) assoc_start,
    (Function) assoc_close,
    (Function) assoc_expmem,
    (Function) assoc_report,
 };
 
-char *assoc_start (Function * global_funcs)
-{
+char *assoc_start (Function * global_funcs) {
    global = global_funcs;
    context;
    module_register(MODULE_NAME, assoc_table, 2, 0);

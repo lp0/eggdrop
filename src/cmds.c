@@ -574,8 +574,7 @@ static void cmd_boot (struct userrec * u, int idx, char * par)
       dprintf(idx, "Who?  No such person on the party line.\n");
 }
 
-static void cmd_console (struct userrec * u, int idx, char * par)
-{
+static void cmd_console (struct userrec * u, int idx, char * par) {
    char * nick, s[2], s1[512];
    int dest = 0, i, ok = 0, pls, md;
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
@@ -791,7 +790,8 @@ static void cmd_nick (struct userrec * u, int idx, char * par)
      if ((newnick[i] <= 32) || (newnick[i] >= 127) || (newnick[i] == '@'))
        newnick[i] = '?';
    if (strchr("-,+*=:!.@#;$", newnick[0]) != NULL) {
-      dprintf(idx, "Bizarre quantum forces prevent nicknames from starting with %c\n", par[0]);
+      dprintf(idx, "Bizarre quantum forces prevent nicknames from starting with '%c'\n",
+	      newnick[0]);
    } else if (get_user_by_handle(userlist, newnick) &&
 	      strcasecmp(dcc[idx].nick, newnick)) {
       dprintf(idx, "Somebody is already using %s.\n", newnick);
@@ -1464,6 +1464,7 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
    struct userrec * u2;
    struct flag_record pls = {0,0,0,0,0,0}, mns = {0,0,0,0,0,0},
      user = {0,0,0,0,0,0};
+   int idx2;
    
    if (!par[0]) {
       dprintf(idx, "Usage: botattr <handle> [changes] [channel]\n");
@@ -1473,6 +1474,13 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
    u2 = get_user_by_handle(userlist,hand);
    if ((hand[0] == '*') || !u2 || !(u2->flags & USER_BOT)) {
       dprintf(idx, "No such bot!\n");
+      return;
+   }
+   for (idx2 = 0; idx2 < dcc_total; idx++) 
+     if (!strcasecmp(dcc[idx].nick, hand))
+       break;
+   if (idx2 == dcc_total) {
+      dprintf(idx, "You may not change the attributes of a linked bot.\n");
       return;
    }
    if ((par[0] != '#') && (par[0] != '&')) {

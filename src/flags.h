@@ -20,7 +20,7 @@ struct flag_record {
 /* + user defined A-Z                      */
 /*   unused letters: eglrwyz               */
 /* botflags soon to be:                    */
-/*   ?9876543 210??sr? p???l??? h?????ba   */
+/*   ?9876543 210??sr? p???l??i h?????ba   */
 /*   unused letters: cdefgijkmnoqtuvwxyz   */
 /* chanflags:                              */
 /*   ???????? ??vu?s?q ?onm?k?? ??f?d??a   */
@@ -32,7 +32,7 @@ struct flag_record {
 
 #define USER_VALID    0x00B9f6Af
 #define CHAN_VALID    0x00357429
-#define BOT_VALID     0x7fe68881
+#define BOT_VALID     0x7fe68981
 
 #define USER_AUTOOP   0x00000001  /* a   auto-op - future */
 #define USER_BOT      0x00000002  /* b   user is a bot */
@@ -70,7 +70,7 @@ struct flag_record {
 #define BOT_F         0x00000020  /* f   unused */
 #define BOT_G         0x00000040  /* g   unused */
 #define BOT_HUB       0x00000080  /* h   auto-link to ONE of these bots */
-#define BOT_I         0x00000100  /* i   unused */
+#define BOT_ISOLATE   0x00000100  /* i   unused */
 #define BOT_J         0x00000200  /* j   unused */
 #define BOT_K         0x00000400  /* k   unused */
 #define BOT_LEAF      0x00000800  /* l   may not link other bots */
