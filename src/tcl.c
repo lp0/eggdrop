@@ -4,7 +4,7 @@
  *   Tcl initialization
  *   getting and setting Tcl/eggdrop variables
  *
- * $Id: tcl.c,v 1.76 2004/04/10 03:52:28 stdarg Exp $
+ * $Id: tcl.c,v 1.81 2004/07/25 11:17:34 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -160,8 +160,11 @@ static char *tcl_eggcouplet(ClientData cdata, Tcl_Interp *irp,
     if (s != NULL) {
       int nr1, nr2;
 
+      nr1 = nr2 = 0;
+
       if (strlen(s) > 40)
         s[40] = 0;
+
       sscanf(s, "%d%*c%d", &nr1, &nr2);
       *(cp->left) = nr1;
       *(cp->right) = nr2;
@@ -274,8 +277,8 @@ static char *tcl_eggstr(ClientData cdata, Tcl_Interp *irp,
       return "read-only variable";
     }
 #ifdef USE_TCL_BYTE_ARRAYS
-#undef malloc
-#undef free
+#  undef malloc
+#  undef free
     {
       Tcl_Obj *obj;
       unsigned char *bytes;
@@ -387,7 +390,7 @@ void add_cd_tcl_cmds(cd_tcl_cmd *table)
   void **cdata;
 
   while (table->name) {
-    cdata = (void **) nmalloc(sizeof(void *) * 2);
+    cdata = nmalloc(sizeof(void *) * 2);
     clientdata_stuff += sizeof(void *) * 2;
     cdata[0] = (void *)table->callback;
     cdata[1] = table->cdata;
@@ -691,12 +694,32 @@ resetPath:
 void do_tcl(char *whatzit, char *script)
 {
   int code;
+  char *result;
+
+#ifdef USE_TCL_ENCODING
+  Tcl_DString dstr;
+#endif
 
   code = Tcl_Eval(interp, script);
+
+#ifdef USE_TCL_ENCODING
+  /* properly convert string to system encoding. */
+  Tcl_DStringInit(&dstr);
+  Tcl_UtfToExternalDString(NULL, interp->result, -1, &dstr);
+  result = Tcl_DStringValue(&dstr);
+#else
+  /* use old pre-Tcl 8.1 way. */
+  result = interp->result;
+#endif
+
   if (code != TCL_OK) {
     putlog(LOG_MISC, "*", "Tcl error in script for '%s':", whatzit);
-    putlog(LOG_MISC, "*", "%s", interp->result);
+    putlog(LOG_MISC, "*", "%s", result);
   }
+
+#ifdef USE_TCL_ENCODING
+  Tcl_DStringFree(&dstr);
+#endif
 }
 
 /* Interpret tcl file fname.
@@ -705,18 +728,39 @@ void do_tcl(char *whatzit, char *script)
  */
 int readtclprog(char *fname)
 {
+  int code;
+  char *result;
+#ifdef USE_TCL_ENCODING
+  Tcl_DString dstr;
+#endif
+
   if (!file_readable(fname))
     return 0;
 
-  if (Tcl_EvalFile(interp, fname) != TCL_OK) {
+  code = Tcl_EvalFile(interp, fname);
+  result = Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY);
+
+#ifdef USE_TCL_ENCODING
+  /* properly convert string to system encoding. */
+  Tcl_DStringInit(&dstr);
+  Tcl_UtfToExternalDString(NULL, result, -1, &dstr);
+  result = Tcl_DStringValue(&dstr);
+#endif
+
+  if (code != TCL_OK) {
     putlog(LOG_MISC, "*", "Tcl error in file '%s':", fname);
-    putlog(LOG_MISC, "*", "%s",
-           Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY));
-    return 0;
+    putlog(LOG_MISC, "*", "%s", result);
+    code = 0; /* JJM: refactored to remove premature return */
+  } else {
+    /* Refresh internal variables */
+    code = 1;
   }
 
-  /* Refresh internal variables */
-  return 1;
+#ifdef USE_TCL_ENCODING
+  Tcl_DStringFree(&dstr);
+#endif
+
+  return code;
 }
 
 void add_tcl_strings(tcl_strings *list)
@@ -726,7 +770,7 @@ void add_tcl_strings(tcl_strings *list)
   int tmp;
 
   for (i = 0; list[i].name; i++) {
-    st = (strinfo *) nmalloc(sizeof(strinfo));
+    st = nmalloc(sizeof *st);
     strtot += sizeof(strinfo);
     st->max = list[i].length - (list[i].flags & STR_DIR);
     if (list[i].flags & STR_PROTECT)
@@ -768,7 +812,7 @@ void add_tcl_ints(tcl_ints *list)
   intinfo *ii;
 
   for (i = 0; list[i].name; i++) {
-    ii = nmalloc(sizeof(intinfo));
+    ii = nmalloc(sizeof *ii);
     strtot += sizeof(intinfo);
     ii->var = list[i].val;
     ii->ro = list[i].readonly;
@@ -811,7 +855,7 @@ void add_tcl_coups(tcl_coups *list)
   int i;
 
   for (i = 0; list[i].name; i++) {
-    cp = (coupletinfo *) nmalloc(sizeof(coupletinfo));
+    cp = nmalloc(sizeof *cp);
     strtot += sizeof(coupletinfo);
     cp->left = list[i].lptr;
     cp->right = list[i].rptr;

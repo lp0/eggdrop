@@ -2,7 +2,7 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  *
- * $Id: filesys.c,v 1.63 2004/01/09 05:56:38 wcc Exp $
+ * $Id: filesys.c,v 1.66 2004/07/02 21:02:02 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -23,31 +23,43 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include <fcntl.h>
-#include <sys/stat.h>
 #define MODULE_NAME "filesys"
 #define MAKING_FILESYS
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <sys/file.h>
-#if HAVE_DIRENT_H
-# include <dirent.h>
-# define NAMLEN(dirent) strlen((dirent)->d_name)
-#else
-# define dirent direct
-# define NAMLEN(dirent) (dirent)->d_namlen
-# if HAVE_SYS_NDIR_H
-#  include <sys/ndir.h>
-# endif
-# if HAVE_SYS_DIR_H
-#  include <sys/dir.h>
-# endif
-# if HAVE_NDIR_H
-#  include <ndir.h>
-# endif
-#endif
+
 #include "src/mod/module.h"
+
+#ifdef HAVE_DIRENT_H
+#  include <dirent.h>
+#  define NAMLEN(dirent) strlen((dirent)->d_name)
+#else
+#  define dirent direct
+#  define NAMLEN(dirent) (dirent)->d_namlen
+#  ifdef HAVE_SYS_NDIR_H
+#    include <sys/ndir.h>
+#  endif
+#  ifdef HAVE_SYS_DIR_H
+#    include <sys/dir.h>
+#  endif
+#  ifdef HAVE_NDIR_H
+#    include <ndir.h>
+#  endif
+#endif
+
+#ifdef TIME_WITH_SYS_TIME
+#  include <sys/time.h>
+#  include <time.h>
+#else
+#  ifdef HAVE_SYS_TIME_H
+#    include <sys/time.h>
+#  else
+#    include <time.h>
+#  endif
+#endif
+
 #include "filedb3.h"
 #include "filesys.h"
 #include "src/tandem.h"
@@ -58,8 +70,7 @@
 static p_tcl_bind_list H_fil;
 static Function *transfer_funcs = NULL;
 
-/* fcntl.h sets this :/ */
-#undef global
+#undef global /* Needs to be undef'd because of fcntl.h. */
 static Function *global = NULL;
 
 /* Root dcc directory */
@@ -72,16 +83,14 @@ static char dccin[121] = "";
 static int upload_to_cd = 0;
 
 /* Maximum allowable file size for dcc send (1M). 0 indicates
- * unlimited file size.
- */
+ * unlimited file size. */
 static int dcc_maxsize = 1024;
 
 /* Maximum number of users can be in the file area at once */
 static int dcc_users = 0;
 
 /* Where to put the filedb, if not in a hidden '.filedb' file in
- * each directory.
- */
+ * each directory. */
 static char filedb_path[121] = "";
 
 /* Prototypes */
@@ -496,7 +505,7 @@ static int builtin_fil STDVAR
   Function F = (Function) cd;
 
   BADARGS(4, 4, " hand idx param");
-  
+
   idx = findanyidx(atoi(argv[2]));
   if (idx < 0 && dcc[idx].type != &DCC_FILES) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -532,7 +541,7 @@ static void disp_dcc_files(int idx, char *buf)
 
 static void disp_dcc_files_pass(int idx, char *buf)
 {
-  sprintf(buf, "fpas  waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "fpas  waited %lis", now - dcc[idx].timeval);
 }
 
 static void kill_dcc_files(int idx, void *x)

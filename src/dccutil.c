@@ -6,7 +6,7 @@
  *   memory management for dcc structures
  *   timeout checking for dcc connections
  *
- * $Id: dccutil.c,v 1.50 2004/05/26 00:20:19 wcc Exp $
+ * $Id: dccutil.c,v 1.52 2004/06/11 06:06:24 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -54,6 +54,7 @@ void init_dcc_max()
 
   if (max_dcc < 1)
     max_dcc = 1;
+
   if (dcc)
     dcc = nrealloc(dcc, sizeof(struct dcc_t) * max_dcc);
   else
@@ -61,10 +62,9 @@ void init_dcc_max()
 
   MAXSOCKS = max_dcc + 10;
   if (socklist)
-    socklist = (sock_list *) nrealloc((void *) socklist,
-               sizeof(sock_list) * MAXSOCKS);
+    socklist = nrealloc(socklist, sizeof(*socklist) * MAXSOCKS);
   else
-    socklist = (sock_list *) nmalloc(sizeof(sock_list) * MAXSOCKS);
+    socklist = nmalloc(sizeof(*socklist) * MAXSOCKS);
   for (; osock < MAXSOCKS; osock++)
     socklist[osock].flags = SOCK_UNUSED;
 }
@@ -414,7 +414,7 @@ void set_away(int idx, char *s)
   }
   if (dcc[idx].u.chat->away != NULL)
     nfree(dcc[idx].u.chat->away);
-  dcc[idx].u.chat->away = (char *) nmalloc(strlen(s) + 1);
+  dcc[idx].u.chat->away = nmalloc(strlen(s) + 1);
   strcpy(dcc[idx].u.chat->away, s);
   if (dcc[idx].u.chat->channel >= 0) {
     chanout_but(-1, dcc[idx].u.chat->channel,

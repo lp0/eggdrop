@@ -10,7 +10,7 @@
  *
  * dprintf'ized, 9nov1995
  *
- * $Id: users.c,v 1.43 2004/01/20 18:39:37 wcc Exp $
+ * $Id: users.c,v 1.46 2004/07/25 11:17:34 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -154,7 +154,7 @@ void addignore(char *ign, char *from, char *mnote, time_t expire_time)
     char *mask = str_escape(ign, ':', '\\');
 
     if (mask) {
-      shareout(NULL, "+i %s %lu %c %s %s\n", mask, expire_time - now,
+      shareout(NULL, "+i %s %li %c %s %s\n", mask, expire_time - now,
                (p->flags & IGREC_PERM) ? 'p' : '-', from, mnote);
       nfree(mask);
     }
@@ -472,9 +472,8 @@ static void restore_ignore(char *host)
 
 void tell_user(int idx, struct userrec *u, int master)
 {
-  char s[81], s1[81];
-  char format[81];
-  int n;
+  char s[81], s1[81], format[81];
+  int n = 0;
   time_t now2;
   struct chanuserrec *ch;
   struct user_entry *ue;
@@ -485,10 +484,11 @@ void tell_user(int idx, struct userrec *u, int master)
 
   fr.udef_global = u->flags_udef;
   build_flags(s, &fr, NULL);
-  Tcl_SetVar(interp, "user", u->handle, 0);
-  n = 0;
-  if (Tcl_VarEval(interp, "notes ", "$user", NULL) == TCL_OK)
-    n = atoi(interp->result);
+  if (module_find("notes", 0, 0)) {
+    Tcl_SetVar(interp, "user", u->handle, 0);
+    if (Tcl_VarEval(interp, "notes ", "$user", NULL) == TCL_OK)
+      n = atoi(interp->result);
+  }
   li = get_user(&USERENTRY_LASTON, u);
   if (!li || !li->laston)
     strcpy(s1, "never");
@@ -591,39 +591,46 @@ void tell_users_match(int idx, char *mtch, int start, int limit,
       chname = dcc[idx].u.chat->con_chan;
     flags = 1;
   }
+
   for (u = userlist; u; u = u->next) {
     if (flags) {
       get_user_flagrec(u, &user, chname);
       if (flagrec_eq(&pls, &user)) {
         if (nomns || !flagrec_eq(&mns, &user)) {
           cnt++;
-          if ((cnt <= limit) && (cnt >= start))
+          if ((cnt <= limit) && (cnt >= start)) {
             tell_user(idx, u, master);
-          if (cnt == limit + 1)
+          }
+          if (cnt == limit + 1) {
             dprintf(idx, MISC_TRUNCATED, limit);
+          }
         }
       }
     } else if (wild_match(mtch, u->handle)) {
       cnt++;
-      if ((cnt <= limit) && (cnt >= start))
+      if ((cnt <= limit) && (cnt >= start)) {
         tell_user(idx, u, master);
-      if (cnt == limit + 1)
+      }
+      if (cnt == limit + 1) {
         dprintf(idx, MISC_TRUNCATED, limit);
+      }
     } else {
       fnd = 0;
       for (q = get_user(&USERENTRY_HOSTS, u); q; q = q->next) {
-        if ((wild_match(mtch, q->extra)) && (!fnd)) {
+        if (wild_match(mtch, q->extra) && !fnd) {
           cnt++;
           fnd = 1;
           if ((cnt <= limit) && (cnt >= start)) {
             tell_user(idx, u, master);
           }
-          if (cnt == limit + 1)
+          if (cnt == limit + 1) {
             dprintf(idx, MISC_TRUNCATED, limit);
+          }
         }
       }
     }
   }
+
   dprintf(idx, MISC_FOUNDMATCH, cnt, cnt == 1 ? "" : MISC_MATCH_PLURAL);
 }
 

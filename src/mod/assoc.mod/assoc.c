@@ -2,7 +2,7 @@
  * assoc.c -- part of assoc.mod
  *   the assoc code, moved here mainly from botnet.c for module work
  *
- * $Id: assoc.c,v 1.28 2004/01/09 05:56:37 wcc Exp $
+ * $Id: assoc.c,v 1.30 2004/06/14 01:14:06 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -25,6 +25,7 @@
 
 #define MODULE_NAME "assoc"
 #define MAKING_ASSOC
+
 #include "src/mod/module.h"
 #include "src/tandem.h"
 #include <stdlib.h>
@@ -132,7 +133,7 @@ static void add_assoc(char *name, int chan)
   /* Add in numerical order */
   for (a = assoc; a; old = a, a = a->next) {
     if (a->channel > chan) {
-      b = (assoc_t *) nmalloc(sizeof(assoc_t));
+      b = nmalloc(sizeof *b);
       b->next = a;
       b->channel = chan;
       strncpyz(b->name, name, sizeof b->name);
@@ -144,7 +145,7 @@ static void add_assoc(char *name, int chan)
     }
   }
   /* Add at the end */
-  b = (assoc_t *) nmalloc(sizeof(assoc_t));
+  b = nmalloc(sizeof *b);
   b->next = NULL;
   b->channel = chan;
   strncpyz(b->name, name, sizeof b->name);
@@ -257,7 +258,7 @@ static int tcl_killassoc STDVAR
   int chan;
 
   BADARGS(2, 2, " chan");
-  
+
   if (argv[1][0] == '&')
     kill_all_assoc();
   else {
@@ -279,7 +280,7 @@ static int tcl_assoc STDVAR
   char name[21], *p;
 
   BADARGS(2, 3, " chan ?name?");
-  
+
   if ((argc == 2) && ((argv[1][0] < '0') || (argv[1][0] > '9'))) {
     chan = get_assoc(argv[1]);
     if (chan == -1)
@@ -348,7 +349,7 @@ static void assoc_report(int idx, int details)
   if (details) {
     assoc_t *a;
     int size = 0, count = 0;
-  
+
     for (a = assoc; a; a = a->next) {
       count++;
       size += sizeof(assoc_t);

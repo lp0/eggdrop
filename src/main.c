@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.107 2004/05/26 00:20:19 wcc Exp $
+ * $Id: main.c,v 1.111 2004/07/02 21:21:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -60,6 +60,10 @@
 #include "tandem.h"
 #include "bg.h"
 
+#ifndef ENABLE_STRIP
+#  include <sys/resource.h>
+#endif
+
 #ifdef CYGWIN_HACKS
 #  include <windows.h>
 #endif
@@ -86,8 +90,8 @@ time_t now;
  * modified versions of this bot.
  */
 
-char egg_version[1024] = "1.6.16";
-int egg_numver = 1061600;
+char egg_version[1024] = "1.6.17";
+int egg_numver = 1061700;
 
 char notify_new[121] = "";      /* Person to send a note to for new users */
 int default_flags = 0;          /* Default user flags                     */
@@ -283,16 +287,18 @@ void write_debug()
             interp->result : "*unknown*", TCL_PATCH_LEVEL ? TCL_PATCH_LEVEL :
             "*unknown*");
 
-#if HAVE_TCL_THREADS
+#ifdef HAVE_TCL_THREADS
     dprintf(-x, "Tcl is threaded\n");
 #endif
 
 #ifdef CCFLAGS
     dprintf(-x, "Compile flags: %s\n", CCFLAGS);
 #endif
+
 #ifdef LDFLAGS
     dprintf(-x, "Link flags: %s\n", LDFLAGS);
 #endif
+
 #ifdef STRIPFLAGS
     dprintf(-x, "Strip flags: %s\n", STRIPFLAGS);
 #endif
@@ -312,7 +318,7 @@ void write_debug()
     putlog(LOG_MISC, "*", "* Wrote DEBUG");
   }
 }
-#endif
+#endif /* DEBUG_CONTEXT */
 
 static void got_bus(int z)
 {
@@ -425,16 +431,16 @@ void eggContextNote(const char *file, int line, const char *module,
   char x[31], *p;
 
   p = strrchr(file, '/');
-  if (!module) {
+  if (!module)
     strncpyz(x, p ? p + 1 : file, sizeof x);
-  } else
+  else
     egg_snprintf(x, 31, "%s:%s", module, p ? p + 1 : file);
   cx_ptr = ((cx_ptr + 1) & 15);
   strcpy(cx_file[cx_ptr], x);
   cx_line[cx_ptr] = line;
   strncpyz(cx_note[cx_ptr], note, sizeof cx_note[cx_ptr]);
 }
-#endif
+#endif /* DEBUG_CONTEXT */
 
 #ifdef DEBUG_ASSERT
 /* Called from the Assert macro.
@@ -708,7 +714,6 @@ int main(int argc, char **argv)
   struct chanset_t *chan;
 
 #ifndef ENABLE_STRIP
-#include <sys/resource.h>
   /* Make sure it can write core, if you make debug. Else it's pretty
    * useless (dw)
    */
@@ -870,7 +875,7 @@ int main(int argc, char **argv)
   use_stderr = 0;               /* Stop writing to stderr now */
   if (backgrd) {
     /* Ok, try to disassociate from controlling terminal (finger cross) */
-#if HAVE_SETPGID && !defined(CYGWIN_HACKS)
+#if defined(HAVE_SETPGID) && !defined(CYGWIN_HACKS)
     setpgid(0, 0);
 #endif
     /* Tcl wants the stdin, stdout and stderr file handles kept open. */
@@ -894,11 +899,12 @@ int main(int argc, char **argv)
     dcc[n].status = STAT_ECHO;
     strcpy(dcc[n].nick, "HQ");
     strcpy(dcc[n].host, "llama@console");
-    dcc[n].user = get_user_by_handle(userlist, "HQ");
+    /* HACK: Workaround not to pass literal "HQ" as a non-const arg */
+    dcc[n].user = get_user_by_handle(userlist, dcc[n].nick);
     /* Make sure there's an innocuous HQ user if needed */
     if (!dcc[n].user) {
-      userlist = adduser(userlist, "HQ", "none", "-", USER_PARTY);
-      dcc[n].user = get_user_by_handle(userlist, "HQ");
+      userlist = adduser(userlist, dcc[n].nick, "none", "-", USER_PARTY);
+      dcc[n].user = get_user_by_handle(userlist, dcc[n].nick);
     }
     setsock(STDOUT, 0);          /* Entry in net table */
     dprintf(n, "\n### ENTERING DCC CHAT SIMULATION ###\n\n");

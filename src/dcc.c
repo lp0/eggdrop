@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  *
- * $Id: dcc.c,v 1.77 2004/04/06 06:56:38 wcc Exp $
+ * $Id: dcc.c,v 1.81 2004/07/31 01:21:53 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -363,7 +363,7 @@ static void timeout_dcc_bot_new(int idx)
 
 static void display_dcc_bot_new(int idx, char *buf)
 {
-  sprintf(buf, "bot*  waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "bot*  waited %lis", now - dcc[idx].timeval);
 }
 
 static int expmem_dcc_bot_(void *x)
@@ -468,7 +468,7 @@ static void display_dcc_fork_bot(int idx, char *buf)
 
 struct dcc_table DCC_BOT = {
   "BOT",
-  DCT_BOT,
+  DCT_BOT | DCT_VALIDIDX,
   eof_dcc_bot,
   dcc_bot,
   NULL,
@@ -633,7 +633,7 @@ static void tout_dcc_chat_pass(int idx)
 
 static void display_dcc_chat_pass(int idx, char *buf)
 {
-  sprintf(buf, "pass  waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "pass  waited %lis", now - dcc[idx].timeval);
 }
 
 static int expmem_dcc_general(void *x)
@@ -1104,7 +1104,11 @@ static void dcc_telnet(int idx, char *buf, int i)
   /* Buffer data received on this socket.  */
   sockoptions(sock, EGG_OPTION_SET, SOCK_BUFFER);
 
+#if (SIZEOF_SHORT == 2)
+  if (port < 1024) {
+#else
   if (port < 1024 || port > 65535) {
+#endif
     putlog(LOG_BOTS, "*", DCC_BADSRC, s, port);
     killsock(sock);
     return;
@@ -1496,7 +1500,7 @@ static void timeout_dcc_telnet_id(int idx)
 
 static void display_dcc_telnet_id(int idx, char *buf)
 {
-  sprintf(buf, "t-in  waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "t-in  waited %lis", now - dcc[idx].timeval);
 }
 
 struct dcc_table DCC_TELNET_ID = {
@@ -1659,12 +1663,12 @@ static void tout_dcc_telnet_pw(int idx)
 
 static void display_dcc_telnet_new(int idx, char *buf)
 {
-  sprintf(buf, "new   waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "new   waited %lis", now - dcc[idx].timeval);
 }
 
 static void display_dcc_telnet_pw(int idx, char *buf)
 {
-  sprintf(buf, "newp  waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "newp  waited %lis", now - dcc[idx].timeval);
 }
 
 struct dcc_table DCC_TELNET_NEW = {
@@ -1894,7 +1898,7 @@ void eof_dcc_identwait(int idx)
 
 static void display_dcc_identwait(int idx, char *buf)
 {
-  sprintf(buf, "idtw  waited %lus", now - dcc[idx].timeval);
+  sprintf(buf, "idtw  waited %lis", now - dcc[idx].timeval);
 }
 
 struct dcc_table DCC_IDENTWAIT = {
@@ -1915,6 +1919,7 @@ void dcc_ident(int idx, char *buf, int len)
   char response[512], uid[512], buf1[UHOSTLEN];
   int i;
 
+  *response = *uid = '\0';
   sscanf(buf, "%*[^:]:%[^:]:%*[^:]:%[^\n]\n", response, uid);
   rmspace(response);
   if (response[0] != 'U') {

@@ -7,7 +7,7 @@
  *   telling the current programmed settings
  *   initializing a lot of stuff and loading the tcl scripts
  *
- * $Id: chanprog.c,v 1.51 2004/04/06 07:15:18 wcc Exp $
+ * $Id: chanprog.c,v 1.57 2004/07/25 11:17:34 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -29,15 +29,18 @@
  */
 
 #include "main.h"
-#if HAVE_GETRUSAGE
-#include <sys/resource.h>
-#if HAVE_SYS_RUSAGE_H
-#include <sys/rusage.h>
+
+#ifdef HAVE_GETRUSAGE
+#  include <sys/resource.h>
+#  ifdef HAVE_SYS_RUSAGE_H
+#    include <sys/rusage.h>
+#  endif
 #endif
-#endif
+
 #ifdef HAVE_UNAME
-#include <sys/utsname.h>
+#  include <sys/utsname.h>
 #endif
+
 #include "modules.h"
 
 extern struct userrec *userlist;
@@ -60,30 +63,26 @@ char origbotname[NICKLEN + 1];
 char botname[NICKLEN + 1];         /* Primary botname              */
 
 
-/* Remove space characters from beginning and end of string
- * (more efficent by Fred1)
+/* Remove leading and trailing whitespaces.
  */
 void rmspace(char *s)
 {
-#define whitespace(c) (((c) == 32) || ((c) == 9) || ((c) == 13) || ((c) == 10))
-  char *p, *end;
-  int len;
+  register char *p = NULL, *q = NULL;
 
-  if (!*s)
+  if (!s || !*s)
     return;
 
-  /* Wipe end of string */
-  end = s + strlen(s) - 1;
-  for (p = end; ((whitespace(*p)) && (p >= s)); p--);
-  if (p != end) *(p + 1) = 0;
-  len = p+1 - s;
-  for (p = s; ((whitespace(*p)) && (*p)); p++);
-  len -= (p - s);
-  if (p != s) {
-    /* +1 to include the null in the copy */
-    memmove(s, p, len + 1);
-  }
+  /* Remove trailing whitespaces. */
+  for (q = s + strlen(s) - 1; q >= s && egg_isspace(*q); q--);
+  *(q + 1) = 0;
+
+  /* Remove leading whitespaces. */
+  for (p = s; egg_isspace(*p); p++);
+
+  if (p != s)
+    memmove(s, p, q - p + 2);
 }
+
 
 /* Returns memberfields if the nick is in the member list.
  */
@@ -120,6 +119,7 @@ struct chanset_t *findchan_by_dname(const char *name)
       return chan;
   return NULL;
 }
+
 
 /*
  *    "caching" functions
@@ -268,13 +268,12 @@ void tell_verbose_status(int idx)
   char *vers_t, *uni_t;
   int i;
   time_t now2 = now - online_since, hr, min;
-
-#if HAVE_GETRUSAGE
+#ifdef HAVE_GETRUSAGE
   struct rusage ru;
 #else
-# if HAVE_CLOCK
+#  ifdef HAVE_CLOCK
   clock_t cl;
-# endif
+#  endif
 #endif
 #ifdef HAVE_UNAME
   struct utsname un;
@@ -319,20 +318,20 @@ void tell_verbose_status(int idx)
     else
       strcpy(s1, MISC_LOGMODE);
   }
-#if HAVE_GETRUSAGE
+#ifdef HAVE_GETRUSAGE
   getrusage(RUSAGE_SELF, &ru);
   hr = (int) ((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) / 60);
   min = (int) ((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) - (hr * 60));
   sprintf(s2, "CPU: %02d:%02d", (int) hr, (int) min);    /* Actally min/sec */
 #else
-# if HAVE_CLOCK
+#  ifdef HAVE_CLOCK
   cl = (clock() / CLOCKS_PER_SEC);
   hr = (int) (cl / 60);
   min = (int) (cl - (hr * 60));
   sprintf(s2, "CPU: %02d:%02d", (int) hr, (int) min);    /* Actually min/sec */
-# else
+#  else
   sprintf(s2, "CPU: unknown");
-# endif
+#  endif
 #endif
   dprintf(idx, "%s %s (%s) - %s - %s: %4.1f%%\n", MISC_ONLINEFOR,
           s, s1, s2, MISC_CACHEHIT,
@@ -356,7 +355,7 @@ void tell_verbose_status(int idx)
           interp->result : "*unknown*", MISC_TCLHVERSION,
           TCL_PATCH_LEVEL ? TCL_PATCH_LEVEL : "*unknown*");
 
-#if HAVE_TCL_THREADS
+#ifdef HAVE_TCL_THREADS
   dprintf(idx, "Tcl is threaded.\n");
 #endif
 
@@ -430,18 +429,24 @@ void reaffirm_owners()
 void chanprog()
 {
   int i;
+  FILE *f;
+  char s[161], rands[8];
 
-  admin[0] = 0;
+  admin[0]   = 0;
   helpdir[0] = 0;
   tempdir[0] = 0;
+  conmask    = 0;
+
   for (i = 0; i < max_logs; i++)
     logs[i].flags |= LF_EXPIRING;
-  conmask = 0;
+
   /* Turn off read-only variables (make them write-able) for rehash */
   protect_readonly = 0;
+
   /* Now read it */
   if (!readtclprog(configfile))
     fatal(MISC_NOCONFIGFILE, 0);
+
   for (i = 0; i < max_logs; i++) {
     if (logs[i].flags & LF_EXPIRING) {
       if (logs[i].filename != NULL) {
@@ -460,16 +465,20 @@ void chanprog()
       logs[i].flags = 0;
     }
   }
+
   /* We should be safe now */
   call_hook(HOOK_REHASH);
   protect_readonly = 1;
-  if (!botnetnick[0]) {
+
+  if (!botnetnick[0])
     strncpyz(botnetnick, origbotname, HANDLEN + 1);
-  }
+
   if (!botnetnick[0])
     fatal("I don't have a botnet nick!!\n", 0);
+
   if (!userfile[0])
     fatal(MISC_NOUSERFILE2, 0);
+
   if (!readuserfile(userfile, &userlist)) {
     if (!make_userfile) {
       char tmp[178];
@@ -485,31 +494,30 @@ void chanprog()
     make_userfile = 0;
     printf("%s\n", MISC_USERFEXISTS);
   }
+
   if (helpdir[0])
     if (helpdir[strlen(helpdir) - 1] != '/')
       strcat(helpdir, "/");
+
   if (tempdir[0])
     if (tempdir[strlen(tempdir) - 1] != '/')
       strcat(tempdir, "/");
-  /* Test tempdir: it's vital */
-  {
-    FILE *f;
-    char s[161], rands[8];
 
-    /* Possible file race condition solved by using a random string
-     * and the process id in the filename.
-     * FIXME: This race is only partitially fixed. We could still be
-     *        overwriting an existing file / following a malicious
-     *        link.
-     */
-    make_rand_str(rands, 7);    /* create random string */
-    sprintf(s, "%s.test-%u-%s", tempdir, getpid(), rands);
-    f = fopen(s, "w");
-    if (f == NULL)
-      fatal(MISC_CANTWRITETEMP, 0);
-    fclose(f);
-    unlink(s);
-  }
+  /* Test tempdir: it's vital. */
+
+  /* Possible file race condition solved by using a random string
+   * and the process id in the filename.
+   * FIXME: This race is only partitially fixed. We could still be
+   *        overwriting an existing file / following a malicious
+   *        link.
+   */
+  make_rand_str(rands, 7); /* create random string */
+  sprintf(s, "%s.test-%u-%s", tempdir, getpid(), rands);
+  f = fopen(s, "w");
+  if (f == NULL)
+    fatal(MISC_CANTWRITETEMP, 0);
+  fclose(f);
+  unlink(s);
   reaffirm_owners();
   check_tcl_event("userfile-loaded");
 }
@@ -555,10 +563,10 @@ unsigned long add_timer(tcl_timer_t ** stack, int elapse, char *cmd,
 {
   tcl_timer_t *old = (*stack);
 
-  *stack = (tcl_timer_t *) nmalloc(sizeof(tcl_timer_t));
+  *stack = nmalloc(sizeof **stack);
   (*stack)->next = old;
   (*stack)->mins = elapse;
-  (*stack)->cmd = (char *) nmalloc(strlen(cmd) + 1);
+  (*stack)->cmd = nmalloc(strlen(cmd) + 1);
   strcpy((*stack)->cmd, cmd);
   /* If it's just being added back and already had an id,
    * don't create a new one.

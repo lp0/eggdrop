@@ -1,3 +1,216 @@
+2004-06-14 01:14  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: bg.c, chanprog.c, eggdrop.h, main.c, main.h, mem.c, net.c,
+	patch.h, proto.h, tcl.c, tclhash.c, tclmisc.c, compat/inet_aton.h,
+	mod/assoc.mod/assoc.c, mod/blowfish.mod/blowfish.c,
+	mod/channels.mod/channels.c, mod/compress.mod/compress.c,
+	mod/console.mod/console.c, mod/ctcp.mod/ctcp.c, mod/dns.mod/dns.h,
+	mod/filesys.mod/filedb3.h, mod/filesys.mod/files.c,
+	mod/filesys.mod/filesys.c, mod/irc.mod/irc.c,
+	mod/notes.mod/notes.c, mod/seen.mod/seen.c,
+	mod/server.mod/server.c, mod/uptime.mod/uptime.c,
+	mod/wire.mod/wire.c, mod/woobie.mod/woobie.c:
+
+	* Misc. cleanups.  
+
+2004-06-13 21:02  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: chanprog.c, patch.h:
+
+	* And revision 4! Tested this time, should work.. but, if anyone
+	  else wants to look over rmspace() and fixfrom() just to make sure,
+	  that'd probably be good.  Patch by Sup.  
+
+2004-06-13 17:34  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, userrec.c:
+
+	* Fix to fixfrom() from cleanups1.6.  
+
+2004-06-12 21:00  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/flags.c, src/patch.h:
+
+	- Op (+o) implies halfop (+l) now.  
+	* Patch by: darko`` 
+
+2004-06-12 19:54  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: chanprog.c, patch.h:
+
+	* Part two of Sup's rmspace() optimization.  
+
+2004-06-12 01:24  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/chanprog.c, src/eggdrop.h, src/patch.h,
+	src/userrec.c:
+
+	- Cleaned up and optimized rmspace() and fixfrom().  
+	* Patch by: Sup 
+
+2004-06-11 19:17  Will Buckner <wcc@techmonkeys.org>
+
+	* configure:
+
+	* Run autoconf from last commit.  
+
+2004-06-11 19:16  Will Buckner <wcc@techmonkeys.org>
+
+	* configure.ac, doc/UPDATES1.6, src/patch.h:
+
+	* Updated recomended Tcl version to 8.4.6.  
+
+2004-06-11 18:40  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/COMPILING-FAQ, doc/html/compiling.html, src/patch.h:
+
+	* Added the FreeBSD 'permission denied' problem to the COMPILE-FAQ.
+	  I think we should rename that probably since it's not an FAQ. I
+	  thought I renamed it to COMPILE-GUIDE in 1.6.16....  
+
+2004-06-11 17:55  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6:
+
+	[no log message] 
+
+2004-06-11 17:46  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, doc/tcl-commands.doc, doc/html/tcl-commands.html,
+	src/botcmd.c, src/patch.h, src/tcldcc.c:
+
+	- Fix behavior of the BCST bind. BCST is now correctly triggered for 
+	  dccbroadcasts, as well as when a bot "says" something on a
+	  channel.  See doc/tcl-commands.doc for more information.  
+	* Found by: FireEgl - Patch by: Wingman 
+
+2004-06-11 06:06  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: botnet.c, dccutil.c, patch.h:
+
+	* Couple fixes from that last patch.  
+
+2004-06-11 05:53  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/botnet.c, src/chanprog.c, src/dccutil.c,
+	src/misc.c, src/net.c, src/patch.h, src/tcl.c, src/tclhash.c,
+	src/tclmisc.c, src/userrec.c, src/mod/assoc.mod/assoc.c,
+	src/mod/blowfish.mod/blowfish.c, src/mod/channels.mod/tclchan.c,
+	src/mod/dns.mod/coredns.c, src/mod/share.mod/share.c,
+	src/mod/transfer.mod/transferqueue.c, src/mod/wire.mod/wire.c:
+
+	- Remove some unneeded casts.  
+	* Patch by: darko`` 
+
+2004-06-10 20:36  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/filesys.mod/filedb3.c:
+
+	- Fixed performance issues with mv/cp when a lot of files are in the 
+	  file area.  
+	* Found by: fabulous - Patch by: Wingman 
+
+2004-06-10 20:03  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/COMPILING-FAQ, doc/UPDATES1.6, doc/html/compiling.html,
+	src/patch.h:
+
+	- Typo in doc/COMPILING-FAQ. It's LD_LIBRARY_PATH, not
+	LB_LIBRARY_PATH.  
+	* Found by: NoPleX - Patch by: Wcc 
+
+2004-06-09 17:43  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6:
+
+	* Hmm, how did that happen? Damn middle mouse button. =P 
+
+2004-06-09 17:34  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/dcc.c, src/patch.h, src/tcl.c:
+
+	- Fix a possible issue with ident code.  
+	* Found by: various - Patch by: darko`` 
+
+2004-06-06 00:03  stdarg <stdarg@techmonkeys.org>
+
+	* INSTALL, INSTALL:
+
+	[no log message] 
+
+2004-06-04 17:25  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, doc/tcl-commands.doc, doc/html/tcl-commands.html,
+	src/patch.h, src/mod/filesys.mod/tclfiles.c:
+
+	-- Small updates from tcl_mkdir patch...  
+
+2004-06-04 16:41  Will Buckner <wcc@techmonkeys.org>
+
+	* configure, doc/UPDATES1.6, src/patch.h,
+	src/mod/filesys.mod/tclfiles.c:
+
+	- Don't let .tcl mkdir create duplicate filedb entries.  
+	* Found by: fabulous - Patch by: Wingman 
+
+2004-06-04 14:07  Will Buckner <wcc@techmonkeys.org>
+
+	* .cvsignore, aclocal.m4, config.h.in, configure, configure.ac,
+	doc/UPDATES1.6, src/eggdrop.h, src/patch.h:
+
+	- Fixed a compile error related to varargs when using old Tcl
+	versions.  
+	* Found by: Thomas Neumayer - Patch by: Wcc 
+	
+	- Fixed a compile error on systems that don't have socklen_t.  
+	* Found by: Brad Edwards - Patch by: Wcc 
+	
+	-- .cvsignore stuff for autoscan.  
+
+2004-06-03 14:10  Will Buckner <wcc@techmonkeys.org>
+
+	* aclocal.m4, configure, help/cmds1.help, help/cmds2.help,
+	src/eggdrop.h, src/patch.h, src/mod/irc.mod/cmdsirc.c:
+
+	* Fixed some indenting.  
+	* Make head -n 1, if existant, take precedence over -1 to suppress 
+	  warnings on newer versions of head. This will not affect systems 
+	  that do not support -n 1.  
+	* Help stuff.  
+
+2004-06-03 03:57  Will Buckner <wcc@techmonkeys.org>
+
+	* src/patch.h:
+
+	Testing.  
+
+2004-06-03 02:51  Will Buckner <wcc@techmonkeys.org>
+
+	* src/patch.h:
+
+	* Seeing if CVS works right now.  
+
+2004-06-02 06:58  Will Buckner <wcc@techmonkeys.org>
+
+	* configure, configure.ac, doc/COMPILING-FAQ, doc/PATCH-HOWTO,
+	doc/TEXT-SUBSTITUTIONS, doc/UPDATES1.6, doc/tcl-commands.doc,
+	doc/html/app-textsub.html, doc/html/compiling.html,
+	doc/html/tcl-commands.html, src/main.c, src/patch.h:
+
+	* Start of 1.6.17 :) 
+
+2004-06-01 00:59  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, help/core.help:
+
+	* Misc stuff before the release.  
+
+2004-06-01 00:41  Will Buckner <wcc@techmonkeys.org>
+
+	* help/core.help:
+
+	* Help file stuff.  
+
 2004-05-27 06:29  Will Buckner <wcc@techmonkeys.org>
 
 	* eggdrop.conf, doc/UPDATES1.6, doc/html/mod-compress.html,

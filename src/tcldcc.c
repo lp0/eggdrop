@@ -2,7 +2,7 @@
  * tcldcc.c -- handles:
  *   Tcl stubs for the dcc commands
  *
- * $Id: tcldcc.c,v 1.51 2004/04/06 06:56:38 wcc Exp $
+ * $Id: tcldcc.c,v 1.55 2004/08/12 06:49:58 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -125,8 +125,9 @@ static int tcl_dccsimul STDVAR
       dcc[idx].type->activity(idx, argv[2], l);
       return TCL_OK;
     }
-  } else
-      Tcl_AppendResult(irp, "invalid idx", NULL);
+  } else {
+    Tcl_AppendResult(irp, "invalid idx", NULL);
+  }
   return TCL_ERROR;
 }
 
@@ -140,6 +141,7 @@ static int tcl_dccbroadcast STDVAR
   strncpyz(msg, argv[1], sizeof msg);
   chatout("*** %s\n", msg);
   botnet_send_chat(-1, botnetnick, msg);
+  check_tcl_bcst(botnetnick, -1, msg);
   return TCL_OK;
 }
 
@@ -673,7 +675,7 @@ static int tcl_whom STDVAR
       if (dcc[i].u.chat->channel == chan || chan == -1) {
         c[0] = geticon(i);
         c[1] = 0;
-        egg_snprintf(idle, sizeof idle, "%lu", (now - dcc[i].timeval) / 60);
+        egg_snprintf(idle, sizeof idle, "%li", (now - dcc[i].timeval) / 60);
         list[0] = dcc[i].nick;
         list[1] = botnetnick;
         list[2] = dcc[i].host;
@@ -696,7 +698,7 @@ static int tcl_whom STDVAR
       if (party[i].timer == 0L)
         strcpy(idle, "0");
       else
-        egg_snprintf(idle, sizeof idle, "%lu", (now - party[i].timer) / 60);
+        egg_snprintf(idle, sizeof idle, "%li", (now - party[i].timer) / 60);
       list[0] = party[i].nick;
       list[1] = party[i].bot;
       list[2] = party[i].from ? party[i].from : "";
@@ -877,7 +879,7 @@ static int tcl_connect STDVAR
 static int tcl_listen STDVAR
 {
   int i, j, idx = -1, port, realport;
-  char s[11];
+  char s[11], msg[256];
   struct portmap *pmap = NULL, *pold = NULL;
 
   BADARGS(3, 5, " port type ?mask?/?proc ?flag??");
@@ -911,7 +913,7 @@ static int tcl_listen STDVAR
   if (idx < 0) {
     /* Make new one */
     if (dcc_total >= max_dcc) {
-      Tcl_AppendResult(irp, "no more DCC slots available", NULL);
+      Tcl_AppendResult(irp, "No more DCC slots available.", NULL);
       return TCL_ERROR;
     }
     /* Try to grab port */
@@ -925,7 +927,10 @@ static int tcl_listen STDVAR
         break;
     }
     if (i == -1) {
-      Tcl_AppendResult(irp, "Couldn't grab nearby port", NULL);
+      egg_snprintf(msg, sizeof msg, "Couldn't listen on port '%d' on the "
+                   "given address. Please make sure 'my-ip' is set correctly, "
+                   "or try a different port.", realport);
+      Tcl_AppendResult(irp, msg, NULL);
       return TCL_ERROR;
     } else if (i == -2) {
       Tcl_AppendResult(irp, "Couldn't assign the requested IP. Please make "
@@ -942,7 +947,7 @@ static int tcl_listen STDVAR
   if (!strcmp(argv[2], "script")) {
     strcpy(dcc[idx].nick, "(script)");
     if (argc < 4) {
-      Tcl_AppendResult(irp, "must give proc name for script listen", NULL);
+      Tcl_AppendResult(irp, "a proc name must be specified for a script listen", NULL);
       killsock(dcc[idx].sock);
       lostdcc(idx);
       return TCL_ERROR;
@@ -970,7 +975,7 @@ static int tcl_listen STDVAR
   else if (!strcmp(argv[2], "all"))
     strcpy(dcc[idx].nick, "(telnet)");
   if (!dcc[idx].nick[0]) {
-    Tcl_AppendResult(irp, "illegal listen type: must be one of ",
+    Tcl_AppendResult(irp, "invalid listen type: must be one of ",
                      "bots, users, all, off, script", NULL);
     killsock(dcc[idx].sock);
     dcc_total--;
@@ -989,7 +994,7 @@ static int tcl_listen STDVAR
   }
   pmap->realport = realport;
   pmap->mappedto = port;
-  putlog(LOG_MISC, "*", "Listening at telnet port %d (%s)", port, argv[2]);
+  putlog(LOG_MISC, "*", "Listening at telnet port %d (%s).", port, argv[2]);
   return TCL_OK;
 }
 

@@ -15,7 +15,7 @@
  * 1.4       1997-11-25      1.2.2.0         Added language addition  Kirk
  * 1.5       1998-07-12      1.3.0.0         Fixed ;me and updated    BB
  *
- * $Id: wire.c,v 1.32 2004/05/27 05:33:41 wcc Exp $
+ * $Id: wire.c,v 1.35 2004/06/15 07:20:55 wcc Exp $
  */
 /*
  * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
@@ -38,22 +38,19 @@
 #define MODULE_NAME "wire"
 #define MAKING_WIRE
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#include "src/mod/module.h"
 
 #ifdef TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
-# else
 #  include <time.h>
-# endif
+#else
+#  ifdef HAVE_SYS_TIME_H
+#    include <sys/time.h>
+#  else
+#    include <time.h>
+#  endif
 #endif
 
-#include "src/mod/module.h"
 #include "src/users.h"
 #include "src/chan.h"
 #include "wire.h"
@@ -343,20 +340,20 @@ static void wire_join(int idx, char *key)
     w = w->next;
   }
   if (!wirelist) {
-    wirelist = (wire_list *) nmalloc(sizeof(wire_list));
+    wirelist = nmalloc(sizeof *wirelist);
     w = wirelist;
   } else {
-    w->next = (wire_list *) nmalloc(sizeof(wire_list));
+    w->next = nmalloc(sizeof *w->next);
     w = w->next;
   }
   w->sock = dcc[idx].sock;
-  w->key = (char *) nmalloc(strlen(key) + 1);
+  w->key = nmalloc(strlen(key) + 1);
   strcpy(w->key, key);
   w->next = 0;
   enctmp = encrypt_string(w->key, "wire");
   strcpy(wiretmp, enctmp);
   nfree(enctmp);
-  w->crypt = (char *) nmalloc(strlen(wiretmp) + 1);
+  w->crypt = nmalloc(strlen(wiretmp) + 1);
   strcpy(w->crypt, wiretmp);
   sprintf(wirecmd, "!wire%s", wiretmp);
   sprintf(wiremsg, "%s joined wire '%s'", dcc[idx].nick, key);

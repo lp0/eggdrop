@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: tcl-commands.html,v 1.39 2004/05/27 01:30:11 wcc Exp $ -->
+<!-- $Id: tcl-commands.html,v 1.43 2004/08/02 18:50:47 wcc Exp $ -->
 
 <html>
   <head>
@@ -17,7 +17,7 @@
     you can also use these to manipulate features of the bot. They are listed
     according to category.</p>
 
-    <p>This list is accurate for Eggdrop v1.6.16. Scripts written for
+    <p>This list is accurate for Eggdrop v1.6.17. Scripts written for
     v1.3/v1.4 series of Eggdrop should probably work with a few minor
     modifications depending on the script. Scripts which were written for
     v0.9, v1.0, v1.1 or v1.2 will probably not work without modification.
@@ -1898,7 +1898,72 @@
 
         <dd>
           <p><strong>Description:</strong> modifies the strip-flags for a
-          user</p>
+          user. The supported strip-flags are:</p>
+
+          <blockquote>
+            <table>
+              <tr valign="top">
+                <td>
+                  <p><strong>b</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all boldface codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>c</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all color codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>r</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all reverse video codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>u</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all underline codes</p>
+                </td>
+              </tr>
+
+
+              <tr valign="top">
+                <td>
+                  <p><strong>a</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all ANSI codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>g</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all ctrl-g (bell) codes</p>
+                </td>
+              </tr>
+            </table>
+          </blockquote>
 
           <p><strong>Returns:</strong> new strip-flags for the specified user
           (or the current flags, if strip-flags was omitted)</p>
@@ -2613,6 +2678,16 @@
                   <p>directory exists but is not a directory</p>
                 </td>
               </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>-3</strong></p>
+                </td>
+
+                <td>
+                  <p>could not open filedb</p>
+                </td>
+              </tr>
             </table>
           </blockquote>
 
@@ -2762,7 +2837,7 @@
           <p><strong>Description:</strong> sets the flags required to
           access a directory</p>
 
-          <p><strong>Returns:</strong> 0 on success; -1 on failure</p>
+          <p><strong>Returns:</strong> 0 on success; -1 or -3 on failure</p>
 
           <p><strong>Module:</strong> filesys</p>
         </dd>
@@ -3278,6 +3353,82 @@
           <p><strong>Description:</strong> rehashes the bot</p>
 
           <p><strong>Returns:</strong> nothing</p>
+
+          <p><strong>Module:</strong> core</p>
+        </dd>
+
+        <dt><strong>* stripcodes &lt;strip-flags&gt; &lt;string&gt;</strong></dt>
+        <dd>
+          <p><strong>Description:</strong> strips specified control characters
+          from the string given. strip-flags can be any combination of the
+          following:</p>
+
+          <blockquote>
+            <table>
+              <tr valign="top">
+                <td>
+                  <p><strong>b</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all boldface codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>c</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all color codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>r</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all reverse video codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>u</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all underline codes</p>
+                </td>
+              </tr>
+
+
+              <tr valign="top">
+                <td>
+                  <p><strong>a</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all ANSI codes</p>
+                </td>
+              </tr>
+
+              <tr valign="top">
+                <td>
+                  <p><strong>g</strong></p>
+                </td>
+
+                <td>
+                  <p>remove all ctrl-g (bell) codes</p>
+                </td>
+              </tr>
+            </table>
+          </blockquote>
+
+          <p><strong>Returns:</strong> the stripped string</p>
 
           <p><strong>Module:</strong> core</p>
         </dd>
@@ -3888,18 +4039,21 @@
             </li>
 
             <li>
-              <p><strong>CHAT (stackable)</strong></p>
+              <p><strong>*  CHAT (stackable)</strong></p>
 
               <p><strong>bind chat &lt;flags&gt; &lt;mask&gt; &lt;proc&gt;<br>
               proc-name &lt;handle&gt; &lt;channel#&gt;
               &lt;text&gt;</strong></p>
 
-              <p><strong>Description:</strong> when someone says something on
+              <p><strong>Description:</strong> when a user says something on
               the botnet, it invokes this binding. Flags are ignored; handle
               could be a user on this bot (&quot;DronePup&quot;) or on
               another bot (&quot;Eden@Wilde&quot;) and therefore you can&#39;t
               rely on a local user record. The mask is checked against the
               entire line of text and supports wildcards.</p>
+
+              <p><strong>NOTE:</strong> If a BOT says something on the botnet,
+              the BCST bind is invoked instead.</p>
 
               <p><strong>Module:</strong> core</p>
             </li>
@@ -4065,16 +4219,23 @@
             </li>
 
             <li>
-              <p><strong>BCST (stackable)</strong></p>
+              <p><strong>* BCST (stackable)</strong></p>
 
               <p><strong>bind bcst &lt;flags&gt; &lt;mask&gt; &lt;proc&gt;<br>
               proc-name &lt;botname&gt; &lt;channel#&gt;
               &lt;text&gt;</strong></p>
 
-              <p><strong>Description:</strong> when a bot broadcasts
-              something on the botnet (see &#39;dccbroadcast&#39; above),
-              it invokes this binding. flags are ignored; the mask is
-              matched against the message text and can contain wildcards.</p>
+              <p><strong>Description:</strong> when a bot broadcasts something
+              on the botnet (see &#39;dccbroadcast&#39; above), it invokes
+              this binding. flags are ignored; the mask is matched against
+              the message text and can contain wildcards. &#39;channel&#39;
+              argument will always be &#39;-1&#39; since broadcasts are not
+              directed to any partyline channel.</p>
+
+              <p>It is also invoked when a BOT (not a person, as with the CHAT
+              bind) &#39;says&#39; something on a channel. In this case, the
+              &#39;channel&#39; argument will be a valid channel, and not
+              &#39;-1&#39;.
 
               <p><strong>Module:</strong> core</p>
             </li>
@@ -4294,7 +4455,7 @@
 
                   <tr valign="top">
                     <td>
-                      <p><strong>* userfile-loaded</strong></p>
+                      <p><strong>userfile-loaded</strong></p>
                     </td>
 
                     <td>

@@ -1,8 +1,8 @@
-$Id: tcl-commands.doc,v 1.110 2004/05/27 01:30:10 wcc Exp $
+$Id: tcl-commands.doc,v 1.115 2004/08/02 18:50:46 wcc Exp $
 
 Eggdrop Tcl Commands
-Last revised: January 12, 2004
-     _________________________________________________________________
+Last revised: August 02, 2004
+    _____________________________________________________________________
 
                            Eggdrop Tcl Commands
 
@@ -12,7 +12,7 @@ of the normal Tcl built-in commands are still there, of course, but you
 can also use these to manipulate features of the bot. They are listed
 according to category.
 
-This list is accurate for Eggdrop v1.6.16. Scripts written for v1.3/v1.4
+This list is accurate for Eggdrop v1.6.17. Scripts written for v1.3/v1.4
 series of Eggdrop should probably work with a few minor modifications
 depending on the script. Scripts which were written for  v0.9, v1.0, v1.1
 or v1.2 will probably not work without modification. Commands which have
@@ -909,7 +909,14 @@ marked with vertical bars (|) on the left.
     Module: core
 
   strip <idx> [+/-strip-flags]
-    Description: modifies the strip-flags for a user
+|   Description: modifies the strip-flags for a user. The supported
+|     strip-flags are:
+|       b - remove all boldface codes
+|       c - remove all color codes
+|       r - remove all reverse video codes
+|       u - remove all underline codes
+|       a - remove all ANSI codes
+|       g - remove all ctrl-g (bell) codes
     Returns: new strip-flags for the specified user (or the current
       flags, if strip-flags was omitted)
     Module: core
@@ -1209,6 +1216,7 @@ marked with vertical bars (|) on the left.
       0 success
       1 can't create directory
       2 directory exists but is not a directory
+     -3 could not open filedb
     Module: filesys
 
   rmdir <directory>
@@ -1246,7 +1254,7 @@ marked with vertical bars (|) on the left.
 
   setflags <dir> [<flags> [channel]]
     Description: sets the flags required to access a directory
-    Returns: 0 on success; -1 on failure
+    Returns: 0 on success; -1 or -3 on failure
     Module: filesys
 
 
@@ -1508,6 +1516,18 @@ marked with vertical bars (|) on the left.
     Description: rehashes the bot
     Returns: nothing
     Module: core
+
+| stripcodes <strip-flags> <string>
+|   Description: strips specified control characters from the string given.
+|     strip-flags can be any combination of the following:
+|       b - remove all boldface codes
+|       c - remove all color codes
+|       r - remove all reverse video codes
+|       u - remove all underline codes
+|       a - remove all ANSI codes
+|       g - remove all ctrl-g (bell) codes
+|   Returns: the stripped string.
+|   Module: core
 
 
 *** GLOBAL VARIABLES ***
@@ -1863,11 +1883,14 @@ marked with vertical bars (|) on the left.
          bind chat <flags> <mask> <proc>
          proc-name <handle> <channel#> <text>
 
-         Description: when someone says something on the botnet, it invokes
+         Description: when a user says something on the botnet, it invokes
            this binding. Flags are ignored; handle could be a user on this
            bot ("DronePup") or on another bot ("Eden@Wilde") and therefore
            you can't rely on a local user record. The mask is checked against
            the entire line of text and supports wildcards.
+
+|          NOTE: If a BOT says something on the botnet, the BCST bind is
+|          invoked instead.
          Module: core
 
     (24) LINK (stackable)
@@ -1979,15 +2002,20 @@ marked with vertical bars (|) on the left.
           pass it to bind in its original form.
         Module: server
 
-    (34) BCST (stackable)
-         bind bcst <flags> <mask> <proc>
-         proc-name <botname> <channel#> <text>
-
-         Description: when a bot broadcasts something on the botnet (see
-           'dccbroadcast' above), it invokes this binding. flags are ignored;
-           the mask is matched against the message text and can contain
-           wildcards.
-         Module: core
+|   (34) BCST (stackable)
+|        bind bcst <flags> <mask> <proc>
+|        proc-name <botname> <channel#> <text>
+|
+|        Description: when a bot broadcasts something on the botnet (see
+|          'dccbroadcast' above), it invokes this binding. flags are ignored;
+|          the mask is matched against the message text and can contain
+|          wildcards. 'channel' argument will always be '-1' since broadcasts
+|          are not directed to any partyline channel.
+|
+|          It is also invoked when a BOT (not a person, as with the CHAT bind)
+|          'says' something on a channel. In this case, the 'channel' argument
+|          will be a valid channel, and not '-1'.
+|        Module: core
 
     (35) CHJN (stackable)
          bind chjn <flags> <mask> <proc>
@@ -2073,7 +2101,7 @@ marked with vertical bars (|) on the left.
              prerestart      - called just before a restart
              logfile         - called when the logs are switched daily
              loaded          - called when the bot is done loading
-|            userfile-loaded - called after userfile has been loaded
+             userfile-loaded - called after userfile has been loaded
 
              connect-server    - called just before we connect to an IRC server
              init-server       - called when we actually get on our IRC server
@@ -2244,6 +2272,6 @@ marked with vertical bars (|) on the left.
      word)
   ~  matches 1 or more space characters (can be used for whitespace between
      words)
-     _________________________________________________________________
+    _____________________________________________________________________
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+  Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

@@ -2,7 +2,7 @@
  * blowfish.c -- part of blowfish.mod
  *   encryption and decryption of passwords
  *
- * $Id: blowfish.c,v 1.28 2004/01/09 05:56:37 wcc Exp $
+ * $Id: blowfish.c,v 1.30 2004/06/14 01:14:06 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -32,6 +32,7 @@
 #include "src/mod/module.h"
 #include "blowfish.h"
 #include "bf_tab.h"             /* P-box P-array, S-box */
+
 #undef global
 static Function *global = NULL;
 
@@ -208,10 +209,10 @@ static void blowfish_init(u_8bit_t *key, int keybytes)
   }
   /* Initialize new buffer */
   /* uh... this is over 4k */
-  box[bx].P = (u_32bit_t *) nmalloc((bf_N + 2) * sizeof(u_32bit_t));
-  box[bx].S = (u_32bit_t **) nmalloc(4 * sizeof(u_32bit_t *));
+  box[bx].P = nmalloc((bf_N + 2) * sizeof(u_32bit_t));
+  box[bx].S = nmalloc(4 * sizeof(u_32bit_t *));
   for (i = 0; i < 4; i++)
-    box[bx].S[i] = (u_32bit_t *) nmalloc(256 * sizeof(u_32bit_t));
+    box[bx].S[i] = nmalloc(256 * sizeof(u_32bit_t));
   bf_P = box[bx].P;
   bf_S = box[bx].S;
   box[bx].keybytes = keybytes;
@@ -314,12 +315,12 @@ static char *encrypt_string(char *key, char *str)
   int i;
 
   /* Pad fake string with 8 bytes to make sure there's enough */
-  s = (char *) nmalloc(strlen(str) + 9);
+  s = nmalloc(strlen(str) + 9);
   strcpy(s, str);
   if ((!key) || (!key[0]))
     return s;
   p = s;
-  dest = (char *) nmalloc((strlen(str) + 9) * 2);
+  dest = nmalloc((strlen(str) + 9) * 2);
   while (*p)
     p++;
   for (i = 0; i < 8; i++)
@@ -360,12 +361,12 @@ static char *decrypt_string(char *key, char *str)
   int i;
 
   /* Pad encoded string with 0 bits in case it's bogus */
-  s = (char *) nmalloc(strlen(str) + 12);
+  s = nmalloc(strlen(str) + 12);
   strcpy(s, str);
   if ((!key) || (!key[0]))
     return s;
   p = s;
-  dest = (char *) nmalloc(strlen(str) + 12);
+  dest = nmalloc(strlen(str) + 12);
   while (*p)
     p++;
   for (i = 0; i < 12; i++)
@@ -396,7 +397,7 @@ static int tcl_encrypt STDVAR
   char *p;
 
   BADARGS(3, 3, " key string");
-  
+
   p = encrypt_string(argv[1], argv[2]);
   Tcl_AppendResult(irp, p, NULL);
   nfree(p);
@@ -408,7 +409,7 @@ static int tcl_decrypt STDVAR
   char *p;
 
   BADARGS(3, 3, " key string");
-  
+
   p = decrypt_string(argv[1], argv[2]);
   Tcl_AppendResult(irp, p, NULL);
   nfree(p);
@@ -418,10 +419,10 @@ static int tcl_decrypt STDVAR
 static int tcl_encpass STDVAR
 {
   BADARGS(2, 2, " string");
-  
+
   if (strlen(argv[1]) > 0) {
     char p[16];
-   
+
     blowfish_encrypt_pass(argv[1], p);
     Tcl_AppendResult(irp, p, NULL);
   } else

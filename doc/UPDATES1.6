@@ -1,7 +1,7 @@
-$Id: UPDATES1.6,v 1.558 2004/06/01 00:59:46 wcc Exp $
+$Id: UPDATES1.6,v 1.591 2004/08/22 22:33:24 wcc Exp $
 
 Eggdrop Changes (since v1.6.0)
-     _________________________________________________________________
+    _____________________________________________________________________
 
                              Eggdrop Changes
 
@@ -10,9 +10,112 @@ Eggdrop Changes (since v1.6.0)
 
     ftp://ftp.eggheads.org/pub/eggdrop/UPDATES/
 
+  1.6.17 (22 August 2004):
+    + Final released on August 22nd, 2004.
+
+    - Lots of doc updates.
+    * Patch by: dollar, Wcc
+
+    + RC1 released on August 2nd, 2004.
+
+    - Added a "stripcodes" Tcl command. See doc/tcl-commands.doc for more
+      information.
+    * Patch by: BarkerJr
+
+    - Bot idx's should be considered valid to tcl_valididx.
+    * Found by: SteppenWolf - Patch by: Wcc
+
+    - Always try to detect shared Tcl libraries before static ones.
+    * Patch by: Wcc
+
+    - We now correctly differentiate the +l user flag from the +l bot flag.
+    * Found by: Joker - Patch by: Wcc, darko``
+
+    - Cleaned up modules.c and the module configure stuff quite a bit.
+    * Patch by: Wcc
+
+    - Detect Tcl in $HOME/lib and $HOME/tcl/lib first, as to make it easier
+      to allow users to override the system's Tcl version.
+    * Found by: various - Patch by: Wcc
+
+    - We now support module loading under Darwin (Mac OS X) and NeXT Step.
+    * Found by: various - Patch by: Wcc
+
+    - Don't try to call tcl_notes if the notes module isn't loaded.
+    * Found by: Chris Northwood - Patch by: lordares
+
+    - Show a more descriptive error message when a listen socket can't be
+      opened.
+    * Found by: various - Patch by: Wcc
+
+    - Fixed Tcl encoding issues with .tcl and .set.
+    * Found by: fabulous, Miguel Ventura - Patch by: CoderX2
+
+    - Added a set of Finnish language files and a Finnish MOTD.
+    * Patch by: Mikko Vester
+
+    - time_t isn't unsigned, and therefor %lu should not be used as a
+      conversion specifier.
+    * Patch by: lordares
+
+    - Fixed a gcc warning in dcc.c.
+    * Patch by: BarkerJr
+
+    - Added support for Quakenet channel modes.
+    * Patch by: thommey
+
+    - Removed an invalid killsock() in dcc.c.
+    * Patch by: lordares
+
+    - Fixed extra spaces being written to chan file.
+    * Patch by: lordares
+
+    - Reworked 'make config' / module configure process.
+    * Found by: various - Patch by: Wcc
+
+    - Op (+o) implies halfop (+l) now.
+    * Patch by: darko``
+
+    - Cleaned up and optimized rmspace() and fixfrom().
+    * Patch by: Sup
+
+    - Updated recomended Tcl version to 8.4.6.
+    * Patch by: Wcc
+
+    - Fix behavior of the BCST bind. BCST is now correctly triggered for
+      dccbroadcasts, as well as when a bot "says" something on a channel.
+      See doc/tcl-commands.doc for more information.
+    * Found by: FireEgl - Patch by: Wingman
+
+    - Remove some unneeded casts.
+    * Patch by: darko``
+
+    - Fixed performance issues with mv/cp when a lot of files are in the
+      file area.
+    * Found by: fabulous - Patch by: Wingman
+
+    - Typo in doc/COMPILING-FAQ. It's LD_LIBRARY_PATH, not LB_LIBRARY_PATH.
+    * Found by: NoPleX - Patch by: Wcc
+
+    - Fix a possible issue with ident code.
+    * Found by: various - Patch by: darko``
+
+    - Don't let .tcl mkdir create duplicate filedb entries.
+    * Found by: fabulous, Ze - Patch by: Wingman
+
+    - Fixed a compile error related to varargs when using old Tcl versions.
+    * Found by: Thomas Neumayer - Patch by: Wcc
+
+    - Fixed a compile error on systems that don't have socklen_t.
+    * Found by: Brad Edwards - Patch by: Wcc
+
+    - Suppress configure warnings on systems that use newer versions of GNU
+      coreutils.
+    * Patch by: Wcc
+
   1.6.16 (31 May 2004):
     + Final released on May 31, 2004.
-    
+
     - Added back a missing alarm call (removed accidentally with IPv6).
     * Patch by: TaKeDa
 
@@ -1080,3 +1183,5 @@ various   Fabian    Under certain circumstances, the old user file was
                     first.
                     Shrunk buffer size in cmd_boot(), using the new function.
           Shaun     Fixed crash with handles larger than 19 characters.
+    _____________________________________________________________________
+

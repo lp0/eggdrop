@@ -1,8 +1,8 @@
-$Id: TEXT-SUBSTITUTIONS,v 1.2 2004/01/09 05:56:35 wcc Exp $
+$Id: TEXT-SUBSTITUTIONS,v 1.4 2004/07/25 03:56:58 wcc Exp $
 
 Textfile Substitutions
 Last revised: March 08, 2002
-   ________________________________________________________________________
+    _____________________________________________________________________
 
                             Textfile Substitutions
 
@@ -23,9 +23,9 @@ respective values:
 
  %B   bot's nickname (i.e. "LamestBot")
 
- %V   current Eggdrop version (i.e. "eggdrop v1.6.16")
+ %V   current Eggdrop version (i.e. "eggdrop v1.6.17")
 
- %E   long form of %V (i.e. "Eggdrop v1.6.16 (C) 1997 Robey Pointer (C) 2004 Eggheads Development Team")
+ %E   long form of %V (i.e. "Eggdrop v1.6.17 (C) 1997 Robey Pointer (C) 2004 Eggheads Development Team")
 
  %C   channels the bot is on (i.e. "#lamest, #botnetcentral")
 
@@ -69,6 +69,6 @@ Other variables:
  %{end}        end columnated or restricted (i.e. %{+m}) block
 
  %{center}     center the following text (70 columns)
-     _________________________________________________________________
+    _____________________________________________________________________
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+  Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

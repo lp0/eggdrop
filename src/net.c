@@ -2,7 +2,7 @@
  * net.c -- handles:
  *   all raw network i/o
  *
- * $Id: net.c,v 1.67 2004/05/27 05:33:40 wcc Exp $
+ * $Id: net.c,v 1.71 2004/07/05 21:42:39 wcc Exp $
  */
 /*
  * This is hereby released into the public domain.
@@ -19,14 +19,14 @@
 #  include <sys/select.h>
 #endif
 #include <netinet/in.h>
-#include <arpa/inet.h>          /* is this really necessary? */
+#include <arpa/inet.h>
 #include <errno.h>
 #if HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
 #include <setjmp.h>
 
-#if !HAVE_GETDTABLESIZE
+#ifndef HAVE_GETDTABLESIZE
 #  ifdef FD_SETSIZE
 #    define getdtablesize() FD_SETSIZE
 #  else
@@ -286,6 +286,7 @@ void killsock(register int sock)
   /* Ignore invalid sockets.  */
   if (sock < 0)
     return;
+
   for (i = 0; i < MAXSOCKS; i++) {
     if ((socklist[i].sock == sock) && !(socklist[i].flags & SOCK_UNUSED)) {
       close(socklist[i].sock);
@@ -302,7 +303,7 @@ void killsock(register int sock)
       return;
     }
   }
-  putlog(LOG_MISC, "*", "Attempt to kill un-allocated socket %d !!", sock);
+  putlog(LOG_MISC, "*", "Warning: Attempt to kill un-allocated socket %d!", sock);
 }
 
 /* Send connection request to proxy
@@ -432,8 +433,6 @@ int open_telnet(char *server, int port)
 {
   int sock = getsock(0), ret = open_telnet_raw(sock, server, port);
 
-  if (ret < 0)
-    killsock(sock);
   return ret;
 }
 
@@ -448,10 +447,11 @@ int open_address_listen(IP addr, int *port)
 
   if (firewall[0]) {
     /* FIXME: can't do listen port thru firewall yet */
-    putlog(LOG_MISC, "*", "!! Cant open a listen port (you are using a "
-           "firewall)");
+    putlog(LOG_MISC, "*", "Can't open a listen port (you are using a "
+           "firewall).");
     return -1;
   }
+
   if (getmyip() > 0) {
     sock = getsock(SOCK_LISTEN);
     if (sock < 1)
@@ -477,6 +477,7 @@ int open_address_listen(IP addr, int *port)
       return -1;
     }
   }
+
   return sock;
 }
 
@@ -755,7 +756,7 @@ int sockgets(char *s, int *len)
           if (strlen(socklist[i].inbuf) > 510)
             socklist[i].inbuf[510] = 0;
           strcpy(s, socklist[i].inbuf);
-          px = (char *) nmalloc(strlen(p + 1) + 1);
+          px = nmalloc(strlen(p + 1) + 1);
           strcpy(px, p + 1);
           nfree(socklist[i].inbuf);
           if (px[0])
@@ -810,7 +811,7 @@ int sockgets(char *s, int *len)
       socklist[ret].flags &= ~SOCK_STRONGCONN;
       /* Buffer any data that came in, for future read. */
       socklist[ret].inbuflen = *len;
-      socklist[ret].inbuf = (char *) nmalloc(*len + 1);
+      socklist[ret].inbuf = nmalloc(*len + 1);
       /* It might be binary data. You never know. */
       egg_memcpy(socklist[ret].inbuf, xx, *len);
       socklist[ret].inbuf[*len] = 0;
@@ -838,7 +839,7 @@ int sockgets(char *s, int *len)
   /* Might be necessary to prepend stored-up data! */
   if (socklist[ret].inbuf != NULL) {
     p = socklist[ret].inbuf;
-    socklist[ret].inbuf = (char *) nmalloc(strlen(p) + strlen(xx) + 1);
+    socklist[ret].inbuf = nmalloc(strlen(p) + strlen(xx) + 1);
     strcpy(socklist[ret].inbuf, p);
     strcat(socklist[ret].inbuf, xx);
     nfree(p);
@@ -850,7 +851,7 @@ int sockgets(char *s, int *len)
     } else {
       p = socklist[ret].inbuf;
       socklist[ret].inbuflen = strlen(p) - 510;
-      socklist[ret].inbuf = (char *) nmalloc(socklist[ret].inbuflen + 1);
+      socklist[ret].inbuf = nmalloc(socklist[ret].inbuflen + 1);
       strcpy(socklist[ret].inbuf, p + 510);
       *(p + 510) = 0;
       strcpy(xx, p);
@@ -892,13 +893,13 @@ int sockgets(char *s, int *len)
   if (socklist[ret].inbuf != NULL) {
     p = socklist[ret].inbuf;
     socklist[ret].inbuflen = strlen(p) + strlen(xx);
-    socklist[ret].inbuf = (char *) nmalloc(socklist[ret].inbuflen + 1);
+    socklist[ret].inbuf = nmalloc(socklist[ret].inbuflen + 1);
     strcpy(socklist[ret].inbuf, xx);
     strcat(socklist[ret].inbuf, p);
     nfree(p);
   } else {
     socklist[ret].inbuflen = strlen(xx);
-    socklist[ret].inbuf = (char *) nmalloc(socklist[ret].inbuflen + 1);
+    socklist[ret].inbuf = nmalloc(socklist[ret].inbuflen + 1);
     strcpy(socklist[ret].inbuf, xx);
   }
   if (data)
@@ -961,7 +962,7 @@ void tputs(register int z, char *s, unsigned int len)
         x = 0;
       if (x < len) {
         /* Socket is full, queue it */
-        socklist[i].outbuf = (char *) nmalloc(len - x);
+        socklist[i].outbuf = nmalloc(len - x);
         egg_memcpy(socklist[i].outbuf, &s[x], len - x);
         socklist[i].outbuflen = len - x;
       }
@@ -1043,7 +1044,7 @@ void dequeue_sockets()
         char *p = socklist[i].outbuf;
 
         /* This removes any sent bytes from the beginning of the buffer */
-        socklist[i].outbuf = (char *) nmalloc(socklist[i].outbuflen - x);
+        socklist[i].outbuf = nmalloc(socklist[i].outbuflen - x);
         egg_memcpy(socklist[i].outbuf, p + x, socklist[i].outbuflen - x);
         socklist[i].outbuflen -= x;
         nfree(p);

@@ -2,7 +2,7 @@
  * tclmisc.c -- handles:
  *   Tcl stubs for everything else
  *
- * $Id: tclmisc.c,v 1.50 2004/05/26 00:20:19 wcc Exp $
+ * $Id: tclmisc.c,v 1.54 2004/08/02 18:50:47 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -27,19 +27,22 @@
 #include "modules.h"
 #include "tandem.h"
 #include "md5/md5.h"
+
 #ifdef TIME_WITH_SYS_TIME
-# include <sys/time.h>
-# include <time.h>
-#else
-# ifdef HAVE_SYS_TIME_H
 #  include <sys/time.h>
-# else
 #  include <time.h>
-# endif
+#else
+#  ifdef HAVE_SYS_TIME_H
+#    include <sys/time.h>
+#  else
+#    include <time.h>
+#  endif
 #endif
+
 #include <sys/stat.h>
+
 #ifdef HAVE_UNAME
-#include <sys/utsname.h>
+#  include <sys/utsname.h>
 #endif
 
 extern p_tcl_bind_list bind_table_list;
@@ -57,11 +60,13 @@ int expmem_tclmisc()
 {
   int i, tot = 0;
 
-  for (i = 0; i < max_logs; i++)
+  for (i = 0; i < max_logs; i++) {
     if (logs[i].filename != NULL) {
       tot += strlen(logs[i].filename) + 1;
       tot += strlen(logs[i].chname) + 1;
     }
+  }
+
   return tot;
 }
 
@@ -109,7 +114,7 @@ static int tcl_logfile STDVAR
         }
         logs[i].flags = 0;
       } else {
-        logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
+        logs[i].chname = nmalloc(strlen(argv[2]) + 1);
         strcpy(logs[i].chname, argv[2]);
       }
       Tcl_AppendResult(interp, argv[3], NULL);
@@ -125,9 +130,9 @@ static int tcl_logfile STDVAR
     if (logs[i].filename == NULL) {
       logs[i].flags = 0;
       logs[i].mask = logmodes(argv[1]);
-      logs[i].filename = (char *) nmalloc(strlen(argv[3]) + 1);
+      logs[i].filename = nmalloc(strlen(argv[3]) + 1);
       strcpy(logs[i].filename, argv[3]);
-      logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
+      logs[i].chname = nmalloc(strlen(argv[2]) + 1);
       strcpy(logs[i].chname, argv[2]);
       Tcl_AppendResult(interp, argv[3], NULL);
       return TCL_OK;
@@ -373,7 +378,7 @@ static int tcl_unixtime STDVAR
 
   BADARGS(1, 1, "");
 
-  egg_snprintf(s, sizeof s, "%lu", (unsigned long) now2);
+  egg_snprintf(s, sizeof s, "%li", now2);
   Tcl_AppendResult(irp, s, NULL);
   return TCL_OK;
 }
@@ -621,6 +626,43 @@ static int tcl_callevent STDVAR
   return TCL_OK;
 }
 
+static int tcl_stripcodes STDVAR
+{
+  int flags = 0;
+  char *p;
+
+  BADARGS(3, 3, " strip-flags string");
+
+  for (p = argv[1]; *p; p++)
+    switch (*p) {
+    case 'a':
+      flags |= STRIP_ANSI;
+      break;
+    case 'b':
+      flags |= STRIP_BOLD;
+      break;
+    case 'c':
+      flags |= STRIP_COLOR;
+      break;
+    case 'g':
+      flags |= STRIP_BELLS;
+      break;
+    case 'r':
+      flags |= STRIP_REV;
+      break;
+    case 'u':
+      flags |= STRIP_UNDER;
+      break;
+    default:
+      Tcl_AppendResult(irp, "Invalid strip-flags: ", argv[1], NULL);
+      return TCL_ERROR;
+    }
+
+  strip_mirc_codes(flags, argv[2]);
+  Tcl_AppendResult(irp, argv[2], NULL);
+  return TCL_OK;
+}
+
 #ifdef USE_TCL_OBJ
 static int tcl_md5(cd, irp, objc, objv)
 ClientData cd;
@@ -707,5 +749,6 @@ tcl_cmds tclmisc_cmds[] = {
 #endif /* USE_TCL_OBJ */
   {"binds",               tcl_binds},
   {"callevent",       tcl_callevent},
+  {"stripcodes",     tcl_stripcodes},
   {NULL,                       NULL}
 };

@@ -2,7 +2,7 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  *
- * $Id: channels.c,v 1.86 2004/01/09 05:56:37 wcc Exp $
+ * $Id: channels.c,v 1.89 2004/06/27 17:26:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -25,6 +25,7 @@
 
 #define MODULE_NAME "channels"
 #define MAKING_CHANNELS
+
 #include <sys/stat.h>
 #include "src/mod/module.h"
 
@@ -112,6 +113,15 @@ static void set_mode_protect(struct chanset_t *chan, char *set)
       break;
     case 'r':
       i = CHANLONLY;
+      break;
+    case 'D':
+      i = CHANDELJN;
+      break;
+    case 'u':
+      i = CHANSTRIP;
+      break;
+    case 'N':
+      i = CHANNONOTC;
       break;
     case 't':
       i = CHANTOPIC;
@@ -205,6 +215,12 @@ static void get_mode_protect(struct chanset_t *chan, char *s)
       *p++ = 'M';
     if (tst & CHANLONLY)
       *p++ = 'r';
+    if (tst & CHANDELJN)
+      *p++ = 'D';
+    if (tst & CHANSTRIP)
+      *p++ = 'u';
+    if (tst & CHANNONOTC)
+      *p++ = 'N';
     if (tst & CHANTOPIC)
       *p++ = 't';
     if (tst & CHANNOMSG)
@@ -389,18 +405,17 @@ static void write_channels()
     convert_element(chan->need_key, need3);
     convert_element(chan->need_unban, need4);
     convert_element(chan->need_limit, need5);
+    /* Do not indent me (adds extra spaces to chan file). */
     fprintf(f,
-            "channel %s %s%schanmode %s idle-kick %d stopnethack-mode %d \
-            revenge-mode %d need-op %s need-invite %s need-key %s \
-            need-unban %s need-limit %s flood-chan %d:%d flood-ctcp %d:%d \
-            flood-join %d:%d flood-kick %d:%d flood-deop %d:%d \
-            flood-nick %d:%d aop-delay %d:%d ban-time %d exempt-time %d \
-            invite-time %d %cenforcebans %cdynamicbans %cuserbans %cautoop \
-            %cautohalfop %cbitch %cgreet %cprotectops %cprotecthalfops \
-            %cprotectfriends %cdontkickops %cstatuslog %crevenge %crevengebot \
-            %cautovoice %csecret %cshared %ccycle %cseen %cinactive \
-            %cdynamicexempts %cuserexempts %cdynamicinvites \
-            %cuserinvites %cnodesynch ",
+"channel %s %s%schanmode %s idle-kick %d stopnethack-mode %d revenge-mode %d \
+need-op %s need-invite %s need-key %s need-unban %s need-limit %s \
+flood-chan %d:%d flood-ctcp %d:%d flood-join %d:%d flood-kick %d:%d \
+flood-deop %d:%d flood-nick %d:%d aop-delay %d:%d ban-time %d exempt-time %d \
+invite-time %d %cenforcebans %cdynamicbans %cuserbans %cautoop %cautohalfop \
+%cbitch %cgreet %cprotectops %cprotecthalfops %cprotectfriends %cdontkickops \
+%cstatuslog %crevenge %crevengebot %cautovoice %csecret %cshared %ccycle \
+%cseen %cinactive %cdynamicexempts %cuserexempts %cdynamicinvites \
+%cuserinvites %cnodesynch ",
             channel_static(chan) ? "set" : "add", name, channel_static(chan) ?
             " " : " { ", w2, chan->idle_kick, chan->stopnethack_mode,
             chan->revenge_mode, need1, need2, need3, need4, need5,

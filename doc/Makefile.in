@@ -1,5 +1,5 @@
 # Makefile for doc/
-# $Id: Makefile.in,v 1.21 2003/12/09 22:21:46 wcc Exp $
+# $Id: Makefile.in,v 1.23 2004/08/08 18:17:00 wcc Exp $
 
 SHELL = @SHELL@
 top_srcdir = @top_srcdir@
@@ -12,7 +12,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 
-DOCS = ABOUT AUTHORS BANS BOTNET BUG-REPORT COMPILING-FAQ CONTENTS \
+DOCS = ABOUT AUTHORS BANS BOTNET BUG-REPORT COMPILE-GUIDE CONTENTS \
 FIRST-SCRIPT KNOWN-PROBLEMS MODULES PARTYLINE PATCH-HOWTO tcl-commands.doc \
 TEXT-SUBSTITUTIONS TRICKS UPDATES1.6 USERS
 
@@ -36,19 +36,19 @@ clean:
 install:
 	@if test ! -d $(DEST)/doc; then \
 		echo "Creating 'doc' subdirectory."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc >/dev/null; \
 	fi
 	@if test ! -d $(DEST)/doc/man1; then \
 		echo "Creating 'doc/man1' subdirectory."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc/man1; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc/man1 >/dev/null; \
 	fi
 	@if test ! -d $(DEST)/doc/html; then \
 		echo "Creating 'doc/html' subdirectory."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc/html; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc/html >/dev/null; \
 	fi
 	@if test ! -d $(DEST)/doc/settings; then \
 		echo "Creating 'doc/settings' subdirectory."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc/settings; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/doc/settings >/dev/null; \
 	fi
 	@echo "Copying docs."
 	@for i in $(DOCS); do \

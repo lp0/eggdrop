@@ -2,7 +2,7 @@
 #  This is the Makefile for EGGDROP (the IRC bot)
 #  You should never need to edit this.
 #
-# $Id: Makefile.in,v 1.36 2004/04/09 18:31:37 wcc Exp $
+# $Id: Makefile.in,v 1.39 2004/07/25 11:17:33 wcc Exp $
 
 SHELL = @SHELL@
 top_srcdir = @top_srcdir@
@@ -25,50 +25,53 @@ EGGVERSION = @EGGVERSION@
 #                    or 'make sdebug'
 CFLGS =
 
-# configure SHOULD set these...you may need to tweak them to get modules
-# to compile .. if you do...let the devel-team know the working settings
-# btw to turn STRIP off, do 'STRIP = touch' not 'STRIP ='
+# ./configure SHOULD set these; however you may need to tweak them to
+# get modules to compile. If you do, PLEASE let the development team know,
+# so we can incorporate needed changes into the next release. You can
+# contact us at eggdev@eggheads.org, as always.
 
-# defaults
+# Compiler
 CC = @CC@
-LD = @CC@
-STRIP = @STRIP@
-RANLIB = @RANLIB@
-
-# make eggmod
 MOD_CC = @MOD_CC@
-MOD_LD = @MOD_LD@
-MOD_STRIP = @MOD_STRIP@
-
-# make modules
 SHLIB_CC = @SHLIB_CC@
-SHLIB_LD = @SHLIB_LD@
-SHLIB_STRIP = @SHLIB_STRIP@
-MOD_EXT = @MOD_EXT@
 
-# programs make install uses
+# Linker
+LD = @CC@
+MOD_LD = @MOD_LD@
+SHLIB_LD = @SHLIB_LD@
+
+# Stripping
+# To turn STRIP off, use 'STRIP = touch' not 'STRIP ='.
+STRIP = @STRIP@
+MOD_STRIP = @MOD_STRIP@
+SHLIB_STRIP = @SHLIB_STRIP@
+
+# Programs make install uses
 LN_S = @LN_S@
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 
-# STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
-# - - - - - - - - do not edit anything below this line. - - - - - - - - #
-# - - - - - - - - -  it's all done by configure now.  - - - - - - - - - #
-# STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
-
-# stuff for Tcl
+# Misc
+RANLIB = @RANLIB@
+MOD_EXT = @MOD_EXT@
 XREQS = @TCL_REQS@
-XLIBS = @TCL_LIBS@ @LIBS@
 TCLLIB = @TCLLIB@
 TCLLIBFN = @TCLLIBFN@
 
-DEBCFLAGS = -DDEBUG_ASSERT -DDEBUG_MEM 
+# Extra libraries
+# XLIBS will be linked with everything; MODULE_XLIBS will only be linked with
+# the actual module objects.
+XLIBS = @TCL_LIBS@ @LIBS@
+MODULE_XLIBS = @MODULE_XLIBS@
+
+# Shouldn't need to touch anything below here.
+DEBCFLAGS = -DDEBUG_ASSERT -DDEBUG_MEM
 
 modconf = $(top_srcdir)/misc/modconfig --top_srcdir=$(top_srcdir)
 
-egg_test_run =  EGG_LANGDIR=$(top_srcdir)/language ./$(EGGEXEC) -v
+egg_test_run = EGG_LANGDIR=$(top_srcdir)/language ./$(EGGEXEC) -v
 
 post_config  =  echo "" && \
 		echo "You can now compile the bot, using \"make\"." && \
@@ -89,7 +92,8 @@ MAKE_MODEGG = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(MOD_CC)' 'LD=$(MOD_LD)' \
 'XLIBS=$(XLIBS)' 'EGGEXEC=$(EGGEXEC)' 'EGGBUILD=(standard build)' 'MODOBJS='
 
 MAKE_MODULES = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(SHLIB_CC)' 'LD=$(SHLIB_LD)' \
-'STRIP=$(SHLIB_STRIP)' 'CFLGS=$(CFLGS)' 'XLIBS=$(XLIBS)' 'MOD_EXT=$(MOD_EXT)'
+'STRIP=$(SHLIB_STRIP)' 'CFLGS=$(CFLGS)' 'XLIBS=$(XLIBS)' 'MOD_EXT=$(MOD_EXT)' \
+'MODULE_XLIBS=$(MODULE_XLIBS)'
 
 MAKE_STATIC = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(CC)' 'LD=$(LD)' \
 'STRIP=$(STRIP)' 'RANLIB=$(RANLIB)' 'CFLGS=$(CFLGS) -DSTATIC' \
@@ -104,7 +108,7 @@ MAKE_DEBEGG = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(MOD_CC)' 'LD=$(MOD_LD) -g' \
 
 MAKE_DEBMODULES = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(SHLIB_CC)' 'LD=$(SHLIB_LD)' \
 'XLIBS=$(XLIBS)' 'STRIP=touch' 'CFLGS=-g3 $(DEBCFLAGS) $(CFLGS)' \
-'MOD_EXT=$(MOD_EXT)'
+'MOD_EXT=$(MOD_EXT)' 'MODULE_XLIBS=$(MODULE_XLIBS)'
 
 MAKE_SDEBUG = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(CC)' 'LD=$(LD) -g' \
 'STRIP=touch' 'RANLIB=$(RANLIB)' 'CFLGS=-g3 $(DEBCFLAGS) -DSTATIC $(CFLGS)' \
@@ -146,9 +150,6 @@ depend:
 	@cd src/md5 && $(MAKE_DEPEND) depend
 	@cd src/mod && $(MAKE_DEPEND) depend
 	@cd src/compat && $(MAKE_DEPEND) depend
-
-eggautoconf:
-	@$(modconf) eggautoconf
 
 config:
 	@$(modconf) modules-still-exist
@@ -298,16 +299,22 @@ install-scripts install-end
 install-start:
 	@if test ! -f $(EGGEXEC); then \
 		echo ""; \
-		echo "You haven't compiled eggdrop yet."; \
-		echo "To compile eggdrop use:"; \
-		echo "  make <target>"; \
+		echo "You haven't compiled Eggdrop yet."; \
+		echo "To compile Eggdrop, use:"; \
 		echo ""; \
-		echo "  valid targets: eggdrop static debug sdebug"; \
+		echo "  make [target]"; \
+		echo ""; \
+		echo "Valid targets: 'eggdrop', 'static', 'debug', 'sdebug'."; \
+		echo "Default target: '@DEFAULT_MAKE@'."; \
 		echo ""; \
 		exit 1; \
 	fi
 	@if test "x$(DEST)" = "x"; then \
-		echo "You must specify a destination directory with DEST="; \
+		echo "You must specify a destination directory."; \
+		echo "Example:"; \
+		echo ""; \
+		echo "  make install DEST=\"/home/wcc/mybot\""; \
+		echo ""; \
 		exit 1; \
 	fi
 	@echo ""
@@ -317,7 +324,7 @@ install-start:
 	@echo ""
 	@if test ! -d $(DEST); then \
 		echo "Creating directory '$(DEST)'."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST); \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST) >/dev/null; \
 	fi
 
 install-bin:
@@ -349,7 +356,7 @@ install-modules:
 	@if test ! "x`echo *.$(MOD_EXT)`" = "x*.$(MOD_EXT)"; then \
 		if test ! -d $(DEST)/modules-$(EGGVERSION); then \
 			echo "Creating 'modules-$(EGGVERSION)' subdirectory and symlink."; \
-			$(top_srcdir)/misc/mkinstalldirs $(DEST)/modules-$(EGGVERSION); \
+			$(top_srcdir)/misc/mkinstalldirs $(DEST)/modules-$(EGGVERSION) >/dev/null; \
 		fi; \
 		(cd $(DEST) && $(LN_S) modules-$(EGGVERSION) modules); \
 		echo "Copying new modules."; \
@@ -364,12 +371,12 @@ install-data:
 	fi
 	@if test ! -d $(DEST)/logs; then \
 		echo "Creating 'logs' subdirectory."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/logs; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/logs >/dev/null; \
 		$(INSTALL_DATA) $(srcdir)/logs/CONTENTS $(DEST)/logs/; \
 	fi;
 	@if test ! -d $(DEST)/text; then \
 		echo "Creating 'text' subdirectory."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/text; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/text >/dev/null; \
 	fi;
 	@if test ! -f $(DEST)/text/motd; then \
 		$(INSTALL_DATA) $(srcdir)/text/motd $(DEST)/text/; \
@@ -383,7 +390,7 @@ install-help:
 	@if test ! "x`echo $(srcdir)/help/*.help`" = "x$(srcdir)/help/*.help"; then \
 		if test ! -d $(DEST)/help; then \
 			echo "Creating 'help' subdirectory."; \
-			$(top_srcdir)/misc/mkinstalldirs $(DEST)/help; \
+			$(top_srcdir)/misc/mkinstalldirs $(DEST)/help >/dev/null; \
 		fi; \
 		for i in $(srcdir)/help/*.help; do \
 			$(INSTALL_DATA) $$i $(DEST)/help/; \
@@ -392,7 +399,7 @@ install-help:
 	@if test ! "x`echo $(srcdir)/help/msg/*.help`" = "x$(srcdir)/help/msg/*.help"; then \
 		if test ! -d $(DEST)/help/msg; then \
 			echo "Creating 'help/msg' subdirectory."; \
-			$(top_srcdir)/misc/mkinstalldirs $(DEST)/help/msg; \
+			$(top_srcdir)/misc/mkinstalldirs $(DEST)/help/msg >/dev/null; \
 		fi; \
 		for i in $(srcdir)/help/msg/*.help; do \
 			$(INSTALL_DATA) $$i $(DEST)/help/msg/; \
@@ -401,7 +408,7 @@ install-help:
 	@if test ! "x`echo $(srcdir)/help/set/*.help`" = "x$(srcdir)/help/set/*.help"; then \
 		if test ! -d $(DEST)/help/set; then \
 			echo "Creating 'help/set' subdirectory."; \
-			$(top_srcdir)/misc/mkinstalldirs $(DEST)/help/set; \
+			$(top_srcdir)/misc/mkinstalldirs $(DEST)/help/set >/dev/null; \
 		fi; \
 		for i in $(srcdir)/help/set/*.help; do \
 			$(INSTALL_DATA) $$i $(DEST)/help/set/; \
@@ -414,7 +421,7 @@ install-language:
 	@if test ! "x`echo $(srcdir)/language/*.lang`" = "x$(srcdir)/language/*.lang"; then \
 		if test ! -d $(DEST)/language; then \
 			echo "Creating 'language' subdirectory."; \
-			$(top_srcdir)/misc/mkinstalldirs $(DEST)/language; \
+			$(top_srcdir)/misc/mkinstalldirs $(DEST)/language >/dev/null; \
 		fi; \
 		for i in $(srcdir)/language/*.lang; do \
 			$(INSTALL_DATA) $$i $(DEST)/language/; \
@@ -425,8 +432,8 @@ install-language:
 install-filesys:
 	@if test ! -d $(DEST)/filesys; then \
 		echo "Creating skeletal filesystem subdirectories."; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/filesys; \
-		$(top_srcdir)/misc/mkinstalldirs $(DEST)/filesys/incoming; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/filesys >/dev/null; \
+		$(top_srcdir)/misc/mkinstalldirs $(DEST)/filesys/incoming >/dev/null; \
 	fi
 
 install-doc:
