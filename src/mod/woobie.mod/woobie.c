@@ -35,7 +35,7 @@ static void woobie_report (int idx, int details)
 
    context;
    if (details)
-     dprintf(idx, "     0 woobies using %d bytes\n",size);
+     dprintf(idx, "    0 woobies using %d bytes\n",size);
 }
 
 static cmd_t mydcc[] =

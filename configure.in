@@ -37,9 +37,13 @@ dnl AC_CHECK_PROGS(AWK,awk gawk mawk)
 AC_PROG_RANLIB
 
 dnl stop putting -g in there!  @#$!#$%!
-CFLAGS="-O"
-if test "x$CC" = "xgcc"; then
-  CFLAGS="-O2"
+if test "x${CFLAGS}" = "x" ; then
+  CFLAGS="-O"
+  if test "x$CC" = "xgcc"; then
+    CFLAGS="-O2"
+  fi
+else
+  CFLAGS=${CFLAGS}
 fi
 
 dnl cp checks
@@ -87,7 +91,7 @@ system=`$UNAME`
 DLOPEN_1=1
 case $system in
   Linux)
-    CFLAGS="${CFLAGS} -Wall"
+    CFLAGS="$CFLAGS -Wall"
     AC_MSG_RESULT(Linux! The choice of the GNU generation)
     SHLIB_LD="${CC} -shared -nostartfiles"
     BEL_MOD_LD="${CC}"

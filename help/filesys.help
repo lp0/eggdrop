@@ -116,8 +116,8 @@ see also: cd, pwd, get
    shared files are displayed with a "(shr)" next to them.
    
 see also: hide, share
-%{help=filesys/rmdir}%{+j}
-###  %brmdir%b <dir> [flags [channel]]
+%{help=filesys/mkdir}%{+j}
+###  %bmkdir%b <dir> [flags [channel]]
    creates a subdirectory from this one, with the given name.  if
    flags are specified, then those flags are required to enter or
    even see the directory.  you can even specify a channel that the

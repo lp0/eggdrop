@@ -320,7 +320,8 @@ static void write_channels()
 	      channel_cycle(chan) ? '+' : '-');
       fprintf(f, "%cseen ", 
 	      channel_seen(chan) ? '+' : '-');
-      if (fprintf(f, "%c\n", channel_static(chan) ? ' ' : '}') == EOF) {
+      fprintf(f, "%c\n", channel_static(chan) ? ' ' : '}');
+      if (fflush(f)) {
 	 putlog(LOG_MISC, "*", "ERROR writing channel file.");
 	 fclose(f);
 	 return;

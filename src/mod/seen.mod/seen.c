@@ -633,7 +633,7 @@ LOOPIT:
 static void seen_report (int idx, int details)
 {
    if (details)
-     dprintf(idx, "     seen.so - PUB, DCC and MSG \"seen\" commands.\n");
+     dprintf(idx, "    seen.so - PUB, DCC and MSG \"seen\" commands.\n");
 }
 
 /*

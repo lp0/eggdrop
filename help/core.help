@@ -37,7 +37,7 @@ For masters:
 %b  rehash       restart%b
 %{+n}
 For owners:
-%b  die          simul        module       load         unload%b
+%b  die          simul        module       loadmod      unloadmod%b
 %b  set          tcl          rehelp       modules%b
 %{-}
 All commands begin with '.' and all else goes to the party line.

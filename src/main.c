@@ -77,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.15";
-int egg_numver = 1031500;
+char egg_version[1024] = "1.3.16";
+int egg_numver = 1031600;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -629,7 +629,24 @@ int main (int argc, char ** argv)
       if (xx == -1)
 	 fatal("CANNOT FORK PROCESS.", 0);
       if (xx != 0) {
-	 printf("Launched into the background  (pid: %d)\n\n", xx);
+         FILE *fp;
+         /* need to attempt to write pid now, not later */
+         unlink(pid_file);
+         fp = fopen(pid_file, "w");
+         if (fp != NULL) {
+            fprintf(fp, "%u\n", xx);
+            if (fflush(fp)) {
+               /* kill bot incase a botchk is run from crond */
+               printf("* Warning!  Could not write %s file!\n", pid_file);
+               printf("  Try freeing some disk space\n");
+               fclose(fp);
+               unlink(pid_file);
+               exit(1);
+            }
+            fclose(fp);
+         } else
+            printf("* Warning!  Could not write %s file!\n", pid_file);
+         printf("Launched into the background  (pid: %d)\n\n", xx);
 #if HAVE_SETPGID
 	 setpgid(xx, xx);
 #endif
@@ -638,13 +655,19 @@ int main (int argc, char ** argv)
    }
    use_stderr = 0;		/* stop writing to stderr now */
    xx = getpid();
-   if (xx != 0) {
+   if ((xx != 0) && (!backgrd)) {
       FILE *fp;
       /* write pid to file */
       unlink(pid_file);
       fp = fopen(pid_file, "w");
       if (fp != NULL) {
 	 fprintf(fp, "%u\n", xx);
+         if (fflush(fp)) {
+      /* let the bot live since this doesn't appear to be a botchk */
+            printf("* Warning!  Could not write %s file!\n", pid_file);
+            fclose(fp);
+            unlink(pid_file);
+         }
 	 fclose(fp);
       } else
 	 printf("* Warning!  Could not write %s file!\n", pid_file);

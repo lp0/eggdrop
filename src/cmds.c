@@ -1982,38 +1982,38 @@ static void cmd_module (struct userrec * u, int idx, char * par)
    do_module_report(idx,2,par[0]?par:NULL);
 }
 
-static void cmd_loadmodule (struct userrec * u, int idx, char * par)
+static void cmd_loadmod (struct userrec * u, int idx, char * par)
 {
    const char *p;
 
    context;
    if (!par[0]) {
-      dprintf(idx, "%s: loadmodule <module>\n", USAGE);
+      dprintf(idx, "%s: loadmod <module>\n", USAGE);
    } else {
       p = module_load(par);
       if (p)
 	 dprintf(idx, "%s: %s %s\n", par, MOD_LOADERROR, p);
       else {
-	 putlog(LOG_CMDS, "*", "#%s# loadmodule %s", dcc[idx].nick, par);
+	 putlog(LOG_CMDS, "*", "#%s# loadmod %s", dcc[idx].nick, par);
 	 dprintf(idx, "%s %s\n", MOD_LOADED, par);
       }
    }
    context;
 }
 
-static void cmd_unloadmodule (struct userrec * u, int idx, char * par)
+static void cmd_unloadmod (struct userrec * u, int idx, char * par)
 {
    char *p;
 
    context;
    if (!par[0]) {
-      dprintf(idx, "%s: unloadmodule <module>\n", USAGE);
+      dprintf(idx, "%s: unloadmod <module>\n", USAGE);
    } else {
       p = module_unload(par,dcc[idx].nick);
       if (p)
 	 dprintf(idx, "%s %s: %s\n", MOD_UNLOADERROR, par, p);
       else {
-	 putlog(LOG_CMDS, "*", "#%s# unloadmodule %s", dcc[idx].nick, par);
+	 putlog(LOG_CMDS, "*", "#%s# unloadmod %s", dcc[idx].nick, par);
 	 dprintf(idx, "%s %s\n", MOD_UNLOADED, par);
       }
    }
@@ -2038,12 +2038,15 @@ static void cmd_pls_ignore (struct userrec * u, int idx, char * par)
    putlog(LOG_CMDS, "*", "#%s# +ignore %s %s", dcc[idx].nick, who, par);
 }
 
-static void cmd_mns_ignore (struct userrec * u, int idx, char * par)
-{
+static void cmd_mns_ignore (struct userrec * u, int idx, char * par) {
+   char buf[UHOSTLEN+1];
+   
    if (!par[0]) {
       dprintf(idx, "Usage: -ignore <hostmask>\n");
       return;
    }
+   strncpy(buf, par, UHOSTLEN);
+   buf[UHOSTLEN] = 0;
    if (delignore(par)) {
       putlog(LOG_CMDS, "*", "#%s# -ignore %s", dcc[idx].nick, par);
       dprintf(idx, "No longer ignoring: %s\n", par);
@@ -2259,7 +2262,7 @@ cmd_t C_dcc[63]={
   { "help", "", (Function)cmd_help, NULL },
   { "ignores", "m", (Function)cmd_ignores, NULL },
   { "link", "t", (Function)cmd_link, NULL },
-  { "loadmod", "n", (Function)cmd_loadmodule, NULL },
+  { "loadmod", "n", (Function)cmd_loadmod, NULL },
   { "match", "to|o", (Function)cmd_match, NULL },
   { "me", "", (Function)cmd_me, NULL },
   { "module", "m", (Function)cmd_module, NULL },
@@ -2284,7 +2287,7 @@ cmd_t C_dcc[63]={
   { "tcl", "n", (Function)cmd_tcl, NULL },
   { "trace", "", (Function)cmd_trace, NULL },
   { "unlink", "t", (Function)cmd_unlink, NULL },
-  { "unloadmod", "n", (Function)cmd_unloadmodule, NULL },
+  { "unloadmod", "n", (Function)cmd_unloadmod, NULL },
   { "vbottree", "t", (Function)cmd_vbottree, NULL },
   { "who", "", (Function)cmd_who, NULL },
   { "whois", "to|o", (Function)cmd_whois, NULL },

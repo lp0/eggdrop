@@ -186,61 +186,47 @@ char * newsplit ( char ** rest ) {
    or "abc!user@1.2.3.4" into "*!user@1.2.3.*"  */
 void maskhost (char * s, char * nw)
 {
-   char *p, *q, xx[150];
-   strcpy(xx, s);
-   p = strchr(s, '!');
-   if (p != NULL) {
-      /* copy username over, quoting '?' and '*' */
-      char *dest = xx, *src = p + 1;
-      while (*src) {
-	 if ((*src == '*') || (*src == '?'))
-	    *dest++ = '\\';
-	 *dest++ = *src++;
+   char *p, *q, xx[UHOSTLEN + 1], *e, *f;
+   int i;
+
+   p = (q = strchr(s, '!')) ? q + 1 : s;
+   /* strip of any nick, if a username is found, use last 8 chars */
+   if ((q = strchr(p, '@'))) {
+         if ((q - p) > 10) {
+	          xx[0] = '*';
+	          p = q - 8;
+	          i = 1;
+	       } else
+           i = 0;
+         while (*p != '@')
+           xx[i++] = *p++;
+         xx[i++] = '@';
+         q++;
+      } else {
+            xx[0] = '*';
+            xx[1] = '@';
+            i = 2;
+            q = s;
+         }
+   /* now q points to the hostname, i point to where to put the mask */
+   p = strchr(q, '.');
+   e = strchr(p + 1, '.');
+   if (!p || !e)
+     /* TLD or 2 part host */
+     strcpy(xx + i, q);
+   else {
+         for (f = e; *f; f++);
+         f--;
+         if ((*f >= '0') && (*f <= '9')) {  /* numeric IP address */
+	          while (*f != '.')
+	            f--;
+	          strncpy(xx + i, q, f - q);
+	          i += (f - q);
+	          strcpy(xx + i, ".*");
+	       } else  /* normal host >= 3 parts */
+	sprintf(xx + i, "*%s", strchr(e + 1, '.') ? e : p);
       }
-      *dest = 0;
-      if (strlen(dest) > 10) {
-	 /* truncate */
-	 p = strchr(s, '@');
-	 if (p != NULL) {
-	    if (*(dest + 8) == '\\') {
-	       *(dest + 8) = '*';
-	       strcpy(dest + 9, p);
-	    } else {
-	       *(dest + 9) = '*';
-	       strcpy(dest + 10, p);
-	    }
-	 }
-      }
-   }
-   p = strchr(xx, '@');
-   if (p != NULL) {
-      q = strchr(p, '.');
-      if (q == NULL) {
-	 /* form xx@yy -> very bizarre */
-	 sprintf(nw, "*!%s", xx);
-	 return;
-      }
-      if (strchr(q + 1, '.') == NULL) {
-	 /* form xx@yy.com -> don't truncate */
-	 sprintf(nw, "*!%s", xx);
-	 return;
-      }
-      if ((xx[strlen(xx) - 1] >= '0') && (xx[strlen(xx) - 1] <= '9')) {
-	 /* ip number -> xx@#.#.#.* */
-	 q = strrchr(p, '.');
-	 if (q != NULL)
-	    strcpy(q, ".*");
-	 sprintf(nw, "*!%s", xx);
-	 return;
-      }
-      /* form xx@yy.zz.etc.edu or whatever -> xx@*.zz.etc.edu */
-      if (q != NULL) {
-	 *(p + 1) = '*';
-	 strcpy(p + 2, q);
-      }
-      sprintf(nw, "*!%s", xx);
-   } else
-      strcpy(nw, "*");
+   sprintf(nw, "*!%s", xx);
 }
 
 /* copy a file from one place to another (possibly erasing old copy) */

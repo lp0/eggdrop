@@ -20,6 +20,7 @@ PASS
 OP
 INVITE
 GO
+KEY
 %{-}%{+m}
 DIE
 JUMP
@@ -79,6 +80,11 @@ There may also be additional commands provided by other modules.
    This will tell me to voice you on the channel if I have
    ops and you don't have a voice, and I monitor that channels
    voices.
+%{help=key}%{+o|o}
+%b/MSG%b %B %bKEY%b <password> <channel>
+   This will send you the key for a channel that is +k
+   and possibly also invite if it is +i (if I'm on that
+   channel).
 %{help=pass}
 %b/MSG%b %B %bPASS%b <password>
    This sets a password, which lets you use other commands,

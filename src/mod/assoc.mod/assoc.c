@@ -360,7 +360,7 @@ static void assoc_report (int idx, int details)  {
 	 size += sizeof(assoc_t);
 	 a = a->next;
       }
-      dprintf(idx, "     %d assocs using %d bytes\n",
+      dprintf(idx, "    %d assocs using %d bytes\n",
 	      count, size);
    }
 }

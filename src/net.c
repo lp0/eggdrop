@@ -259,10 +259,15 @@ void killsock (int sock)
    for (i = 0; i < MAXSOCKS; i++) {
       if (socklist[i].sock == sock) {
 	 close(socklist[i].sock);
-	 if (socklist[i].inbuf != NULL)
+	 if (socklist[i].inbuf != NULL) {
 	    nfree(socklist[i].inbuf);
-	 if (socklist[i].outbuf != NULL)
+		socklist[i].inbuf = NULL;
+	 }
+	 if (socklist[i].outbuf != NULL) {
 	    nfree(socklist[i].outbuf);
+		socklist[i].outbuf = NULL;
+		socklist[i].outbuflen = 0;
+	 }
 	 socklist[i].flags = SOCK_UNUSED;
 	 return;
       }

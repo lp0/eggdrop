@@ -563,6 +563,52 @@ static int msg_op (char * nick, char * host, struct userrec * u, char * par)
    return 1;
 }
 
+static int msg_key (char * nick, char * host, struct userrec * u, char * par)
+{
+   struct chanset_t *chan;
+   char *pass;
+   struct flag_record fr = { FR_GLOBAL|FR_CHAN,0,0,0, 0, 0 };
+   
+   if (match_my_nick(nick))
+     return 1;
+   pass = newsplit(&par);
+   if (u_pass_match(u,pass)) {
+      /* Prevent people from getting key with no pass set */
+      if (!u_pass_match(u,"-")) {
+         if (!(chan = findchan(par))) {
+            dprintf(DP_SERVER, "NOTICE %s :%s: /MSG %s key <pass> <channel>\n",
+		    nick, USAGE, botname);
+            return 1;
+         }
+         if (!channel_active(chan)) {
+            dprintf(DP_SERVER, "NOTICE %s :%s: %s\n", nick, par, IRC_NOTONCHAN);
+            return 1;
+         }
+	 chan = findchan(par);
+	 if (chan && channel_active(chan)) {
+	    get_user_flagrec(u,&fr,par);
+	    if (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) {
+               if (chan->channel.key[0]) {
+		  dprintf(DP_SERVER, "NOTICE %s :%s: key is %s\n", nick, par, chan->channel.key);
+		  if (invite_key && (chan->channel.mode & CHANINV)) {
+		     dprintf(DP_SERVER, "INVITE %s %s\n", nick, par);
+		     putlog(LOG_CMDS, "*", "(%s!%s) !%s! KEY %s",
+			    nick, host, u->handle, par);
+		  } else {
+		     dprintf(DP_SERVER, "NOTICE %s :%s: no key set for this channel\n", nick, par);
+		     putlog(LOG_CMDS, "*", "(%s!%s) !%s! KEY %s",
+			    nick, host, u->handle, par);
+		  }
+	       }
+	    }
+	    return 1;
+	 }
+      }
+   }
+   putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed KEY", nick, host, nick);
+   return 1;
+}
+
 static int msg_voice (char * nick, char * host, struct userrec * u, char * par)
 {
    struct chanset_t *chan;
@@ -600,6 +646,7 @@ static int msg_invite (char * nick, char * host, struct userrec * u, char * par)
 {
    char * pass;
    struct chanset_t * chan;
+   struct flag_record fr = { FR_GLOBAL|FR_CHAN,0,0,0, 0, 0 };
    
    if (match_my_nick(nick))
       return 1;
@@ -607,6 +654,17 @@ static int msg_invite (char * nick, char * host, struct userrec * u, char * par)
       return 0;
    pass = newsplit(&par);
    if (u_pass_match(u,pass)) {
+      if (par[0] == '*') {
+	 for (chan = chanset; chan; chan = chan->next) {
+	    get_user_flagrec(u,&fr,chan->name);
+	    if ((chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) && 
+		(chan->channel.mode & CHANINV)) 
+	      dprintf(DP_SERVER, "INVITE %s %s\n", nick, chan->name);
+	 }
+	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! INVITE ALL", nick, host,
+		u->handle);
+	 return 1;
+      }
       if (!(chan = findchan(par))) {
 	 dprintf(DP_SERVER, "NOTICE %s :%s: /MSG %s invite <pass> <channel>\n",
 		 nick, USAGE, botname);
@@ -851,22 +909,23 @@ static int msg_jump (char * nick, char * host, struct userrec * u, char * par)
  *  int msg_cmd("handle","nick","user@host","params");
  *  function is responsible for any logging
  *  (return 1 if successful, 0 if not) */
-static cmd_t C_msg[17]={
-  { "die", "n", (Function)msg_die, NULL },
-  { "go", "", (Function)msg_go, NULL },
-  { "hello", "", (Function)msg_hello, NULL },
-  { "help", "", (Function)msg_help, NULL },
-  { "ident", "", (Function)msg_ident, NULL },
-  { "info", "", (Function)msg_info, NULL },
-  { "invite", "o|o", (Function)msg_invite, NULL },
-  { "jump", "m",(Function) msg_jump, NULL },
-  { "memory", "m", (Function)msg_memory, NULL },
-  { "op", "", (Function)msg_op, NULL },
-  { "pass", "", (Function)msg_pass, NULL },
-  { "rehash", "m", (Function)msg_rehash, NULL },
-  { "reset", "m", (Function)msg_reset, NULL },
-  { "status", "m|m", (Function)msg_status, NULL },
-  { "voice", "", (Function)msg_voice, NULL },
-  { "who", "", (Function)msg_who, NULL },
-  { "whois", "", (Function)msg_whois, NULL },
+static cmd_t C_msg[18]={
+   { "die", "n", (Function)msg_die, NULL },
+   { "go", "", (Function)msg_go, NULL },
+   { "hello", "", (Function)msg_hello, NULL },
+   { "help", "", (Function)msg_help, NULL },
+   { "ident", "", (Function)msg_ident, NULL },
+   { "info", "", (Function)msg_info, NULL },
+   { "invite", "o|o", (Function)msg_invite, NULL },
+   { "jump", "m",(Function) msg_jump, NULL },
+   { "key", "o|o", (Function)msg_key, NULL },
+   { "memory", "m", (Function)msg_memory, NULL },
+   { "op", "", (Function)msg_op, NULL },
+   { "pass", "", (Function)msg_pass, NULL },
+   { "rehash", "m", (Function)msg_rehash, NULL },
+   { "reset", "m", (Function)msg_reset, NULL },
+   { "status", "m|m", (Function)msg_status, NULL },
+   { "voice", "", (Function)msg_voice, NULL },
+   { "who", "", (Function)msg_who, NULL },
+   { "whois", "", (Function)msg_whois, NULL },
 };

@@ -23,6 +23,7 @@ static int wait_split = 300;
 static int bounce_bans = 0;
 static int learn_users = 0;
 static int wait_info = 15;
+static int invite_key = 1;
 /* number of modes per line to send */
 static int modesperline = 3;
 /* maximum bytes to send in 1 mode */
@@ -594,6 +595,7 @@ static tcl_ints myints[] =
      {"mode-buf-length" , &mode_buf_len, 0},
      {"use-354", &use_354, 0},
      {"kick-method", &kick_method, 0},
+     {"invite-key", &invite_key, 0},
      {0,0}
 };
 
@@ -642,7 +644,7 @@ static void irc_report (int idx, int details)
    }
    if (k > 10) {
       q[k-2] = 0;
-      dprintf(idx,"   %s\n",q);
+      dprintf(idx,"    %s\n",q);
    }
 }
 
@@ -675,7 +677,7 @@ static char *irc_close()
    context;
    rem_tcl_ints(myints);
    rem_builtins(H_dcc,irc_dcc,16);
-   rem_builtins(H_msg,C_msg,17);
+   rem_builtins(H_msg,C_msg,18);
    rem_builtins(H_raw,irc_raw,24);
    rem_tcl_commands(tclchan_cmds);
    rem_help_reference("irc.help");
@@ -744,7 +746,7 @@ char *irc_start (Function* global_funcs)
    context;
    add_tcl_ints(myints);
    add_builtins(H_dcc,irc_dcc,16);
-   add_builtins(H_msg,C_msg,17);
+   add_builtins(H_msg,C_msg,18);
    add_builtins(H_raw,irc_raw,24);
    add_tcl_commands(tclchan_cmds);
    add_help_reference("irc.help");

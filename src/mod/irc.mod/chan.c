@@ -356,7 +356,8 @@ static void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick)
                c[0] = 0;
                if (u->desc && (u->desc[0] != '@'))
                   sprintf(c, "%s: %s", IRC_BANNED, u->desc);
-               kick_all(chan, u->banmask, c ? c : IRC_YOUREBANNED);
+               kick_all(chan, u->banmask, c[0] ? c : IRC_YOUREBANNED);
+	       return; /* drop out on 1st ban */
 	    }
 	 }
       }
