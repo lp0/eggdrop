@@ -1,6 +1,22 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.14
+Foundby   Fixedby   What....
+          Beldin    net.c warning
+          Beldin    private_global wasnt handling userfile downloads right,
+	            or +bot
+          NC        Fix to sharing global info
+islandic  MHT       cosmetic-bug in smart-notes: display "You have no
+                    message" twice.
+          Beldin    enforce channel modes the *efficient* way upon setting
+MrBond    Beldin    bots were sending incorrect 'thisbot' messages to 1.3.x's
+          Ernst     ban fixes
+Daklop    Beldin    flushing of overlapping enforced bans (to keep some
+                    EFNET servers happy)
+          Beldin    if cx_ptr got overwritten by a buffer overflow & the bot
+	            crashed -> egaged CPU munch mode & partition fill mode
+		    
 1.3.13 
 Foundby   Fixedby   What....
 Ernst     Beldin    .botattr SEGV
@@ -28,6 +44,7 @@ NC        Beldin    incoming chattr's where not being checked for owner changes
 	            ignore
           Daklop    added a +seen channel setting
 Daklop    Beldin    probably solution to ident timeouts causing SEGV's
+          MHT      implemented smart read and erase notes
 
 1.3.12
 Foundby   Fixedby   What....

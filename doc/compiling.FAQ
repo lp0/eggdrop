@@ -143,40 +143,7 @@ export TCLLIB='$HOME/lib'
 Did I say finally?  Heh, finally run configure and then make again.
 
 
- 4. 'TCL_DONT_WAIT' UNDECLARED IN MAIN.C  (various)
-
-   main.c: In function `main':main.c:864: `TCL_DONT_WAIT' undeclared (first use this function)
-   main.c:864: (Each undeclared identifier is reported only once
-   main.c:864: for each function it appears in.)
-   make[1]: *** [main.o] Error 1
-
-
-This seems to be caused by a beta release of Tcl 7.5 on eggdrop 1.0a and
-later bots, the solution is relatively simple.  The solution would be to
-edit your Makefile and add -UMODERN_TCL to your CFLGS line.  For example:
-
-CFLGS = -UMODERN_TCL
-
-
- 5. '_Tcl_DoOneEvent' UNDEFINED SYMBOL  (various)
-
-   gcc -s -o eggdrop chan.o chanprog.o chanset.o cmds.o dcc.o dccutil.o filedb.o fileq.o files.o gotdcc.o hash.o main.o match.o mem.o misc.o mode.o msgcmds.o msgnotice.o net.o tandcmd.o tandem.o tcl.o tclhash.o userrec.o users.o -ldl -L/usr/local/lib -ltcl -lm
-   collect2: ld returned 2 exit status
-   ld: Undefined symbol
-      _Tcl_DoOneEvent
-   *** Error code 1
-   make: Fatal error: Command failed for target `eggdrop'
-
-
-This is actually the same problem as #4, again.  Only difference is
-TCL_DONT_WAIT seems to be defined by Tcl_DoOneEvent function doesn't exist.
-The solution would be to edit your Makefile and add -UMODERN_TCL to your
-CFLGS line.  For example:
-
-CFLGS = -UMODERN_TCL
-
-
- 6. STRIP TERMINATED WITH SIGNAL 6  (various)
+ 4. STRIP TERMINATED WITH SIGNAL 6  (various)
 
    collect2: strip terminated with signal 6 [IOT/Abort trap]
    *** Exit 1
@@ -199,7 +166,7 @@ GMAKE = ${MAKE} 'CC=gcc' 'AWK=awk' 'OBJS=${OBJS}' 'TCLLIBFN=tcl.a'\
         'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' 'XLIBS= -L/usr/local/lib -ltcl -lm' \
         'TCLLIB=${TCLLIB}' 'RANLIB=ranlib' 'STRIP='
 
- 7. 'DIR' UNDECLARED (AND A WHOLE BUNCH OF OTHERS)   (AIX 4)
+ 5. 'DIR' UNDECLARED (AND A WHOLE BUNCH OF OTHERS)   (AIX 4)
 
    gcc -c -O2 -fno-strength-reduce -I.. -DHAVE_CONFIG_H  filedb.c
    filedb.c: In function `filedb_update':
@@ -231,7 +198,7 @@ to the Makefile's CFLGS line...
 
 CFLGS = -DHAVE_DIRENT_H -DHAVE_SYS_DIR_H
 
- 8. 'FD_SET' UNDECLARED (AND A WHOLE BUNCH OF OTHERS)   (AIX 4)
+ 6. 'FD_SET' UNDECLARED (AND A WHOLE BUNCH OF OTHERS)   (AIX 4)
 
    gcc -c -O2 -fno-strength-reduce -I.. -DHAVE_CONFIG_H -DHAVE_DIRENT_H -DHAVE_SYS_DIR_H net.c
    net.c: In function `sockread':
@@ -252,7 +219,7 @@ CFLGS = -DHAVE_DIRENT_H -DHAVE_SYS_DIR_H -DHAVE_SYS_SELECT_H
 (I suppose they thought a minor error would deter anyone from continuing
 onward, but I am not just anyone, I am a blockhead... <grin>)
 
- 9. UNRESOLVED OR UNDEFINED SYMBOLS: ldclose, ldopen, ldnshread  (AIX 3)
+ 7. UNRESOLVED OR UNDEFINED SYMBOLS: ldclose, ldopen, ldnshread  (AIX 3)
 
    cc -s -o eggdrop chan.o chanprog.o chanset.o cmds.o dcc.o dccutil.o filedb.o fileq.o files.o gotdcc.o hash.o main.o match.o mem.o misc.o mode.o msgcmds.o msgnotice.o net.o tandcmd.o tandem.o tcl.o tclhash.o userrec.o users.o -L/home2/f/foster/lib -ltcl7.5 -lm
    0706-317 ERROR: Unresolved or undefined symbols detected:
@@ -281,7 +248,7 @@ GMAKE = ${MAKE} 'CC=cc' 'AWK=awk' 'OBJS=${OBJS}' 'TCLLIBFN=tcl7.5.a'\
         'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' 'XLIBS=-lld -L/home2/f/foster/lib -ltcl7.5 -lm'\
         'TCLLIB=${TCLLIB}' 'RANLIB=ranlib' 'STRIP=-s'
 
- 10. UNSATISIFED SYMBOLS 'shl_findsym' and 'shl_load'  (HP-UX 9)
+ 8. UNSATISFIED SYMBOLS 'shl_findsym' and 'shl_load'  (HP-UX 9)
 
    gcc -s -o eggdrop chan.o chanprog.o chanset.o cmds.o dcc.o dccutil.o filedb.o fileq.o files.o gotdcc.o hash.o main.o match.o mem.o misc.o mode.o msgcmds.o msgnotice.o net.o tandcmd.o tandem.o tcl.o tclhash.o userrec.o users.o -L/home/hltran/tcl/lib -ltcl7.5 -lm
    /bin/ld: Unsatisfied symbols:

@@ -765,8 +765,7 @@ void check_tcl_loadunld (char * mod, p_tcl_bind_list table)
    context;
 }
 
-char *check_tcl_filt (int idx, char * text)
-{
+char *check_tcl_filt (int idx, char * text) {
    char s[10];
    int x;
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};

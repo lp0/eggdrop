@@ -77,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.13";
-int egg_numver = 1031300;
+char egg_version[1024] = "1.3.14";
+int egg_numver = 1031400;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -196,9 +196,9 @@ void write_debug()
 	 dprintf(-x, "Debug (%s) written %s", ver, s);
 	 dprintf(-x, "Full Patch List: %s\n", egg_xtra);
 	 dprintf(-x, "Context: ");
-	 for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) {
-	    dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
-	 }
+	 cx_ptr = cx_ptr & 15;
+	 for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) 
+	   dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
 	 dprintf(-x, "%s/%d\n\n", cx_file[y], cx_line[y]);
 	 killsock(x);
 	 close(x);
@@ -226,9 +226,9 @@ void write_debug()
       dprintf(-x, "Link flags   : %s\n", LDFLAGS);
       dprintf(-x, "Strip flags  : %s\n", STRIPFLAGS);
       dprintf(-x, "Context: ");
-      for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) {
-	 dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
-      }
+      cx_ptr = cx_ptr & 15;
+      for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) 
+	dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
       dprintf(-x, "%s/%d\n\n", cx_file[cx_ptr], cx_line[cx_ptr]);
       tell_dcc(-x);
       dprintf(-x, "\n");

@@ -379,7 +379,7 @@ int nextbot (char * who)
        
    for (j = 0; j < dcc_total; j++)
      if (bot->via && !strcasecmp(bot->via->bot, dcc[j].nick)
-	  && (dcc[j].type == & DCC_BOT))
+	  && (dcc[j].type == &DCC_BOT))
        return j;
    return -1;		/* we're not connected to 'via' */
 }

@@ -424,7 +424,7 @@ static void notes_read (char * hand, char * nick, char * srd, int idx)
 	    dprintf(DP_HELP, "NOTICE %s :(%d %s)\n", nick, ix - 1, MISC_TOTAL);
       }
    }
-   if ((ir == 0) && (ix == 1)) {
+   else if ((ir == 0) && (ix == 1)) {
       if (idx >= 0)
 	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else

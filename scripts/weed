@@ -38,6 +38,9 @@
 #     fixed bug "list element in braces followed by X instead of space"
 #       (the use of "lrange" where you aren't sure if it's a list is bad)
 #     fixed --CONSOLE item not being included, creating "user" --CONSOLE
+# <Ernst 1apr98>:
+#     two more improper ocurrences of "lrange" removed
+#
 
 set exempt {*ban *ignore}
 set exemptops 0 ; set exemptmasters 0 ; set exemptfriends 0
@@ -285,7 +288,7 @@ proc loadUserFile {fname} {
       } elseif {$handle == "!"} {
         # channel
         set chList [string trim [string range $line 1 end]]
-        lappend Channel($oldhandle) [lrange $chList 0 end]
+        lappend Channel($oldhandle) $chList
       } elseif {$handle == "--BOTADDR"} {
         # botaddr
         set BotAddr($oldhandle) [lindex $line 1]
@@ -337,7 +340,7 @@ proc loadUserFile {fname} {
         } {
             set xtraList ""
         }
-        lappend Xtra($oldhandle) [lrange $xtraList 0 end]
+        lappend Xtra($oldhandle) $xtraList
       } elseif {$handle == "--LASTON"} {
         # laston
         set LastOn($oldhandle) [lindex $line 1]
@@ -372,7 +375,7 @@ proc saveUserFile fname {
       if {[string index $i 0] == "*" || [string range $i 0 1] == "::"} {
         set hmask [lindex $Hostmask($i) $hmloop]
         regsub -all {~} $hmask { } hmask
-        puts $fd "- [lrange $hmask 0 end]"
+        puts $fd "- $hmask"
       } else {
         puts $fd "--HOSTS [lindex $Hostmask($i) $hmloop]"
       }

@@ -1000,21 +1000,21 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        ignored; the mask is checked against the text of the wallops msg
 
   (33) BCST   (stackable)
-       bind chat <flags> <mask> <proc>
+       bind bcst <flags> <mask> <proc>
        proc-name <bot> <channel#> <text>
 
        when a bot says something on the botnet, it invokes this binding;
        flags is ignored; the mask is checked against the text
 
   (34) CHJN   (stackable)
-       bind chat <flags> <mask> <proc>
+       bind chjn <flags> <mask> <proc>
        proc-name <bot> <nick> <channel#> <flag><sock> <from>
 
        when someone joins a botnet channel, it invokes this binding;
        flags is ignored; the mask is checked against the text
 
   (35) CHPT   (stackable)
-|      bind chat <flags> <mask> <proc>
+|      bind chpt <flags> <mask> <proc>
 |      proc-name <bot> <nick> <sock> <chan>
 
        when someone parts a botnet channel, it invokes this binding;

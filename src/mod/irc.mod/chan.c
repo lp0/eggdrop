@@ -18,8 +18,7 @@
  */
 
 /* returns a pointer to a new channel member structure */
-static memberlist *newmember (struct chanset_t * chan)
-{
+static memberlist *newmember (struct chanset_t * chan) {
    memberlist *x;
    x = chan->channel.member;
    while (x->nick[0])
@@ -33,8 +32,7 @@ static memberlist *newmember (struct chanset_t * chan)
    return x;
 }
 
-static void update_idle(char *chname, char *nick)
-{
+static void update_idle(char *chname, char *nick) {
    memberlist *m;
    struct chanset_t *chan;
    
@@ -47,8 +45,7 @@ static void update_idle(char *chname, char *nick)
 }
 
 /* what the channel's mode CURRENTLY is */
-static char *getchanmode (struct chanset_t * chan)
-{
+static char *getchanmode (struct chanset_t * chan) {
    static char s[121];
    int atr, i;
    s[0] = '+';
@@ -80,12 +77,23 @@ static char *getchanmode (struct chanset_t * chan)
    return s;
 }
 
+/* check a channel and clean-out any more-specific matching bans,
+ * some EFNET servers get picky about bans */
+static void do_ban (struct chanset_t * chan, char * ban ) {
+   banlist *b;
+   
+   for (b  = chan->channel.ban; b->ban[0]; b = b->next) 
+     if (wild_match(ban, b->ban)) 
+       add_mode (chan, '-', 'b', b->ban);
+   add_mode(chan, '+', 'b', ban);
+   flush_mode(chan, QUICK);
+}
+      
 /* this is a clone of detect_flood, but works for channel specificity now */
 /* and handles kick & deop as well */
 
 static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
-			      struct chanset_t * chan, int which, char * victim)
-{
+			      struct chanset_t * chan, int which, char * victim) {
    char h[UHOSTLEN], ftype[12], *p;
    struct userrec * u;
    int thr = 0, lapse = 0;
@@ -208,8 +216,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	 simple_sprintf(h, "*!*@%s", p);
 	 if (!isbanned(chan, h) && me_op(chan)) {
 	    add_mode(chan, '-', 'o', from);
-	    add_mode(chan, '+', 'b', h);
-	    flush_mode(chan, QUICK);
+	    do_ban(chan, h);
 	 }
 	 if ((u_match_ban(global_bans,from))
 	     || (u_match_ban(chan->bans, from)))
@@ -254,8 +261,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 }
 
 /* given a [nick!]user@host, place a quick ban on them on a chan */
-static char *quickban (struct chanset_t * chan, char * uhost)
-{
+static char *quickban (struct chanset_t * chan, char * uhost) {
    char s1[512], *pp;
    int i;
    static char s[512];
@@ -276,57 +282,21 @@ static char *quickban (struct chanset_t * chan, char * uhost)
       sprintf(s, "*!*%s", s1+i-7);
    else
       sprintf(s, "*!*%s", s1+2);	/* gotta add that extra '*' */
-   add_mode(chan, '+', 'b', s);
-   flush_mode(chan, QUICK);
+   do_ban(chan, s);
    return s;
 }
 
-
-/* if any bans match this wildcard expression, refresh them on the channel */
-static void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick)
-{
-   struct banrec *u;
-   memberlist * m;
-   
-   int cycle;
-   for (cycle = 0;cycle < 2;cycle++) {
-      if (cycle)
-	u = chan->bans;
-      else
-	u = global_bans;
-      for (;u;u=u->next) {
-	 if (wild_match(u->banmask,user)) {
-	    if (u->lastactive < now - 60) {
-	       m = ismember(chan,nick);
-	       if (m && chan_hasop(m)) 
-		 add_mode(chan, '-', 'o', nick);  /* guess it can't hurt */
-	       add_mode(chan, '+', 'b', u->banmask);
-	       flush_mode(chan, QUICK);		/* do it IMMEDIATELY */
-	       u->lastactive = now;
-	       if (u->desc && (u->desc[0] != '@')) {
-		  dprintf(DP_MODE, "KICK %s %s :%s: %s\n", chan->name, nick, 
-				IRC_BANNED, u->desc);
-	       } else
-		 dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick,
-			 IRC_YOUREBANNED);
-	    }
-	 }
-      }
-   }
-}
-
-/* since i was getting a ban list, i assume i'm chop */
-
 /* kicks any user (except friends/masters) with certain mask from channel
    with a specified comment.  Ernst 18/3/98 */
-static void kick_all (struct chanset_t * chan, char * hostmask, char * comment)
-{
+static void kick_all (struct chanset_t * chan, char * hostmask, char * comment) {
    memberlist *m;
    char kickchan[512], kicknick[512], s[UHOSTLEN];
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    int k, l, flushed;
-   context;
 
+   context;
+   if (!me_op(chan))
+     return;
    k = 0; flushed = 0; kickchan[0] = 0; kicknick[0] = 0;
    m = chan->channel.member;
    while (m->nick[0]) {
@@ -342,7 +312,7 @@ static void kick_all (struct chanset_t * chan, char * hostmask, char * comment)
 	    flush_mode(chan, QUICK);
 	    flushed += 1;
 	 }
-	 m->flags |= SENTKICK;
+	 m->flags |= SENTKICK;   /* mark as pending kick */
 	 if (kickchan[0])
 	    strcat(kickchan, ",");
 	 if (kicknick[0])
@@ -360,63 +330,76 @@ static void kick_all (struct chanset_t * chan, char * hostmask, char * comment)
    }
    if (k > 0)
       dprintf(DP_SERVER, "KICK %s %s :%s\n", kickchan, kicknick, comment);
-
    context;
 }
 
-/* enforce all bot bans in a given channel.  Ernst 18/3/98 */
-static void enforce_bans (struct chanset_t * chan)
-{
+/* if any bans match this wildcard expression, refresh them on the channel */
+static void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick) {
    struct banrec *u;
-   int i;
+   memberlist * m;
    char c[512];  /* the ban comment */
-
-   context;
-   for (i = 0; i < 2; i++) {
-      if (i == 0)
-	 u = global_bans;
+   
+   int cycle;
+   for (cycle = 0;cycle < 2;cycle++) {
+      if (cycle)
+	u = chan->bans;
       else
-	 u = chan->bans;
-      /* go through all bans, kicking the users */
-      while (u) {
-	 c[0] = 0;
-	 if (u->desc)
-	    sprintf(c, "%s: %s", IRC_BANNED, u->desc);
-	 kick_all(chan, u->banmask, c ? c : IRC_BANNED);
-	 u = u->next;
+	u = global_bans;
+      for ( ; u; u = u->next) {
+	 if (wild_match(u->banmask,user)) {
+	    if (u->lastactive < now - 60) {
+	       m = ismember(chan,nick);
+	       if (m && chan_hasop(m)) 
+		 add_mode(chan, '-', 'o', nick);  /* guess it can't hurt */
+	       do_ban(chan, u->banmask);
+	       u->lastactive = now;
+               c[0] = 0;
+               if (u->desc && (u->desc[0] != '@'))
+                  sprintf(c, "%s: %s", IRC_BANNED, u->desc);
+               kick_all(chan, u->banmask, c ? c : IRC_YOUREBANNED);
+	    }
+	 }
       }
    }
-   context;
 }
+
+/* enforce all channel bans in a given channel.  Ernst 18/3/98 */
+static void enforce_bans (struct chanset_t * chan) {
+   char me[UHOSTLEN];
+   banlist *b = chan->channel.ban;
+
+   context;
+   if (!me_op(chan))
+      return;			/* can't do it */
+   simple_sprintf(me, "%s!%s", botname, botuserhost);
+   /* go through all bans, kicking the users */
+   while (b->ban[0]) {
+      if (!wild_match(b->ban, me))
+	kick_all(chan, b->ban, IRC_YOUREBANNED);
+      b = b->next;
+   }
+}
+
+/* since i was getting a ban list, i assume i'm chop */
 
 /* recheck_bans makes sure that all who are 'banned' on the userlist are
    actually in fact banned on the channel */
-static void recheck_bans (struct chanset_t * chan)
-{
+static void recheck_bans (struct chanset_t * chan) {
    struct banrec *u;
    int i;
    
-   for (i = 0; i < 2; i++) {
-      if (i == 0)
-	 u = global_bans;
-      else
-	 u = chan->bans;
-      while (u) {
-	 if (!isbanned(chan, u->banmask)
-	   && (!channel_dynamicbans(chan)
-	     || (u->flags & BANREC_STICKY)))
-	   add_mode(chan, '+', 'b', u->banmask);
-	 u = u->next;
-      }
-   }
+   for (i = 0; i < 2; i++) 
+     for (u = i ? chan->bans : global_bans; u; u = u->next) 
+       if (!isbanned(chan, u->banmask) && (!channel_dynamicbans(chan)
+					   || (u->flags & BANREC_STICKY)))
+	 add_mode(chan, '+', 'b', u->banmask);
 }
 
 
 /* resets the bans on the channel */
-static void resetbans (struct chanset_t * chan)
-{
+static void resetbans (struct chanset_t * chan) {
    banlist *b = chan->channel.ban;
-   
+
    if (!me_op(chan))
       return;			/* can't do it */
    /* remove bans we didn't put there */
@@ -431,8 +414,7 @@ static void resetbans (struct chanset_t * chan)
 }
 
 /* things to do when i just became a chanop: */
-static void recheck_channel (struct chanset_t * chan, int dobans)
-{
+static void recheck_channel (struct chanset_t * chan, int dobans) {
    memberlist *m;
    char s[UHOSTLEN], *p;
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
@@ -479,14 +461,20 @@ static void recheck_channel (struct chanset_t * chan, int dobans)
 	     && (channel_autoop(chan) || (glob_autoop(fr) || chan_autoop(fr))))
 	   /* op them! */
 	   add_mode(chan, '+', 'o', m->nick);
-	 /* now lets check 'em vs bans */
-	 /* this is done by recheck_bans later Ernst 18/3/98 */
+         /* now lets check 'em vs bans */
+         /* if we're enforcing bans */
+         if (channel_enforcebans(chan) &&
+             /* & they match a ban */
+             (u_match_ban(global_bans,s) || u_match_ban(chan->bans, s)))
+           /* bewm */
+           refresh_ban_kick(chan, s, m->nick);
+         /* ^ will use the ban comment */
 	 /* are they +k ? */
 	 if (chan_kick(fr) || glob_kick(fr)) {
 	    quickban(chan, m->userhost);
 	    p = get_user(&USERENTRY_COMMENT,m->user);
 	    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick, 
-		    p?p:  "...and thank you for playing.\n");
+		    p?p:  "%s\n", IRC_POLITEKICK);
 	    /* otherwise, lets check +v stuff if the llamas want it */
 	 } else if (channel_autovoice(chan)) {
 	    /* do they not have +v or +o on the channel */
@@ -506,6 +494,8 @@ static void recheck_channel (struct chanset_t * chan, int dobans)
    }
    if (dobans)
      recheck_bans(chan);
+   if (dobans && channel_enforcebans(chan))
+     enforce_bans(chan);
    pls = chan->mode_pls_prot;
    mns = chan->mode_mns_prot;
    cur = chan->channel.mode;
@@ -560,8 +550,7 @@ static void recheck_channel (struct chanset_t * chan, int dobans)
 
 /* got 324: mode status */
 /* <server> 324 <to> <channel> <mode> */
-static int got324 (char * from, char * msg)
-{
+static int got324 (char * from, char * msg) {
    int i = 1;
    char *p, *q, *chname;
    struct chanset_t *chan;
@@ -575,30 +564,22 @@ static int got324 (char * from, char * msg)
    }
    chan->channel.mode = 0;
    while (msg[i] != 0) {
-      if (msg[i] == 'i') {
-	 chan->channel.mode |= CHANINV;
-      }
-      if (msg[i] == 'p') {
-	 chan->channel.mode |= CHANPRIV;
-      }
-      if (msg[i] == 's') {
-	 chan->channel.mode |= CHANSEC;
-      }
-      if (msg[i] == 'm') {
-	 chan->channel.mode |= CHANMODER;
-      }
-      if (msg[i] == 't') {
-	 chan->channel.mode |= CHANTOPIC;
-      }
-      if (msg[i] == 'n') {
-	 chan->channel.mode |= CHANNOMSG;
-      }
-      if (msg[i] == 'a') {
-	 chan->channel.mode |= CHANANON;
-      }
-      if (msg[i] == 'q') {
-	 chan->channel.mode |= CHANQUIET;
-      }
+      if (msg[i] == 'i') 
+	chan->channel.mode |= CHANINV;
+      if (msg[i] == 'p') 
+	chan->channel.mode |= CHANPRIV;
+      if (msg[i] == 's') 
+	chan->channel.mode |= CHANSEC;
+      if (msg[i] == 'm') 
+	chan->channel.mode |= CHANMODER;
+      if (msg[i] == 't') 
+	chan->channel.mode |= CHANTOPIC;
+      if (msg[i] == 'n') 
+	chan->channel.mode |= CHANNOMSG;
+      if (msg[i] == 'a') 
+	chan->channel.mode |= CHANANON;
+      if (msg[i] == 'q') 
+	chan->channel.mode |= CHANQUIET;
       if (msg[i] == 'k') {
 	 p = strchr(msg, ' ');
 	 p++;
@@ -627,6 +608,7 @@ static int got324 (char * from, char * msg)
       }
       i++;
    }
+   recheck_channel(chan,0);
    return 0;
 }
 
@@ -782,8 +764,7 @@ static int got315 (char * from, char * msg)
 
 /* got 367: ban info */
 /* <server> 367 <to> <chan> <ban> [placed-by] [timestamp] */
-static int got367 (char * from, char * msg)
-{
+static int got367 (char * from, char * msg) {
    char s[UHOSTLEN], * ban, * who, *chname;
    struct chanset_t *chan;
    struct userrec * u;
@@ -1063,8 +1044,7 @@ static void do_embedded_mode (struct chanset_t * chan, char * nick,
 }
 
 /* join */
-static int gotjoin (char * from, char * chname)
-{
+static int gotjoin (char * from, char * chname) {
    char * nick, *p, *newmode, buf[UHOSTLEN], *uhost = buf;
    struct chanset_t *chan;
    memberlist *m;

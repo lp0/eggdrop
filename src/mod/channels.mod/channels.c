@@ -31,8 +31,7 @@ void * channel_malloc (int size, char * file, int line) {
    return p;
 }
 
-static void set_mode_protect (struct chanset_t * chan, char * set)
-{
+static void set_mode_protect (struct chanset_t * chan, char * set) {
    int i, pos = 1;
    char *s, *s1;
    
@@ -105,8 +104,7 @@ static void set_mode_protect (struct chanset_t * chan, char * set)
    dprintf(DP_MODE,"MODE %s\n",chan->name);
 }
 
-static void get_mode_protect (struct chanset_t * chan, char * s)
-{
+static void get_mode_protect (struct chanset_t * chan, char * s) {
    char *p = s, s1[121];
    int ok = 0, i, tst;
    s1[0] = 0;
@@ -320,6 +318,8 @@ static void write_channels()
 	      channel_secret(chan) ? '+' : '-');
       fprintf(f, "%ccycle ", 
 	      channel_cycle(chan) ? '+' : '-');
+      fprintf(f, "%cseen ", 
+	      channel_seen(chan) ? '+' : '-');
       if (fprintf(f, "%c\n", channel_static(chan) ? ' ' : '}') == EOF) {
 	 putlog(LOG_MISC, "*", "ERROR writing channel file.");
 	 fclose(f);
@@ -412,8 +412,7 @@ static cmd_t my_chon[] = {
      { "*", "", (Function) channels_chon, "channels:chon" },
 };
    
-static void channels_report (int idx, int details)
-{
+static void channels_report (int idx, int details) {
    struct chanset_t * chan;
    int i;
    char s[1024], s2[100];

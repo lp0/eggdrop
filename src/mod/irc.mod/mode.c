@@ -29,8 +29,7 @@ static int reversing = 0;
 static struct flag_record user = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
 static struct flag_record victim = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
 
-static void flush_mode (struct chanset_t * chan, int pri)
-{
+static void flush_mode (struct chanset_t * chan, int pri) {
    char *p, out[512], post[512];
    int i, ok = 0;
    p = out;
@@ -67,14 +66,28 @@ static void flush_mode (struct chanset_t * chan, int pri)
    }
    chan->limit = (-1);
    chan->key[0] = 0;
+   /* do -b before +b to avoid server ban overlap ignores */
+   for (i = 0; i < modesperline; i++)
+      if ((chan->cmode[i].type & MINUS) && (chan->cmode[i].type & BAN)) {
+	 if (!ok) {
+	    *p++ = '-';
+	    ok = 1;
+	 }
+	 *p++ = 'b';
+	 strcat(post, chan->cmode[i].op);
+	 strcat(post, " ");
+	 nfree(chan->cmode[i].op);
+	 chan->cmode[i].op = NULL;
+      }
+   ok = 0;
    for (i = 0; i < modesperline; i++)
       if (chan->cmode[i].type & PLUS) {
 	 if (!ok) {
 	    *p++ = '+';
 	    ok = 1;
 	 }
-	 *p++ = (chan->cmode[i].type & 
-			BAN ? 'b' : (chan->cmode[i].type & CHOP ? 'o' : 'v'));
+	 *p++ = ((chan->cmode[i].type & BAN) ? 'b' : 
+		 ((chan->cmode[i].type & CHOP) ? 'o' : 'v'));
 	 strcat(post, chan->cmode[i].op);
 	 strcat(post, " ");
 	 nfree(chan->cmode[i].op);
@@ -93,13 +106,12 @@ static void flush_mode (struct chanset_t * chan, int pri)
    }
    chan->rmkey[0] = 0;
    for (i = 0; i < modesperline; i++)
-      if (chan->cmode[i].type & MINUS) {
+     if ((chan->cmode[i].type & MINUS) && !(chan->cmode[i].type & BAN)) {
 	 if (!ok) {
 	    *p++ = '-';
 	    ok = 1;
 	 }
-	 *p++ = (chan->cmode[i].type & 
-			BAN ? 'b' : (chan->cmode[i].type & CHOP ? 'o' : 'v'));
+	 *p++ = (chan->cmode[i].type & CHOP) ? 'o' : 'v';
 	 strcat(post, chan->cmode[i].op);
 	 strcat(post, " ");
 	 nfree(chan->cmode[i].op);
@@ -124,8 +136,7 @@ static void flush_mode (struct chanset_t * chan, int pri)
 
 /* queue a channel mode change */
 static void real_add_mode (struct chanset_t * chan, 
-	       char plus, char mode, char * op)
-{
+	       char plus, char mode, char * op) {
    int i, type, ok, l;
    char s[21];
 
@@ -167,33 +178,29 @@ static void real_add_mode (struct chanset_t * chan,
       return;
    }
    /* +k ? store key */
-   if ((plus == '+') && (mode == 'k')) {
-      strcpy(chan->key, op);
-      return;
-   }
+   if ((plus == '+') && (mode == 'k')) 
+     strcpy(chan->key, op);
    /* -k ? store removed key */
-   if ((plus == '-') && (mode == 'k')) {
-      strcpy(chan->rmkey, op);
-      return;
-   }
+   else if ((plus == '-') && (mode == 'k')) 
+     strcpy(chan->rmkey, op);
    /* +l ? store limit */
-   if ((plus == '+') && (mode == 'l')) {
-      chan->limit = atoi(op);
-      return;
-   }
-   /* typical mode changes */
-   if (plus == '+')
-      strcpy(s, chan->pls);
-   else
-      strcpy(s, chan->mns);
-   if (strchr(s, mode) != NULL)
-      return;			/* duplicate */
-   if (plus == '+') {
-      chan->pls[strlen(chan->pls) + 1] = 0;
-      chan->pls[strlen(chan->pls)] = mode;
-   } else {
-      chan->mns[strlen(chan->mns) + 1] = 0;
-      chan->mns[strlen(chan->mns)] = mode;
+   else if ((plus == '+') && (mode == 'l')) 
+     chan->limit = atoi(op);
+   else {
+      /* typical mode changes */
+      if (plus == '+')
+	strcpy(s, chan->pls);
+      else
+	strcpy(s, chan->mns);
+      if (!strchr(s, mode)) {
+	 if (plus == '+') {
+	    chan->pls[strlen(chan->pls) + 1] = 0;
+	    chan->pls[strlen(chan->pls)] = mode;
+	 } else {
+	    chan->mns[strlen(chan->mns) + 1] = 0;
+	    chan->mns[strlen(chan->mns)] = mode;
+	 }
+      }
    }
 }
 

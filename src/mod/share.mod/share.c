@@ -236,8 +236,7 @@ static void share_newuser (int idx, char * par) {
       etc = newsplit(&par);
       if (!(u = get_user_by_handle(userlist,etc)) 
 	  || !(u->flags & USER_UNSHARED)) {
-	 shareout_but(NULL,idx, "n %s %s\n", etc, 
-		      private_global ? "" : par);
+	 fr.global = 0;
 	 /* If user already exists, ignore command */
 	 if (!u) {
 	    noshare = 1;
@@ -245,16 +244,17 @@ static void share_newuser (int idx, char * par) {
 	      etc[HANDLEN] = 0;
 	    etc2 = newsplit(&par);
 	    etc3 = newsplit(&par);
-	    if (!private_global) {
-	       fr.match = FR_GLOBAL;
-	       break_down_flags(par,&fr,NULL);
-	       userlist = adduser(userlist, etc, etc2, etc3, fr.global);
-	       fr.match = FR_CHAN;
-	    } else
-	      userlist = adduser(userlist, etc, etc2, etc3, 0);
+	    fr.match = FR_GLOBAL;
+	    break_down_flags(par,&fr,NULL);
+	    fr.match = FR_CHAN;
+	    userlist = adduser(userlist, etc, etc2, etc3, 
+			       private_global ? fr.global :
+			       (fr.global & USER_BOT));
 	    noshare = 0;
 	    putlog(LOG_CMDS, "*", "%s: newuser %s", dcc[idx].nick, etc);
 	 }
+	 shareout_but(NULL,idx, "n %s %s\n", etc,  private_global ?
+		      ((fr.global & USER_BOT) ? "b" : "") : par);
       }
    }
 }
@@ -800,8 +800,10 @@ static void shareout_mod(va_alist) va_dcl {
 	if ((dcc[i].type->flags & DCT_BOT) &&
 	    (dcc[i].status & STAT_SHARE) &&
 	    !(dcc[i].status & (STAT_GETTING|STAT_SENDING))) {
-	   fr.match = (FR_CHAN | FR_BOT);
-	   get_user_flagrec(dcc[i].user,&fr,chan->name);
+	   if (chan) {
+	      fr.match = (FR_CHAN | FR_BOT);
+	      get_user_flagrec(dcc[i].user,&fr,chan->name);
+	   }
 	   if (!chan || bot_chan(fr) || bot_global(fr))
 	     tputs(dcc[i].sock, s, l + 2);
 	}
@@ -833,8 +835,10 @@ static void shareout_but(va_alist) va_dcl {
 	  (dcc[i].status & STAT_SHARE) &&
 	  (!(dcc[i].status & STAT_GETTING)) &&
 	  (!(dcc[i].status & STAT_SENDING))) {
-	 fr.match = (FR_CHAN | FR_BOT);
-	 get_user_flagrec(dcc[i].user,&fr,chan->name);
+	 if (chan) {
+	    fr.match = (FR_CHAN | FR_BOT);
+	    get_user_flagrec(dcc[i].user,&fr,chan->name);
+	 }
 	 if (!chan || bot_chan(fr) || bot_global(fr))
 	   tputs(dcc[i].sock, s, l + 2);
       }
@@ -1201,6 +1205,9 @@ static void finish_share (int idx) {
 	       for (ue = u2->entries; ue; ue = ue->next) 
 		 if (ue->type && !ue->type->got_share && ue->type->dup_user)
 		   ue->type->dup_user(u,u2,ue);
+	    } else if (private_global) {
+	       u->flags = 0;
+	       u->flags_udef = 0;
 	    }
 	 }
 	 clear_userlist(ou);

@@ -184,8 +184,7 @@ static int tcl_newban STDVAR
    return TCL_OK;
 }
 
-static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan)
-{
+static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan) {
    char s[121];
    get_mode_protect(chan, s);
    Tcl_AppendElement(irp, s);

@@ -99,8 +99,7 @@ static void strip_telnet (int sock, char * buf, int * len)
    *o = *p;
 }
 
-static void greet_new_bot (int idx)
-{
+static void greet_new_bot (int idx) {
    int bfl = bot_flags(dcc[idx].user);
    int i;
    
@@ -131,8 +130,7 @@ static void greet_new_bot (int idx)
       }
 }
 
-static void bot_version (int idx, char * par)
-{
+static void bot_version (int idx, char * par) {
    char x[1024];
    int l;
    
@@ -160,7 +158,7 @@ static void bot_version (int idx, char * par)
 #endif
    } else {
 #endif
-      dprintf(idx, "t %s\n", botnetnick);
+      dprintf(idx, "tb %s\n", botnetnick);
       l = atoi(newsplit(&par));
       if (l != HANDLEN) {
 	 dprintf(idx, "error Non-matching handle length: mine %d, yours %d\n",
