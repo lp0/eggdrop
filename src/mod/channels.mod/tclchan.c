@@ -1,7 +1,7 @@
 /* 
  * tclchan.c -- part of channels.mod
  * 
- * $Id: tclchan.c,v 1.27 2000/05/06 22:02:27 fabian Exp $
+ * $Id: tclchan.c,v 1.31 2000/08/06 14:49:56 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -936,11 +936,13 @@ static int tcl_channel STDVAR
 static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
 			      int items, char **item)
 {
-  int i, oldstatus, x = 0, found;
+  int i, x = 0, found,
+      old_status = chan->status,
+      old_mode_mns_prot = chan->mode_mns_prot,
+      old_mode_pls_prot = chan->mode_pls_prot;
   struct udef_struct *ul = udef;
   module_entry *me;
 
-  oldstatus = chan->status;
   for (i = 0; i < items; i++) {
     if (!strcmp(item[i], "need-op")) {
       i++;
@@ -1204,7 +1206,7 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
    * <drummer/1999/10/21>
    */
   if (protect_readonly || chan_hack) {
-    if (((oldstatus ^ chan->status) & CHAN_INACTIVE) &&
+    if (((old_status ^ chan->status) & CHAN_INACTIVE) &&
 	module_find("irc", 0, 0)) {
       if (channel_inactive(chan) &&
 	  (chan->status & (CHAN_ACTIVE | CHAN_PEND)))
@@ -1213,12 +1215,17 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
 	  !(chan->status & (CHAN_ACTIVE | CHAN_PEND)))
 	dprintf(DP_SERVER, "JOIN %s %s\n", (chan->name[0]) ?
 					   chan->name : chan->dname,
-					   chan->key_prot);
+					   chan->channel.key[0] ?
+					   chan->channel.key : chan->key_prot);
     }
-    if ((oldstatus ^ chan->status) &
-	(CHAN_ENFORCEBANS | CHAN_OPONJOIN | CHAN_BITCH | CHAN_AUTOVOICE))
+    if ((old_status ^ chan->status) &
+	(CHAN_ENFORCEBANS | CHAN_OPONJOIN | CHAN_BITCH | CHAN_AUTOVOICE)) {
       if ((me = module_find("irc", 0, 0)))
 	(me->funcs[IRC_RECHECK_CHANNEL])(chan, 1);
+    } else if (old_mode_pls_prot != chan->mode_pls_prot ||
+	       old_mode_mns_prot != chan->mode_mns_prot)
+      if ((me = module_find("irc", 1, 2)))
+	(me->funcs[IRC_RECHECK_CHANNEL_MODES])(chan);
   }
   if (x > 0) 
     return TCL_ERROR;
@@ -1470,21 +1477,23 @@ static void init_masklist(masklist *m)
 
 /* Initialize out the channel record.
  */
-static void init_channel(struct chanset_t *chan)
+static void init_channel(struct chanset_t *chan, int reset)
 {
   chan->channel.maxmembers = (-1);
   chan->channel.mode = 0;
   chan->channel.members = 0;
-  chan->channel.key = (char *) nmalloc(1);
-  chan->channel.key[0] = 0;
+  if (!reset) {
+    chan->channel.key = (char *) nmalloc(1);
+    chan->channel.key[0] = 0;
+  }
 
-  chan->channel.ban = (masklist *)nmalloc(sizeof(masklist));
+  chan->channel.ban = (masklist *) nmalloc(sizeof(masklist));
   init_masklist(chan->channel.ban);
   
-  chan->channel.exempt = (masklist *)nmalloc(sizeof(masklist));
+  chan->channel.exempt = (masklist *) nmalloc(sizeof(masklist));
   init_masklist(chan->channel.exempt);
   
-  chan->channel.invite = (masklist *)nmalloc(sizeof(masklist));
+  chan->channel.invite = (masklist *) nmalloc(sizeof(masklist));
   init_masklist(chan->channel.invite);
 
   chan->channel.member = (memberlist *) nmalloc(sizeof(memberlist));
@@ -1514,7 +1523,6 @@ static void clear_channel(struct chanset_t *chan, int reset)
 {
   memberlist *m, *m1;
 
-  nfree(chan->channel.key);
   if (chan->channel.topic)
     nfree(chan->channel.topic);
   m = chan->channel.member;
@@ -1532,7 +1540,7 @@ static void clear_channel(struct chanset_t *chan, int reset)
   chan->channel.invite = NULL;
 
   if (reset)
-    init_channel(chan);
+    init_channel(chan, 1);
 }
 
 /* Create new channel and parse commands.
@@ -1581,6 +1589,7 @@ static int tcl_channel_add(Tcl_Interp * irp, char *newname, char *options)
     chan->flood_nick_thr = gfld_nick_thr;
     chan->flood_nick_time = gfld_nick_time;
     chan->stopnethack_mode = global_stopnethack_mode;
+    chan->idle_kick = global_idle_kick;
     
     /* We _only_ put the dname (display name) in here so as not to confuse
      * any code later on. chan->name gets updated with the channel name as
@@ -1590,7 +1599,7 @@ static int tcl_channel_add(Tcl_Interp * irp, char *newname, char *options)
     chan->dname[80] = 0;
     
     /* Initialize chan->channel info */
-    init_channel(chan);
+    init_channel(chan, 0);
     list_append((struct list_type **) &chanset, (struct list_type *) chan);
     /* Channel name is stored in xtra field for sharebot stuff */
     join = 1;

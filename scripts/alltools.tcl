@@ -12,8 +12,10 @@
 # rtc       20Sep1999: added isnumber, changes
 # dw        20Sep1999: use regexp for isnumber checking
 # Tothwolf  06Oct1999: optimized completely
+# krbb      09Jun2000: added missing return to randstring
+# Tothwolf  18Jun2000: added ispermowner
 #
-# $Id: alltools.tcl,v 1.3 1999/12/21 17:35:07 fabian Exp $
+# $Id: alltools.tcl,v 1.5 2000/06/20 19:54:53 fabian Exp $
 #
 ########################################
 # Descriptions of avaliable commands:
@@ -104,6 +106,10 @@
 ## (other commands):
 # isnumber <string>
 #   if the given string is a valid number, return 1
+#   else return 0
+#
+# ispermowner <handle>
+#   if the given handle is a permanent owner, return 1
 #   else return 0
 #
 ########################################
@@ -200,6 +206,7 @@ proc randstring {length} {
   for {set i 0} {$i < $length} {incr i} {
     append result [string index $chars [rand $count]]
   }
+  return $result
 }
 
 proc putdccall {text} {
@@ -333,6 +340,17 @@ proc number_to_number {number} {
 
 proc isnumber {string} {
   if {([string compare $string ""]) && (![regexp \[^0-9\] $string])} then {
+    return 1
+  }
+  return 0
+}
+
+proc ispermowner {hand} {
+  global owner
+
+  regsub -all -- , [string tolower $owner] "" owners
+  if {([matchattr $hand n]) && \
+      ([lsearch -exact $owners [string tolower $hand]] != -1)} then {
     return 1
   }
   return 0

@@ -82,7 +82,7 @@ see also: +ignore, -ignore, set ignore-time
 %{help=modules}%{+n}
 ###  %bmodules%b <botname>
    requests a listing of the modules running on the remote bot
-%{help=motd}   
+%{help=motd}
 ###  %bmotd%b
    will redisplay the party-line message of the day, which was
    shown when you first joined.
@@ -95,6 +95,11 @@ see also: +ignore, -ignore, set ignore-time
    changes your handle on the bot. That's the handle(nickname) that the
    bot will know you as forever and ever, and what you have to use when
    telnetting in or IDENT'ing yourself, so remember it.
+%{help=nick}
+###  %bnick%b
+   Please note, that this command has been superceeded by
+   'handle'. If you still want to use 'nick', load compat.tcl
+   into your bot.
 %{help=note}
 ###  %bnote%b <nickname[@bot]> <message>
    sends a private note to a user on the party line.  if that user

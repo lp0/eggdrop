@@ -2,7 +2,7 @@
  * msgcmds.c -- part of irc.mod
  *   all commands entered via /MSG
  * 
- * $Id: msgcmds.c,v 1.12 2000/03/23 23:17:58 fabian Exp $
+ * $Id: msgcmds.c,v 1.15 2000/08/06 14:51:38 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -389,7 +389,7 @@ static int msg_who(char *nick, char *host, struct userrec *u, char *par)
     return 1;
   if (!par[0]) {
     dprintf(DP_HELP, "NOTICE %s :%s: /msg %s who <channel>\n", nick,
-	    USAGE, botname);
+	    MISC_USAGE, botname);
     return 0;
   }
   chan = findchan_by_dname(par);
@@ -529,9 +529,7 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
 	   (glob_op(fr) && !chan_deop(fr)) ||
 	   glob_friend(fr) || chan_op(fr) || chan_friend(fr))) {
 	tt = cr->laston;
-	strcpy(s, ctime(&tt));
-	strcpy(s, &s[4]);
-	s[12] = 0;
+	strftime(s, 14, "%b %d %H:%M", localtime(&tt));
 	ok = 1;
 	sprintf(s1, "NOTICE %s :[%s] %s %s on %s", nick, u2->handle,
 		IRC_LASTSEENAT, s, chan->dname);
@@ -638,7 +636,7 @@ static int msg_key(char *nick, char *host, struct userrec *u, char *par)
     if (!u_pass_match(u, "-")) {
       if (!(chan = findchan_by_dname(par))) {
 	dprintf(DP_HELP, "NOTICE %s :%s: /MSG %s key <pass> <channel>\n",
-		nick, USAGE, botname);
+		nick, MISC_USAGE, botname);
 	return 1;
       }
       if (!channel_active(chan)) {
@@ -743,7 +741,7 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
     }
     if (!(chan = findchan_by_dname(par))) {
       dprintf(DP_HELP, "NOTICE %s :%s: /MSG %s invite <pass> <channel>\n",
-	      nick, USAGE, botname);
+	      nick, MISC_USAGE, botname);
       return 1;
     }
     if (!channel_active(chan)) {
@@ -879,7 +877,10 @@ static int msg_die(char *nick, char *host, struct userrec *u, char *par)
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! DIE", nick, host, u->handle);
   dprintf(-serv, "NOTICE %s :%s\n", nick, BOT_MSGDIE);
+  if (!par[0])
   simple_sprintf(s, "BOT SHUTDOWN (authorized by %s)", u->handle);
+  else 
+    simple_sprintf(s, "BOT SHUTDOWN (%s: %s)", u->handle, par);
   chatout("*** %s\n", s);
   botnet_send_chat(-1, botnetnick, s);
   botnet_send_bye();

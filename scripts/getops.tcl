@@ -1,7 +1,7 @@
 
-# Getops 2.2d
+# Getops 2.2f
 
-# $Id: getops-2.2d.tcl,v 1.2 1999/12/21 17:35:08 fabian Exp $
+# $Id: getops.tcl,v 1.5 2000/08/17 03:49:10 guppy Exp $
 
 # This script is used for bots to request and give ops to each other. 
 # For this to work, you'll need:
@@ -21,6 +21,14 @@
 # hostmasks up-to-date).
 
 # -----------------------------------------------------------------------------
+
+# 2.2f by Eule <eule@berlin.snafu.de>
+#  - removed key work-around added in 2.2d as eggdrop now handles this
+#    correctly.
+
+# 2.2e by Fabian <fknittel@gmx.de>
+#  - added support for !channels (so-called ID-channels), using chandname2name
+#    functions. This makes it eggdrop 1.5 specific.
 
 # 2.2d by brainsick <brnsck@mail.earthlink.net>
 #  - Undernet now handles keys differently.  It no longer gives the key on a
@@ -131,7 +139,7 @@ proc gain_entrance {what chan} {
     }
    } {
     if {$go_cycle} {
-     putserv "NOTICE $chan :$go_cycle_msg"
+     putserv "NOTICE [chandname2name $chan] :$go_cycle_msg"
     }
    }
   }
@@ -164,6 +172,7 @@ proc botnet_request {bot com args} {
  set args [lindex $args 0]
  set subcom [lindex $args 0]
  set chan [string tolower [lindex $args 1]]
+ set idchan [chandname2name $chan]
  set nick [lindex $args 2]
 
  if {[matchattr $bot b] == 0} {
@@ -232,7 +241,7 @@ proc botnet_request {bot com args} {
   }
   "invite" {
    putlog "GetOps: $bot asked for an invite to $chan."
-   putserv "invite $nick $chan"
+   putserv "invite $nick $idchan"
    return 1
   }
   "limit" {
@@ -253,7 +262,11 @@ proc botnet_request {bot com args} {
    putlog "GetOps: $bot gave me the key to $chan! ($nick)"
    foreach channel [string tolower [channels]] {
     if {$chan == $channel} {
-     putserv "JOIN $channel $nick"
+     if {$idchan != ""} {
+      putserv "JOIN $idchan $nick"
+     } else {
+      putserv "JOIN $channel $nick"
+     }
      return 1
     }
    }
@@ -323,17 +336,6 @@ bind bot - gop_resp gop_resp
 # Ask for ops when joining a channel
 bind join - * gop_join
 
-# Get the key after getting opped
-bind mode - "* +o" get_key
-
-proc get_key { nick uhost hand chan mode whom } {
- global botnick
- if {$botnick == $whom} {
-  puthelp "MODE $chan"
- }
- return 0
-}
-
 proc requestop { chan } {
  global botnick
  set chan [string tolower $chan]
@@ -365,4 +367,4 @@ proc gop_join { nick uhost hand chan } {
 
 set getops_loaded 1
 
-putlog "GetOps v2.2d by brainsick, Progfou, Cron@irc.pl, dtM, The_O, DarkDruid & Ernst loaded."
+putlog "GetOps v2.2f by Fabian, brainsick, Progfou, Cron@irc.pl, dtM, The_O, DarkDruid & Ernst loaded."

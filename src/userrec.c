@@ -4,7 +4,7 @@
  *   a bunch of functions to find and change user records
  *   change and check user (and channel-specific) flags
  * 
- * $Id: userrec.c,v 1.19 2000/04/05 19:55:13 fabian Exp $
+ * $Id: userrec.c,v 1.22 2000/08/07 10:09:53 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -586,31 +586,32 @@ void write_userfile(int idx)
 int change_handle(struct userrec *u, char *newh)
 {
   int i;
-  char s[16];
+  char s[HANDLEN + 1];
 
   if (!u)
     return 0;
   /* Nothing that will confuse the userfile */
-  if ((newh[1] == 0) && strchr(BADHANDCHARS, newh[0]))
+  if (newh[1] == 0 && strchr(BADHANDCHARS, newh[0]))
     return 0;
   check_tcl_nkch(u->handle, newh);
   /* Yes, even send bot nick changes now: */
-  if ((!noshare) && !(u->flags & USER_UNSHARED))
+  if (!noshare && !(u->flags & USER_UNSHARED))
     shareout(NULL, "h %s %s\n", u->handle, newh);
-  strcpy(s, u->handle);
-  strcpy(u->handle, newh);
-  for (i = 0; i < dcc_total; i++) {
-    if (!egg_strcasecmp(dcc[i].nick, s) &&
-	(dcc[i].type != &DCC_BOT)) {
-      strcpy(dcc[i].nick, newh);
-      if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->channel >= 0)) {
+  strncpy(s, u->handle, HANDLEN);
+  s[HANDLEN] = 0;
+  strncpy(u->handle, newh, HANDLEN);
+  u->handle[HANDLEN] = 0;
+  for (i = 0; i < dcc_total; i++)
+    if (!egg_strcasecmp(dcc[i].nick, s) && dcc[i].type != &DCC_BOT) {
+      strncpy(dcc[i].nick, newh, HANDLEN);
+      dcc[i].nick[HANDLEN] = 0;
+      if (dcc[i].type == &DCC_CHAT && dcc[i].u.chat->channel >= 0) {
 	chanout_but(-1, dcc[i].u.chat->channel,
-		    "*** Nick change: %s -> %s\n", s, newh);
+		    "*** Handle change: %s -> %s\n", s, newh);
 	if (dcc[i].u.chat->channel < 100000)
 	  botnet_send_nkch(i, s);
       }
     }
-  }
   return 1;
 }
 
@@ -679,7 +680,8 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
     fr.global = u->flags;
     fr.udef_global = u->flags_udef;
     build_flags(x, &fr, 0);
-    shareout(NULL, "n %s %s %s %s\n", handle, host, pass, x);
+    shareout(NULL, "n %s %s %s %s\n", handle, host && host[0] ? host : "none",
+             pass, x);
   }
   if (bu == NULL)
     bu = u;

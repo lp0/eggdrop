@@ -1,7 +1,7 @@
 /* 
  * share.c -- part of share.mod
  * 
- * $Id: share.c,v 1.31 2000/03/23 23:17:59 fabian Exp $
+ * $Id: share.c,v 1.34 2000/08/06 14:47:20 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -36,16 +36,15 @@
 #include "transfer.mod/transfer.h"
 #include "channels.mod/channels.h"
 
-/* Minimum version I will share with */
+/* Minimum version I will share with. */
 static const int min_share		= 1029900;
-/* Earliest version that supports exempts and invites */
+/* Earliest version that supports exempts and invites. */
 static const int min_exemptinvite	= 1032800; 
-/* Minimum version that supports userfile features */
+/* Minimum version that supports userfile features. */
 static const int min_uffeature		= 1050200;
 
 static Function *global = NULL, *transfer_funcs = NULL, *channels_funcs = NULL;
 
-static int private_owner = 1;
 static int private_global = 0;
 static int private_user = 0;
 static char private_globals[50];
@@ -362,43 +361,49 @@ static void share_mns_chrec(int idx, char *par)
 
 static void share_newuser(int idx, char *par)
 {
-  char *etc, *etc2, *etc3, s[100];
+  char *nick, *host, *pass, s[100];
   struct userrec *u;
 
   if ((dcc[idx].status & STAT_SHARE) && !private_user) {
-    etc = newsplit(&par);
-    if (!(u = get_user_by_handle(userlist, etc)) ||
+    nick = newsplit(&par);
+    host = newsplit(&par);
+    pass = newsplit(&par);
+
+    if (!(u = get_user_by_handle(userlist, nick)) ||
 	!(u->flags & USER_UNSHARED)) {
       fr.global = 0;
 
+      fr.match = FR_GLOBAL;
+      break_down_flags(par, &fr, NULL);
+
       /* If user already exists, ignore command */
-      shareout_but(NULL, idx, "n %s %s\n", etc, private_global
-		   ? ((fr.global &USER_BOT) ? "b" : "-") : par);
+      shareout_but(NULL, idx, "n %s %s %s %s\n", nick, host, pass,
+		   private_global ? (fr.global & USER_BOT ? "b" : "-") : par);
+
       if (!u) {
 	noshare = 1;
-	if (strlen(etc) > HANDLEN)
-	  etc[HANDLEN] = 0;
-	etc2 = newsplit(&par);
-	etc3 = newsplit(&par);
-	fr.match = FR_GLOBAL;
-	break_down_flags(par, &fr, NULL);
+	if (strlen(nick) > HANDLEN)
+	  nick[HANDLEN] = 0;
 
 	if (private_global)
 	  fr.global &= USER_BOT;
 	else {
+	  /* It shouldn't be done before sending to other bots? */
 	  int pgbm = private_globals_bitmask();
 
 	  fr.match = FR_GLOBAL;
 	  fr.global &=~pgbm;
 	}
+
 	build_flags(s, &fr, 0);
-	userlist = adduser(userlist, etc, etc2, etc3, 0);
+	userlist = adduser(userlist, nick, host, pass, 0);
+
 	/* Support for userdefinedflag share - drummer */
-	u = get_user_by_handle(userlist, etc);
+	u = get_user_by_handle(userlist, nick);
 	set_user_flagrec(u, &fr, 0);
 	fr.match = FR_CHAN; /* why?? */
 	noshare = 0;
-	putlog(LOG_CMDS, "*", "%s: newuser %s %s", dcc[idx].nick, etc, s);
+	putlog(LOG_CMDS, "*", "%s: newuser %s %s", dcc[idx].nick, nick, s);
       }
     }
   }
@@ -993,7 +998,7 @@ static void share_ufsend(int idx, char *par)
     putlog(LOG_MISC, "*", "NO MORE DCC CONNECTIONS -- can't grab userfile");
     dprintf(idx, "s e I can't open a DCC to you; I'm full.\n");
     zapfbot(idx);
-  } else if (!(f = fopen(s, "w"))) {
+  } else if (!(f = fopen(s, "wb"))) {
     putlog(LOG_MISC, "*", "CAN'T WRITE USERFILE DOWNLOAD FILE!");
     zapfbot(idx);
   } else {
@@ -1466,7 +1471,7 @@ static int write_tmp_userfile(char *fn, struct userrec *bu, int idx)
   struct userrec *u;
   int ok = 0;
 
-  if (!(f = fopen(fn, "w")))
+  if (!(f = fopen(fn, "wb")))
     putlog(LOG_MISC, "*", USERF_ERRWRITE2);
   else {
     chmod(fn, 0600);		/* make it -rw------- */
@@ -2116,5 +2121,5 @@ int private_globals_bitmask()
   struct flag_record fr = {FR_GLOBAL, 0, 0, 0, 0, 0};
 
   break_down_flags(private_globals, &fr, 0);
-  return fr.global | (private_owner ? USER_OWNER : 0);
+  return fr.global;
 }

@@ -3,7 +3,7 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  * 
- * $Id: cmds.c,v 1.29 2000/05/06 22:02:27 fabian Exp $
+ * $Id: cmds.c,v 1.38 2000/08/18 16:45:51 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -34,8 +34,7 @@ extern struct dcc_t	*dcc;
 extern struct userrec	*userlist;
 extern tcl_timer_t	*timer, *utimer;
 extern int		 dcc_total, remote_boots, backgrd, make_userfile,
-			 do_restart, conmask, require_p, must_be_owner,
-			 use_silence;
+			 do_restart, conmask, require_p, must_be_owner;
 extern unsigned long	 otraffic_irc, otraffic_irc_today,
 			 itraffic_irc, itraffic_irc_today,
 			 otraffic_bn, otraffic_bn_today,
@@ -60,29 +59,28 @@ static char	*btos(int);
 static int add_bot_hostmask(int idx, char *nick)
 {
   struct chanset_t *chan;
-  memberlist *m;
-  char s[UHOSTLEN];
 
-  for (chan = chanset; chan; chan = chan->next) {
+  for (chan = chanset; chan; chan = chan->next)
     if (channel_active(chan)) {
-      m = ismember(chan, nick);
+      memberlist *m = ismember(chan, nick);
+
       if (m) {
+	char s[UHOSTLEN], s1[UHOSTLEN];
 	struct userrec *u;
 
-	simple_sprintf(s, "%s!%s", m->nick, m->userhost);
+	egg_snprintf(s, sizeof s, "%s!%s", m->nick, m->userhost);
 	u = get_user_by_host(s);
 	if (u) {
 	  dprintf(idx, "(Can't add userhost for %s because it matches %s)\n",
 		  nick, u->handle);
 	  return 0;
 	}
-	simple_sprintf(s, "*!%s", m->userhost);
+	maskhost(s, s1);
 	dprintf(idx, "(Added hostmask for %s from %s)\n", nick, chan->dname);
-	addhost_by_handle(nick, s);
+	addhost_by_handle(nick, s1);
 	return 1;
       }
     }
-  }
   return 0;
 }
 
@@ -146,13 +144,7 @@ static void tell_who(struct userrec *u, int idx, int chan)
 	ok = 1;
 	dprintf(idx, "Bots connected:\n");
       }
-      strcpy(s, ctime(&dcc[i].timeval));
-      strcpy(s, &s[1]);
-      s[9] = 0;
-      strcpy(s, &s[7]);
-      s[2] = ' ';
-      strcpy(&s[7], &s[10]);
-      s[12] = 0;
+      strftime(s, 14, "%d %b %H:%M", localtime(&dcc[i].timeval));
       spaces[len = HANDLEN - strlen(dcc[i].nick)] = 0;
       if (atr & USER_OWNER) {
 	dprintf(idx, "  [%.2lu]  %s%c%s%s (%s) %s\n",
@@ -1101,7 +1093,7 @@ static void cmd_simul(struct userrec *u, int idx, char *par)
 
   nick = newsplit(&par);
   if (!par[0]) {
-    dprintf(idx, "Usage: simul <nick> <text>\n");
+    dprintf(idx, "Usage: simul <hand> <text>\n");
     return;
   }
   if (isowner(nick)) {
@@ -1647,7 +1639,8 @@ static void cmd_botattr(struct userrec *u, int idx, char *par)
     return;
   }
   for (idx2 = 0; idx2 < dcc_total; idx2++)
-    if (dcc[idx2].type != &DCC_RELAY && !egg_strcasecmp(dcc[idx2].nick, hand))
+    if (dcc[idx2].type != &DCC_RELAY && dcc[idx2].type != &DCC_FORK_BOT &&
+	!egg_strcasecmp(dcc[idx2].nick, hand))
       break;
   if (idx2 != dcc_total) {
     dprintf(idx, "You may not change the attributes of a directly linked bot.\n");
@@ -2105,8 +2098,8 @@ static void cmd_su(struct userrec *u, int idx, char *par)
       correct_handle(par);
       putlog(LOG_CMDS, "*", "#%s# su %s", dcc[idx].nick, par);
       if (!(atr & USER_OWNER) ||
-	  ((atr & USER_OWNER) && !(isowner(dcc[idx].nick))) ||
-	  ((u->flags & USER_OWNER) && (isowner(par)))) {
+	  ((u->flags & USER_OWNER) && (isowner(par)) &&
+	   !(isowner(dcc[idx].nick)))) {
 	/* This check is only important for non-owners */
 	if (u_pass_match(u, "-")) {
 	  dprintf(idx, "No password set for user. You may not .su to them\n");
@@ -2128,8 +2121,10 @@ static void cmd_su(struct userrec *u, int idx, char *par)
 	strcpy(dcc[idx].u.chat->su_nick, dcc[idx].nick);
 	dcc[idx].user = u;
 	strcpy(dcc[idx].nick, par);
+	/* Display password prompt and turn off echo (send IAC WILL ECHO). */
 	dprintf(idx, "Enter password for %s%s\n", par,
-		(dcc[idx].status & STAT_TELNET) ? "\377\373\001" : "");
+		(dcc[idx].status & STAT_TELNET) ? TLN_IAC_C TLN_WILL_C
+	       					  TLN_ECHO_C : "");
 	dcc[idx].type = &DCC_CHAT_PASS;
       } else if (atr & USER_OWNER) {
 	if (dcc[idx].u.chat->channel < 100000)
@@ -2195,7 +2190,6 @@ static void cmd_page(struct userrec *u, int idx, char *par)
     dcc[idx].u.chat->line_count = 0;
     dcc[idx].u.chat->current_lines = 0;
     putlog(LOG_CMDS, "*", "#%s# page %d", dcc[idx].nick, a);
-    return;
   } else {
     dprintf(idx, "Usage: page <off or #>\n");
     return;
@@ -2272,7 +2266,7 @@ static void cmd_loadmod(struct userrec *u, int idx, char *par)
      }
   Context;
   if (!par[0]) {
-    dprintf(idx, "%s: loadmod <module>\n", USAGE);
+    dprintf(idx, "%s: loadmod <module>\n", MISC_USAGE);
   } else {
     p = module_load(par);
     if (p)
@@ -2296,7 +2290,7 @@ static void cmd_unloadmod(struct userrec *u, int idx, char *par)
      }
   Context;
   if (!par[0]) {
-    dprintf(idx, "%s: unloadmod <module>\n", USAGE);
+    dprintf(idx, "%s: unloadmod <module>\n", MISC_USAGE);
   } else {
     p = module_unload(par, dcc[idx].nick);
     if (p)
@@ -2310,22 +2304,60 @@ static void cmd_unloadmod(struct userrec *u, int idx, char *par)
 
 static void cmd_pls_ignore(struct userrec *u, int idx, char *par)
 {
-  char *who;
-  char s[UHOSTLEN];
+  char			*who;
+  char			 s[UHOSTLEN];
+  unsigned long int	 expire_time = 0;
 
   if (!par[0]) {
-    dprintf(idx, "Usage: +ignore <hostmask> [comment]\n");
+    dprintf(idx,
+	    "Usage: +ignore <hostmask> [%%ignoretime <XdXhXm>] [comment]\n");
     return;
   }
+
   who = newsplit(&par);
   remove_gunk(who);
+  if (par[0] == '%') {
+    char		*p, *p_expire;
+    unsigned long int	 expire_foo;
+
+    p = newsplit(&par);
+    p_expire = p + 1;
+    while (*(++p) != 0) {
+      switch (tolower(*p)) {
+      case 'd':
+	*p = 0;
+	expire_foo = strtol(p_expire, NULL, 10);
+	if (expire_foo > 365)
+	  expire_foo = 365;
+	expire_time += 86400 * expire_foo;
+	p_expire = p + 1;
+	break;
+      case 'h':
+	*p = 0;
+	expire_foo = strtol(p_expire, NULL, 10);
+	if (expire_foo > 8760)
+	  expire_foo = 8760;
+	expire_time += 3600 * expire_foo;
+	p_expire = p + 1;
+	break;
+      case 'm':
+	*p = 0;
+	expire_foo = strtol(p_expire, NULL, 10);
+	if (expire_foo > 525600)
+	  expire_foo = 525600;
+	expire_time += 60 * expire_foo;
+	p_expire = p + 1;
+      }
+    }
+  }
   if (!par[0])
     par = "requested";
   else if (strlen(par) > 65)
     par[65] = 0;
   if (strlen(who) > UHOSTMAX - 4)
     who[UHOSTMAX - 4] = 0;
-  /* Fix missing ! or @ BEFORE continuing - sounds familiar */
+
+  /* Fix missing ! or @ BEFORE continuing */
   if (!strchr(who, '!')) {
     if (!strchr(who, '@'))
       simple_sprintf(s, "%s!*@*", who);
@@ -2335,15 +2367,14 @@ static void cmd_pls_ignore(struct userrec *u, int idx, char *par)
     simple_sprintf(s, "%s@*", who);
   else
     strcpy(s, who);
-  if (match_ignore(s)) {
+
+  if (match_ignore(s))
     dprintf(idx, "That already matches an existing ignore.\n");
-    return;
+  else {
+    dprintf(idx, "Now ignoring: %s (%s)\n", s, par);
+    addignore(s, dcc[idx].nick, par, expire_time ? now + expire_time : 0L);
+    putlog(LOG_CMDS, "*", "#%s# +ignore %s %s", dcc[idx].nick, s, par);
   }
-  dprintf(idx, "Now ignoring: %s (%s)%s\n", s, par, use_silence == 0 ? "" : " (added to silence list)");
-  if (use_silence)
-	dprintf(DP_SERVER, "SILENCE +%s\n", s);
-  addignore(s, dcc[idx].nick, par, 0L);
-  putlog(LOG_CMDS, "*", "#%s# +ignore %s %s", dcc[idx].nick, s, par);
 }
 
 static void cmd_mns_ignore(struct userrec *u, int idx, char *par)
@@ -2357,10 +2388,8 @@ static void cmd_mns_ignore(struct userrec *u, int idx, char *par)
   strncpy(buf, par, UHOSTMAX);
   buf[UHOSTMAX] = 0;
   if (delignore(buf)) {
-    if (use_silence)
-      dprintf(DP_SERVER, "SILENCE -%s\n", buf);
     putlog(LOG_CMDS, "*", "#%s# -ignore %s", dcc[idx].nick, buf);
-    dprintf(idx, "No longer ignoring: %s%s\n", buf, use_silence == 0 ? "" : " (removed from silence list)");
+    dprintf(idx, "No longer ignoring: %s\n", buf);
   } else
     dprintf(idx, "Can't find that ignore.\n");
 }
@@ -2402,7 +2431,7 @@ static void cmd_mns_user(struct userrec *u, int idx, char *par)
   struct userrec *u2;
 
   if (!par[0]) {
-    dprintf(idx, "Usage: -user <nick>\n");
+    dprintf(idx, "Usage: -user <hand>\n");
     return;
   }
   handle = newsplit(&par);

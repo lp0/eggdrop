@@ -4,7 +4,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.31 2000/04/05 19:58:11 fabian Exp $
+ * $Id: modules.c,v 1.38 2000/08/18 00:25:09 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -71,15 +71,17 @@ extern char		 tempdir[], botnetnick[], botname[], natip[],
 			 userfile[], ver[], notify_new[], helpdir[],
 			 version[];
 extern int		 reserved_port, noshare, dcc_total, egg_numver,
-			 use_silence, use_console_r, ignore_time,
+			 use_console_r, ignore_time, must_be_owner,
 			 debug_output, gban_total, make_userfile,
 			 gexempt_total, ginvite_total, default_flags,
 			 require_p, max_dcc, share_greet, password_timeout,
 			 min_dcc_port, max_dcc_port, use_invites, use_exempts,
 			 force_expire, do_restart, protect_readonly,
-			 userfile_perm, must_be_owner;
+			 userfile_perm;
 extern time_t now, online_since;
 extern struct chanset_t *chanset;
+extern tand_t *tandbot;
+extern party_t *party;
 
 
 int cmd_die();
@@ -293,58 +295,58 @@ Function global_table[] =
   (Function) _get_data_ptr,
   (Function) open_telnet,
   /* 88 - 91 */
-  (Function) null_func,	/* EMPTY. Originally was: bzero() */
+  (Function) check_tcl_event,
   (Function) egg_memcpy,
   (Function) my_atoul,
   (Function) my_strcpy,
   /* 92 - 95 */
-  (Function) & dcc,		/* struct dcc_t * */
-  (Function) & chanset,		/* struct chanset_t * */
-  (Function) & userlist,	/* struct userrec * */
-  (Function) & lastuser,	/* struct userrec * */
+  (Function) & dcc,		 /* struct dcc_t *			*/
+  (Function) & chanset,		 /* struct chanset_t *			*/
+  (Function) & userlist,	 /* struct userrec *			*/
+  (Function) & lastuser,	 /* struct userrec *			*/
   /* 96 - 99 */
-  (Function) & global_bans,	/* struct banrec * */
-  (Function) & global_ign,	/* struct igrec * */
-  (Function) & password_timeout,	/* int */
-  (Function) & share_greet,	/* int */
+  (Function) & global_bans,	 /* struct banrec *			*/
+  (Function) & global_ign,	 /* struct igrec *			*/
+  (Function) & password_timeout, /* int					*/
+  (Function) & share_greet,	 /* int					*/
   /* 100 - 103 */
-  (Function) & max_dcc,		/* int */
-  (Function) & require_p,	/* int */
-  (Function) & use_silence,	/* int */
-  (Function) & use_console_r,	/* int */
+  (Function) & max_dcc,		 /* int					*/
+  (Function) & require_p,	 /* int					*/
+  (Function) 0,                  /* this was use_silence		*/
+  (Function) & use_console_r,	 /* int					*/
   /* 104 - 107 */
-  (Function) & ignore_time,	/* int */
-  (Function) & reserved_port,	/* int */
-  (Function) & debug_output,	/* int */
-  (Function) & noshare,		/* int */
+  (Function) & ignore_time,	 /* int					*/
+  (Function) & reserved_port,	 /* int					*/
+  (Function) & debug_output,	 /* int					*/
+  (Function) & noshare,		 /* int					*/
   /* 108 - 111 */
-  (Function) & gban_total,	/* int */
-  (Function) & make_userfile,	/* int */
-  (Function) & default_flags,	/* int */
-  (Function) & dcc_total,	/* int */
+  (Function) & gban_total,	 /* int					*/
+  (Function) & make_userfile,	 /* int					*/
+  (Function) & default_flags,	 /* int					*/
+  (Function) & dcc_total,	 /* int					*/
   /* 112 - 115 */
-  (Function) tempdir,		/* char * */
-  (Function) natip,		/* char * */
-  (Function) hostname,		/* char * */
-  (Function) origbotname,	/* char * */
+  (Function) tempdir,		 /* char *				*/
+  (Function) natip,		 /* char *				*/
+  (Function) hostname,		 /* char *				*/
+  (Function) origbotname,	 /* char *				*/
   /* 116 - 119 */
-  (Function) botuser,		/* char * */
-  (Function) admin,		/* char * */
-  (Function) userfile,		/* char * */
-  (Function) ver,		/* char * */
+  (Function) botuser,		 /* char *				*/
+  (Function) admin,		 /* char *				*/
+  (Function) userfile,		 /* char *				*/
+  (Function) ver,		 /* char *				*/
      /* 120 - 123 */
-  (Function) notify_new,	/* char * */
-  (Function) helpdir,		/* char * */
-  (Function) version,		/* char * */
-  (Function) botnetnick,	/* char * */
+  (Function) notify_new,	 /* char *				*/
+  (Function) helpdir,		 /* char *				*/
+  (Function) version,		 /* char *				*/
+  (Function) botnetnick,	 /* char *				*/
   /* 124 - 127 */
-  (Function) & DCC_CHAT_PASS,	/* struct dcc_table * */
-  (Function) & DCC_BOT,		/* struct dcc_table * */
-  (Function) & DCC_LOST,	/* struct dcc_table * */
-  (Function) & DCC_CHAT,	/* struct dcc_table * */
+  (Function) & DCC_CHAT_PASS,	 /* struct dcc_table *			*/
+  (Function) & DCC_BOT,		 /* struct dcc_table *			*/
+  (Function) & DCC_LOST,	 /* struct dcc_table *			*/
+  (Function) & DCC_CHAT,	 /* struct dcc_table *			*/
   /* 128 - 131 */
-  (Function) & interp,		/* Tcl_Interp * */
-  (Function) & now,		/* time_t */
+  (Function) & interp,		 /* Tcl_Interp *			*/
+  (Function) & now,		 /* time_t				*/
   (Function) findanyidx,
   (Function) findchan,
   /* 132 - 135 */
@@ -384,7 +386,7 @@ Function global_table[] =
   (Function) rem_help_reference,
   /* 160 - 163 */
   (Function) touch_laston,
-  (Function) & add_mode,		/* Function * */
+  (Function) & add_mode,	/* Function *				*/
   (Function) rmspace,
   (Function) in_chain,
   /* 164 - 167 */
@@ -395,40 +397,40 @@ Function global_table[] =
   /* 168 - 171 */
   (Function) expected_memory,
   (Function) tell_mem_status,
-  (Function) & do_restart,		/* int */
+  (Function) & do_restart,	/* int					*/
   (Function) check_tcl_filt,
   /* 172 - 175 */
   (Function) add_hook,
   (Function) del_hook,
-  (Function) & H_dcc,			/* p_tcl_bind_list * */
-  (Function) & H_filt,			/* p_tcl_bind_list * */
+  (Function) & H_dcc,		/* p_tcl_bind_list *			*/
+  (Function) & H_filt,		/* p_tcl_bind_list *			*/
   /* 176 - 179 */
-  (Function) & H_chon,			/* p_tcl_bind_list * */
-  (Function) & H_chof,			/* p_tcl_bind_list * */
-  (Function) & H_load,			/* p_tcl_bind_list * */
-  (Function) & H_unld,			/* p_tcl_bind_list * */
+  (Function) & H_chon,		/* p_tcl_bind_list *			*/
+  (Function) & H_chof,		/* p_tcl_bind_list *			*/
+  (Function) & H_load,		/* p_tcl_bind_list *			*/
+  (Function) & H_unld,		/* p_tcl_bind_list *			*/
   /* 180 - 183 */
-  (Function) & H_chat,			/* p_tcl_bind_list * */
-  (Function) & H_act,			/* p_tcl_bind_list * */
-  (Function) & H_bcst,			/* p_tcl_bind_list * */
-  (Function) & H_bot,			/* p_tcl_bind_list * */
+  (Function) & H_chat,		/* p_tcl_bind_list *			*/
+  (Function) & H_act,		/* p_tcl_bind_list *			*/
+  (Function) & H_bcst,		/* p_tcl_bind_list *			*/
+  (Function) & H_bot,		/* p_tcl_bind_list *			*/
   /* 184 - 187 */
-  (Function) & H_link,			/* p_tcl_bind_list * */
-  (Function) & H_disc,			/* p_tcl_bind_list * */
-  (Function) & H_away,			/* p_tcl_bind_list * */
-  (Function) & H_nkch,			/* p_tcl_bind_list * */
+  (Function) & H_link,		/* p_tcl_bind_list *			*/
+  (Function) & H_disc,		/* p_tcl_bind_list *			*/
+  (Function) & H_away,		/* p_tcl_bind_list *			*/
+  (Function) & H_nkch,		/* p_tcl_bind_list *			*/
   /* 188 - 191 */
-  (Function) & USERENTRY_BOTADDR,	/* struct user_entry_type * */
-  (Function) & USERENTRY_BOTFL,		/* struct user_entry_type * */
-  (Function) & USERENTRY_HOSTS,		/* struct user_entry_type * */
-  (Function) & USERENTRY_PASS,		/* struct user_entry_type * */
+  (Function) & USERENTRY_BOTADDR,	/* struct user_entry_type *	*/
+  (Function) & USERENTRY_BOTFL,		/* struct user_entry_type *	*/
+  (Function) & USERENTRY_HOSTS,		/* struct user_entry_type *	*/
+  (Function) & USERENTRY_PASS,		/* struct user_entry_type *	*/
   /* 192 - 195 */
-  (Function) & USERENTRY_XTRA,		/* struct user_entry_type * */
+  (Function) & USERENTRY_XTRA,		/* struct user_entry_type *	*/
   (Function) user_del_chan,
-  (Function) & USERENTRY_INFO,		/* struct user_entry_type * */
-  (Function) & USERENTRY_COMMENT,	/* struct user_entry_type * */
+  (Function) & USERENTRY_INFO,		/* struct user_entry_type *	*/
+  (Function) & USERENTRY_COMMENT,	/* struct user_entry_type *	*/
   /* 196 - 199 */
-  (Function) & USERENTRY_LASTON,	/* struct user_entry_type * */
+  (Function) & USERENTRY_LASTON,	/* struct user_entry_type *	*/
   (Function) putlog,
   (Function) botnet_send_chan,
   (Function) list_type_kill,
@@ -439,7 +441,7 @@ Function global_table[] =
   (Function) stripmasktype,
   /* 204 - 207 */
   (Function) sub_lang,
-  (Function) & online_since,	/* time_t * */
+  (Function) & online_since,	/* time_t *				*/
   (Function) cmd_loadlanguage,
   (Function) check_dcc_attrs,
   /* 208 - 211 */
@@ -451,22 +453,22 @@ Function global_table[] =
   (Function) remove_gunk,
   (Function) check_tcl_chjn,
   (Function) sanitycheck_dcc,
-  (Function) isowner,		/* Daemus */
+  (Function) isowner,
   /* 216 - 219 */
-  (Function) & min_dcc_port,	/* dw */
-  (Function) & max_dcc_port,
-  (Function) & rfc_casecmp,	/* Function * */
-  (Function) & rfc_ncasecmp,	/* Function * */
+  (Function) & min_dcc_port,	/* int					*/
+  (Function) & max_dcc_port,	/* int					*/
+  (Function) & rfc_casecmp,	/* Function *				*/
+  (Function) & rfc_ncasecmp,	/* Function *				*/
   /* 220 - 223 */
-  (Function) & global_exempts,	/* struct exemptrec * */
-  (Function) & global_invites,	/* struct inviterec * */
-  (Function) & gexempt_total,	/* int */
-  (Function) & ginvite_total,	/* int */
+  (Function) & global_exempts,	/* struct exemptrec *			*/
+  (Function) & global_invites,	/* struct inviterec *			*/
+  (Function) & gexempt_total,	/* int					*/
+  (Function) & ginvite_total,	/* int					*/
   /* 224 - 227 */
-  (Function) & H_event,		/* p_tcl_bind_list * */
-  (Function) & use_exempts,	/* int - drummer/Jason */
-  (Function) & use_invites,	/* int - drummer/Jason */
-  (Function) & force_expire,	/* int - Rufus */
+  (Function) & H_event,		/* p_tcl_bind_list *			*/
+  (Function) & use_exempts,	/* int					*/
+  (Function) & use_invites,	/* int					*/
+  (Function) & force_expire,	/* int					*/
   /* 228 - 231 */
   (Function) add_lang_section,
   (Function) _user_realloc,
@@ -488,7 +490,7 @@ Function global_table[] =
   /* 236 - 239 */
   (Function) call_ipbyhost,
   (Function) iptostr,
-  (Function) & DCC_DNSWAIT,	/* struct dcc_table * */
+  (Function) & DCC_DNSWAIT,	 /* struct dcc_table *			*/
   (Function) hostsanitycheck_dcc,
   /* 240 - 243 */
   (Function) dcc_dnsipbyhost,
@@ -496,10 +498,10 @@ Function global_table[] =
   (Function) changeover_dcc,  
   (Function) make_rand_str,
   /* 244 - 247 */
-  (Function) & protect_readonly, /* int */
+  (Function) & protect_readonly, /* int					*/
   (Function) findchan_by_dname,
   (Function) removedcc,
-  (Function) & userfile_perm,	/* int */
+  (Function) & userfile_perm,	 /* int					*/
   /* 248 - 251 */
   (Function) sock_has_data,
   (Function) bots_in_subtree,
@@ -513,7 +515,11 @@ Function global_table[] =
   /* 256 - 259 */
   (Function) egg_strncasecmp,
   (Function) is_file,
-  (Function) & must_be_owner,	/* int */
+  (Function) & must_be_owner,	/* int					*/
+  (Function) & tandbot,		/* tand_t *				*/
+  /* 260 - 263 */
+  (Function) & party,		/* party_t *				*/
+  (Function) open_address_listen,
 };
 
 void init_modules(void)
@@ -621,9 +627,9 @@ const char *module_load(char *name)
   if (moddir[0] != '/') {
     if (getcwd(workbuf, 1024) == NULL)
       return MOD_BADCWD;
-    sprintf(&(workbuf[strlen(workbuf)]), "/%s%s.so", moddir, name);
+    sprintf(&(workbuf[strlen(workbuf)]), "/%s%s." EGG_MOD_EXT, moddir, name);
   } else
-    sprintf(workbuf, "%s%s.so", moddir, name);
+    sprintf(workbuf, "%s%s." EGG_MOD_EXT, moddir, name);
 #  ifdef HPUX_HACKS
   hand = shl_load(workbuf, BIND_IMMEDIATE, 0L);
   Context;
@@ -943,7 +949,7 @@ void add_hook(int hook_num, Function func)
       }
       break;
     case HOOK_MATCH_NOTEREJ:
-      if (match_noterej == false_func)
+      if (match_noterej == (int (*)(struct userrec *, char *))false_func)
 	match_noterej = func;
       break;
     case HOOK_DNS_HOSTBYIP:
@@ -998,7 +1004,7 @@ void del_hook(int hook_num, Function func)
 	add_mode = null_func;
       break;
     case HOOK_MATCH_NOTEREJ:
-      if (match_noterej == func)
+      if (match_noterej == (int (*)(struct userrec *, char *))false_func)
 	match_noterej = false_func;
       break;
     case HOOK_DNS_HOSTBYIP:
@@ -1014,16 +1020,16 @@ void del_hook(int hook_num, Function func)
 
 int call_hook_cccc(int hooknum, char *a, char *b, char *c, char *d)
 {
-  struct hook_entry *p;
+  struct hook_entry *p, *pn;
   int f = 0;
 
   if (hooknum >= REAL_HOOKS)
     return 0;
   p = hook_list[hooknum];
   Context;
-  while ((p != NULL) && !f) {
+  for (p = hook_list[hooknum]; p && !f; p = pn) {
+    pn = p->next;
     f = p->func(a, b, c, d);
-    p = p->next;
   }
   return f;
 }

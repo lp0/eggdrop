@@ -2,7 +2,7 @@
  * lang.h
  *   Conversion definitions for language support
  * 
- * $Id: lang.h,v 1.11 2000/04/05 19:35:43 fabian Exp $
+ * $Id: lang.h,v 1.15 2000/08/03 21:51:33 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -26,64 +26,8 @@
 #ifndef _EGG_LANG_H
 #define _EGG_LANG_H
 
-#define USAGE			get_language(0x001)
-#define FAILED			get_language(0x002)
-
-/* File area
- */
-#define FILES_CONVERT		get_language(0x300)
-#define FILES_NOUPDATE		get_language(0x301)
-#define FILES_NOCONVERT		get_language(0x302)
-#define FILES_LSHEAD1		get_language(0x303)
-#define FILES_LSHEAD2		get_language(0x304)
-#define FILES_NOFILES		get_language(0x305)
-#define FILES_NOMATCH		get_language(0x306)
-#define FILES_DIRDNE		get_language(0x307)
-#define FILES_FILEDNE		get_language(0x308)
-#define FILES_NOSHARE		get_language(0x309)
-#define FILES_REMOTE		get_language(0x30a)
-#define FILES_SENDERR		get_language(0x30b)
-#define FILES_SENDING		get_language(0x30c)
-#define FILES_REMOTEREQ		get_language(0x30d)
-#define FILES_BROKEN		get_language(0x30e)
-#define FILES_INVPATH		get_language(0x30f)
-#define FILES_CURDIR		get_language(0x310)
-#define FILES_NEWCURDIR		get_language(0x311)
-#define FILES_NOSUCHDIR		get_language(0x312)
-#define FILES_ILLDIR		get_language(0x313)
-#define FILES_BADNICK		get_language(0x314)
-#define FILES_NOTAVAIL		get_language(0x315)
-#define FILES_REQUESTED		get_language(0x316)
-#define FILES_NORMAL		get_language(0x317)
-#define FILES_CHGLINK		get_language(0x318)
-#define FILES_NOTOWNER		get_language(0x319)
-#define FILES_CREADIR		get_language(0x31a)
-#define FILES_REQACCESS		get_language(0x31b)
-#define FILES_CHGACCESS		get_language(0x31c)
-#define FILES_CHGNACCESS	get_language(0x31d)
-#define FILES_REMDIR		get_language(0x31e)
-#define FILES_ILLSOURCE		get_language(0x31f)
-#define FILES_ILLDEST		get_language(0x320)
-#define FILES_STUPID		get_language(0x321)
-#define FILES_EXISTDIR		get_language(0x322)
-#define FILES_SKIPSTUPID	get_language(0x323)
-#define FILES_DEST		get_language(0x324)
-#define FILES_COPY		get_language(0x325)
-#define FILES_COPIED		get_language(0x326)
-#define FILES_MOVE		get_language(0x327)
-#define FILES_MOVED		get_language(0x328)
-#define FILES_CANTWRITE		get_language(0x329)
-#define FILES_REQUIRES		get_language(0x32a)
-#define FILES_HID		get_language(0x32b)
-#define FILES_UNHID		get_language(0x32c)
-#define FILES_SHARED		get_language(0x32d)
-#define FILES_UNSHARED		get_language(0x32e)
-#define FILES_ADDLINK		get_language(0x32f)
-#define FILES_CHANGED		get_language(0x330)
-#define FILES_BLANKED		get_language(0x331)
-#define FILES_ERASED		get_language(0x332)
-#define FILES_WELCOME		get_language(0x33a)
-#define FILES_WELCOME1		get_language(0x33b)
+#define MISC_USAGE		get_language(0x001)
+#define MISC_FAILED		get_language(0x002)
 
 /* Userfile messages
  */
@@ -357,25 +301,18 @@
 /* Messages referring to channels
  */
 #define CHAN_NOSUCH		get_language(0x900)
-#define CHAN_BADCHANKEY		get_language(0x901)
 #define CHAN_BADCHANMODE	get_language(0x902)
 #define CHAN_BADCHANMODE_ARGS	chan->dname, who
 #define CHAN_BADCHANMODE_ARGS2	chan->dname, op
 #define CHAN_MASSDEOP		get_language(0x903)
 #define CHAN_MASSDEOP_ARGS	chan->dname, from
 #define CHAN_MASSDEOP_KICK	get_language(0x904)
-#define CHAN_BADBAN		get_language(0x905)
-#define CHAN_PERMBANNED		get_language(0x906)
 #define CHAN_FORCEJOIN		get_language(0x907)
 #define CHAN_FAKEMODE		get_language(0x908)
 #define CHAN_FAKEMODE_KICK	get_language(0x909)
 #define CHAN_DESYNCMODE		get_language(0x90a)
 #define CHAN_DESYNCMODE_KICK	get_language(0x90b)
 #define CHAN_FLOOD		get_language(0x90c)
-#define CHAN_BOGUSBAN		get_language(0x90d)
-#define CHAN_BOGUSUSERNAME	get_language(0x90e)
-#define CHAN_BOGUSEXEMPT	get_language(0x90f)
-#define CHAN_BOGUSINVITE	get_language(0x910)
 
 /* Messages referring to ignores
  */

@@ -3,6 +3,95 @@
 Changes in eggdrop: (since v1.5.0)
 ----------------------------------
 
+1.5.4 (August 22, 2000)
+Foundby   Fixedby   What....
+metatron/ Eule      Fixed buffer overflow bug with long keys (>80 chars). Keys
+NeO-MeTaL             can now be handled and saved without length limitation.
+          Sup       H_need was being passed the wrong arguments.
+          Sup       Updated the help file for cmd_pls_ignore.
+          Wiktor    Updated documentation.
+          Tothwolf  Removed declartions of USERENTRY_EMAIL and USERENTRY_URL
+                      which haven't been unused and available for a long time.
+TaKeDa    G`Quann   Lagcheck broke if bot got kicked in the wrong moment.
+          Tothwolf  Removed unpopular safe_str() macro.
+Sup       guppy     Added a lifetime option to cmd_pls_ignore().
+          Tothwolf  The disable_modules file now allows spaces around module
+                      names.
+xberry    guppy     New tcl bind: need (see tcl-commands.doc for info).
+Sup       stary     Fixed notes command broken by recent strftime changes.
+          Fabian    Added open_address_listen() to listen on specific
+                      addresses or on INADDR_ANY.
+Sup       Sup/guppy Exporting tandbot and party from core to modules.
+          Sup       Minor fix of +/-chrec usage information.
+          drummer   Added resetting of nick_juped and channel juped flags.
+          Sup       Yet another minor 'Nick change' to 'Handle change' change.
+          Sup       Made chanset show usage info when no settings are given.
+matt      Fabian    unlink, used as ghost bug work-around, only worked locally.
+          Tothwolf  Made all code use strftime() instead of home-brewn hacks to
+                      display the time in a certain format.
+          Sup       Fixes dcc refused notices.
+          Eule      Updated an overlooked JOIN to follow new channel key logic.
+          Shaun     Fixed bug where handle changes with handles longer than
+                      15 characters crashed the bot.
+          TaKeDa    `share_newuser' failed to correctly pass on data from new
+                      users over the botnet.
+          Sup       doc fixes.
+          symbands  Updated doc/MODULES.
+          Sup       Slightly fixes and cleans up cmd_adduser().
+Ben       Eule      Enhanced channel key logic. Bot now first tries last set
+                      channel key when re-joining.
+          Sup       add_bot_hostmask now uses maskhost to get the right
+                      hostmask format.
+          Sup       `.deluser' doesn't require the user to be on the console
+                      channel anymore.
+          Fabian    Slightly cleaned up the transfer module and some other
+                      places in the code.
+          Scorpius/ Added `lost' and `tout' events as well as a new tcl func
+          Fabian      `getfilesendtime' to the transfer module.
+          G`Quann   Lagcheck blocked the bot when it tried to (de-)op/voice a
+                      netsplitted user. Now fixed.
+RebuM     Fabian    Removed duplicate '.' before MOD_EXT in console.mod.
+          RebuM/    Added proper Cygwin detection and usage of `.dll' suffix
+          Fabian      for libraries on Cygwin systems.
+          Fabian    Cleaned up server module a bit.
+TaKeDa/Sup Sup      Added no-host detection to adduser().
+abfab     Fabian    Long filenames caused 'NULL' to be displayed in directory
+                      listings.
+          Sup       Changed chan->name to chan->dname in some places.
+          SuperS    Added support for Tcl8.4 to configure script.
+          Fabian    Removed version suffixes from getops and userinfo filenames.
+          Fabian    Using constants instead of raw telnet character-codes now.
+          Wiktor    some places still used nick instead of hand..
+blaster   Fabian    Removed silence left-overs. Minor other fixes.
+          Eule      Removed call to enforce_bans in real_add_mode().
+Tothwolf  Fabian/   Replace all spaces in logfilenames by underscores and
+          G`Quann     changed default suffix to `.%d%b%Y'.
+Lucas     G`Quann   fixed problem with lagcheck on Dalnet.
+MBroLad   Fabian    Removed all occurrences of private_owner from share.mod.
+                      Global owners are now shared by default, as in 1.4.
+JoKeR     Fabian    added tcl_channame2dname and tcl_chandname2name to allow
+                      tcls to support !channels.
+          guppy     removed ircu silence support.
+Wiktor/   Fabian    Fixed some places which were using chan->name instead of
+guppy                 chan->dname. This included the join bind and laston info.
+Joker     Fabian    eggContext and friends didn't cut down filename paths.
+          drummer   upgraded sentinel1.54 to 1.55.
+          Sup       added .help tcl.
+Sup       Wiktor    extended info in patch.howto.
+Georg S.  Wiktor    added gmake hint on Ultrix to compiling.FAQ.
+Ben/Lucas Wiktor    changed *.conf.dist a bit and added chnick and nick to help.
+          Wiktor    moved some lines from the login procedure to the motd file.
+Joker     Fabian    Illegal definition of egg_snprintf fixed for STDC systems.
+          Eule      Added further bot-link check to securely avoid loops at
+                      an earlier stage.
+various   Tothwolf  removed the 'BOOL FreeConsole' cygwin hack from main.c.
+FireEgl   Tothwolf  print 'Launched' message when compiled with cygwin.
+          RebuM     Use opendir() instead of fopen() in files.c.
+          RebuM     Use binary mode when opening userfile with cygwin.
+          Wiktor    removed private-owner from config files.
+toot      Wiktor    compress.mod was missing in eggdrop.complete.conf.
+          Wiktor    updates NEWS file.
+
 1.5.3 (May 07, 2000)
 Foundby   Fixedby   What....
           SuperS    added support for dell svr4. Fixed trigraph problems in
@@ -127,7 +216,7 @@ Wiktor    Fabian    blowfish didn't re-initialise it's tcl bindings correctly
                       to right section - tcl-commands.doc.
 
 
-1.5.2 (Februar 04, 2000)
+1.5.2 (February 04, 2000)
 Foundby   Fixedby   What....
           Jason     Stopped flooding of partyline with channel juped messages.
                       Added display to .status and a ischanjuped tcl command.

@@ -7,7 +7,7 @@
  *   (non-Tcl) procedure lookups for msg/dcc/file commands
  *   (Tcl) binding internal procedures to msg/dcc/file commands
  * 
- * $Id: tclhash.c,v 1.15 2000/05/06 22:02:27 fabian Exp $
+ * $Id: tclhash.c,v 1.17 2000/08/03 21:51:33 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -39,7 +39,7 @@ extern struct userrec	*userlist;
 extern int		 debug_tcl, dcc_total;
 extern time_t		 now;
 
-static p_tcl_bind_list	bind_table_list;
+p_tcl_bind_list	bind_table_list;
 p_tcl_bind_list		H_chat, H_act, H_bcst, H_chon, H_chof,
 			H_load, H_unld, H_link, H_disc, H_dcc, H_chjn, H_chpt,
 			H_bot, H_time, H_nkch, H_away, H_note, H_filt, H_event;
@@ -345,11 +345,10 @@ static int tcl_bind STDVAR
 {
   p_tcl_bind_list tp;
 
-  if ((long int) cd == 1) {
-    BADARGS(5, 5, " type flags cmd/mask procname")
-  } else {
-    BADARGS(4, 5, " type flags cmd/mask ?procname?")
-  }
+  if ((long int) cd == 1)
+    BADARGS(5, 5, " type flags cmd/mask procname");
+  else
+    BADARGS(4, 5, " type flags cmd/mask ?procname?");
   tp = find_bind_table(argv[1]);
   if (!tp) {
     Tcl_AppendResult(irp, "bad type, should be one of: ", NULL);
@@ -359,9 +358,8 @@ static int tcl_bind STDVAR
   if ((long int) cd == 1) {
     if (!unbind_bind_entry(tp, argv[2], argv[3], argv[4])) {
       /* Don't error if trying to re-unbind a builtin */
-      if ((argv[4][0] != '*') || (argv[4][4] != ':') ||
-          (strcmp(argv[3], &argv[4][5])) ||
-	      (strncmp(argv[1], &argv[4][1], 3))) {
+      if (argv[4][0] != '*' || argv[4][4] != ':' ||
+	  strcmp(argv[3], &argv[4][5]) || strncmp(argv[1], &argv[4][1], 3)) {
 	Tcl_AppendResult(irp, "no such binding", NULL);
 	return TCL_ERROR;
       }

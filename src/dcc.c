@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  * 
- * $Id: dcc.c,v 1.28 2000/05/06 22:00:31 fabian Exp $
+ * $Id: dcc.c,v 1.31 2000/07/12 21:45:29 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -78,35 +78,35 @@ static void strip_telnet(int sock, char *buf, int *len)
   int mark;
 
   while (*p != 0) {
-    while ((*p != 255) && (*p != 0))
+    while ((*p != TLN_IAC) && (*p != 0))
       *o++ = *p++;
-    if (*p == 255) {
+    if (*p == TLN_IAC) {
       p++;
       mark = 2;
       if (!*p)
 	mark = 1;		/* bogus */
-      if ((*p >= 251) && (*p <= 254)) {
+      if ((*p >= TLN_WILL) && (*p <= TLN_DONT)) {
 	mark = 3;
 	if (!*(p + 1))
 	  mark = 2;		/* bogus */
       }
-      if (*p == 251) {
+      if (*p == TLN_WILL) {
 	/* WILL X -> response: DONT X */
 	/* except WILL ECHO which we just smile and ignore */
-	if (!(*(p + 1) == 1)) {
-	  write(sock, "\377\376", 2);
+	if (*(p + 1) != TLN_ECHO) {
+	  write(sock, TLN_IAC_C TLN_DONT_C, 2);
 	  write(sock, p + 1, 1);
 	}
       }
-      if (*p == 253) {
+      if (*p == TLN_DO) {
 	/* DO X -> response: WONT X */
 	/* except DO ECHO which we just smile and ignore */
-	if (!(*(p + 1) == 1)) {
-	  write(sock, "\377\374", 2);
+	if (*(p + 1) != TLN_ECHO) {
+	  write(sock, TLN_IAC_C TLN_WONT_C, 2);
 	  write(sock, p + 1, 1);
 	}
       }
-      if (*p == 246) {
+      if (*p == TLN_AYT) {
 	/* "are you there?" */
 	/* response is: "hell yes!" */
 	write(sock, "\r\nHell, yes!\r\n", 14);
@@ -156,6 +156,13 @@ static void bot_version(int idx, char *par)
 
   Context;
   dcc[idx].timeval = now;
+  if (in_chain(dcc[idx].nick)) {
+    dprintf(idx, "error Sorry, already connected.\n");
+    dprintf(idx, "bye\n");
+    killsock(dcc[idx].sock);
+    lostdcc(idx);
+    return;
+  }
   if ((par[0] >= '0') && (par[0] <= '9')) {
     char *work;
 
@@ -582,8 +589,9 @@ static void dcc_chat_pass(int idx, char *buf, int atr)
       dcc[idx].status &= ~STAT_CHAT;
       dcc[idx].u.chat->con_flags = (atr & USER_MASTER) ? conmask : 0;
       dcc[idx].u.chat->channel = -2;
+      /* Turn echo back on for telnet sessions (send IAC WON'T ECHO). */
       if (dcc[idx].status & STAT_TELNET)
-	dprintf(idx, "\377\374\001\n");		/* Turn echo back on */
+	dprintf(idx, TLN_IAC_C TLN_WONT_C TLN_ECHO_C "\n");
       dcc_chatter(idx);
     }
   } else {
@@ -594,8 +602,9 @@ static void dcc_chat_pass(int idx, char *buf, int atr)
     putlog(LOG_MISC, "*", DCC_BADLOGIN, dcc[idx].nick,
 	   dcc[idx].host, dcc[idx].port);
     if (dcc[idx].u.chat->away) {	/* su from a dumb user */
+      /* Turn echo back on for telnet sessions (send IAC WON'T ECHO). */
       if (dcc[idx].status & STAT_TELNET)
-	dprintf(idx, "\377\374\001\n");		/* Turn echo back on */
+	dprintf(idx, TLN_IAC_C TLN_WONT_C TLN_ECHO_C "\n");
       dcc[idx].user = get_user_by_handle(userlist, dcc[idx].u.chat->away);
       strcpy(dcc[idx].nick, dcc[idx].u.chat->away);
       nfree(dcc[idx].u.chat->away);
@@ -947,7 +956,7 @@ static void dcc_chat(int idx, char *buf, int i)
 					       dcc[idx].u.chat->su_nick);
 	    strcpy(dcc[idx].nick, dcc[idx].u.chat->su_nick);
 	    dcc[idx].type = &DCC_CHAT;
-	    dprintf(idx, "Returning to real nick %s!\r\n",
+	    dprintf(idx, "Returning to real nick %s!\n",
 		    dcc[idx].u.chat->su_nick);
 	    nfree(dcc[idx].u.chat->su_nick);
 	    dcc[idx].u.chat->su_nick = NULL;
@@ -1355,7 +1364,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
   buf[HANDLEN] = 0;
   /* Toss out bad nicknames */
   if ((dcc[idx].nick[0] != '@') && (!wild_match(dcc[idx].nick, buf))) {
-    dprintf(idx, "Sorry, that nickname format is invalid.\r\n");
+    dprintf(idx, "Sorry, that nickname format is invalid.\n");
     putlog(LOG_BOTS, "*", DCC_BADNICK, dcc[idx].host);
     killsock(dcc[idx].sock);
     lostdcc(idx);
@@ -1365,7 +1374,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
   get_user_flagrec(dcc[idx].user, &fr, NULL);
   /* Make sure users-only/bots-only connects are honored */
   if ((dcc[idx].status & STAT_BOTONLY) && !glob_bot(fr)) {
-    dprintf(idx, "This telnet port is for bots only.\r\n");
+    dprintf(idx, "This telnet port is for bots only.\n");
     putlog(LOG_BOTS, "*", DCC_NONBOT, dcc[idx].host);
     killsock(dcc[idx].sock);
     lostdcc(idx);
@@ -1383,10 +1392,10 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
       ((allow_new_telnets) || (make_userfile))) {
     dcc[idx].type = &DCC_TELNET_NEW;
     dcc[idx].timeval = now;
-    dprintf(idx, "\r\n");
+    dprintf(idx, "\n");
     dprintf(idx, IRC_TELNET, IRC_TELNET_ARGS);
     dprintf(idx, IRC_TELNET1);
-    dprintf(idx, "\r\nEnter the nickname you would like to use.\r\n");
+    dprintf(idx, "\nEnter the nickname you would like to use.\n");
     return;
   }
   if (chan_op(fr)) {
@@ -1402,7 +1411,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
       ok = 1;
   }
   if (!ok) {
-    dprintf(idx, "You don't have access.\r\n");
+    dprintf(idx, "You don't have access.\n");
     putlog(LOG_BOTS, "*", DCC_INVHANDLE, dcc[idx].host, buf);
     killsock(dcc[idx].sock);
     lostdcc(idx);
@@ -1457,7 +1466,7 @@ static void dcc_telnet_pass(int idx, int atr)
 #endif
       return;
     }
-    dprintf(idx, "Can't telnet until you have a password set.\r\n");
+    dprintf(idx, "Can't telnet until you have a password set.\n");
     putlog(LOG_MISC, "*", DCC_NOPASS, dcc[idx].nick, dcc[idx].host);
     killsock(dcc[idx].sock);
     lostdcc(idx);
@@ -1515,8 +1524,9 @@ static void dcc_telnet_pass(int idx, int atr)
      *       stored in cleartext, or at least something that can be reversed.
      *       <Cybah>
      */
-    dprintf(idx, "\n%s\377\373\001\n",DCC_ENTERPASS);
-    /* Turn off remote telnet echo: IAC WILL ECHO */
+
+    /* Turn off remote telnet echo (send IAC WILL ECHO). */
+    dprintf(idx, "\n%s" TLN_IAC_C TLN_WILL_C TLN_ECHO_C "\n", DCC_ENTERPASS);
   }
 }
 
@@ -2102,9 +2112,9 @@ void dcc_telnet_got_ident(int i, char *host)
   if (stealth_telnets) 
     sub_lang(i, MISC_BANNER_STEALTH);
   else {
-    dprintf(i, "\r\n\r\n");
+    dprintf(i, "\n\n");
     sub_lang(i, MISC_BANNER);
   }
   if (allow_new_telnets)
-    dprintf(i, "(If you are new, enter 'NEW' here.)\r\n");
+    dprintf(i, "(If you are new, enter 'NEW' here.)\n");
 }

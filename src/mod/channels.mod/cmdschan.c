@@ -2,7 +2,7 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  * 
- * $Id: cmdschan.c,v 1.22 2000/05/06 22:06:44 fabian Exp $
+ * $Id: cmdschan.c,v 1.26 2000/08/11 22:43:07 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -907,11 +907,23 @@ static void cmd_stick_yn(int idx, char *par, int yn)
 {
   int i, j;
   struct chanset_t *chan;
-  char s[UHOSTLEN], * stick_type;
-  stick_type=newsplit(&par);
+  char s[UHOSTLEN], *stick_type;
+
+  stick_type = newsplit(&par);
   strncpy(s, par, UHOSTMAX);
   s[UHOSTMAX] = 0;
        
+  if ((egg_strcasecmp(stick_type,"exempt")) &&
+      (egg_strcasecmp(stick_type,"invite")) &&
+      (egg_strcasecmp(stick_type,"ban"))) {
+    strncpy(s, stick_type, UHOSTMAX);
+    s[UHOSTMAX] = 0;
+  }
+  if (!s[0]) {
+    dprintf(idx, "Usage: %sstick [ban/exempt/invite] <num or mask>\n",
+	    yn ? "" : "un");
+    return;
+  }    
   /* Now deal with exemptions */
   if (!egg_strcasecmp(stick_type,"exempt")) {
     i = u_setsticky_exempt(NULL, s,
@@ -967,10 +979,6 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     dprintf(idx, "No such invite.\n");
     return;
   }
-  if (egg_strcasecmp(stick_type,"ban")) {
-    strncpy(s, stick_type, UHOSTMAX);
-    s[UHOSTMAX] = 0;    
-  }
   i = u_setsticky_ban(NULL, s, (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
   if (i > 0) {
     putlog(LOG_CMDS, "*", "#%s# %sstick ban %s", 
@@ -994,8 +1002,6 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     return;
   }
   dprintf(idx, "No such ban.\n");
-  dprintf(idx, "Usage: %sstick [ban/exempt/invite] <num or mask>\n",
-	  yn ? "" : "un");
 }
 
 
@@ -1018,7 +1024,7 @@ static void cmd_pls_chrec(struct userrec *u, int idx, char *par)
 
   Context;
   if (!par[0]) {
-    dprintf(idx, "Usage: +chrec <User> [channel]\n");
+    dprintf(idx, "Usage: +chrec <user> [channel]\n");
     return;
   }
   nick = newsplit(&par);
@@ -1065,7 +1071,7 @@ static void cmd_mns_chrec(struct userrec *u, int idx, char *par)
 
   Context;
   if (!par[0]) {
-    dprintf(idx, "Usage: -chrec <User> [channel]\n");
+    dprintf(idx, "Usage: -chrec <user> [channel]\n");
     return;
   }
   nick = newsplit(&par);
@@ -1101,7 +1107,7 @@ static void cmd_mns_chrec(struct userrec *u, int idx, char *par)
   }
   putlog(LOG_CMDS, "*", "#%s# -chrec %s %s", dcc[idx].nick, nick, chn);
   del_chanrec(u1, chn);
-  dprintf(idx, "Removed %s channel record for %s.\n", chn, nick);
+  dprintf(idx, "Removed %s channel record from %s.\n", chn, nick);
 }
 
 static void cmd_pls_chan(struct userrec *u, int idx, char *par)
@@ -1162,6 +1168,7 @@ static void cmd_mns_chan(struct userrec *u, int idx, char *par)
   if (!channel_inactive(chan) && chan->name[0])  
     dprintf(DP_SERVER, "PART %s\n", chan->name);
 
+  nfree(chan->channel.key);
   remove_channel(chan);
   dprintf(idx, "Channel %s removed from the bot.\n", chname);
   dprintf(idx, "This includes any channel specific bans, invites, exemptions and user records that you set.\n");
@@ -1325,7 +1332,7 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
   if (!par[0])
     dprintf(idx, "Usage: chanset [%schannel] <settings>\n", CHANMETA);
   else {
-    if ((strlen(par) > 2) && (par[0] == '*') && (par[1] == ' ')) {
+    if (strlen(par) > 2 && par[0] == '*' && par[1] == ' ') {
       all = 1;
       get_user_flagrec(u, &user, chanset ? chanset->dname : "");
       if (!glob_master(user)) {
@@ -1349,6 +1356,10 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
 	    *--par = ' ';
 	  par = chname;
 	}
+      }
+      if (!par[0] || par[0] == '*') {
+        dprintf(idx, "Usage: chanset [%schannel] <settings>\n", CHANMETA);
+        return;
       }
       if (!chan &&
           !(chan = findchan_by_dname(chname = dcc[idx].u.chat->con_chan))) {
@@ -1384,7 +1395,7 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
 	 */
 	if (strncmp(list[0], "need-", 5) || (u->flags & USER_OWNER)) {
 	  if (!strncmp(list[0], "need-", 5) && !(isowner(dcc[idx].nick)) &&
-	      (must_be_owner)) {
+	      must_be_owner) {
 	    dprintf(idx, "Due to security concerns, only permanent owners can set these modes.\n");
 	    nfree(buf);
 	    return;

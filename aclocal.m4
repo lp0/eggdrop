@@ -1,7 +1,7 @@
 dnl aclocal.m4
 dnl   macros autoconf uses when building configure from configure.in
 dnl
-dnl $Id: aclocal.m4,v 1.18 2000/05/07 00:18:36 fabian Exp $
+dnl $Id: aclocal.m4,v 1.22 2000/08/07 10:09:16 fabian Exp $
 dnl
 
 
@@ -21,11 +21,6 @@ dnl
 AC_DEFUN(EGG_MSG_CONFIGURE_END, [dnl
 AC_MSG_RESULT()
 AC_MSG_RESULT(Configure is done.)
-AC_MSG_RESULT()
-AC_MSG_RESULT([WARNING!!])
-AC_MSG_RESULT([This is a DEVELOPMENT release! We do not consider it])
-AC_MSG_RESULT([stable. Please report all bugs you find, as long as])
-AC_MSG_RESULT([they are not yet fixed in a later release.])
 AC_MSG_RESULT()
 AC_MSG_RESULT(Type 'make config' to configure the modules. Or 'make iconfig' to)
 AC_MSG_RESULT(interactively choose which modules to compile.)
@@ -122,6 +117,7 @@ SHLIB_LD="${CC}"
 SHLIB_STRIP="${STRIP}"
 NEED_DL=1
 DEFAULT_MAKE=debug
+MOD_EXT=so
 
 AC_MSG_CHECKING(your OS)
 if eval "test \"`echo '$''{'egg_cv_var_system'+set}'`\" = set"
@@ -160,9 +156,22 @@ case "$egg_cv_var_system" in
     esac
     ;;
   CYGWIN*)
-    AC_MSG_RESULT(Cygwin)
-    NEED_DL=0
-    DEFAULT_MAKE=static
+    cygwin_version=`${UNAME} -r | cut -c 1-3`
+    case "$cygwin_version" in
+      1.*)
+        AC_MSG_RESULT(Cygwin 1.x)
+        NEED_DL=0
+        MOD_LD="${CC}"
+        SHLIB_LD="${CC} -shared"
+        MOD_EXT=dll
+        AC_DEFINE(MODULES_OK)dnl
+      ;;
+      *)
+        AC_MSG_RESULT(Cygwin pre 1.0 or unknown)
+        NEED_DL=0
+        DEFAULT_MAKE=static
+      ;;
+    esac
     ;;
   HP-UX)
     AC_MSG_RESULT([HP-UX, just shoot yourself now])
@@ -203,6 +212,7 @@ case "$egg_cv_var_system" in
     NEED_DL=0
     SHLIB_STRIP=touch
     DEFUALT_MAKE=static
+    SHELL=/bin/sh5
     ;;
   BeOS)
     AC_MSG_RESULT(BeOS)
@@ -234,7 +244,7 @@ case "$egg_cv_var_system" in
         MOD_CC=cc
         MOD_LD=cc
         SHLIB_CC=cc
-        SHLIB_LD="ld -shared -expect_unresolved '*'"
+        SHLIB_LD="ld -shared -expect_unresolved \"'*'\""
         SHLIB_STRIP=touch
         AC_DEFINE(MODULES_OK)dnl
         ;;
@@ -313,6 +323,8 @@ AC_SUBST(SHLIB_LD)dnl
 AC_SUBST(SHLIB_CC)dnl
 AC_SUBST(SHLIB_STRIP)dnl
 AC_SUBST(DEFAULT_MAKE)dnl
+AC_SUBST(MOD_EXT)dnl
+AC_DEFINE_UNQUOTED(EGG_MOD_EXT, "${MOD_EXT}")dnl
 ])dnl
 
 
@@ -327,6 +339,7 @@ else
   AC_CHECK_LIB(nsl, connect)
   AC_CHECK_LIB(dns, gethostbyname)
   AC_CHECK_LIB(dl, dlopen)
+  AC_CHECK_LIB(m, tan, EGG_MATH_LIB="-lm")
   # This is needed for Tcl libraries compiled with thread support
   AC_CHECK_LIB(pthread,pthread_mutex_init,
 ac_cv_lib_pthread_pthread_mutex_init=yes,
@@ -825,13 +838,13 @@ AC_DEFUN(EGG_TCL_TESTLIBS, [dnl
 # Setup TCL_TESTLIBS for Tcl library tests
 if test ! "x${TCLLIBEXT}" = "x.a"
 then
-  TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS -lm $LIBS"
+  TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB $LIBS"
 else
   if test ! "x${tcllibname}" = "x"
   then
-    TCL_TESTLIBS="$TCLLIB/lib$TCLLIBFN -lm $LIBS"
+    TCL_TESTLIBS="$TCLLIB/lib$TCLLIBFN $EGG_MATH_LIB $LIBS"
   else
-    TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS -lm $LIBS"
+    TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB $LIBS"
   fi
 fi
 if test "x${ac_cv_lib_pthread_pthread_mutex_init}" = "xyes"
@@ -948,7 +961,7 @@ AC_DEFUN(EGG_TCL_LIB_REQS, [dnl
 if test ! "x${TCLLIBEXT}" = "x.a"
 then
   TCL_REQS="$TCLLIB/lib$TCLLIBFN"
-  TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
+  TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB"
 else
 
   # Set default make as static for unshared Tcl library
@@ -974,10 +987,10 @@ EOF
     if test ! "x${tcllibname}" = "x"
     then
       TCL_REQS="$TCLLIB/lib$TCLLIBFN"
-      TCL_LIBS="$TCLLIB/lib$TCLLIBFN -lm"
+      TCL_LIBS="$TCLLIB/lib$TCLLIBFN $EGG_MATH_LIB"
     else
       TCL_REQS="$TCLLIB/lib$TCLLIBFN"
-      TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
+      TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB"
     fi
   else
     cat << EOF >&2
@@ -988,7 +1001,7 @@ configure: warning:
 
 EOF
     TCL_REQS="libtcle.a"
-    TCL_LIBS="-L. -ltcle -lm"
+    TCL_LIBS="-L. -ltcle $EGG_MATH_LIB"
   fi
 fi
 AC_SUBST(TCL_REQS)dnl
@@ -1121,4 +1134,3 @@ AC_DEFUN(EGG_SAVE_PARAMETERS, [dnl
   AC_DIVERT_POP()dnl to NORMAL
   AC_SUBST(egg_ac_parameters)dnl
 ])dnl
-

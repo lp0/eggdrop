@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  * 
- * $Id: main.c,v 1.36 2000/05/06 22:04:55 fabian Exp $
+ * $Id: main.c,v 1.40 2000/06/10 01:00:22 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -49,9 +49,9 @@
 #include "chan.h"
 #include "modules.h"
 #include "tandem.h"
+
 #ifdef CYGWIN_HACKS
 #include <windows.h>
-BOOL FreeConsole(VOID);
 #endif
 
 #ifndef _POSIX_SOURCE
@@ -79,8 +79,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.5.3";
-int	egg_numver = 1050300;
+char	egg_version[1024] = "1.5.4";
+int	egg_numver = 1050400;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -97,7 +97,7 @@ char	helpdir[121];		/* Directory of help files (if used) */
 char	textdir[121] = "";	/* Directory for text files that get dumped */
 int	keep_all_logs = 0;	/* Never erase logfiles, no matter how old
 				   they are? */
-char logfile_suffix[21] = "%d%b%y"; /* format of logfile suffix */
+char	logfile_suffix[21] = ".%d%b%Y"; /* Format of logfile suffix. */
 time_t	online_since;		/* Unix-time that the bot loaded up */
 int	make_userfile = 0;	/* Using bot in make-userfile mode? (first
 				   user to 'hello' becomes master) */
@@ -367,13 +367,14 @@ static void got_ill(int z)
 /* Context */
 void eggContext(char *file, int line, char *module)
 {
-  char x[100];
+  char x[31], *p;
 
-  if (!module)
-    sprintf(x, "%s", file);
-  else
-    sprintf(x, "%s:%s", module, file);
-  x[30] = 0;
+  p = strrchr(file, '/');
+  if (!module) {
+    strncpy(x, p ? p + 1 : file, 30);
+    x[30] = 0;
+  } else
+    egg_snprintf(x, 31, "%s:%s", module, p ? p + 1 : file);
   cx_ptr = ((cx_ptr + 1) & 15);
   strcpy(cx_file[cx_ptr], x);
   cx_line[cx_ptr] = line;
@@ -384,13 +385,14 @@ void eggContext(char *file, int line, char *module)
  */
 void eggContextNote(char *file, int line, char *module, char *note)
 {
-  char x[100];
+  char x[31], *p;
 
-  if (!module)
-    sprintf(x, "%s", file);
-  else
-    sprintf(x, "%s:%s", module, file);
-  x[30] = 0;
+  p = strrchr(file, '/');
+  if (!module) {
+    strncpy(x, p ? p + 1 : file, 30);
+    x[30] = 0;
+  } else
+    egg_snprintf(x, 31, "%s:%s", module, p ? p + 1 : file);
   cx_ptr = ((cx_ptr + 1) & 15);
   strcpy(cx_file[cx_ptr], x);
   cx_line[cx_ptr] = line;
@@ -761,7 +763,6 @@ int main(int argc, char **argv)
 	 botnetnick, i, count_users(userlist));
   cache_miss = 0;
   cache_hit = 0;
-  Context;
   sprintf(pid_file, "pid.%s", botnetnick);
   Context;
 
@@ -780,9 +781,9 @@ int main(int argc, char **argv)
   }
   Context;
 
-#ifndef CYGWIN_HACKS
   /* Move into background? */
   if (backgrd) {
+#ifndef CYGWIN_HACKS
     xx = fork();
     if (xx == -1)
       fatal("CANNOT FORK PROCESS.", 0);
@@ -811,43 +812,45 @@ int main(int argc, char **argv)
 #endif
       exit(0);
     }
-  }
+  } else {			/* !backgrd */
 #endif
-  use_stderr = 0;		/* Stop writing to stderr now */
-  xx = getpid();
-  if ((xx != 0) && (!backgrd)) {
-    FILE *fp;
+    xx = getpid();
+    if (xx != 0) {
+      FILE *fp;
 
-    /* Write pid to file */
-    unlink(pid_file);
-    fp = fopen(pid_file, "w");
-    if (fp != NULL) {
-      fprintf(fp, "%u\n", xx);
-      if (fflush(fp)) {
-	/* Let the bot live since this doesn't appear to be a botchk */
-	printf(EGG_NOWRITE, pid_file);
-	fclose(fp);
-	unlink(pid_file);
+      /* Write pid to file */
+      unlink(pid_file);
+      fp = fopen(pid_file, "w");
+      if (fp != NULL) {
+        fprintf(fp, "%u\n", xx);
+        if (fflush(fp)) {
+	  /* Let the bot live since this doesn't appear to be a botchk */
+	  printf(EGG_NOWRITE, pid_file);
+	  fclose(fp);
+	  unlink(pid_file);
+        } else
+ 	  fclose(fp);
       } else
-	fclose(fp);
-    } else
-      printf(EGG_NOWRITE, pid_file);
+        printf(EGG_NOWRITE, pid_file);
+#ifdef CYGWIN_HACKS
+      printf("Launched  (pid: %d)\n\n", xx);
+#endif
+    }
   }
+
+  use_stderr = 0;		/* Stop writing to stderr now */
   if (backgrd) {
     /* Ok, try to disassociate from controlling terminal (finger cross) */
 #if HAVE_SETPGID && !defined(CYGWIN_HACKS)
     setpgid(0, 0);
 #endif
-    /* Close out stdin/out/err */
+    /* Tcl wants the stdin, stdout and stderr file handles kept open. */
     freopen("/dev/null", "r", stdin);
     freopen("/dev/null", "w", stdout);
     freopen("/dev/null", "w", stderr);
 #ifdef CYGWIN_HACKS
     FreeConsole();
 #endif
-    /* Note: Tcl wants those file handles kept open!
-     *       close(0); close(1); close(2);
-     */
   }
 
   /* Terminal emulating dcc chat */

@@ -2,7 +2,7 @@
  * chancmds.c -- part of irc.mod
  *   handles commands direclty relating to channel interaction
  * 
- * $Id: cmdsirc.c,v 1.12 2000/03/23 23:17:58 fabian Exp $
+ * $Id: cmdsirc.c,v 1.18 2000/08/06 14:51:38 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -73,7 +73,7 @@ static void cmd_act(struct userrec *u, int idx, char *par)
     return;
   }
   if ((chan->channel.mode & CHANMODER) && !(m->flags & (CHANOP | CHANVOICE))) {
-    dprintf(idx, "Cannot say to %s, it is moderated.\n", chan->name);
+    dprintf(idx, "Cannot say to %s, it is moderated.\n", chan->dname);
     return;
   }
   putlog(LOG_CMDS, "*", "#%s# (%s) act %s", dcc[idx].nick,
@@ -87,10 +87,10 @@ static void cmd_msg(struct userrec *u, int idx, char *par)
 {
   char *nick;
 
+  nick = newsplit(&par);
   if (!par[0]) {
     dprintf(idx, "Usage: msg <nick> <message>\n");
   } else {
-    nick = newsplit(&par);
     putlog(LOG_CMDS, "*", "#%s# msg %s %s", dcc[idx].nick, nick, par);
     dprintf(DP_HELP, "PRIVMSG %s :%s\n", nick, par);
     dprintf(idx, "Msg to %s: %s\n", nick, par);
@@ -145,6 +145,10 @@ static void cmd_kickban(struct userrec *u, int idx, char *par)
     chname = 0;
   if (!(chan = has_op(idx, chname)))
     return;
+  if (!channel_active(chan)) {
+    dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+    return;
+  }
   if (!me_op(chan)) {
     dprintf(idx, "I can't help you now because I'm not a channel op on %s.\n",
 	    chan->dname);
@@ -228,6 +232,10 @@ static void cmd_voice(struct userrec *u, int idx, char *par)
   nick = newsplit(&par);
   if (!(chan = has_op(idx, par)))
     return;
+  if (!channel_active(chan)) {
+    dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+    return;
+  }
   if (!me_op(chan)) {
     dprintf(idx, "I can't help you now because I'm not a chan op on %s.\n",
 	    chan->dname);
@@ -259,6 +267,10 @@ static void cmd_devoice(struct userrec *u, int idx, char *par)
   nick = newsplit(&par);
   if (!(chan = has_op(idx, par)))
     return;
+  if (!channel_active(chan)) {
+    dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+    return;
+  }
   if (!me_op(chan)) {
     dprintf(idx, "I can't do that right now I'm not a chan op on %s.\n",
 	    chan->dname);
@@ -290,9 +302,13 @@ static void cmd_op(struct userrec *u, int idx, char *par)
   nick = newsplit(&par);
   if (!(chan = has_op(idx, par)))
     return;
+  if (!channel_active(chan)) {
+    dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+    return;
+  }
   if (!me_op(chan)) {
     dprintf(idx, "I can't help you now because I'm not a chan op on %s.\n",
-	    chan->name);
+	    chan->dname);
     return;
   }
   putlog(LOG_CMDS, "*", "#%s# (%s) op %s %s", dcc[idx].nick,
@@ -332,6 +348,10 @@ static void cmd_deop(struct userrec *u, int idx, char *par)
   nick = newsplit(&par);
   if (!(chan = has_op(idx, par)))
     return;
+  if (!channel_active(chan)) {
+    dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+    return;
+  }
   if (!me_op(chan)) {
     dprintf(idx, "I can't help you now because I'm not a chan op on %s.\n",
 	    chan->dname);
@@ -382,9 +402,13 @@ static void cmd_kick(struct userrec *u, int idx, char *par)
     chname = 0;
   if (!(chan = has_op(idx, chname)))
     return;
+  if (!channel_active(chan)) {
+    dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+    return;
+  }
   if (!me_op(chan)) {
     dprintf(idx, "I can't help you now because I'm not a channel op on %s.\n",
-	    chan->name);
+	    chan->dname);
     return;
   }
   putlog(LOG_CMDS, "*", "#%s# (%s) kick %s", dcc[idx].nick,
@@ -411,7 +435,7 @@ static void cmd_kick(struct userrec *u, int idx, char *par)
   }
   if ((chan_master(victim) || glob_master(victim)) &&
       !(glob_owner(user) || chan_owner(user))) {
-    dprintf(idx, "%s is a %s master.\n", nick, chan->name);
+    dprintf(idx, "%s is a %s master.\n", nick, chan->dname);
     return;
   }
   if (glob_bot(victim) && !(glob_owner(victim) || chan_owner(victim))) {
@@ -502,16 +526,10 @@ static void cmd_channel(struct userrec *u, int idx, char *par)
     spaces2[HANDLEN - 9] = ' ';
     while (m && m->nick[0]) {
       if (m->joined > 0) {
-	strcpy(s, ctime(&(m->joined)));
-	if ((now - (m->joined)) > 86400) {
-	  strcpy(s1, &s[4]);
-	  strcpy(s, &s[8]);
-	  strcpy(&s[2], s1);
-	  s[5] = 0;
-	} else {
-	  strcpy(s, &s[11]);
-	  s[5] = 0;
-	}
+	if ((now - (m->joined)) > 86400)
+	  strftime(s, 6, "%d%b", localtime(&(m->joined)));
+	else
+	  strftime(s, 6, "%H:%M", localtime(&(m->joined)));
       } else
 	strcpy(s, " --- ");
       if (m->user == NULL) {
@@ -615,6 +633,10 @@ static void cmd_topic(struct userrec *u, int idx, char *par)
   } else
     chan = has_op(idx, "");
   if (chan) {
+    if (!channel_active(chan)) {
+      dprintf(idx, "I'm not on %s right now!\n", chan->dname);
+      return;
+    }
     if (!par[0]) {
       if (chan->channel.topic) {
 	dprintf(idx, "The topic for %s is: %s\n", chan->dname,
@@ -726,7 +748,7 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
 {
   char *nick, *hand;
   struct chanset_t *chan;
-  memberlist *m = 0;
+  memberlist *m = NULL;
   char s[121], s1[121];
   int atr = u ? u->flags : 0;
   int statichost = 0;
@@ -765,12 +787,10 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
   }
 
   Context;
-  chan = chanset;
-  while (chan != NULL) {
+  for (chan = chanset; chan; chan = chan->next) {
     m = ismember(chan, nick);
     if (m)
       break;
-    chan=chan->next;
   }
   if (!m) {
     dprintf(idx, "%s is not on any channels I monitor\n", nick);
@@ -778,7 +798,7 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
   }
   if (strlen(hand) > HANDLEN)
     hand[HANDLEN] = 0;
-  simple_sprintf(s, "%s!%s", m->nick, m->userhost);
+  egg_snprintf(s, sizeof s, "%s!%s", m->nick, m->userhost);
   u = get_user_by_host(s);
   if (u) {
     dprintf(idx, "%s is already known as %s.\n", nick, u->handle);
@@ -825,33 +845,29 @@ static void cmd_deluser(struct userrec *u, int idx, char *par)
 {
   char *nick, s[1024];
   struct chanset_t *chan;
-  memberlist *m;
+  memberlist *m = NULL;
   struct flag_record victim = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
   if (!par[0]) {
     dprintf(idx, "Usage: deluser <nick>\n");
     return;
   }
-  chan = findchan_by_dname(dcc[idx].u.chat->con_chan);
-  if (!chan) {
-    dprintf(idx, "Your console channel is invalid.\n");
-    return;
-  }
-  if (!channel_active(chan)) {
-    dprintf(idx, "I'm not on %s!\n", chan->dname);
-    return;
-  }
   nick = newsplit(&par);
-  m = ismember(chan, nick);
+
+  for (chan = chanset; chan; chan = chan->next) {
+    m = ismember(chan, nick);
+    if (m)
+      break;
+  }
   if (!m) {
-    dprintf(idx, "%s is not on %s.\n", nick, chan->dname);
+    dprintf(idx, "%s is not on any channels I monitor\n", nick);
     return;
   }
   get_user_flagrec(u, &user, chan->dname);
-  simple_sprintf(s, "%s!%s", m->nick, m->userhost);
+  egg_snprintf(s, sizeof s, "%s!%s", m->nick, m->userhost);
   u = get_user_by_host(s);
   if (!u) {
-    dprintf(idx, "%s is not in a valid user.\n", nick);
+    dprintf(idx, "%s is not a valid user.\n", nick);
     return;
   }
   get_user_flagrec(u, &victim, NULL);
@@ -875,6 +891,7 @@ static void cmd_deluser(struct userrec *u, int idx, char *par)
     dprintf(idx, "Can't delete a bot!\n");
   } else {
     char buf[HANDLEN + 1];
+
     strncpy(buf, u->handle, HANDLEN);
     buf[HANDLEN] = 0;
     if (deluser(u->handle)) {
@@ -897,9 +914,9 @@ static void cmd_reset(struct userrec *u, int idx, char *par)
     else {
       get_user_flagrec(u, &user, par);
       if (!glob_master(user) && !chan_master(user)) {
-	dprintf(idx, "You are not a master on %s.\n", chan->name);
+	dprintf(idx, "You are not a master on %s.\n", chan->dname);
       } else if (!channel_active(chan)) {
-	dprintf(idx, "Im not on %s at the moment!\n", chan->name);
+	dprintf(idx, "I'm not on %s at the moment!\n", chan->dname);
       } else {
 	putlog(LOG_CMDS, "*", "#%s# reset %s", dcc[idx].nick, par);
 	dprintf(idx, "Resetting channel info for %s...\n", chan->dname);

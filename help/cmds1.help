@@ -21,13 +21,11 @@
    to her own record via the %b/MSG IDENT%b command, but it's here if
    you need it.
 %{help=+ignore}%{+m}
-###  %b+ignore%b <hostmask> [comment]
-   Adds a hostmask to the ignore list, with your nickname and an
-   optional comment.  An ignore added manually like this becomes
-   "permenent", ie, it will not expire automatically.  To make
-   the bot stop ignoring this hostmask, you must eventually use
-   a %b'-ignore'%b command.  This command can be used to either ignore
-   users on irc, or to ignore incoming telnet connections.
+###  %b+ignore%b <hostmask> [%%ignoretime <XdXhXm>] [comment]
+   Adds a hostmask to the ignore list, with your nickname and optional
+   comment and ignoretime. This command can be used to either ignore
+   users on irc, or to ignore incoming telnet connections. Ignoretime
+   has to be expressed in days, hours and minutes.
    
 See also: -ignore, ignores
 %{help=+user}%{+m}
@@ -213,6 +211,11 @@ See also: whois
    Changes the handle of a user record. For example, to
    change the handle of user 'gavroche' to 'jamie', you would
    type: 'chhandle gavroche jamie'
+%{help=chnick}%{+t}
+###  %bchnick%b
+   Please note, that this command has been superceeded by
+   'chhandle'. If you still want to use 'chnick', load compat.tcl
+   into your bot.
 %{help=chpass}%{+t}
 ###  %bchpass%b <handle> [newpassword]
    Changes a user's password on the bot.  If you leave off the new

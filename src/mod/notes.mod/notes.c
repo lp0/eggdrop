@@ -5,7 +5,7 @@
  *   note cmds
  *   note ignores
  * 
- * $Id: notes.c,v 1.16 2000/03/23 23:17:58 fabian Exp $
+ * $Id: notes.c,v 1.21 2000/08/18 01:04:38 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -508,9 +508,8 @@ static void notes_read(char *hand, char *nick, char *srd, int idx)
 	  from = newsplit(&s1);
 	  dt = newsplit(&s1);
 	  tt = atoi(dt);
-	  strcpy(wt, ctime(&tt));
-	  wt[16] = 0;
-	  dt = wt + 4;
+	  strftime(wt, 14, "%b %d %H:%M", localtime(&tt));
+	  dt = wt;
 	  lapse = (int) ((now - tt) / 86400);
 	  if (lapse > note_life - 7) {
 	    if (lapse >= note_life)
@@ -596,7 +595,7 @@ static void notes_del(char *hand, char *nick, char *sdl, int idx)
     if (idx >= 0)
       dprintf(idx, "%s.\n", BOT_NOMESSAGES);
     else
-      dprintf(DP_HELP, "NOTICE %s :BOT_NOMESSAGES.\n", nick);
+      dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
     return;
   }
   sprintf(s, "%s~new", notefile);
@@ -738,8 +737,8 @@ static int msg_notes(char *nick, char *host, struct userrec *u, char *par)
   if (u->flags & (USER_BOT | USER_COMMON))
     return 1;
   if (!par[0]) {
-    dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] INDEX\n", nick, USAGE);
-    dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] TO <nick> <msg>\n", nick);
+    dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] INDEX\n", nick, MISC_USAGE);
+    dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] TO <hand> <msg>\n", nick);
     dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] READ <# or ALL>\n", nick);
     dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] ERASE <# or ALL>\n", nick);
     dprintf(DP_HELP, "NOTICE %s :       # may be numbers and/or intervals separated by ;\n", nick);
@@ -773,8 +772,8 @@ static int msg_notes(char *nick, char *host, struct userrec *u, char *par)
 
     to = newsplit(&par);
     if (!par[0]) {
-      dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] TO <nick> <message>\n",
-	      nick, USAGE);
+      dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] TO <hand> <message>\n",
+	      nick, MISC_USAGE);
       return 0;
     }
     u2 = get_user_by_handle(userlist, to);

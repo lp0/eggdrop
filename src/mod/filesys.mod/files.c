@@ -2,7 +2,7 @@
  * files.c - part of filesys.mod
  *   handles all file system commands
  * 
- * $Id: files.c,v 1.21 2000/04/25 20:53:55 fabian Exp $
+ * $Id: files.c,v 1.24 2000/07/12 21:50:35 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -150,7 +150,8 @@ static void cmd_optimise(int idx, char *par)
 static int resolve_dir(char *current, char *change, char **real, int idx)
 {
   char *elem = NULL, *s = NULL, *new = NULL, *work = NULL, *p = NULL;
-  FILE *fdb  = NULL, *f = NULL;
+  FILE *fdb  = NULL;
+  DIR  *dir  = NULL;
   filedb_entry *fdbe = NULL;
   struct flag_record user = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0},
 		     req  = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
@@ -255,11 +256,11 @@ static int resolve_dir(char *current, char *change, char **real, int idx)
   /* Sanity check: does this dir exist? */
   s = nrealloc(s, strlen(dccdir) + strlen(*real) + 1);
   sprintf(s, "%s%s", dccdir, *real);
-  f = fopen(s, "r");
+  dir = opendir(s);
   my_free(s);
-  if (f == NULL)
+  if (!dir)
     return 0;
-  fclose(f);
+  closedir(dir);
   Context;
   return 1;
 }
@@ -323,7 +324,7 @@ static void cmd_pending(int idx, char *par)
 static void cmd_cancel(int idx, char *par)
 {
   if (!par[0]) {
-    dprintf(idx, "%s: cancel <file-mask>\n", USAGE);
+    dprintf(idx, "%s: cancel <file-mask>\n", MISC_USAGE);
     return;
   }
   fileq_cancel(idx, par);
@@ -335,7 +336,7 @@ static void cmd_chdir(int idx, char *msg)
   char *s;
 
   if (!msg[0]) {
-    dprintf(idx, "%s: cd <new-dir>\n", USAGE);
+    dprintf(idx, "%s: cd <new-dir>\n", MISC_USAGE);
     return;
   }
   if (!resolve_dir(dcc[idx].u.file->dir, msg, &s, idx)) {
@@ -435,7 +436,7 @@ static void cmd_reget_get(int idx, char *par, int resend)
       nicklen = (int) me->funcs[SERVER_NICKLEN];
   }
   if (!par[0]) {
-    dprintf(idx, "%s: %sget <file(s)> [nickname]\n", USAGE, resend ? "re" : "");
+    dprintf(idx, "%s: %sget <file(s)> [nickname]\n", MISC_USAGE, resend ? "re" : "");
     return;
   }
   what = newsplit(&par);
@@ -461,7 +462,6 @@ static void cmd_reget_get(int idx, char *par, int resend)
   if (!fdb)
     return;
   filedb_readtop(fdb, NULL);
-  debug1("what: '%s'", what);
   fdbe = filedb_matchfile(fdb, ftell(fdb), what);
   if (!fdbe) {
     filedb_close(fdb);
@@ -557,7 +557,7 @@ static void cmd_hide(int idx, char *par)
   int ok = 0;
 
   if (!par[0]) {
-    dprintf(idx, "%s: hide <file(s)>\n", USAGE);
+    dprintf(idx, "%s: hide <file(s)>\n", MISC_USAGE);
     return;
   }
   fdb = filedb_open(dcc[idx].u.file->dir, 0);
@@ -599,7 +599,7 @@ static void cmd_unhide(int idx, char *par)
   int ok = 0;
 
   if (!par[0]) {
-    dprintf(idx, "%s: unhide <file(s)>\n", USAGE);
+    dprintf(idx, "%s: unhide <file(s)>\n", MISC_USAGE);
     return;
   }
   fdb = filedb_open(dcc[idx].u.file->dir, 0);
@@ -641,7 +641,7 @@ static void cmd_share(int idx, char *par)
   int ok = 0;
 
   if (!par[0]) {
-    dprintf(idx, "%s: share <file(s)>\n", USAGE);
+    dprintf(idx, "%s: share <file(s)>\n", MISC_USAGE);
     return;
   }
   fdb = filedb_open(dcc[idx].u.file->dir, 0);
@@ -683,7 +683,7 @@ static void cmd_unshare(int idx, char *par)
   int ok = 0;
 
   if (!par[0]) {
-    dprintf(idx, "%s: unshare <file(s)>\n", USAGE);
+    dprintf(idx, "%s: unshare <file(s)>\n", MISC_USAGE);
     return;
   }
   fdb = filedb_open(dcc[idx].u.file->dir, 0);
@@ -732,7 +732,7 @@ static void cmd_ln(int idx, char *par)
     share[60] = 0;
   /* Correct format? */
   if (!(p = strchr(share, ':')) || !par[0])
-    dprintf(idx, "%s: ln <bot:path> <localfile>\n", USAGE);
+    dprintf(idx, "%s: ln <bot:path> <localfile>\n", MISC_USAGE);
   else if (p[1] != '/')
     dprintf(idx, "Links to other bots must have absolute paths.\n");
   else {
@@ -798,7 +798,7 @@ static void cmd_desc(int idx, char *par)
 
   fn = newsplit(&par);
   if (!fn[0]) {
-    dprintf(idx, "%s: desc <filename> <new description>\n", USAGE);
+    dprintf(idx, "%s: desc <filename> <new description>\n", MISC_USAGE);
     return;
   }
   /* Fix up desc */
@@ -900,7 +900,7 @@ static void cmd_rm(int idx, char *par)
   char *s;
 
   if (!par[0]) {
-    dprintf(idx, "%s: rm <file(s)>\n", USAGE);
+    dprintf(idx, "%s: rm <file(s)>\n", MISC_USAGE);
     return;
   }
   fdb = filedb_open(dcc[idx].u.file->dir, 0);
@@ -949,7 +949,7 @@ static void cmd_mkdir(int idx, char *par)
   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   if (!par[0]) {
-    dprintf(idx, "%s: mkdir <dir> [required-flags] [channel]\n", USAGE);
+    dprintf(idx, "%s: mkdir <dir> [required-flags] [channel]\n", MISC_USAGE);
     return;
   }
   name = newsplit(&par);
@@ -991,7 +991,7 @@ static void cmd_mkdir(int idx, char *par)
 		  + strlen(name) + 2);
       sprintf(s, "%s%s/%s", dccdir, dcc[idx].u.file->dir, name);
       if (mkdir(s, 0755) != 0) {
-	dprintf(idx, FAILED);
+	dprintf(idx, MISC_FAILED);
 	filedb_close(fdb);
 	my_free(s);
 	return;
@@ -1087,7 +1087,7 @@ static void cmd_rmdir(int idx, char *par)
       putlog(LOG_FILES, "*", "files: #%s# rmdir %s", dcc[idx].nick, name);
       return;
     }
-    dprintf(idx, FAILED);
+    dprintf(idx, MISC_FAILED);
     filedb_close(fdb);
     free_fdbe(&fdbe);
     my_free(s);
@@ -1107,7 +1107,7 @@ static void cmd_mv_cp(int idx, char *par, int copy)
   fn = newsplit(&par);
   if (!par[0]) {
     dprintf(idx, "%s: %s <oldfilepath> <newfilepath>\n",
-	    USAGE, copy ? "cp" : "mv");
+	    MISC_USAGE, copy ? "cp" : "mv");
     return;
   }
   p = strrchr(fn, '/');

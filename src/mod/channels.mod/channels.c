@@ -2,7 +2,7 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  * 
- * $Id: channels.c,v 1.29 2000/04/05 19:58:11 fabian Exp $
+ * $Id: channels.c,v 1.32 2000/08/07 10:09:16 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -43,6 +43,7 @@ static int  quiet_save		= 0;
 static char glob_chanmode[64]	= "nt";	/* Default chanmode (drummer,990731) */
 static struct udef_struct *udef	= NULL;
 static int global_stopnethack_mode = 0;
+static int global_idle_kick;		/* Default idle-kick setting. */
 
 /* Global channel settings (drummer/dw) */
 static char glob_chanset[512]	= "\
@@ -116,6 +117,12 @@ static void set_mode_protect(struct chanset_t *chan, char *set)
       break;
     case 'm':
       i = CHANMODER;
+      break;
+    case 'c':
+      i = CHANNOCLR;
+      break;
+    case 'R':
+      i = CHANREGON;
       break;
     case 't':
       i = CHANTOPIC;
@@ -200,6 +207,10 @@ static void get_mode_protect(struct chanset_t *chan, char *s)
       *p++ = 's';
     if (tst & CHANMODER)
       *p++ = 'm';
+    if (tst & CHANNOCLR)
+      *p++ = 'c';
+    if (tst & CHANREGON)
+      *p++ = 'R';
     if (tst & CHANTOPIC)
       *p++ = 't';
     if (tst & CHANNOMSG)
@@ -473,6 +484,7 @@ static void read_channels(int create)
   chan = chanset;
   while (chan != NULL) {
     if (chan->status & CHAN_FLAGGED) {
+      nfree(chan->channel.key);
       putlog(LOG_MISC, "*", "No longer supporting channel %s", chan->dname);
       if (chan->name[0] && !channel_inactive(chan))
         dprintf(DP_SERVER, "PART %s\n", chan->name);
@@ -742,6 +754,7 @@ static tcl_ints my_tcl_ints[] =
   {"invite-time",		&invite_time,			0},
   {"quiet-save",		&quiet_save,			0},
   {"global-stopnethack-mode",	&global_stopnethack_mode,	0},
+  {"global-idle-kick",		&global_idle_kick,		0},
   {NULL,			NULL,				0}
 };
 
@@ -865,6 +878,7 @@ char *channels_start(Function * global_funcs)
   gfld_join_time = 60;
   gfld_ctcp_thr = 5;
   gfld_ctcp_time = 60;
+  global_idle_kick = 0;
   Context;
   module_register(MODULE_NAME, channels_table, 1, 0);
   if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {

@@ -10,7 +10,7 @@
  * 
  * dprintf'ized, 9nov1995
  * 
- * $Id: users.c,v 1.15 2000/05/06 22:02:27 fabian Exp $
+ * $Id: users.c,v 1.17 2000/08/06 14:51:38 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -46,7 +46,7 @@ char spaces2[33] = "                                 ";
 extern struct dcc_t *dcc;
 extern struct userrec *userlist, *lastuser;
 extern struct chanset_t *chanset;
-extern int dcc_total, noshare, use_silence;
+extern int dcc_total, noshare;
 extern char botnetnick[];
 extern Tcl_Interp *interp;
 extern time_t now;
@@ -208,17 +208,6 @@ void check_expired_ignores()
     if (!((*u)->flags & IGREC_PERM) && (now >= (*u)->expire)) {
       putlog(LOG_MISC, "*", "%s %s (%s)", IGN_NOLONGER, (*u)->igmask,
 	     MISC_EXPIRED);
-      if (use_silence) {
-	char *p;
-
-	/* possibly an ircu silence was added for this user */
-	p = strchr((*u)->igmask, '!');
-	if (p == NULL)
-	  p = (*u)->igmask;
-	else
-	  p++;
-	dprintf(DP_SERVER, "SILENCE -%s\n", p);
-      }
       delignore((*u)->igmask);
     } else {
       u = &((*u)->next);
@@ -500,15 +489,10 @@ void tell_user(int idx, struct userrec *u, int master)
     strcpy(s1, "never");
   else {
     now2 = now - li->laston;
-    strcpy(s1, ctime(&li->laston));
-    if (now2 > 86400) {
-      s1[7] = 0;
-      strcpy(&s1[11], &s1[4]);
-      strcpy(s1, &s1[8]);
-    } else {
-      s1[16] = 0;
-      strcpy(s1, &s1[11]);
-    }
+    if (now2 > 86400)
+      strftime(s1, 7, "%d %b", localtime(&li->laston));
+    else
+      strftime(s1, 6, "%H:%M", localtime(&li->laston));
   }
   Context;
   spaces[l] = 0;
@@ -527,15 +511,10 @@ void tell_user(int idx, struct userrec *u, int master)
 	strcpy(s1, "never");
       else {
 	now2 = now - (ch->laston);
-	strcpy(s1, ctime(&(ch->laston)));
-	if (now2 > 86400) {
-	  s1[7] = 0;
-	  strcpy(&s1[11], &s1[4]);
-	  strcpy(s1, &s1[8]);
-	} else {
-	  s1[16] = 0;
-	  strcpy(s1, &s1[11]);
-	}
+	if (now2 > 86400)
+	  strftime(s1, 7, "%d %b", localtime(&li->laston));
+	else
+	  strftime(s1, 6, "%H:%M", localtime(&li->laston));
       }
       fr.match = FR_CHAN;
       fr.chan = ch->flags;

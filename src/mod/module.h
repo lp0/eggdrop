@@ -1,7 +1,7 @@
 /* 
  * module.h
  * 
- * $Id: module.h,v 1.28 2000/04/05 19:58:11 fabian Exp $
+ * $Id: module.h,v 1.32 2000/08/18 00:25:10 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -197,8 +197,7 @@
 #define get_data_ptr(x) ((void *(*)(int,char*,int))global[86])(x,__FILE__,__LINE__)
 #define open_telnet ((int (*) (char *, int))global[87])
 /* 88 - 91 */
-/* global[88] is now EMPTY. Was bzero(). Use egg_memset or egg_bzero instead.
- */
+#define check_tcl_event ((void * (*) (char *))global[88])
 #define my_memcpy ((void * (*) (void *, const void *, size_t))global[89])
 #define my_atoul ((IP(*)(char *))global[90])
 #define my_strcpy ((int (*)(char *, const char *))global[91])
@@ -215,7 +214,7 @@
 /* 100 - 103 */
 #define max_dcc (*(int *)global[100])
 #define require_p (*(int *)global[101])
-#define use_silence (*(int *)(global[102]))
+/* this was use_silence */
 #define use_console_r (*(int *)(global[103]))
 /* 104 - 107 */
 #define ignore_time (*(int *)(global[104]))
@@ -420,6 +419,10 @@
 #define egg_strncasecmp ((int (*)(const char *, const char *, size_t))global[256])
 #define is_file ((int (*)(const char *))global[257])
 #define must_be_owner (*(int *)(global[258]))
+#define tandbot (*(tand_t **)(global[259]))
+/* 260 - 263 */
+#define party (*(party_t **)(global[260]))
+#define open_address_listen ((int (*)(IP addr, int *port))global[261])
 
 
 /* This is for blowfish module, couldnt be bothereed making a whole new .h
