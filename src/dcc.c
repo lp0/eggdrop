@@ -872,7 +872,7 @@ static void dcc_telnet (int idx, char * buf,int i)
    unsigned long ip;
    unsigned short port;
    int j = 0,sock;
-   char s[UHOSTLEN], s2[UHOSTLEN+20];
+   char s[UHOSTLEN+1], s2[UHOSTLEN+20];
    
    context;
    if (dcc_total + 1 > max_dcc) {

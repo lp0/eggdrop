@@ -12,7 +12,7 @@
 static int setstatic = 0;
 static int use_info = 1;
 static int ban_time = 60;
-static char chanfile [121];
+static char chanfile [121] = "chanfile";
 static Function * global = NULL;
 static int chan_hack = 0;
 
@@ -192,39 +192,42 @@ static int killchanset (struct chanset_t * chan)
 
 /* bind this to chon and *if* the users console channel == ***
  * then set it to a specific channel */
-static void channels_chon (char * handle, int idx) {
+static int channels_chon (char * handle, int idx) {
    struct flag_record fr = {FR_CHAN|FR_ANYWH|FR_GLOBAL,0,0,0,0,0};
    int find, found = 0;
    struct chanset_t * chan = chanset;
    
-   if (!findchan(dcc[idx].u.chat->con_chan)
-       && ((dcc[idx].u.chat->con_chan[0] != '*')
-       || (dcc[idx].u.chat->con_chan[1] != 0))) {
-      
-      get_user_flagrec(dcc[idx].user,&fr,NULL);
-      if (glob_op(fr))
-	found = 1;
-      if (chan_owner(fr))
-	find = USER_OWNER;
-      else if (chan_master(fr))
-	find = USER_MASTER;
-      else
-	find = USER_OP;
-      fr.match = FR_CHAN;
-      while (chan && !found) {
-	 get_user_flagrec(dcc[idx].user,&fr,chan->name);
-	 if (fr.chan & find)
+   if (dcc[idx].type == &DCC_CHAT) {
+      if (!findchan(dcc[idx].u.chat->con_chan)
+	  && ((dcc[idx].u.chat->con_chan[0] != '*')
+	      || (dcc[idx].u.chat->con_chan[1] != 0))) {
+	 
+	 get_user_flagrec(dcc[idx].user,&fr,NULL);
+	 if (glob_op(fr))
 	   found = 1;
+	 if (chan_owner(fr))
+	   find = USER_OWNER;
+	 else if (chan_master(fr))
+	   find = USER_MASTER;
 	 else
-	   chan = chan->next;
+	   find = USER_OP;
+	 fr.match = FR_CHAN;
+	 while (chan && !found) {
+	    get_user_flagrec(dcc[idx].user,&fr,chan->name);
+	    if (fr.chan & find)
+	      found = 1;
+	    else
+	      chan = chan->next;
+	 }
+	 if (!chan)
+	   chan = chanset;
+	 if (chan)
+	   strcpy(dcc[idx].u.chat->con_chan, chan->name);
+	 else
+	   strcpy(dcc[idx].u.chat->con_chan, "*");
       }
-      if (!chan)
-	chan = chanset;
-      if (chan)
-	strcpy(dcc[idx].u.chat->con_chan, chan->name);
-      else
-	strcpy(dcc[idx].u.chat->con_chan, "*");
    }
+   return 0;
 }
 
 static void write_channels()
@@ -234,6 +237,8 @@ static void write_channels()
    struct chanset_t *chan;
 
    context;
+   if (!chanfile[0])
+      return;
    sprintf(s, "%s~new", chanfile);
    f = fopen(s, "w");
    chmod(s, 0600);
@@ -591,7 +596,6 @@ char *channels_start (Function * global_funcs)
    module_register(MODULE_NAME, channels_table, 1, 0);
    if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
      return "This module needs eggdrop1.3.0 or later";
-   strcpy(chanfile,"chanfile");
    add_hook(HOOK_MINUTELY,check_expired_bans);
    add_hook(HOOK_USERFILE,channels_writeuserfile);
    add_hook(HOOK_REHASH,channels_rehash);

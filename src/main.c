@@ -77,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.8";
-int egg_numver = 1030800;
+char egg_version[1024] = "1.3.9";
+int egg_numver = 1030900;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -148,7 +148,7 @@ void fatal (char * s, int recoverable)
 
 int expmem_chanprog(), expmem_users(), expmem_misc(),
     expmem_dccutil(), expmem_botnet(), expmem_tcl(), expmem_tclhash(),   
-    expmem_net(), expmem_modules(int), expmem_language();
+    expmem_net(), expmem_modules(int), expmem_language(), expmem_tcldcc();
 
 /* for mem.c : calculate memory we SHOULD be using */
 int expected_memory()
@@ -157,7 +157,7 @@ int expected_memory()
    context;
    tot = expmem_chanprog() + expmem_users() + expmem_misc() +
        expmem_dccutil() + expmem_botnet() + expmem_tcl() + expmem_tclhash() +
-       expmem_net() + expmem_modules(0) + expmem_language();
+       expmem_net() + expmem_modules(0) + expmem_language() + expmem_tcldcc();
    return tot;
 }
 

@@ -282,7 +282,7 @@ context;
       /* "my girlfriend" */
 
         else if (!strcasecmp(word1, "girlfriend") || !strcasecmp(word1, "gf")) {
-         strcpy(whotarget, getxtra(hand, "BF"));
+         strcpy(whotarget, getxtra(hand, "GF"));
          if (whotarget[0]) {
             sprintf(whoredirect, "%s, your girlfriend is %s, and ",
                                  nick, whotarget);

@@ -33,10 +33,19 @@ extern tand_t * tandbot;
 extern int max_dcc;
 int enable_simul = 0;
 extern time_t now;
+static struct portmap * root = NULL;
+
+int expmem_tcldcc (void) {
+   int tot = 0;
+   struct portmap * pmap;
+   for (pmap = root; pmap; pmap = pmap->next)
+     tot += sizeof(struct portmap);
+   return tot;
+}
 
 /***********************************************************************/
 
-static int tcl_putdcc STDVAR
+static int tcl_putdcc STDVAR 
 {
    int i, j;
    
@@ -794,16 +803,29 @@ static int tcl_connect STDVAR
    listen <port> off */
 static int tcl_listen STDVAR
 {
-   int i, j, idx = (-1), port;
+   int i, j, idx = (-1), port, realport;
    char s[10];
-
+   struct portmap * pmap = NULL, * pold = NULL;
+   
    context;
    BADARGS(3, 4, " port type ?mask/proc?");
-   port = atoi(argv[1]);
-   for (i = 0; i < dcc_total; i++)
-      if ((dcc[i].type == &DCC_TELNET) && (dcc[i].port == port))
-	  idx = i;
+   port = realport = atoi(argv[1]);
+   for (pmap = root; pmap; pold = pmap, pmap = pmap->next) 
+     if (pmap->realport == port) {
+	port = pmap->mappedto;
+	break;
+     }
+   for (i = 0; i < dcc_total; i++) 
+     if ((dcc[i].type == &DCC_TELNET) && (dcc[i].port == port))
+       idx = i;
    if (strcasecmp(argv[2], "off") == 0) {
+      if (pmap) {
+	 if (pold)
+	   pold->next = pmap->next;
+	 else
+	   root = pmap->next;
+	 nfree(pmap);
+      }
       /* remove */
       if (idx < 0) {
 	 Tcl_AppendResult(irp, "no such listen port is open", NULL);
@@ -872,6 +894,14 @@ static int tcl_listen STDVAR
       strcpy(dcc[idx].host, "*");
    sprintf(s, "%d", port);
    Tcl_AppendResult(irp, s, NULL);
+   if (!pmap) {
+      pmap = nmalloc(sizeof(struct portmap));
+      pmap->next = root;
+      root = pmap;
+   }
+   pmap->realport = realport;
+   pmap->mappedto = port;
+   putlog(LOG_MISC, "*", "Listening at telnet port %d (%s)", port, argv[2]);
    return TCL_OK;
 }
 

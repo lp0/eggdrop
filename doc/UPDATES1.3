@@ -1,6 +1,30 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.9
+Foundby   Fixedby   What....
+          deadgrrrl xtra_tcl_set typo
+Q         Beldin    lets fix chanfile = "" properly
+          Beldin    .chaddr allowed too-long addresses
+          Beldin    buffer overflow in start_sending_users with long entires
+Thomas    Beldin    setuser laston global time setting
+Daklop    Beldin    console.mod stored local channels still got broadcast join
+          aaronwl   config file name made avaliable to scripts
+KingKurly Kirk      setting sticky bans using * as the first character of the
+                    comment has been tarted up a bit
+          Kirk      mapping of listening ports has been changed, to stop the
+                    problem with eggdrop grabbing more ports when rehashing 
+                    when it couldn't get the specified listening port
+	  Beldin    learn to delete from link lists kirk :P
+          Kirk/Beldin revenge wasn't setting the channel deop flag correctly
+                    on users who weren't in the userlist (do it properly)
+          Beldin    added .modules command for report module listings
+tdemarti  Beldin    made the chon binding require a return value (0 = cont, 
+	            1 = stop handling)
+tdemarti  Beldin    also made chon handlers verify they are using DCC_CHAT's
+tdemarti  Beldin    part messages were still being passed on for unkown users
+??????????????????? HP-UX module support (does it even work?)
+
 1.3.8
 Foundby   Fixedby   What....
           Beldin    kicks were not being logged all the time
@@ -16,7 +40,7 @@ Melvan/Daklop Beldin console still not saving correctly (masktype changed)
 
 1.3.7
 Foundby   Fixedby   What....
-toblerone Kirk      pub & pubm messages were being passed n!u@h not u@h
+Toblerone Kirk      pub & pubm messages were being passed n!u@h not u@h
 Ernest B. Kirk      +/-cycle added
 Daklop    Beldin    lastons were back-the-front
           Ernest B. buildstatic failure to execute bug

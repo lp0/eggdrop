@@ -67,6 +67,7 @@ int expmem_tclhash();
 int expmem_net();
 int expmem_modules();
 int expmem_language();
+int expmem_tcldcc();
 void tell_netdebug();
 void do_module_report(int,int,char *);
 
@@ -113,7 +114,7 @@ void tell_mem_status_dcc (int idx)
 void debug_mem_to_dcc (int idx)
 {
 #ifdef DEBUG
-#define MAX_MEM 10
+#define MAX_MEM 11
    unsigned long exp[MAX_MEM], use[MAX_MEM], l;
    int i, j;
    char fn[20], sofar[81];
@@ -130,6 +131,7 @@ void debug_mem_to_dcc (int idx)
    exp[7] = expmem_tcl();
    exp[8] = expmem_tclhash();
    exp[9] = expmem_modules(1);
+   exp[10] = expmem_tcldcc();
    for (me = module_list; me; me = me->next)
       me->mem_work = 0;
    for (i = 0; i < MAX_MEM; i++)
@@ -160,6 +162,8 @@ void debug_mem_to_dcc (int idx)
 	 use[8] += l;
       else if (!strcasecmp(fn, "modules.c"))
 	 use[9] += l;
+      else if (!strcasecmp(fn, "tcldcc.c"))
+	use[10] += l;
       else if (p) {
 	 for (me = module_list; me; me = me->next)
 	    if (strcmp(fn, me->name) == 0)
@@ -201,6 +205,9 @@ void debug_mem_to_dcc (int idx)
 	 break;
       case 9:
 	 strcpy(fn, "modules.c");
+	 break;
+	case 10:
+	 strcpy(fn, "tcldcc.c");
 	 break;
       }
       if (use[i] == exp[i]) {

@@ -64,6 +64,8 @@ extern time_t online_since;
 extern log_t * logs;
 extern int tands;
 extern char natip[];
+/* confvar patch by aaronwl */
+extern char configfile[];
 int dcc_flood_thr = 3;
 int debug_tcl = 0;
 int use_silence = 0;
@@ -318,6 +320,8 @@ static tcl_strings def_tcl_strings[] =
    {"username", botuser, 10, 0},
    {"version", egg_version, 0, 0},
    {"firewall", firewall, 120, 0},
+/* confvar patch by aaronwl */
+   {"config", configfile, 0, 0},
    {0, 0, 0, 0}
 };
 

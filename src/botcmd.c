@@ -31,6 +31,7 @@ extern int remote_boots;
 extern char motdfile[];
 extern party_t * party;
 extern int noshare;
+extern module_entry *module_list;
 
 /* static buffer for goofy bot stuff */
 static char TBUF[1024];
@@ -1229,22 +1230,23 @@ static void bot_part (int idx, char * par)
       sprintf(TBUF,"@%s",bot);
       touch_laston(u,TBUF,now);
    }
-   partyidx = getparty(bot, sock);
-   check_tcl_chpt(bot, nick, sock,party[partyidx].chan);
-   if ((b_numver(idx) >= NEAT_BOTNET) && !silent) {
+   if ((partyidx = getparty(bot, sock))) {
+      check_tcl_chpt(bot, nick, sock,party[partyidx].chan);
+      if ((b_numver(idx) >= NEAT_BOTNET) && !silent) {
       register int chan = party[partyidx].chan;
-      
+	 
       if (par[0])
-	chanout_but(-1,chan, "*** (%s) %s %s %s (%s).\n", bot, nick,
-		NET_LEFTTHE,
-		chan ? "channel" : "party line", par);
-      else
-	chanout_but(-1,chan, "*** (%s) %s %s %s.\n", bot, nick,
-		NET_LEFTTHE,
-		chan ? "channel" : "party line");
+	   chanout_but(-1,chan, "*** (%s) %s %s %s (%s).\n", bot, nick,
+		       NET_LEFTTHE,
+		       chan ? "channel" : "party line", par);
+	 else
+	   chanout_but(-1,chan, "*** (%s) %s %s %s.\n", bot, nick,
+		       NET_LEFTTHE,
+		       chan ? "channel" : "party line");
+      }
+      botnet_send_part_party(idx,partyidx, par, silent);
+      remparty(bot, sock);
    }
-   botnet_send_part_party(idx,partyidx, par, silent);
-   remparty(bot, sock);
    context;
 }
 
@@ -1354,6 +1356,26 @@ void bot_share (int idx, char * par) {
    sharein(idx,par);
 }
 
+/* v <frombot> <tobot> <idx:nick> */
+static void bot_versions (int sock, char * par) {
+   char * frombot = newsplit(&par), *tobot, *from;
+   module_entry * me;
+   
+   if (nextbot(frombot) != sock)
+     fake_alert(sock, "versions-direction", frombot);
+   else if (strcasecmp(tobot = newsplit(&par), botnetnick)) {
+      if ((sock = nextbot(tobot)))
+	dprintf(sock,"v %s %s %s\n", frombot, tobot, par);
+   } else {
+      from = newsplit(&par);
+      botnet_send_priv(sock, botnetnick, from, frombot, "Modules loaded:\n");
+      for (me = module_list; me; me = me->next)
+	botnet_send_priv(sock,botnetnick,from,frombot,"  Module: %s (v%d.%d)\n",
+			 me->name, me->major, me->minor);
+      botnet_send_priv(sock, botnetnick, from, frombot, "End of module list.\n");
+   }
+}
+
 /* BOT COMMANDS */
 /* function call should be:
  * int bot_whatever(idx,"parameters");
@@ -1457,6 +1479,7 @@ botcmd_t C_bot[]={
   { "unlinked", (Function) bot_unlinked },
   { "update", (Function) bot_update },
   { "userfile?", (Function) bot_old_userfile },
+   { "v", (Function) bot_versions },
 #endif
   { "w", (Function) bot_who },
 #ifndef NO_OLD_BOTNET

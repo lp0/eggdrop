@@ -38,7 +38,7 @@ For masters:
 %{+n}
 For owners:
 %b  die          simul        module       load         unload%b
-%b  set          tcl          rehelp%b
+%b  set          tcl          rehelp       modules%b
 %{-}
 All commands begin with '.' and all else goes to the party line.
 %{+m}Text starting with ',' is sent ONLY to bot-masters.%{end}

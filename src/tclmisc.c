@@ -287,8 +287,7 @@ static int tcl_rand STDVAR
    return TCL_OK;
 }
 
-static int tcl_sendnote STDVAR
-{
+static int tcl_sendnote STDVAR {
    char s[5], from[NOTENAMELEN+1], to[NOTENAMELEN+1], msg[451];
 
    context;

@@ -863,6 +863,8 @@ static void cmd_chaddr (struct userrec * u, int idx, char * par)
    }
    handle = newsplit(&par);
    addr = newsplit(&par);
+   if (strlen(addr) > UHOSTLEN)
+     addr[UHOSTLEN] = 0;
    u1 = get_user_by_handle(userlist, handle);
    if (!u1 || !(u1->flags & USER_BOT)) {
       dprintf(idx, "Useful only for tandem bots.\n");
@@ -2185,12 +2187,28 @@ static void cmd_mns_host (struct userrec * u, int idx, char * par)
      dprintf(idx, "Failed.\n");
 }
 
+static void cmd_modules (struct userrec * u, int idx, char * par) {
+   int ptr;
+   
+   context;
+   if (!par[0])
+     dprintf(idx, "Usage: modules <bot>\n");
+   else {
+      putlog(LOG_CMDS, "*", "#%s# modules %s", dcc[idx].nick,par);
+      if ((ptr = nextbot(par)) >= 0)
+	dprintf(ptr, "v %s %s %d:%s\n", botnetnick, par, dcc[idx].sock,
+		      dcc[idx].nick);
+      else
+	dprintf(idx, "No such bot online.\n");
+   }
+}
+
 /* DCC CHAT COMMANDS */
 /* function call should be:
    int cmd_whatever(idx,"parameters");
    as with msg commands, function is responsible for any logging
 */
-cmd_t C_dcc[66]={
+cmd_t C_dcc[63]={
   { "+bot", "t", (Function)cmd_pls_bot, NULL },
   { "+host", "tm|m", (Function)cmd_pls_host, NULL },
   { "+ignore", "m", (Function)cmd_pls_ignore, NULL },
@@ -2228,6 +2246,7 @@ cmd_t C_dcc[66]={
   { "match", "to|o", (Function)cmd_match, NULL },
   { "me", "", (Function)cmd_me, NULL },
   { "module", "m", (Function)cmd_modulestat, NULL },
+  { "modules", "n", (Function)cmd_modules, NULL },
   { "motd", "", (Function)cmd_motd, NULL },
   { "newpass", "", (Function)cmd_newpass, NULL },
   { "nick", "", (Function)cmd_nick, NULL },

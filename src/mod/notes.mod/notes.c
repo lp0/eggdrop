@@ -732,8 +732,10 @@ static void away_notes ( char * bot, int idx, char * msg ) {
      notes_read(dcc[idx].nick, 0, -1, idx);
 }
 
-static void chon_notes ( char * nick, int idx ) {
-   notes_read(nick, 0, -1, idx);
+static int chon_notes ( char * nick, int idx ) {
+   if (dcc[idx].type == &DCC_CHAT)
+     notes_read(nick, 0, -1, idx);
+   return 0;
 }
 
 static void join_notes (char * nick, char * uhost, char * handle, char * par) {

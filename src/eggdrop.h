@@ -54,7 +54,7 @@
 #endif
 
 #ifndef STATIC
-#if !defined(MODULES_OK) || !defined(HAVE_DLOPEN)
+#if (!defined(MODULES_OK) || !defined(HAVE_DLOPEN)) && !defined(HPUX_HACKS)
 #include "you_can't_compile_with_module_support_on_this_system_try_make_static"
 #endif
 #endif
@@ -159,6 +159,13 @@ typedef unsigned long IP;
 #define debug4(x,a1,a2,a3,a4) putlog(LOG_DEBUG,"*",x,a1,a2,a3,a4)
 
 /***********************************************************************/
+
+/* public structure for the listening port map */
+struct portmap {
+   int realport;
+   int mappedto;
+   struct portmap *next;
+};
 
 /* public structure of all the dcc connections */
 struct dcc_table {

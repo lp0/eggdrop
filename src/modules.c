@@ -508,7 +508,7 @@ const char *module_load (char * name)
    } else
      sprintf(workbuf,"%s%s.so",moddir,name);
 #ifdef HPUX_HACKS
-   hand = shl_load(workbuf, BIND_IMMEDIATE, 0);
+   hand = shl_load(workbuf, BIND_IMMEDIATE, 0L);
    if (!hand)
      return "Can't load module.";
 #else
@@ -525,7 +525,7 @@ const char *module_load (char * name)
      
    sprintf(workbuf, "%s_start", name);
 #ifdef HPUX_HACKS
-   if (!shl_findsym(hand, procname, (short) TYPE_PROCEDURE, (void *)f))
+   if (!shl_findsym(&hand, procname, (short) TYPE_PROCEDURE, (void *)&f))
      f = NULL;
 #else
 #ifdef OSF1_HACKS
@@ -537,7 +537,7 @@ const char *module_load (char * name)
    if (f == NULL) {		/* some OS's need the _ */
       sprintf(workbuf, "_%s_start", name);
 #ifdef HPUX_HACKS
-      if (!shl_findsym(hand, procname, (short) TYPE_PROCEDURE, (void *)f))
+      if (!shl_findsym(&hand, procname, (short) TYPE_PROCEDURE, (void *)&f))
 	f = NULL;
 #else
 #ifdef OSF1_HACKS

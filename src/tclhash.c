@@ -104,11 +104,11 @@ void init_bind () {
    H_bcst = add_bind_table("bcst",HT_STACKABLE,builtin_chat);
    H_away = add_bind_table("away",HT_STACKABLE,builtin_chat); 
    H_act = add_bind_table("act",HT_STACKABLE,builtin_chat);
-   add_builtins(H_dcc, C_dcc,62);
+   add_builtins(H_dcc, C_dcc,63);
 }
 
 void kill_bind () {
-   rem_builtins(H_dcc, C_dcc,62);
+   rem_builtins(H_dcc, C_dcc,63);
    while (bind_table_list) {
       del_bind_table(bind_table_list);
    }  
@@ -470,7 +470,7 @@ static int builtin_charidx STDVAR {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   F(argv[1], idx);
+   Tcl_AppendResult(irp, int_to_base10(F(argv[1], idx)), NULL);
    return TCL_OK;
 }
 
@@ -709,7 +709,7 @@ void check_tcl_chonof (char * hand, int sock, p_tcl_bind_list table)
    Tcl_SetVar(interp, "_chonof2", s, 0);
    context;
    check_tcl_bind(table, hand, &fr, " $_chonof1 $_chonof2",
-		  MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
+		  MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE | BIND_WANTRET);
    context;
 }
 

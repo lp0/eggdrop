@@ -168,6 +168,9 @@ case $system in
     AC_CHECK_LIB(dld,shl_load)
     AC_DEFINE(MODULES_OK)
     AC_DEFINE(HPUX_HACKS)
+    BEL_MOD_LD=gcc -Wl,-E
+    SHLIB_CC=gcc -fPIC
+    SHLIB_LD=ld -b
     ;;
   IRIX)
     AC_MSG_RESULT(you are cursed with IRIX)

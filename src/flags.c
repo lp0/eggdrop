@@ -1,5 +1,5 @@
 /*
- * flags.h - all the flag matching/conversion functions in one neat
+ * flags.c - all the flag matching/conversion functions in one neat
  * package :)
  */
 /*

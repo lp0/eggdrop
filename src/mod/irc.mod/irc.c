@@ -115,10 +115,10 @@ static void take_revenge (struct chanset_t * chan, char * who, char * reason)
    fr.match = FR_CHAN;
    fr.chan = USER_DEOP;
    fr.udef_chan = 0;
+   u = get_user_by_handle(userlist, s1);
    set_user_flagrec(u,&fr,chan->name);
    simple_sprintf(s, "(%s) %s (%s)", ct, reason, who);
-   set_user(&USERENTRY_COMMENT,
-	    get_user_by_handle(userlist,nick),(void *)&s);
+   set_user(&USERENTRY_COMMENT,u,(void *)&s);
    putlog(LOG_MISC, "*", "Now deopping %s (%s)", who, reason);
    recheck_channel(chan,0);
    recheck_bans(chan);

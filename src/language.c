@@ -160,9 +160,9 @@ char	*ctmp, *ctmp1;
 
    fclose(FLANG);
 
-   putlog(LOG_MISC, "*", "LANG: %d messages of %d lines loaded from %s.", 
+   putlog(LOG_MISC, "*", "LANG: %d messages of %d lines loaded from %s",
                         ltexts, lline, langfile);
-   putlog(LOG_MISC, "*", "LANG: %d adds, %d updates to message table.",
+   putlog(LOG_MISC, "*", "LANG: %d adds, %d updates to message table",
                         ladd, lupdate);
    langloaded = 1;
    return 0;

@@ -78,15 +78,29 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	 /* irc can't understand bans longer than that */
 	 if (chan) {
 	    u_addban(chan, s, dcc[idx].nick, par, 0L, 0);
-	    putlog(LOG_CMDS, "*", "#%s# (%s) +ban %s %s (%s)", dcc[idx].nick,
-		   dcc[idx].u.chat->con_chan, s, chan->name, par);
-	    dprintf(idx, "New %s ban: %s (%s)\n", chan->name, s, par);
-	    add_mode(chan, '+', 'b', s);
-	 } else {
-	    u_addban(NULL, s, dcc[idx].nick, par, 0L, 0);
-	    putlog(LOG_CMDS, "*", "#%s# (GLOBAL) +ban %s (%s)", dcc[idx].nick,
-		   s, par);
-	    dprintf(idx, "New ban: %s (%s)\n", s, par);
+	    if (par[0] == '*') {
+	       par++;
+	       putlog(LOG_CMDS, "*", "#%s# (%s) +ban %s %s (%s) (sticky)", dcc[idx].nick,
+		      dcc[idx].u.chat->con_chan, s, chan->name, par);
+	       dprintf(idx, "New %s sticky ban: %s (%s)\n", chan->name, s, par);
+	    } else {
+	       putlog(LOG_CMDS, "*", "#%s# (%s) +ban %s %s (%s)", dcc[idx].nick,
+		      dcc[idx].u.chat->con_chan, s, chan->name, par);
+	       dprintf(idx, "New %s ban: %s (%s)\n", chan->name, s, par);
+	    }
+  	    add_mode(chan, '+', 'b', s);
+  	 } else {
+  	    u_addban(NULL, s, dcc[idx].nick, par, 0L, 0);
+	    if (par[0] == '*') {
+	       par++;
+	       putlog(LOG_CMDS, "*", "#%s# (GLOBAL) +ban %s (%s) (sticky)", dcc[idx].nick,
+		      s, par);
+	       dprintf(idx, "New sticky ban: %s (%s)\n", s, par);
+	    } else {
+	       putlog(LOG_CMDS, "*", "#%s# (GLOBAL) +ban %s (%s)", dcc[idx].nick,
+		      s, par);
+	       dprintf(idx, "New ban: %s (%s)\n", s, par);
+	    }
 	    chan = chanset;
 	    while (chan != NULL) {
 	       add_mode(chan, '+', 'b', s);
