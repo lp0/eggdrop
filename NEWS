@@ -1,3 +1,5 @@
+$Id: NEWS,v 1.31 2004/01/09 05:56:35 wcc Exp $
+
 News
 Last revised: April 16, 2003
      _________________________________________________________________
@@ -55,11 +57,6 @@ Changes made to Eggdrop 1.6.x from Eggdrop1.4.x:
     A new module called compress was introduced to Eggdrop. It provides
     gzip support to Eggdrop (via Tcl commands) and enables compressed
     userfile transfer. See doc/settings/mod.compress for more information.
-
-  IPV6 SUPPORT
-
-    Eggdrop now supports version 6 of the IP protocol. See doc/IPV6 for
-    information about how to enable Eggdrop's support for IPv6.
 
   SHARE MODULE
 
@@ -218,4 +215,4 @@ Changes made to Eggdrop 1.6.x from Eggdrop1.4.x:
   ________________________________________________________________________
 
 Copyright (C) 1997 Robey Pointer
-Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

@@ -2,11 +2,11 @@
  * chancmds.c -- part of irc.mod
  *   handles commands directly relating to channel interaction
  *
- * $Id: cmdsirc.c,v 1.53 2003/03/19 00:13:22 wcc Exp $
+ * $Id: cmdsirc.c,v 1.56 2004/01/09 05:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -528,8 +528,12 @@ static void cmd_voice(struct userrec *u, int idx, char *par)
 
   get_user_flagrec(dcc[idx].user, &user, chan->dname);
   m = ismember(chan, nick);
-  if (m && !chan_op(user) && !chan_halfop(user) && ((!glob_op(user) ||
-      chan_deop(user)) || (!glob_halfop(user) || chan_dehalfop(user)))) {
+
+  /* By factoring out a !, this code becomes a lot clearer.
+   * If you are... not a (channel op, or a channel half op, or a global op
+   * without channel deop, or a global halfop without channel dehalfop)...
+   * - stdarg */
+  if (m && !(chan_op(user) || chan_halfop(user) || (glob_op(user) && !chan_deop(user)) || (glob_halfop(user) && !chan_dehalfop(user)))) {
     egg_snprintf(s, sizeof s, "%s!%s", m->nick, m->userhost);
     u2 = m->user ? m->user : get_user_by_host(s);
 
@@ -582,8 +586,7 @@ static void cmd_devoice(struct userrec *u, int idx, char *par)
 
   get_user_flagrec(dcc[idx].user, &user, chan->dname);
   m = ismember(chan, nick);
-  if (m && !chan_op(user) && !chan_halfop(user) && ((!glob_op(user) ||
-      chan_deop(user)) || (!glob_halfop(user) || chan_dehalfop(user)))) {
+  if (m && !(chan_op(user) || chan_halfop(user) || (glob_op(user) && !chan_deop(user)) || (glob_halfop(user) && !chan_dehalfop(user)))) {
     egg_snprintf(s, sizeof s, "%s!%s", m->nick, m->userhost);
     u2 = m->user ? m->user : get_user_by_host(s);
 
@@ -1175,6 +1178,6 @@ static cmd_t irc_dcc[] = {
   {"kickban",      "lo|lo", (Function) cmd_kickban,      NULL},
   {"msg",          "o",     (Function) cmd_msg,          NULL},
   {"say",          "o|o",   (Function) cmd_say,          NULL},
-  {"topic",        "o|o",   (Function) cmd_topic,        NULL},
+  {"topic",        "lo|lo",   (Function) cmd_topic,        NULL},
   {NULL,           NULL,    NULL,                        NULL}
 };

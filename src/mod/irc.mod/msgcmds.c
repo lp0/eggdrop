@@ -2,11 +2,11 @@
  * msgcmds.c -- part of irc.mod
  *   all commands entered via /MSG
  *
- * $Id: msgcmds.c,v 1.41 2003/03/04 08:51:45 wcc Exp $
+ * $Id: msgcmds.c,v 1.49 2004/01/09 05:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -192,12 +192,16 @@ static int msg_ident(char *nick, char *host, struct userrec *u, char *par)
       if (!quiet_reject)
         dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_DENYACCESS);
     } else if (u == u2) {
-      if (!quiet_reject)
-        dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_RECOGNIZED);
+      /*
+       * NOTE: Checking quiet_reject *after* u_pass_match()
+       * verifies the password makes NO sense!
+       * (Broken since 1.3.0+bel17)  Bad Beldin! No Cookie!
+       *   -Toth  [July 30, 2003]
+       */
+      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_RECOGNIZED);
       return 1;
     } else if (u) {
-      if (!quiet_reject)
-        dprintf(DP_HELP, IRC_MISIDENT, nick, who, u->handle);
+      dprintf(DP_HELP, IRC_MISIDENT, nick, who, u->handle);
       return 1;
     } else {
       putlog(LOG_CMDS, "*", "(%s!%s) !*! IDENT %s", nick, host, who);
@@ -486,12 +490,12 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
     dprintf(DP_HELP, "NOTICE %s :[%s] %s\n", nick, u2->handle, s2);
   for (xk = get_user(&USERENTRY_XTRA, u2); xk; xk = xk->next)
     if (!egg_strcasecmp(xk->key, "EMAIL"))
-      dprintf(DP_HELP, "NOTICE %s :[%s] email: %s\n", nick, u2->handle,
+      dprintf(DP_HELP, "NOTICE %s :[%s] E-mail: %s\n", nick, u2->handle,
               xk->data);
   ok = 0;
   for (chan = chanset; chan; chan = chan->next) {
     if (hand_on_chan(chan, u2)) {
-      egg_snprintf(s1, sizeof s1, "NOTICE %s :[%s] %s %s.", nick, u2->handle,
+      egg_snprintf(s1, sizeof s1, "NOTICE %s :[%s] %s: %s.", nick, u2->handle,
                    IRC_ONCHANNOW, chan->dname);
       ok = 1;
     } else {
@@ -511,13 +515,19 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
   if (!ok)
     egg_snprintf(s1, sizeof s1, "NOTICE %s :[%s] %s", nick, u2->handle,
                  IRC_NEVERJOINED);
-  if (u2->flags & USER_OP)
-    strcat(s1, USER_ISGLOBALOP);
-  if (u2->flags & USER_BOT)
-    strcat(s1, USER_ISBOT);
-  if (u2->flags & USER_MASTER)
-    strcat(s1, USER_ISMASTER);
   dprintf(DP_HELP, "%s\n", s1);
+  if (u2->flags & USER_BOT)
+    dprintf(DP_HELP, "NOTICE %s :[%s] Status: bot\n", nick, u2->handle);
+  else if (u2->flags & USER_OWNER)
+    dprintf(DP_HELP, "NOTICE %s :[%s] Status: global owner\n", nick, u2->handle);
+  else if (u2->flags & USER_MASTER)
+    dprintf(DP_HELP, "NOTICE %s :[%s] Status: global master\n", nick, u2->handle);
+  else if (u2->flags & USER_BOTMAST)
+    dprintf(DP_HELP, "NOTICE %s :[%s] Status: botnet master\n", nick, u2->handle);
+  else if (u2->flags & USER_OP)
+    dprintf(DP_HELP, "NOTICE %s :[%s] Status: global op\n", nick, u2->handle);
+  else if (u2->flags & USER_VOICE)
+    dprintf(DP_HELP, "NOTICE %s :[%s] Status: global voice\n", nick, u2->handle);
   return 1;
 }
 
@@ -777,23 +787,22 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
 
 static int msg_status(char *nick, char *host, struct userrec *u, char *par)
 {
-  char s[256];
-  char *ve_t, *un_t;
-  char *pass;
-  int i, l;
+  char s[256], *vers_t, *uni_t, *pass;
+  int i;
   struct chanset_t *chan;
+  time_t now2 = now - online_since, hr, min;
 
 #ifdef HAVE_UNAME
   struct utsname un;
 
-  if (uname(&un) >= 0) {
+  if (!uname(&un) < 0) {
 #endif
-    ve_t = " ";
-    un_t = "*unknown*";
+    vers_t = " ";
+    uni_t  = "*unknown*";
 #ifdef HAVE_UNAME
   } else {
-    ve_t = un.release;
-    un_t = un.sysname;
+    vers_t = un.release;
+    uni_t  = un.sysname;
   }
 #endif
 
@@ -814,43 +823,54 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
     return 1;
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! STATUS", nick, host, u->handle);
-  dprintf(DP_HELP, "NOTICE %s :I am %s, running %s.\n", nick, botnetnick,
-          Version);
-  dprintf(DP_HELP, "NOTICE %s :Running on %s %s\n", nick, un_t, ve_t);
+
+  i = count_users(userlist);
+  dprintf(DP_HELP, "NOTICE %s :I am %s, running %s: %d user%s  (mem: %uk).\n",
+          nick, botnetnick, ver, i, i == 1 ? "" : "s",
+         (int) (expected_memory() / 1024));
+
+  s[0] = 0;
+  if (now2 > 86400) {
+    /* days */
+    sprintf(s, "%d day", (int) (now2 / 86400));
+    if ((int) (now2 / 86400) >= 2)
+      strcat(s, "s");
+    strcat(s, ", ");
+    now2 -= (((int) (now2 / 86400)) * 86400);
+  }
+  hr = (time_t) ((int) now2 / 3600);
+  now2 -= (hr * 3600);
+  min = (time_t) ((int) now2 / 60);
+  sprintf(&s[strlen(s)], "%02d:%02d", (int) hr, (int) min);
+  dprintf(DP_HELP, "NOTICE %s :%s %s.\n", nick, MISC_ONLINEFOR, s);
+
   if (admin[0])
-    dprintf(DP_HELP, "NOTICE %s :Admin: %s\n", nick, admin);
-  /* Fixed previous lame code. Well it's still lame, will overflow the
-   * buffer with a long channel-name. <cybah>
-   */
-  strcpy(s, "Channels: ");
-  l = 10;
+    dprintf(DP_HELP, "NOTICE %s :Admin: %s.\n", nick, admin);
+  dprintf(DP_HELP, "NOTICE %s :OS: %s %s.\n", nick, uni_t, vers_t);
+  dprintf(DP_HELP, "NOTICE %s :Online as: %s!%s.\n", nick, botname, botuserhost);
+
+  /* This shouldn't overflow anymore -Wcc */
+  s[0] = 0;
+  strncpyz(s, "Channels: ", sizeof s);
   for (chan = chanset; chan; chan = chan->next) {
-    l += my_strcpy(s + l, chan->dname);
+    strncat(s, chan->dname, sizeof(s) - 1 - strlen(s));
     if (!channel_active(chan))
-      l += my_strcpy(s + l, " (trying)");
+      strncat(s, " (trying)", sizeof(s) - 1 - strlen(s));
     else if (channel_pending(chan))
-      l += my_strcpy(s + l, " (pending)");
+      strncat(s, " (pending)", sizeof(s) - 1 - strlen(s));
     else if (!me_op(chan))
-      l += my_strcpy(s + l, " (want ops!)");
-    s[l++] = ',';
-    s[l++] = ' ';
-    if (l > 70) {
-      s[l] = 0;
+      strncat(s, " (need ops)", sizeof(s) - 1 - strlen(s));
+    strncat(s, ", ", sizeof(s) - 1 - strlen(s));
+    if (strlen(s) > 140) {
+      s[strlen(s) - 2] = 0; /* remove ', ' */
       dprintf(DP_HELP, "NOTICE %s :%s\n", nick, s);
-      strcpy(s, "          ");
-      l = 10;
+      s[0] = 0;
     }
   }
-  if (l > 10) {
-    s[l] = 0;
+  if (strlen(s) > 10) {
+    s[strlen(s) - 2] = 0; /* remove ', ' */
     dprintf(DP_HELP, "NOTICE %s :%s\n", nick, s);
   }
-  i = count_users(userlist);
-  dprintf(DP_HELP, "NOTICE %s :%d user%s  (mem: %uk)\n", nick, i,
-          i == 1 ? "" : "s", (int) (expected_memory() / 1024));
-  daysdur(now, server_online, s);
-  dprintf(DP_HELP, "NOTICE %s :Connected %s\n", nick, s);
-  dprintf(DP_HELP, "NOTICE %s :Online as: %s!%s\n", nick, botname, botuserhost);
   return 1;
 }
 

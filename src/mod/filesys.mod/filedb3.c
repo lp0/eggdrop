@@ -4,11 +4,11 @@
  *
  * Rewritten by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: filedb3.c,v 1.27 2003/03/12 08:42:00 wcc Exp $
+ * $Id: filedb3.c,v 1.29 2004/01/09 05:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1103,8 +1103,10 @@ static void filedb_getdesc(char *dir, char *fn, char **desc)
 
   fdbe = filedb_getentry(dir, fn);
   if (fdbe) {
-    *desc = nmalloc(strlen(fdbe->desc) + 1);
-    strcpy(*desc, fdbe->desc);
+    if (fdbe->desc) {
+      *desc = nmalloc(strlen(fdbe->desc) + 1);
+      strcpy(*desc, fdbe->desc);
+    }
     free_fdbe(&fdbe);
   } else
     *desc = NULL;

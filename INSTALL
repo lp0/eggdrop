@@ -1,3 +1,5 @@
+$Id: INSTALL,v 1.21 2004/01/13 01:30:25 wcc Exp $
+
 Compilation and Installation of Eggdrop
 Last revised: March 08, 2002
      _________________________________________________________________
@@ -10,10 +12,10 @@ Last revised: March 08, 2002
   experienced users.
 
   Contents:
-    1. What is Eggdrop? 
-    2. Quick startup 
-    3. Modules 
-    4. Frequently asked questions 
+    1. What is Eggdrop?
+    2. Quick startup
+    3. Modules
+    4. Frequently asked questions
 
 
   (1) WHAT IS EGGDROP?
@@ -26,7 +28,7 @@ Last revised: March 08, 2002
     TO YOUR TERMINAL AND BEAT IT WITH A SMELLY SNEAKER! By the way, read the
     README file.
 
-(2) QUICK STARTUP
+  (2) QUICK STARTUP
 
     Eggdrop uses the GNU autoconfigure scripts to make things easier.
 
@@ -46,10 +48,10 @@ Last revised: March 08, 2002
          system will support. Dynamic is always the better way to go if
          possible. There are also the 'debug' and 'sdebug' (static-debug)
          options, which will give more detailed output on a (highly unlikely :)
-         crash. This will help the devteam track down the crash and fix the
-         bug. Debug and sdebug will take a little longer to compile and will
-         enlarge the binary a bit, but it's worth it if you want to support
-         Eggdrop development.
+         crash. This will help the development team track down the crash and
+         fix the bug. Debug and sdebug will take a little longer to compile
+         and will enlarge the binary a bit, but it's worth it if you want to
+         support Eggdrop development.
 
       4. Eggdrop must be installed in a directory somewhere.  This is
          accomplished by entering the UNIX command:
@@ -134,7 +136,7 @@ Last revised: March 08, 2002
 
     (A) Well, go to www.egghelp.org or www.eggheads.org and see if you can
         find there what you're looking for. There are also lots of IRC help
-	channels and various mailing lists, as seen in the README FILE.
+        channels and various mailing lists, as seen in the README FILE.
 
   This is the end. If you read to this point, hopefully you have also read
   the README file. If not, then READ IT!&@#%@!
@@ -144,4 +146,4 @@ Have fun with Eggdrop!
   ________________________________________________________________________
 
 Copyright (C) 1997 Robey Pointer
-Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

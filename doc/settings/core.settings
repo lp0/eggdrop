@@ -1,5 +1,6 @@
 Eggdrop Core Settings
 Last revised: April 17, 2003
+$Id: core.settings,v 1.28 2004/05/27 05:23:39 wcc Exp $
      _________________________________________________________________
 
                            Eggdrop Core Settings
@@ -70,12 +71,6 @@ You can change the basic Eggdrop appearance and behavior in this section.
     may want to specify the particular IP to bind to. You can specify either
     by hostname or by IP. You may also want to set the hostname here if
     Eggdrop has trouble detecting it when it starts up.
-
-
-  set my-hostname6 "virtual.host.com"
-  set my-ip6 "2001:1:1:1::1"
-    If you're using IPv6 support, set the IPv6 IP address and hostname to bind
-    to here. You still need to set my-ip.
 
 
   addlang "english"
@@ -237,7 +232,7 @@ logfile <logflags> <channel> "logs/logfile"
 
   set motd "text/motd"
     The MOTD (Message Of The day) is displayed when people dcc chat or telnet
-    to the bot. Look at doc/text-substitutions.doc for options.
+    to the bot. Look at doc/TEXT-SUBSTITUTIONS for options.
 
 
   set telnet-banner "text/banner"
@@ -536,4 +531,4 @@ should be loaded and their variables should be set at this point.
       source scripts/action.fix.tcl
      _________________________________________________________________
 
-   Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
+   Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

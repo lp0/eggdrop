@@ -2,11 +2,11 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  *
- * $Id: filesys.c,v 1.61 2003/04/17 01:55:57 wcc Exp $
+ * $Id: filesys.c,v 1.63 2004/01/09 05:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -786,11 +786,7 @@ static void filesys_dcc_send_hostresolved(int i)
       lostdcc(i);
     } else {
       dcc[i].timeval = now;
-#ifdef USE_IPV6
-      dcc[i].sock = getsock(SOCK_BINARY, getprotocol(ip));
-#else
       dcc[i].sock = getsock(SOCK_BINARY);
-#endif /* USE_IPV6 */
       if (dcc[i].sock < 0 || open_telnet_dcc(dcc[i].sock, ip, prt) < 0)
         dcc[i].type->eof(i);
     }
@@ -835,11 +831,7 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
   } else {
     ip = newsplit(&msg);
     prt = newsplit(&msg);
-#ifdef USE_IPV6
-    sock = getsock(0, getprotocol(ip));
-#else
     sock = getsock(0);
-#endif /* USE_IPV6 */
     if (sock < 0 || open_telnet_dcc(sock, ip, prt) < 0) {
       neterror(buf);
       if (!quiet_reject)

@@ -4,11 +4,11 @@
  *
  *   IF YOU ALTER THIS FILE, YOU NEED TO RECOMPILE THE BOT.
  *
- * $Id: eggdrop.h,v 1.47 2003/04/17 01:55:57 wcc Exp $
+ * $Id: eggdrop.h,v 1.56 2004/04/06 06:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,16 +27,6 @@
 
 #ifndef _EGG_EGGDROP_H
 #define _EGG_EGGDROP_H
-
-/*
- * Enable IPv6 support?
- */
-#define USE_IPV6
-
-/*
- * Enable IPv6 debugging?
- */
-#define DEBUG_IPV6
 
 /*
  * If you're *only* going to link to new version bots (1.3.0 or higher)
@@ -86,7 +76,7 @@
 
 /* Language stuff */
 #define LANGDIR  "./language" /* language file directory                   */
-#define BASELANG "english"    /* language which always gets loaded before 
+#define BASELANG "english"    /* language which always gets loaded before
                                  all other languages. You do not want to
                                  change this.                              */
 
@@ -102,58 +92,45 @@
 
 
 
-/* Have to use a weird way to make the compiler error out cos not all
- * compilers support #error or error
+/* We have to generate compiler errors in a weird way since not all compilers
+ * support the #error preprocessor directive.
  */
-#if !HAVE_VSPRINTF
-#  include "error you need vsprintf to compile eggdrop"
+#ifndef HAVE_VPRINTF
+#  include "Error: You need vsprintf to compile eggdrop."
 #endif
 
-/* IPv6 sanity checks. */
-#ifdef USE_IPV6
-#  ifndef HAVE_IPV6
-#    undef USE_IPV6
-#  endif
-#  ifndef HAVE_GETHOSTBYNAME2
-#    ifndef HAVE_GETIPNODEBYNAME
-#      undef USE_IPV6
-#    endif
-#  endif
-#endif
-
-#ifndef USE_IPV6
-#  undef DEBUG_IPV6
-#endif
-
-#if HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #  include <unistd.h>
 #endif
 
 #ifndef STATIC
 #  if (!defined(MODULES_OK) || !defined(HAVE_DLOPEN)) && !defined(HPUX_HACKS)
-#    include "you can't compile with module support on this system -- try make static"
+#    include "Error: You can't compile with module support on this system (try make static)."
 #  endif
 #endif
 
-#if !defined(STDC_HEADERS)
-#  include "you need to upgrade your compiler to a standard c compiler"
+#ifndef STDC_HEADERS
+#  include "Error: Your system must support ANSI C Header files."
 #endif
 
 #if (NICKMAX < 9) || (NICKMAX > 32)
-#  include "invalid NICKMAX value"
+#  include "Error: Invalid NICKMAX value."
 #endif
 
 #if (HANDLEN < 9) || (HANDLEN > 32)
-#  include "invalid HANDLEN value"
+#  include "Error: Invalid HANDLEN value."
 #endif
 
 #if HANDLEN > NICKMAX
-#  include "HANDLEN MUST BE <= NICKMAX"
+#  include "Error: HANDLEN MUST BE <= NICKMAX."
 #endif
 
 /* NAME_MAX is what POSIX defines, but BSD calls it MAXNAMLEN.
  * Use 255 if we can't find anything else.
  */
+#if HAVE_SYS_PARAM_H
+#  include <sys/param.h>
+#endif
 #ifndef NAME_MAX
 #  ifdef MAXNAMLEN
 #    define NAME_MAX    MAXNAMLEN
@@ -194,7 +171,6 @@
 #if !HAVE_SIGEMPTYSET
 #  define sigemptyset(x) ((*(int *)(x))=0)
 #endif
-
 
 /*
  *    Handy aliases for memory tracking and core dumps
@@ -252,6 +228,12 @@ typedef u_32bit_t IP;
 #define debug3(x,a1,a2,a3)    putlog(LOG_DEBUG,"*",x,a1,a2,a3)
 #define debug4(x,a1,a2,a3,a4) putlog(LOG_DEBUG,"*",x,a1,a2,a3,a4)
 
+/* These apparently are unsafe without recasting. */
+#define egg_isdigit(x)  isdigit((int)  (unsigned char) (x))
+#define egg_isxdigit(x) isxdigit((int) (unsigned char) (x))
+#define egg_isascii(x)  isascii((int)  (unsigned char) (x))
+#define egg_isspace(x)  isspace((int)  (unsigned char) (x))
+#define egg_islower(x)  islower((int)  (unsigned char) (x))
 /***********************************************************************/
 
 /* It's used in so many places, let's put it here */
@@ -284,10 +266,6 @@ struct userrec;
 struct dcc_t {
   long sock;                    /* This should be a long to keep 64-bit machines sane */
   IP addr;                      /* IP address in host byte order */
-#ifdef USE_IPV6
-  char addr6[121];              /* easier.. ipv6 address in regular notation (3ffe:80c0:225::) */
-  int af_type;                  /* AF_INET or AF_INET6 */
-#endif /* USE_IPV6 */
   unsigned int port;
   struct userrec *user;
   char nick[NICKLEN];
@@ -452,7 +430,7 @@ struct dupwait_info {
 #define STRIP_BOLD   0x00002    /* remove bold codes                    */
 #define STRIP_REV    0x00004    /* remove reverse video codes           */
 #define STRIP_UNDER  0x00008    /* remove underline codes               */
-#define STRIP_ANSI   0x00010    /* remove ALL ansi codes                */
+#define STRIP_ANSI   0x00010    /* remove ALL ANSI codes                */
 #define STRIP_BELLS  0x00020    /* remote ctrl-g's                      */
 #define STRIP_ALL    0x00040    /* remove every damn thing!             */
 
@@ -601,9 +579,6 @@ typedef struct {
   char *outbuf;
   unsigned long outbuflen;      /* Outbuf could be binary data  */
   unsigned long inbuflen;       /* Inbuf could be binary data   */
-#ifdef USE_IPV6
-  unsigned int af;
-#endif /* USE_IPV6 */
 } sock_list;
 
 enum {

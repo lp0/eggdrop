@@ -6,11 +6,11 @@
  *   memory management for dcc structures
  *   timeout checking for dcc connections
  *
- * $Id: dccutil.c,v 1.48 2003/02/05 04:17:07 wcc Exp $
+ * $Id: dccutil.c,v 1.50 2004/05/26 00:20:19 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -452,7 +452,7 @@ void makepass(char *s)
 {
   int i;
 
-  i = 10 + (random() % 6);
+  i = 10 + randint(6);
   make_rand_str(s, i);
 }
 

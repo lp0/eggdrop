@@ -3,11 +3,11 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.100 2003/04/17 04:52:48 wcc Exp $
+ * $Id: cmds.c,v 1.107 2004/04/06 06:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -90,23 +90,21 @@ static void tell_who(struct userrec *u, int idx, int chan)
   int i, k, ok = 0, atr = u ? u->flags : 0;
   int nicklen;
   char format[81];
-  char s[1024];                 /* temp fix - 1.4 has a better one */
+  char s[1024]; /* temp fix - 1.4 has a better one */
 
   if (!chan)
-    dprintf(idx, "%s  (* = %s, + = %s, @ = %s)\n",
-            BOT_PARTYMEMBS, MISC_OWNER, MISC_MASTER, MISC_OP);
+    dprintf(idx, "%s (* = owner, + = master, %% = botmaster, @ = op, "
+            "^ = halfop)\n", BOT_PARTYMEMBS);
   else {
     simple_sprintf(s, "assoc %d", chan);
     if ((Tcl_Eval(interp, s) != TCL_OK) || !interp->result[0])
-      dprintf(idx, "%s %s%d:  (* = %s, + = %s, @ = %s)\n",
-              BOT_PEOPLEONCHAN,
-              (chan < GLOBAL_CHANS) ? "" : "*",
-              chan % GLOBAL_CHANS, MISC_OWNER, MISC_MASTER, MISC_OP);
+      dprintf(idx, "%s %s%d: (* = owner, + = master, %% = botmaster, @ = op, "
+              "^ = halfop)\n", BOT_PEOPLEONCHAN, (chan < GLOBAL_CHANS) ? "" :
+              "*", chan % GLOBAL_CHANS);
     else
-      dprintf(idx, "%s '%s' (%s%d):  (* = %s, + = %s, @ = %s)\n",
-              BOT_PEOPLEONCHAN, interp->result,
-              (chan < GLOBAL_CHANS) ? "" : "*",
-              chan % GLOBAL_CHANS, MISC_OWNER, MISC_MASTER, MISC_OP);
+      dprintf(idx, "%s '%s' (%s%d): (* = owner, + = master, %% = botmaster, @ = op, "
+              "^ = halfop)\n", BOT_PEOPLEONCHAN, interp->result,
+              (chan < GLOBAL_CHANS) ? "" : "*", chan % GLOBAL_CHANS);
   }
 
   /* calculate max nicklen */
@@ -515,12 +513,24 @@ static void cmd_who(struct userrec *u, int idx, char *par)
 
 static void cmd_whois(struct userrec *u, int idx, char *par)
 {
+  struct flag_record fr = { FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0 };
+  char *handle;
+
   if (!par[0]) {
     dprintf(idx, "Usage: whois <handle>\n");
     return;
   }
-  putlog(LOG_CMDS, "*", "#%s# whois %s", dcc[idx].nick, par);
-  tell_user_ident(idx, par, u ? (u->flags & USER_MASTER) : 0);
+
+  handle = newsplit(&par);
+  get_user_flagrec(u, &fr, NULL);
+  if (egg_strcasecmp(handle, dcc[idx].nick) && !glob_botmast(fr) &&
+      !glob_op(fr) && !chan_master(fr)) {
+    dprintf(idx, "You do not have access to whois handles other than your "
+            "own.\n");
+    return;
+  }
+  putlog(LOG_CMDS, "*", "#%s# whois %s", dcc[idx].nick, handle);
+  tell_user_ident(idx, handle, u ? (u->flags & USER_MASTER) : 0);
 }
 
 static void cmd_match(struct userrec *u, int idx, char *par)
@@ -790,7 +800,7 @@ static void cmd_pls_bot(struct userrec *u, int idx, char *par)
     userlist = adduser(userlist, handle, "none", "-", USER_BOT);
     u1 = get_user_by_handle(userlist, handle);
     bi = user_malloc(sizeof(struct bot_addr));
- 
+
     q = strchr(addr, ':');
     if (!q) {
       bi->address = user_malloc(strlen(addr) + 1);
@@ -947,11 +957,7 @@ static void cmd_chpass(struct userrec *u, int idx, char *par)
 static void cmd_chaddr(struct userrec *u, int idx, char *par)
 {
   int telnet_port = 3333, relay_port = 3333;
-#ifdef USE_IPV6
-  char *handle, *addr, *p, *q, *r;
-#else
   char *handle, *addr, *p, *q;
-#endif /* USE_IPV6 */
   struct bot_addr *bi;
   struct userrec *u1;
 
@@ -991,31 +997,6 @@ static void cmd_chaddr(struct userrec *u, int idx, char *par)
     bi->telnet_port = telnet_port;
     bi->relay_port = relay_port;
   } else {
-#ifdef USE_IPV6
-    r = strchr(addr, '[');
-    if (r) { /* ipv6 notation [3ffe:80c0:225::] */
-      *addr++;
-      r = strchr(addr, ']');
-      bi->address = user_malloc(r - addr + 1);
-      strncpyz(bi->address, addr, r - addr + 1);
-      addr = r;
-      *addr++;
-    } else {
-      bi->address = user_malloc(q - addr + 1);
-      strncpyz(bi->address, addr, q - addr + 1);
-    }
-    q = strchr(addr, ':');
-    if (q) {
-      p = q + 1;
-      bi->telnet_port = atoi(p);
-      q = strchr(p, '/');
-      if (!q) {
-        bi->relay_port = telnet_port;
-      } else {
-        bi->relay_port = atoi(q + 1);
-      }
-    }
-#else
     bi->address = user_malloc(q - addr + 1);
     strncpyz(bi->address, addr, q - addr + 1);
     p = q + 1;
@@ -1025,7 +1006,6 @@ static void cmd_chaddr(struct userrec *u, int idx, char *par)
       bi->relay_port = bi->telnet_port;
     else
       bi->relay_port = atoi(q + 1);
-#endif /* USE_IPV6 */
   }
   set_user(&USERENTRY_BOTADDR, u1, bi);
 }
@@ -2818,13 +2798,13 @@ cmd_t C_dcc[] = {
   {"strip",     "",     (Function) cmd_strip,      NULL},
   {"su",        "",     (Function) cmd_su,         NULL},
   {"tcl",       "n",    (Function) cmd_tcl,        NULL},
-  {"trace",     "",     (Function) cmd_trace,      NULL},
+  {"trace",     "t",    (Function) cmd_trace,      NULL},
   {"unlink",    "t",    (Function) cmd_unlink,     NULL},
   {"unloadmod", "n",    (Function) cmd_unloadmod,  NULL},
   {"uptime",    "m|m",  (Function) cmd_uptime,     NULL},
   {"vbottree",  "",     (Function) cmd_vbottree,   NULL},
   {"who",       "",     (Function) cmd_who,        NULL},
-  {"whois",     "to|o", (Function) cmd_whois,      NULL},
+  {"whois",     "",     (Function) cmd_whois,      NULL},
   {"whom",      "",     (Function) cmd_whom,       NULL},
   {"traffic",   "m|m",  (Function) cmd_traffic,    NULL},
   {"whoami",    "",     (Function) cmd_whoami,     NULL},

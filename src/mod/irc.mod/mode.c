@@ -4,11 +4,11 @@
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  *
- * $Id: mode.c,v 1.73 2003/03/16 05:04:33 wcc Exp $
+ * $Id: mode.c,v 1.76 2004/01/10 08:41:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -753,7 +753,7 @@ static void got_ban(struct chanset_t *chan, char *nick, char *from, char *who)
       for (b = cycle ? chan->bans : global_bans; b; b = b->next) {
         if (wild_match(b->mask, who)) {
           if (b->desc && b->desc[0] != '@')
-            egg_snprintf(resn, sizeof resn, "%s%s", IRC_PREBANNED, b->desc);
+            egg_snprintf(resn, sizeof resn, "%s %s", IRC_PREBANNED, b->desc);
           else
             resn[0] = 0;
         }
@@ -965,7 +965,7 @@ static int gotmode(char *from, char *origmsg)
       if (m && channel_active(chan) && (me_op(chan) || (me_halfop(chan) &&
           !chan_hasop(m))) && !(glob_friend(user) || chan_friend(user) ||
           (channel_dontkickops(chan) && (chan_op(user) || (glob_op(user) &&
-          !chan_deop(user))))) && !match_my_nick(from)) {
+          !chan_deop(user))))) && !match_my_nick(nick)) {
         if (chan_fakeop(m) || chan_fakehalfop(m)) {
           putlog(LOG_MODES, ch, CHAN_FAKEMODE, ch);
           dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick, CHAN_FAKEMODE_KICK);

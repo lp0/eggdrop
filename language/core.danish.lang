@@ -1,7 +1,7 @@
 # core.danish.lang
 #   core language messages for eggdrop
 #
-# $Id: core.danish.lang,v 1.5 2003/03/20 00:04:48 wcc Exp $
+# $Id: core.danish.lang,v 1.9 2004/02/01 06:13:02 wcc Exp $
 
 # General stuff
 0x001,Brug
@@ -78,7 +78,7 @@ modul, venligst rådfør dig med standard config filen for info.\n
 
 # MISC_
 0x500,udløbet
-0x501,total
+0x501,Total
 0x502,Slettet
 0x504,på
 0x505,Matcher
@@ -91,9 +91,6 @@ modul, venligst rådfør dig med standard config filen for info.\n
 0x50c,Genstarter...
 0x50d,es
 0x50e,Skifter logfiler...
-0x50f,ejer
-0x510,master
-0x511,op
 0x512,idle
 0x513,VÆK
 0x516,Afbrudt
@@ -116,7 +113,7 @@ modul, venligst rådfør dig med standard config filen for info.\n
 0x52b,status mode
 0x52c,log dump mode
 0x52d,Online for
-0x52e,cache hit
+0x52e,Cache hit
 0x52f,Tcl bibliotek:
 0x530,Nye brugere for flags
 0x531,underrette
@@ -243,7 +240,7 @@ Telnet botten og skriv 'NEW' som dit nick.\n
 0x667,Du skal nu vælge et nick at bruge på botten,\nog et password, så ingen andre kan give sig ud for at være dig.\nVenligst husk begge dele!
 0x668,Fra nu af, behøver du ikke at starte botten med -m.\nEnjoy !!
 0x669,Telnet forbindelses flood fra %s!  Smider på ignore!
-0x66a,bannet:
+0x66a,Bannet:
 0x66b,join flood
 0x66c,kick ikke mine venner
 0x66d,...og kom ikke tilbage.

@@ -1,11 +1,11 @@
 /*
  * tclserv.c -- part of server.mod
  *
- * $Id: tclserv.c,v 1.15 2003/02/27 10:18:40 tothwolf Exp $
+ * $Id: tclserv.c,v 1.17 2004/04/30 07:51:08 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -214,8 +214,8 @@ static int tcl_clearqueue STDVAR
     Tcl_AppendResult(irp, s, NULL);
     return TCL_OK;
   }
-  Tcl_AppendResult(irp, "bad option: must be mode, server, help, or all",
-                   NULL);
+  Tcl_AppendResult(irp, "bad option \"", argv[1],
+                   "\": must be mode, server, help, or all", NULL);
   return TCL_ERROR;
 }
 
@@ -247,7 +247,9 @@ static int tcl_queuesize STDVAR
     Tcl_AppendResult(irp, s, NULL);
     return TCL_OK;
   }
-  Tcl_AppendResult(irp, "bad option: must be mode, server, or help", NULL);
+
+  Tcl_AppendResult(irp, "bad option \"", argv[1],
+                   "\": must be mode, server, or help", NULL);
   return TCL_ERROR;
 }
 

@@ -4,11 +4,11 @@
  *   a bunch of functions to find and change user records
  *   change and check user (and channel-specific) flags
  *
- * $Id: userrec.c,v 1.45 2003/01/30 07:15:14 wcc Exp $
+ * $Id: userrec.c,v 1.48 2004/02/04 02:40:42 stdarg Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -241,7 +241,7 @@ void correct_handle(char *handle)
   struct userrec *u;
 
   u = get_user_by_handle(userlist, handle);
-  if (u == NULL)
+  if (u == NULL || handle == u->handle)
     return;
   strcpy(handle, u->handle);
 }
@@ -376,8 +376,8 @@ int u_pass_match(struct userrec *u, char *pass)
     if (!strcmp(cmp, pass))
       return 1;
   } else {
-    if (strlen(pass) > 15)
-      pass[15] = 0;
+    if (strlen(pass) > 30)
+      pass[30] = 0;
     encrypt_pass(pass, new);
     if (!strcmp(cmp, new))
       return 1;

@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: mod-server.html,v 1.27 2003/02/13 23:56:43 wcc Exp $ -->
+<!-- $Id: mod-server.html,v 1.31 2004/01/09 05:56:36 wcc Exp $ -->
 
 <html>
   <head>
@@ -44,11 +44,11 @@
         <dd>
           <p>What is your network?</p>
 
-          <p>0 = Efnet (non +e/+I Hybrid)<br>
+          <p>0 = Efnet<br>
            1 = IRCnet<br>
            2 = Undernet<br>
            3 = Dalnet<br>
-           4 = +e/+I Hybrid<br>
+           4 = +e/+I/max-bans 20 Hybrid<br>
            5 = Others</p>
         </dd>
 
@@ -123,8 +123,13 @@
           Commands</a>).</p>
         </dd>
 
-        <dt><strong>set servers { irc.change.this:6667 irc.example.com:7000 }
-        </strong></dt>
+        <dt><strong>set servers {</strong></dt>
+<pre>
+        you.need.to.change.this:6667
+        another.example.com:7000:password
+</pre>
+        <p><strong>}</strong></p>
+
 
         <dd>
           <p>This is the bot&#39;s server list. The bot will start at the first
@@ -355,7 +360,7 @@
     <hr>
 
     <p><em>Copyright &copy; 1997 Robey Pointer<br>
-    Copyright &copy; 1999, 2000, 2001, 2002, 2003
+    Copyright &copy; 1999, 2000, 2001, 2002, 2003, 2004
     <a href="http://www.eggheads.org/"> Eggheads Development Team</a></em></p>
   </body>
 </html>

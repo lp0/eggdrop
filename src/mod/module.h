@@ -1,11 +1,11 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.75 2003/04/17 01:55:57 wcc Exp $
+ * $Id: module.h,v 1.81 2004/01/09 12:07:23 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -62,9 +62,6 @@
 /* Compability functions. */
 #ifdef egg_inet_aton
 #  undef egg_inet_aton
-#endif
-#ifdef egg_inet_ntop
-#  undef egg_inet_ntop
 #endif
 #ifdef egg_vsnprintf
 #  undef egg_vsnprintf
@@ -201,11 +198,7 @@
 /* 80 - 83 */
 #define new_dcc ((int (*) (struct dcc_table *, int))global[80])
 #define lostdcc ((void (*) (int))global[81])
-#ifdef USE_IPV6
-#  define getsock ((int (*) (int,int))global[82])
-#else
-#  define getsock ((int (*) (int))global[82])
-#endif /* USE_IPV6 */
+#define getsock ((int (*) (int))global[82])
 #define killsock ((void (*) (int))global[83])
 /* 84 - 87 */
 #define open_listen ((int (*) (int *))global[84])
@@ -464,7 +457,7 @@
 #define parties (*(int *)global[275])
 /* 276 - 279 */
 #define tell_bottree ((void (*)(int, int))global[276])
-#define MD5_Init ((void (*)(MD5_CTX))global[277])
+#define MD5_Init ((void (*)(MD5_CTX *))global[277])
 #define MD5_Update ((void (*)(MD5_CTX *, void *, unsigned long))global[278])
 #define MD5_Final ((void (*)(unsigned char *, MD5_CTX *))global[279])
 /* 280 - 283 */
@@ -475,10 +468,16 @@
 /* 284 - 287 */
 #define quiet_reject (*(int *)(global[284]))
 #define file_readable ((int (*) (char *))global[285])
-#define getprotocol ((int (*)(char *))global[286])
-#define open_listen_by_af ((int (*) (int *, int))global[287])
+/* IPv6 leftovers: 286 */
+/* IPv6 leftovers: 287 */
 /* 288 - 291 */
-#define egg_inet_ntop ((int (*)(int af, const void *src, char *dst, socklen_t size))global[288])
+/* IPv6 leftovers: 288 */
+#define strip_mirc_codes ((void (*)(int, char *))global[289])
+#define check_ansi ((int (*) (char *))global[290])
+#define oatoi ((int (*) (const char *))global[291])
+/* 292 - 295 */
+#define str_isdigit ((int (*) (const char *))global[292])
+#define remove_crlf ((void (*)(char **))global[293])
 
 /* hostmasking */
 #define maskhost(a,b) _maskhost((a),(b),1)
@@ -488,10 +487,9 @@
  * file for it ;)
  */
 #ifndef MAKING_ENCRYPTION
-
-#  define encrypt_string(a, b)                                          \
+# define encrypt_string(a, b)                                          \
         (((char *(*)(char *,char*))encryption_funcs[4])(a,b))
-#  define decrypt_string(a, b)                                          \
+# define decrypt_string(a, b)                                          \
         (((char *(*)(char *,char*))encryption_funcs[5])(a,b))
 #endif
 

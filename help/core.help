@@ -1,64 +1,74 @@
-%{help=help}
-DCC COMMANDS for %B, %V:
-%b  who          away         quit         whom         me%b
-%b  page         match        motd         bots         newpass%b
-%b  chat         handle       whoami       echo         strip%b
-%b  su           trace        fixcodes     bottree      vbottree%b
-%b  botinfo      relay        -host%b
+%{help=help}%{-}
+DCC commands for %B, %V:
+   For all users:
+      %bwho          away         quit         whom%b
+      %bme           page         match        motd%b
+      %bbots         newpass      chat         handle%b
+      %bwhoami       echo         strip        su%b
+      %btrace        fixcodes     bottree      vbottree%b
+      %bbotinfo      relay        -host%b
 %{o|o}
-For ops:
-%b  addlog       console      match        whois%b
+   For ops:
+      %baddlog       console      match        whois%b
 %{+t}
-For botnet masters:
-%b  +bot         botattr      chhandle     chpass       +host%b
-%b  -bot         link         chaddr       boot         %b
-%b  unlink       banner       dccstat%b
+   For botnet masters:
+      %b+bot         botattr      chhandle     chpass%b
+      %b+host        -bot         link         chaddr%b
+      %bboot         unlink       banner       dccstat%b
 %{+m|m}
-For masters:
-%b  chattr       save         backup       reload       status%b
-%b  traffic      uptime%b
+   For channel masters:
+      %bchattr       save         backup       reload%b
+      %bstatus       traffic      uptime%b
 %{+m}
-%b  +user        +ignore      comment      binds        ignores%b
-%b  -user        -ignore      dccstat      debug        rehash%b
-%b  restart      module%b
+   For global masters:
+      %b+user        +ignore      comment      binds%b
+      %bignores      -user        -ignore      dccstat%b
+      %bdebug        rehash       restart      module%b
 %{+n}
-For owners:
-%b  die          simul        loadmod      unloadmod    language%b
-%b  set          tcl          rehelp       modules      +lang%b
-%b  -lang        +lsec        -lsec        lstat        relang%b
-%b  ldump%b
+   For owners:
+      %bdie          simul        loadmod      unloadmod%b
+      %blanguage     set          tcl          rehelp%b
+      %bmodules      +lang        -lang        +lsec%b
+      %b-lsec        lstat        relang       ldump%b
 %{-}
 All commands begin with '.', and all else goes to the party line.
-%{+m}Text starting with ',' is sent ONLY to bot-masters.%{end}
-You can get help on individual commands: %b'.help <command>'%b
+%{+m}
+
+Text starting with ',' is sent ONLY to bot-masters.
+%{-}
+
+You can get help on individual commands: %b'.help <command>'%b.
+%{+n}
 Extra help relating to loaded modules may be obtained by typing
 %b'.help <module> module'%b. Possible modules include:
-%b  assoc        channels     console      transfer     irc%b
-%b  filesys      notes        seen         server       share%b
+   %bassoc      channels     compress      console      ctcp%b
+   %bfilesys    irc          notes         seen         server%b
+   %bshare      transfer     uptime        wire%b
+%{-}
+
 You may receive a list of commands provided by all loaded modules by
 using %b'.help all'%b. If you only remember a part of the command's
 name you are searching for, just use wildcards (e.g. %b'.help *bot*'%b),
 and all matching help texts will be displayed.
-%{help=partyline}
+%{help=partyline}%{-}
 %B party-line commands:
-  %b.quit%b              Use this command to leave the party line.
-  %b.whom%b [channel]    Shows a list of all users on the party line, or on a
+   %b.quit%b             Use this command to leave the party line.
+   %b.whom%b [channel]   Shows a list of all users on the party line, or on a
                      particular channel.
-  %b.whom *%b            Shows a list of all users, indicating which ones are
+   %b.whom *%b           Shows a list of all users, indicating which ones are
                      on the party line.
-  %b.chat%b <channel>    Makes you leave the main partyline channel and join a
+   %b.chat%b <channel>   Makes you leave the main partyline channel and join a
                      specific channel (valid channels are 1 to 99999, channel 0
                      is the party line).
-  %b.me%b <action>       Preform an action to the party line.
-  %b.handle%b <handle>   Changes your nick on party line.
-  %b.help%b <command>    Shows more help on a specific command.
-The following commands are also available:
-%b  who          away         quit          page        match%b
-%b  motd         bots         newpass       whoami      echo%b
-%b  strip        su           trace        fixcodes     bottree%b
-%b  vbottree     botinfo      relay        -host%b
-Anything you type that doesn't begin with a '.' goes out to everyone on the
-party line.
+   %b.me%b <action>      Preform an action to the party line.
+   %b.handle%b <handle>  Changes your nick on party line.
+   %b.help%b <command>   Shows more help on a specific command.
+
+See '%b.help all%b' for a complete list of commands.
+All commands begin with '.', and all else goes to the party line.
+%{+m}
+
+Text starting with ',' is sent ONLY to bot-masters.
 %{help=common}%{+o|o}
 ###  %bcommon (the +c 'common' flag)%b
    Sometimes a lot of people use IRC from the same account, for example, a
@@ -69,7 +79,7 @@ party line.
    In such cases, create a user record for the account, and set it +c, or
    "common access", via the chanset command. Marking it as "common access"
    means that it shouldn't be used as a definitive address. When someone
-   introduces themselves to the bot (i.e., by /msg "hello") and matches
+   introduces themselves to the bot (i.e. by /msg "hello") and matches
    as a +c user, they will be given a new user record which identifies them
    BY NICKNAME.
 
@@ -184,34 +194,35 @@ userfile-perm
 switch-logfiles-at
 %{end}
    Use %b'.help set <variable>'%b for more info on each variable.
-%{+n}
-%{help=all}
+%{help=all}%{-}
 ###  %bcore%b commands
-     %bwho          away         quit         whom         me%b
-     %bpage         match        motd         bots         newpass%b
-     %bchat         handle       whoami       echo         strip%b
-     %bsu           trace        fixcodes     bottree      vbottree%b
-     %bbotinfo      relay        -host%b
+   For all users:
+      %bwho          away         quit         whom%b
+      %bme           page         match        motd%b
+      %bbots         newpass      chat         handle%b
+      %bwhoami       echo         strip        su%b
+      %btrace        fixcodes     bottree      vbottree%b
+      %bbotinfo      relay        -host%b
 %{o|o}
    For ops:
-     %baddlog       console      match        whois%b
+      %baddlog       console      match        whois%b
 %{+t}
    For botnet masters:
-     %b+bot         botattr      chhandle     chpass       +host%b
-     %b-bot         link         chaddr       boot         %b
-     %bunlink       banner       dccstat%b
+      %b+bot         botattr      chhandle     chpass%b
+      %b+host        -bot         link         chaddr%b
+      %bboot         unlink       banner       dccstat%b
 %{+m|m}
-   For masters:
-     %bchattr       save         backup       reload       status%b
-     %btraffic      uptime%b
+   For channel masters:
+      %bchattr       save         backup       reload%b
+      %bstatus       traffic      uptime%b
 %{+m}
-     %b+user        +ignore      comment      binds        ignores%b
-     %b-user        -ignore      dccstat      debug        rehash%b
-     %brestart      module%b
+   For global masters:
+      %b+user        +ignore      comment      binds%b
+      %bignores      -user        -ignore      dccstat%b
+      %bdebug        rehash       restart      module%b
 %{+n}
    For owners:
-     %bdie          simul        loadmod      unloadmod    language%b
-     %bset          tcl          rehelp       modules      +lang%b
-     %b-lang        +lsec        -lsec        lstat        relang%b
-     %bldump%b
-%{-}
+      %bdie          simul        loadmod      unloadmod%b
+      %blanguage     set          tcl          rehelp%b
+      %bmodules      +lang        -lang        +lsec%b
+      %b-lsec        lstat        relang       ldump%b

@@ -7,11 +7,11 @@
  *   telling the current programmed settings
  *   initializing a lot of stuff and loading the tcl scripts
  *
- * $Id: chanprog.c,v 1.42 2003/03/08 04:29:43 wcc Exp $
+ * $Id: chanprog.c,v 1.51 2004/04/06 07:15:18 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -66,18 +66,23 @@ char botname[NICKLEN + 1];         /* Primary botname              */
 void rmspace(char *s)
 {
 #define whitespace(c) (((c) == 32) || ((c) == 9) || ((c) == 13) || ((c) == 10))
-  char *p;
+  char *p, *end;
+  int len;
 
-  if (*s == '\0')
+  if (!*s)
     return;
 
   /* Wipe end of string */
-  for (p = s + strlen(s) - 1; ((whitespace(*p)) && (p >= s)); p--);
-  if (p != s + strlen(s) - 1)
-    *(p + 1) = 0;
+  end = s + strlen(s) - 1;
+  for (p = end; ((whitespace(*p)) && (p >= s)); p--);
+  if (p != end) *(p + 1) = 0;
+  len = p+1 - s;
   for (p = s; ((whitespace(*p)) && (*p)); p++);
-  if (p != s)
-    strcpy(s, p);
+  len -= (p - s);
+  if (p != s) {
+    /* +1 to include the null in the copy */
+    memmove(s, p, len + 1);
+  }
 }
 
 /* Returns memberfields if the nick is in the member list.
@@ -262,7 +267,7 @@ void tell_verbose_status(int idx)
   char s[256], s1[121], s2[81];
   char *vers_t, *uni_t;
   int i;
-  time_t now2, hr, min;
+  time_t now2 = now - online_since, hr, min;
 
 #if HAVE_GETRUSAGE
   struct rusage ru;
@@ -277,20 +282,19 @@ void tell_verbose_status(int idx)
   if (!uname(&un) < 0) {
 #endif
     vers_t = " ";
-    uni_t = "*unknown*";
+    uni_t  = "*unknown*";
 #ifdef HAVE_UNAME
   } else {
     vers_t = un.release;
-    uni_t = un.sysname;
+    uni_t  = un.sysname;
   }
 #endif
 
   i = count_users(userlist);
-  dprintf(idx, "I am %s, running %s:  %d user%s (mem: %uk)\n",
+  dprintf(idx, "I am %s, running %s: %d user%s (mem: %uk).\n",
           botnetnick, ver, i, i == 1 ? "" : "s",
           (int) (expected_memory() / 1024));
 
-  now2 = now - online_since;
   s[0] = 0;
   if (now2 > 86400) {
     /* days */
@@ -319,18 +323,18 @@ void tell_verbose_status(int idx)
   getrusage(RUSAGE_SELF, &ru);
   hr = (int) ((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) / 60);
   min = (int) ((ru.ru_utime.tv_sec + ru.ru_stime.tv_sec) - (hr * 60));
-  sprintf(s2, "CPU %02d:%02d", (int) hr, (int) min);    /* Actally min/sec */
+  sprintf(s2, "CPU: %02d:%02d", (int) hr, (int) min);    /* Actally min/sec */
 #else
 # if HAVE_CLOCK
   cl = (clock() / CLOCKS_PER_SEC);
   hr = (int) (cl / 60);
   min = (int) (cl - (hr * 60));
-  sprintf(s2, "CPU %02d:%02d", (int) hr, (int) min);    /* Actually min/sec */
+  sprintf(s2, "CPU: %02d:%02d", (int) hr, (int) min);    /* Actually min/sec */
 # else
-  sprintf(s2, "CPU ???");
+  sprintf(s2, "CPU: unknown");
 # endif
 #endif
-  dprintf(idx, "%s %s  (%s)  %s  %s %4.1f%%\n", MISC_ONLINEFOR,
+  dprintf(idx, "%s %s (%s) - %s - %s: %4.1f%%\n", MISC_ONLINEFOR,
           s, s1, s2, MISC_CACHEHIT,
           100.0 * ((float) cache_hit) / ((float) (cache_hit + cache_miss)));
 
@@ -353,7 +357,7 @@ void tell_verbose_status(int idx)
           TCL_PATCH_LEVEL ? TCL_PATCH_LEVEL : "*unknown*");
 
 #if HAVE_TCL_THREADS
-  dprintf(idx, "Tcl is threaded\n");
+  dprintf(idx, "Tcl is threaded.\n");
 #endif
 
 }
@@ -372,10 +376,13 @@ void tell_settings(int idx)
   dprintf(idx, "Userfile: %s\n", userfile);
   dprintf(idx, "Motd: %s\n",  motdfile);
   dprintf(idx, "Directories:\n");
-  dprintf(idx, "  Help    : %s\n", helpdir);
-  dprintf(idx, "  Temp    : %s\n", tempdir);
 #ifndef STATIC
-  dprintf(idx, "  Modules : %s\n", moddir);
+  dprintf(idx, "  Help   : %s\n", helpdir);
+  dprintf(idx, "  Temp   : %s\n", tempdir);
+  dprintf(idx, "  Modules: %s\n", moddir);
+#else
+  dprintf(idx, "  Help: %s\n", helpdir);
+  dprintf(idx, "  Temp: %s\n", tempdir);
 #endif
   fr.global = default_flags;
 
@@ -390,7 +397,7 @@ void tell_settings(int idx)
               logs[i].filename, logs[i].chname,
               masktype(logs[i].mask), maskname(logs[i].mask));
     }
-  dprintf(idx, "Ignores last %d minute%s\n", ignore_time,
+  dprintf(idx, "Ignores last %d minute%s.\n", ignore_time,
           (ignore_time != 1) ? "s" : "");
 }
 
@@ -504,6 +511,7 @@ void chanprog()
     unlink(s);
   }
   reaffirm_owners();
+  check_tcl_event("userfile-loaded");
 }
 
 /* Reload the user file from disk
@@ -522,6 +530,7 @@ void reload()
   if (!readuserfile(userfile, &userlist))
     fatal(MISC_MISSINGUSERF, 0);
   reaffirm_owners();
+  check_tcl_event("userfile-loaded");
   call_hook(HOOK_READ_USERFILE);
 }
 
@@ -645,38 +654,31 @@ void list_timers(Tcl_Interp *irp, tcl_timer_t *stack)
   }
 }
 
-/* Oddly enough, written by proton (Emech's coder)
+/* Oddly enough, written by Sup (former(?) Eggdrop coder)
  */
 int isowner(char *name)
 {
-  char *pa, *pb;
-  char nl, pl;
+  register char *ptr = NULL, *s = NULL, *n = NULL;
 
-  if (!owner || !*owner)
+  if (!owner || !name)
     return 0;
 
-  if (!name || !*name)
-    return 0;
+  ptr = owner - 1;
 
-  nl = strlen(name);
-  pa = owner;
-  pb = owner;
-  while (1) {
-    while (1) {
-      if ((*pb == 0) || (*pb == ',') || (*pb == ' '))
-        break;
-      pb++;
+  do {
+    ptr++;
+    if (*ptr && !egg_isspace(*ptr) && *ptr != ',') {
+      if (!s)
+        s = ptr;
+    } else if (s) {
+      for (n = name; *n && *s && s < ptr && tolower(*n) == tolower(*s); n++, s++);
+
+      if (s == ptr && !*n)
+        return 1;
+
+      s = NULL;
     }
-    pl = (unsigned int) pb - (unsigned int) pa;
-    if (pl == nl && !egg_strncasecmp(pa, name, nl))
-      return 1;
-    while (1) {
-      if ((*pb == 0) || ((*pb != ',') && (*pb != ' ')))
-        break;
-      pb++;
-    }
-    if (*pb == 0)
-      return 0;
-    pa = pb;
-  }
+  } while (*ptr);
+
+  return 0;
 }

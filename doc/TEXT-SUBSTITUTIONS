@@ -1,3 +1,5 @@
+$Id: TEXT-SUBSTITUTIONS,v 1.2 2004/01/09 05:56:35 wcc Exp $
+
 Textfile Substitutions
 Last revised: March 08, 2002
    ________________________________________________________________________
@@ -19,21 +21,21 @@ text:
 These variables will be interpreted by Eggdrop and replaced by their
 respective values:
 
- %B   bot's nickname (i.e., "LamestBot")
+ %B   bot's nickname (i.e. "LamestBot")
 
- %V   current Eggdrop version (i.e., "eggdrop v1.6.15")
+ %V   current Eggdrop version (i.e. "eggdrop v1.6.16")
 
- %E   long form of %V (i.e., "Eggdrop v1.6.15 (C) 1997 Robey Pointer (C) 2003 Eggheads")
+ %E   long form of %V (i.e. "Eggdrop v1.6.16 (C) 1997 Robey Pointer (C) 2004 Eggheads Development Team")
 
- %C   channels the bot is on (i.e., "#lamest, #botnetcentral")
+ %C   channels the bot is on (i.e. "#lamest, #botnetcentral")
 
  %A   whatever is set in the config file by 'set admin'
 
  %n   whatever is set in the config file by 'set network'
 
- %T   the current time (i.e., "15:00")
+ %T   the current time (i.e. "15:00")
 
- %N   the current user's nickname (i.e., "Robey")
+ %N   the current user's nickname (i.e. "Robey")
 
  %U   the current operating system the bot is running on
 
@@ -69,4 +71,4 @@ Other variables:
  %{center}     center the following text (70 columns)
      _________________________________________________________________
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

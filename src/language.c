@@ -2,11 +2,11 @@
  * language.c -- handles:
  *   language support code
  *
- * $Id: language.c,v 1.22 2003/03/04 08:51:44 wcc Exp $
+ * $Id: language.c,v 1.24 2004/04/06 06:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -652,7 +652,7 @@ static int tcl_language STDVAR
 
   buf = nmalloc(strlen(argv[1]) + 1);
   strcpy(buf, argv[1]);
-  
+
   if (!split_lang(buf, &lang, &section)) {
     Tcl_AppendResult(irp, "Invalid parameter", NULL);
     nfree(buf);

@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: tcl-commands.html,v 1.31 2003/05/04 22:04:32 wcc Exp $ -->
+<!-- $Id: tcl-commands.html,v 1.39 2004/05/27 01:30:11 wcc Exp $ -->
 
 <html>
   <head>
@@ -17,7 +17,7 @@
     you can also use these to manipulate features of the bot. They are listed
     according to category.</p>
 
-    <p>This list is accurate for Eggdrop v1.6.15. Scripts written for
+    <p>This list is accurate for Eggdrop v1.6.16. Scripts written for
     v1.3/v1.4 series of Eggdrop should probably work with a few minor
     modifications depending on the script. Scripts which were written for
     v0.9, v1.0, v1.1 or v1.2 will probably not work without modification.
@@ -263,7 +263,7 @@
         <dd>
           <p><strong>Returns:</strong> a list of users on the bot. You
           can use the flag matching system here
-          ([global]{&/|}[chan]{&/|}[bot]). &#39;&&#39; specifies
+          ([global]{&amp;/|}[chan]{&amp;/|}[bot]). &#39;&amp;&#39; specifies
           &quot;and&quot;; &#39;|&#39; specifies &quot;or&quot;.</p>
 
           <p><strong>Module:</strong> core</p>
@@ -486,9 +486,9 @@
           <p><strong>Description:</strong> changes the attributes for a user
           record, if you include any. Changes are of the form &#39;+f&#39;,
           &#39;-o&#39;, &#39;+dk&#39;, &#39;-o+d&#39;, etc. If changes are
-          specified in the format of |<changes> <channel>, the channel-specific
-          flags for that channel are altered. You can now use the +o|-o
-          #channel format here too.</p>
+          specified in the format of &lt;changes&gt; &lt;channel&lt;, the
+          channel-specific flags for that channel are altered. You can now
+          use the +o|-o #channel format here too.</p>
 
           <p><strong>Returns:</strong>  new flags for the user (if you made
           no changes, the current flags are returned). If a channel was
@@ -1179,12 +1179,12 @@
 
     <blockquote>
       <dl>
-        <dt><strong>channel add &lt;name&gt; &lt;option-list&gt;</strong></dt>
+        <dt><strong>channel add &lt;name&gt; [option-list]</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> adds a channel record for the
           bot to monitor. The full list of possible options are given in
-          doc/settings.mod.channels. Note that the channel options must be
+          doc/settings/mod.channels. Note that the channel options must be
           in a list (enclosed in {}).</p>
 
           <p><strong>Returns:</strong> nothing</p>
@@ -1197,7 +1197,7 @@
         <dd>
           <p><strong>Description:</strong> sets options for the channel
           specified. The full list of possible options are given in
-          doc/settings.mod.channels.</p>
+          doc/settings/mod.channels.</p>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -1469,7 +1469,7 @@
           <p><strong>Returns:</strong> a list of the current bans on the
           channel. Each element is a sublist of the form {&lt;ban&gt;
           &lt;bywho&gt; &lt;age&gt;}. age is seconds from the bot&#39;s
-          POV.</p>
+          point of view</p>
 
           <p><strong>Module:</strong> irc</p>
         </dd>
@@ -1480,7 +1480,7 @@
           <p><strong>Returns:</strong> a list of the current exempts on the
           channel. Each element is a sublist of the form {&lt;exempts&gt;
           &lt;bywho&gt; &lt;age&gt;}. age is seconds from the bot&#39;s
-          POV.</p>
+          point of view</p>
 
           <p><strong>Module:</strong> irc</p>
         </dd>
@@ -1491,7 +1491,7 @@
           <p><strong>Returns:</strong> a list of the current invites on the
           channel. Each element is a sublist of the form {&lt;invites&gt;
           &lt;bywho&gt; &lt;age&gt;}. age is seconds from the bot&#39;s
-          POV.</p>
+          point of view</p>
 
           <p><strong>Module:</strong> irc</p>
         </dd>
@@ -1573,11 +1573,12 @@
           <p><strong>Module:</strong> irc</p>
         </dd>
 
-        <dt><strong>chanlist &lt;channel&gt; [flags[&chanflags]]</strong></dt>
+        <dt><strong>chanlist &lt;channel&gt;
+        [flags[&amp;chanflags]]</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> flags are any global flags; the
-          &#39;&&#39; denotes to look for channel specific flags.
+          &#39;&amp;&#39; denotes to look for channel specific flags.
           Examples:</p>
 
           <blockquote>
@@ -1594,7 +1595,7 @@
 
               <tr valign="top">
                 <td>
-                  <p><strong>&n</strong></p>
+                  <p><strong>&amp;n</strong></p>
                 </td>
 
                 <td>
@@ -1604,7 +1605,7 @@
 
               <tr valign="top">
                 <td>
-                  <p><strong>o&m</strong></p>
+                  <p><strong>o&amp;m</strong></p>
                 </td>
 
                 <td>
@@ -1710,7 +1711,7 @@
           <p><strong>Module:</strong> channels</p>
         </dd>
 
-        <dt><strong>* setudef &lt;flag/int/str&gt; &lt;name&gt;</strong></dt>
+        <dt><strong>setudef &lt;flag/int/str&gt; &lt;name&gt;</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> initializes a user defined channel
@@ -1723,7 +1724,7 @@
           <p><strong>Module:</strong> channels</p>
         </dd>
 
-        <dt><strong>* renudef &lt;flag/int/str&gt; &lt;oldname&gt;
+        <dt><strong>renudef &lt;flag/int/str&gt; &lt;oldname&gt;
         &lt;newname&gt;</strong></dt>
 
         <dd>
@@ -1735,7 +1736,7 @@
           <p><strong>Module:</strong> channels</p>
         </dd>
 
-        <dt><strong>* deludef &lt;flag/int/str&gt; &lt;name&gt;</strong></dt>
+        <dt><strong>deludef &lt;flag/int/str&gt; &lt;name&gt;</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> deletes a user defined channel
@@ -2033,7 +2034,7 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>dcclist ?type?</strong></dt>
+        <dt><strong>dcclist [type]</strong></dt>
 
         <dd>
           <p><strong>Returns:</strong> a list of active connections, each
@@ -2269,7 +2270,7 @@
 
         <dd>
           <p><strong>Description:</strong> removes the name associated
-          with a botnet channel, if any exists. Use &#39;killassoc &&#39;
+          with a botnet channel, if any exists. Use &#39;killassoc &amp;&#39;
           to kill all assocs.</p>
 
           <p><strong>Returns:</strong> nothing</p>
@@ -2805,7 +2806,7 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>binds ?type/mask?</strong></dt>
+        <dt><strong>binds [type/mask]</strong></dt>
 
         <dd>
           <p><strong>Returns:</strong> a list of Tcl binds, each item in the
@@ -3307,7 +3308,7 @@
           <p><strong>Module:</strong> server</p>
         </dd>
 
-        <dt><strong>* server</strong></dt>
+        <dt><strong>server</strong></dt>
 
         <dd>
           <p><strong>Value:</strong> the current server&#39;s real name (what
@@ -3318,7 +3319,7 @@
           <p><strong>Module:</strong> server</p>
         </dd>
 
-        <dt><strong>* serveraddress</strong></dt>
+        <dt><strong>serveraddress</strong></dt>
 
         <dd>
           <p><strong>Value:</strong> the current server&#39;s internet address
@@ -3473,8 +3474,6 @@
       <p>To remove a bind, use the &#39;unbind&#39; command. For example,
       to remove the bind for the &quot;stop&quot; msg command, use
       &#39;unbind msg - stop msg:stop&#39;.</p>
-
-      <a name="binda"></a>
 
       <ol type="A">
         <li>
@@ -3680,7 +3679,7 @@
 
               <p><strong>Description:</strong> triggered when someone is
               kicked off the channel. The mask is matched against
-              &#39;#channel target&#39; where the target is the nickname of
+              &#39;#channel target reason&#39; where the target is the nickname of
               the person who got kicked (can contain wildcards). The proc
               is called with the nick, user@host, and handle of the kicker,
               plus the channel, the nickname of the person who was kicked,
@@ -3690,7 +3689,7 @@
             </li>
 
             <li>
-              <p><strong>* NICK (stackable)</strong></p>
+              <p><strong>NICK (stackable)</strong></p>
 
               <p><strong>bind nick &lt;flags&gt; &lt;mask&gt; &lt;proc&gt;<br>
               procname &lt;nick&gt; &lt;user@host&gt; &lt;handle&gt;
@@ -3793,15 +3792,15 @@
 
               <p><strong>Description:</strong> previous versions of Eggdrop
               required a special compile option to enable this binding, but
-              it&#39;s now standard. The mask is checked against the keyword
-              (either a numeric, like &quot;368&quot;, or a keyword, like
-              &quot;PRIVMSG&quot;). from will be the server name or the
-              source user (depending on the keyword); flags are ignored.
-              The order of the arguments is identical to the order that the
-              IRC server sends to the bot. The pre-processing only splits
-              it apart enough to determine the keyword. If the proc returns
-              1, Eggdrop will not process the line any further (this could
-              cause your bot to behave oddly in some cases).</p>
+              it&#39;s now standard. The keyword is either a numeric, like
+              &quot;368&quot;, or a keyword, such as &quot;PRIVMSG&quot;. from
+              will be the server name or the source user (depending on the
+              keyword); flags are ignored. The order of the arguments is
+              identical to the order that the IRC server sends to the bot. The
+              pre-processing  only splits it apart enough to determine the
+              keyword. If the proc returns 1, Eggdrop will not process the line
+              any further (this could cause unexpected behavior in some
+              cases).</p>
 
               <p><strong>Module:</strong> server</p>
             </li>
@@ -4053,7 +4052,7 @@
             </li>
 
             <li>
-              <p><strong>* WALL (stackable)</strong></p>
+              <p><strong>WALL (stackable)</strong></p>
 
               <p><strong>bind wall &lt;flags&gt; &lt;mask&gt; &lt;proc&gt;<br>
               proc-name &lt;handle&gt; &lt;msg&gt;</strong></p>
@@ -4290,6 +4289,16 @@
 
                     <td>
                       <p>called when the bot is done loading</p>
+                    </td>
+                  </tr>
+
+                  <tr valign="top">
+                    <td>
+                      <p><strong>* userfile-loaded</strong></p>
+                    </td>
+
+                    <td>
+                      <p>called after userfile has been loaded</p>
                     </td>
                   </tr>
                 </table>
@@ -4648,7 +4657,7 @@
     <hr>
 
     <p><em>Copyright &copy; 1997 Robey Pointer<br>
-    Copyright &copy; 1999, 2000, 2001, 2002, 2003
+    Copyright &copy; 1999, 2000, 2001, 2002, 2003, 2004
     <a href="http://www.eggheads.org/"> Eggheads Development Team</a></em></p>
   </body>
 </html>

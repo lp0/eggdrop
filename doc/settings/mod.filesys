@@ -1,16 +1,17 @@
 Filesys Module
-Last revised: January 1, 2002
+Last revised: May 26, 2004
+$Id: mod.filesys,v 1.13 2004/05/27 05:23:39 wcc Exp $
      _________________________________________________________________
 
                               Filesys Module
 
 
-This module provides an area within the bot where users can store
+This module provides an area within the bot where users can store and manage
 files. With this module, the bot is usable as a file server.
 
 This module requires: transfer
 
-Put this line into your Eggdrop configuration file to load the filesys 
+Put this line into your Eggdrop configuration file to load the filesys
 module:
 
   loadmodule filesys
@@ -44,12 +45,12 @@ There are also some variables you can set in your config file:
    set max-file-users 20
      Set here the maximum number of people that can be in the file area at once.
      Setting this to 0 makes it effectively infinite.
-  
-  
+
+
    set max-filesize 1024
      Set here the maximum allowable file size that will be received (in kb).
      Setting this to 0 makes it effectively infinite.
 
      _________________________________________________________________
 
-   Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
+   Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

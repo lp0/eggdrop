@@ -2,11 +2,11 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  *
- * $Id: cmdschan.c,v 1.66 2003/03/24 05:47:07 wcc Exp $
+ * $Id: cmdschan.c,v 1.70 2004/01/09 05:56:37 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -470,19 +470,25 @@ static void cmd_mns_ban(struct userrec *u, int idx, char *par)
     dprintf(idx, "Invalid channel.\n");
     return;
   }
-  if ((i = atoi(ban)) > 0) {
+  if (str_isdigit(ban)) {
+    i = atoi(ban);
+    /* substract the numer of global bans to get the number of the channel ban */
     egg_snprintf(s, sizeof s, "%d", i);
-    j = u_delban(chan, s, 1);
-    if (j > 0) {
-      if (lastdeletedmask)
-        mask = lastdeletedmask;
-      else
-        mask = s;
-      putlog(LOG_CMDS, "*", "#%s# (%s) -ban %s", dcc[idx].nick, chan->dname,
-             mask);
-      dprintf(idx, "Removed %s channel ban: %s\n", chan->dname, mask);
-      add_mode(chan, '-', 'b', mask);
-      return;
+    j = u_delban(0, s, 0);
+    if (j < 0) {
+      egg_snprintf(s, sizeof s, "%d", -j);
+      j = u_delban(chan, s, 1);
+      if (j > 0) {
+        if (lastdeletedmask)
+          mask = lastdeletedmask;
+        else
+          mask = s;
+        putlog(LOG_CMDS, "*", "#%s# (%s) -ban %s", dcc[idx].nick, chan->dname,
+               mask);
+        dprintf(idx, "Removed %s channel ban: %s\n", chan->dname, mask);
+        add_mode(chan, '-', 'b', mask);
+        return;
+      }
     }
     i = 0;
     for (b = chan->channel.ban; b && b->mask && b->mask[0]; b = b->next) {
@@ -571,9 +577,17 @@ static void cmd_mns_exempt(struct userrec *u, int idx, char *par)
   /* Channel-specific exempt? */
   if (chname)
     chan = findchan_by_dname(chname);
-  if (chan) {
-    if ((i = atoi(exempt)) > 0) {
-      egg_snprintf(s, sizeof s, "%d", i);
+  if (!chan) {
+    dprintf(idx, "Invalid channel.\n");
+    return;
+  }
+  if (str_isdigit(exempt)) {
+    i = atoi(exempt);
+    /* substract the numer of global exempts to get the number of the channel exempt */
+    egg_snprintf(s, sizeof s, "%d", i);
+    j = u_delexempt(0, s, 0);
+    if (j < 0) {
+      egg_snprintf(s, sizeof s, "%d", -j);
       j = u_delexempt(chan, s, 1);
       if (j > 0) {
         if (lastdeletedmask)
@@ -586,35 +600,16 @@ static void cmd_mns_exempt(struct userrec *u, int idx, char *par)
         add_mode(chan, '-', 'e', mask);
         return;
       }
-      i = 0;
-      for (e = chan->channel.exempt; e && e->mask && e->mask[0]; e = e->next) {
-        if (!u_equals_mask(global_exempts, e->mask) &&
-            !u_equals_mask(chan->exempts, e->mask)) {
-          i++;
-          if (i == -j) {
-            add_mode(chan, '-', 'e', e->mask);
-            dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDEXEMPT,
-                    e->mask, chan->dname);
-            putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s [on channel]",
-                   dcc[idx].nick, dcc[idx].u.chat->con_chan, exempt);
-            return;
-          }
-        }
-      }
-    } else {
-      j = u_delexempt(chan, exempt, 1);
-      if (j > 0) {
-        putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s", dcc[idx].nick,
-               dcc[idx].u.chat->con_chan, exempt);
-        dprintf(idx, "Removed %s channel exempt: %s\n", chname, exempt);
-        add_mode(chan, '-', 'e', exempt);
-        return;
-      }
-      for (e = chan->channel.exempt; e && e->mask && e->mask[0]; e = e->next) {
-        if (!rfc_casecmp(e->mask, exempt)) {
+    }
+    i = 0;
+    for (e = chan->channel.exempt; e && e->mask && e->mask[0]; e = e->next) {
+      if (!u_equals_mask(global_exempts, e->mask) &&
+          !u_equals_mask(chan->exempts, e->mask)) {
+        i++;
+        if (i == -j) {
           add_mode(chan, '-', 'e', e->mask);
-          dprintf(idx, "%s '%s' on %s.\n",
-                  IRC_REMOVEDEXEMPT, e->mask, chan->dname);
+          dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDEXEMPT,
+                  e->mask, chan->dname);
           putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s [on channel]",
                  dcc[idx].nick, dcc[idx].u.chat->con_chan, exempt);
           return;
@@ -622,8 +617,24 @@ static void cmd_mns_exempt(struct userrec *u, int idx, char *par)
       }
     }
   } else {
-    dprintf(idx, "Invalid channel.\n");
-    return; 
+    j = u_delexempt(chan, exempt, 1);
+    if (j > 0) {
+      putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s", dcc[idx].nick,
+             dcc[idx].u.chat->con_chan, exempt);
+      dprintf(idx, "Removed %s channel exempt: %s\n", chname, exempt);
+      add_mode(chan, '-', 'e', exempt);
+      return;
+    }
+    for (e = chan->channel.exempt; e && e->mask && e->mask[0]; e = e->next) {
+      if (!rfc_casecmp(e->mask, exempt)) {
+        add_mode(chan, '-', 'e', e->mask);
+        dprintf(idx, "%s '%s' on %s.\n",
+                IRC_REMOVEDEXEMPT, e->mask, chan->dname);
+        putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s [on channel]",
+               dcc[idx].nick, dcc[idx].u.chat->con_chan, exempt);
+        return;
+      }
+    }
   }
   dprintf(idx, "No such exemption.\n");
 }
@@ -678,9 +689,17 @@ static void cmd_mns_invite(struct userrec *u, int idx, char *par)
   /* Channel-specific invite? */
   if (chname)
     chan = findchan_by_dname(chname);
-  if (chan) {
-    if ((i = atoi(invite)) > 0) {
-      egg_snprintf(s, sizeof s, "%d", i);
+  if (!chan) {
+    dprintf(idx, "Invalid channel.\n");
+    return;
+  }
+  if (str_isdigit(invite)) {
+    i = atoi(invite);
+    /* substract the numer of global invites to get the number of the channel invite */
+    egg_snprintf(s, sizeof s, "%d", i);
+    j = u_delinvite(0, s, 0);
+    if (j < 0) {
+      egg_snprintf(s, sizeof s, "%d", -j);
       j = u_delinvite(chan, s, 1);
       if (j > 0) {
         if (lastdeletedmask)
@@ -693,37 +712,17 @@ static void cmd_mns_invite(struct userrec *u, int idx, char *par)
         add_mode(chan, '-', 'I', mask);
         return;
       }
-      i = 0;
-      for (inv = chan->channel.invite; inv && inv->mask && inv->mask[0];
-           inv = inv->next) {
-        if (!u_equals_mask(global_invites, inv->mask) &&
-            !u_equals_mask(chan->invites, inv->mask)) {
-          i++;
-          if (i == -j) {
-            add_mode(chan, '-', 'I', inv->mask);
-            dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDINVITE,
-                    inv->mask, chan->dname);
-            putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s [on channel]",
-                   dcc[idx].nick, dcc[idx].u.chat->con_chan, invite);
-            return;
-          }
-        }
-      }
-    } else {
-      j = u_delinvite(chan, invite, 1);
-      if (j > 0) {
-        putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s", dcc[idx].nick,
-               dcc[idx].u.chat->con_chan, invite);
-        dprintf(idx, "Removed %s channel invite: %s\n", chname, invite);
-        add_mode(chan, '-', 'I', invite);
-        return;
-      }
-      for (inv = chan->channel.invite; inv && inv->mask && inv->mask[0];
-           inv = inv->next) {
-        if (!rfc_casecmp(inv->mask, invite)) {
+    }
+    i = 0;
+    for (inv = chan->channel.invite; inv && inv->mask && inv->mask[0];
+         inv = inv->next) {
+      if (!u_equals_mask(global_invites, inv->mask) &&
+          !u_equals_mask(chan->invites, inv->mask)) {
+        i++;
+        if (i == -j) {
           add_mode(chan, '-', 'I', inv->mask);
-          dprintf(idx, "%s '%s' on %s.\n",
-                  IRC_REMOVEDINVITE, inv->mask, chan->dname);
+          dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDINVITE,
+                  inv->mask, chan->dname);
           putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s [on channel]",
                  dcc[idx].nick, dcc[idx].u.chat->con_chan, invite);
           return;
@@ -731,8 +730,25 @@ static void cmd_mns_invite(struct userrec *u, int idx, char *par)
       }
     }
   } else {
-    dprintf(idx, "Invalid channel.\n");
-    return; 
+    j = u_delinvite(chan, invite, 1);
+    if (j > 0) {
+      putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s", dcc[idx].nick,
+             dcc[idx].u.chat->con_chan, invite);
+      dprintf(idx, "Removed %s channel invite: %s\n", chname, invite);
+      add_mode(chan, '-', 'I', invite);
+      return;
+    }
+    for (inv = chan->channel.invite; inv && inv->mask && inv->mask[0];
+         inv = inv->next) {
+      if (!rfc_casecmp(inv->mask, invite)) {
+        add_mode(chan, '-', 'I', inv->mask);
+        dprintf(idx, "%s '%s' on %s.\n",
+                IRC_REMOVEDINVITE, inv->mask, chan->dname);
+        putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s [on channel]",
+               dcc[idx].nick, dcc[idx].u.chat->con_chan, invite);
+        return;
+      }
+    }
   }
   dprintf(idx, "No such invite.\n");
 }
@@ -961,8 +977,12 @@ static void cmd_stick_yn(int idx, char *par, int yn)
       dprintf(idx, "No such channel.\n");
       return;
     }
-    if (i)
-      egg_snprintf(s, sizeof s, "%d", -i);
+    if (str_isdigit(s)) {
+      /* substract the numer of global exempts to get the number of the channel exempt */
+      j = u_setsticky_exempt(NULL, s, -1);
+      if (j < 0)
+        egg_snprintf(s, sizeof s, "%d", -j);
+    }
     j = u_setsticky_exempt(chan, s, yn);
     if (j > 0) {
       putlog(LOG_CMDS, "*", "#%s# %sstick exempt %s %s", dcc[idx].nick,
@@ -995,8 +1015,12 @@ static void cmd_stick_yn(int idx, char *par, int yn)
       dprintf(idx, "No such channel.\n");
       return;
     }
-    if (i)
-      egg_snprintf(s, sizeof s, "%d", -i);
+    if (str_isdigit(s)) {
+      /* substract the numer of global invites to get the number of the channel invite */
+      j = u_setsticky_invite(NULL, s, -1);
+      if (j < 0)
+        egg_snprintf(s, sizeof s, "%d", -j);
+    }
     j = u_setsticky_invite(chan, s, yn);
     if (j > 0) {
       putlog(LOG_CMDS, "*", "#%s# %sstick invite %s %s", dcc[idx].nick,
@@ -1026,8 +1050,12 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     dprintf(idx, "No such channel.\n");
     return;
   }
-  if (i)
-    egg_snprintf(s, sizeof s, "%d", -i);
+  if (str_isdigit(s)) {
+    /* substract the numer of global bans to get the number of the channel ban */
+    j = u_setsticky_ban(NULL, s, -1);
+    if (j < 0)
+      egg_snprintf(s, sizeof s, "%d", -j);
+  }
   j = u_setsticky_ban(chan, s, yn);
   if (j > 0) {
     putlog(LOG_CMDS, "*", "#%s# %sstick ban %s %s", dcc[idx].nick,

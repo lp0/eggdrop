@@ -1,35 +1,37 @@
 /*
  * modules.c -- handles:
  *   support for modules in eggdrop
- * 
+ *
  * by Darrin Smith (beldin@light.iinet.net.au)
- * 
- * $Id: modules.c,v 1.84 2003/04/17 01:55:57 wcc Exp $
+ *
+ * $Id: modules.c,v 1.94 2004/04/06 06:56:38 wcc Exp $
  */
-/* 
+/*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
- * 
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#include <ctype.h>
 #include "main.h"
 #include "modules.h"
 #include "tandem.h"
 #include "md5/md5.h"
-#include <ctype.h>
+#include "users.h"
+
 #ifndef STATIC
 #  ifdef HPUX_HACKS
 #    include <dl.h>
@@ -42,7 +44,6 @@ char *dlerror();
 void *dlopen(const char *, int);
 int dlclose(void *);
 void *dlsym(void *, char *);
-
 #        define DLFLAGS 1
 #      else
 #        include <dlfcn.h>
@@ -60,23 +61,15 @@ void *dlsym(void *, char *);
 #      endif /* DLOPEN_1 */
 #    endif /* OSF1_HACKS */
 #  endif /* HPUX_HACKS */
-#endif /* STATIC */
+#endif /* !STATIC */
 
 extern struct dcc_t *dcc;
-
-#include "users.h"
-
-
 extern struct userrec *userlist, *lastuser;
 extern struct chanset_t *chanset;
 
 extern char tempdir[], botnetnick[], botname[], natip[], hostname[],
             origbotname[], botuser[], admin[], userfile[], ver[], notify_new[],
-#ifdef USE_IPV6
-            helpdir[], version[], quit_msg[], hostname6[];
-#else
             helpdir[], version[], quit_msg[];
-#endif /* USE_IPV6 */
 
 extern int parties, noshare, dcc_total, egg_numver, userfile_perm, do_restart,
            ignore_time, must_be_owner, raw_log, max_dcc, make_userfile,
@@ -90,7 +83,6 @@ extern tand_t *tandbot;
 
 extern Tcl_Interp *interp;
 extern sock_list *socklist;
-extern int getprotocol(char *);
 
 int cmd_die();
 int xtra_kill();
@@ -561,9 +553,16 @@ Function global_table[] = {
   /* 284 - 287 */
   (Function) & quiet_reject,      /* int                                 */
   (Function) file_readable,
-  (Function) getprotocol,
-  (Function) open_listen_by_af,
-  (Function) egg_inet_ntop
+  (Function) 0,                   /* IPv6 leftovers: 286                 */
+  (Function) 0,                   /* IPv6 leftovers: 287                 */
+  /* 288 - 291 */
+  (Function) 0,                   /* IPv6 leftovers: 288                 */
+  (Function) strip_mirc_codes,
+  (Function) check_ansi,
+  (Function) oatoi,
+  /* 292 - 295 */
+  (Function) str_isdigit,
+  (Function) remove_crlf
 };
 
 void init_modules(void)
@@ -1072,8 +1071,8 @@ void do_module_report(int idx, int details, char *which)
 {
   module_entry *p = module_list;
 
-  if (p && !which && details)
-    dprintf(idx, "MODULES LOADED:\n");
+  if (p && !which)
+    dprintf(idx, "Loaded module information:\n");
   for (; p; p = p->next) {
     if (!which || !egg_strcasecmp(which, p->name)) {
       dependancy *d;

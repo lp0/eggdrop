@@ -1,13 +1,14 @@
 IRC Module
-Last revised: February 12, 2003
+Last revised: May 26, 2004
+$Id: mod.irc,v 1.19 2004/05/27 05:23:39 wcc Exp $
      _________________________________________________________________
 
                                 IRC Module
 
 
-This module controls the bots interaction on IRC. Allows the bot to
-join channels, handles channel userlists, etc. You have to load this if
-you want your bot to come on irc.
+This module controls the bots interaction on IRC. It allows the bot to
+join channels, etc. You have to load this if you want your bot to come on
+irc.
 
   This module requires: server, channels
 
@@ -31,10 +32,10 @@ There are also some variables you can set in your config file:
      the same value as max-bans for networks that do not support +e/+I.
 
 
-   set max-bans 20
+   set max-bans 30
      Set here the maximum number of bans you want the bot to set on a channel.
      Eggdrop will not place any more bans if this limit is reached. Undernet
-     currently allows 45 bans, IRCnet allows 30, EFnet allows 25, and DALnet
+     currently allows 45 bans, IRCnet allows 30, EFnet allows 100, and DALnet
      allows 100.
 
 
@@ -167,4 +168,4 @@ There are also some variables you can set in your config file:
 
      _________________________________________________________________
 
-   Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
+   Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

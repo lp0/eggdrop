@@ -7,11 +7,11 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  *
- * $Id: proto.h,v 1.57 2003/04/17 01:55:57 wcc Exp $
+ * $Id: proto.h,v 1.62 2004/01/09 12:07:22 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -125,6 +125,8 @@ char *stripmasktype(int);
 
 /* dcc.c */
 void failed_link(int);
+void strip_mirc_codes(int, char *);
+int check_ansi(char *);
 void dupwait_notify(char *);
 
 /* dccutil.c */
@@ -199,19 +201,15 @@ void tell_mem_status_dcc(int);
 void debug_mem_to_dcc(int);
 
 /* misc.c */
-int egg_strcatn(char *dst, const char *src, size_t max);
+int egg_strcatn(char *, const char *, size_t);
 int my_strcpy(char *, char *);
 void putlog EGG_VARARGS(int, arg1);
 void flushlogs();
 void check_logsize();
-void _maskhost(const char *, char *, int);
-
-#define maskhost(a,b) _maskhost((a),(b),1)
-#define maskban(a,b) _maskhost((a),(b),0)
-
 char *stristr(char *, char *);
 void splitc(char *, char *, char);
 void splitcn(char *, char *, char, size_t);
+void remove_crlf(char **);
 char *newsplit(char **);
 char *splitnick(char **);
 void stridx(char *, char *, int);
@@ -226,8 +224,8 @@ void tellhelp(int, char *, struct flag_record *, int);
 void tellwildhelp(int, char *, struct flag_record *);
 void tellallhelp(int, char *, struct flag_record *);
 void showhelp(char *, char *, struct flag_record *, int);
-void rem_help_reference(char *file);
-void add_help_reference(char *file);
+void rem_help_reference(char *);
+void add_help_reference(char *);
 void debug_help(int);
 void reload_help_data(void);
 char *extracthostname(char *);
@@ -236,36 +234,29 @@ void make_rand_str(char *, int);
 int oatoi(const char *);
 int is_file(const char *);
 void logsuffix_change(char *);
-char *str_escape(const char *str, const char div, const char mask);
-char *strchr_unescape(char *str, const char div, register const char esc_char);
-void str_unescape(char *str, register const char esc_char);
+char *str_escape(const char *, const char, const char);
+char *strchr_unescape(char *, const char, register const char);
+void str_unescape(char *, register const char);
+int str_isdigit(const char *);
 void kill_bot(char *, char *);
+
+void _maskhost(const char *, char *, int);
+#define maskhost(a,b) _maskhost((a),(b),1)
+#define maskban(a,b)  _maskhost((a),(b),0)
 
 /* net.c */
 IP my_atoul(char *);
 unsigned long iptolong(IP);
 IP getmyip();
 void neterror(char *);
-#ifdef USE_IPV6
-void setsock(int, int, int);
-int allocsock(int, int, int);
-int getsock(int, int);
-#else
 void setsock(int, int);
 int allocsock(int, int);
 int getsock(int);
-#endif /* USE_IPV6 */
-int getprotocol(char *);
 char *hostnamefromip(unsigned long);
 void killsock(int);
 int answer(int, char *, unsigned long *, unsigned short *, int);
 inline int open_listen(int *);
-inline int open_listen_by_af(int *, int);
-#ifdef USE_IPV6
-int open_address_listen(IP addr, int af_def, int *);
-#else
 int open_address_listen(IP addr, int *);
-#endif /* USE_IPV6 */
 int open_telnet(char *, int);
 int open_telnet_dcc(int, char *, char *);
 int open_telnet_raw(int, char *, int);

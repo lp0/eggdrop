@@ -10,11 +10,11 @@
  * statement, leave the rest of the file alone, this allows better
  * overlapping patches.
  *
- * $Id: patch.h,v 1.988 2003/05/04 22:04:32 wcc Exp $
+ * $Id: patch.h,v 1.1079 2004/05/27 06:29:46 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,6 +32,21 @@
  */
 #ifndef _EGG_PATCH_H
 #define _EGG_PATCH_H
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
 /*
  *
  *

@@ -2,11 +2,11 @@
  * main.h
  *   include file to include most other include files
  *
- * $Id: main.h,v 1.25 2003/04/17 01:55:57 wcc Exp $
+ * $Id: main.h,v 1.27 2004/05/26 00:20:19 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -137,5 +137,10 @@ extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,
 #  define O_NONBLOCK 00000004 /* POSIX non-blocking I/O */
 #endif /* BORGUBES */
 
+/* Use high-order bits for getting the random integer. With random()
+ * modulo would probably be sufficient but on systems lacking random(),
+ * the function will be just renamed rand().
+ */
+#define randint(n) (unsigned long) (random() / (RAND_MAX + 1.0) * ((n) < 0 ? (-(n)) : (n)))
 
 #endif /* _EGG_MAIN_H */

@@ -2,11 +2,11 @@
  * tcluser.c -- handles:
  *   Tcl stubs for the user-record-oriented commands
  *
- * $Id: tcluser.c,v 1.35 2003/02/27 10:18:40 tothwolf Exp $
+ * $Id: tcluser.c,v 1.38 2004/04/06 06:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,6 +27,7 @@
 #include "users.h"
 #include "chan.h"
 #include "tandem.h"
+#include "modules.h"
 
 extern Tcl_Interp *interp;
 extern struct userrec *userlist;
@@ -69,7 +70,7 @@ static int tcl_passwdOk STDVAR
   struct userrec *u;
 
   BADARGS(3, 3, " handle passwd");
-  
+
   Tcl_AppendResult(irp, ((u = get_user_by_handle(userlist, argv[1])) &&
                    u_pass_match(u, argv[2])) ? "1" : "0", NULL);
   return TCL_OK;
@@ -82,7 +83,7 @@ static int tcl_chattr STDVAR
   struct userrec *u;
 
   BADARGS(2, 4, " handle ?changes? ?channel?");
-  
+
   if ((argv[1][0] == '*') || !(u = get_user_by_handle(userlist, argv[1]))) {
     Tcl_AppendResult(irp, "*", NULL);
     return TCL_OK;
@@ -157,7 +158,7 @@ static int tcl_botattr STDVAR
   struct userrec *u;
 
   BADARGS(2, 4, " bot-handle ?changes? ?channel?");
- 
+
   u = get_user_by_handle(userlist, argv[1]);
   if ((argv[1][0] == '*') || !u || !(u->flags & USER_BOT)) {
     Tcl_AppendResult(irp, "*", NULL);
@@ -257,7 +258,7 @@ static int tcl_matchattr STDVAR
 static int tcl_adduser STDVAR
 {
   BADARGS(2, 3, " handle ?hostmask?");
-  
+
   if (strlen(argv[1]) > HANDLEN)
     argv[1][HANDLEN] = 0;
   if ((argv[1][0] == '*') || get_user_by_handle(userlist, argv[1]))
@@ -386,7 +387,7 @@ static int tcl_chhandle STDVAR
   int x = 1, i;
 
   BADARGS(3, 3, " oldnick newnick");
-  
+
   u = get_user_by_handle(userlist, argv[1]);
   if (!u)
     x = 0;
@@ -527,9 +528,10 @@ static int tcl_setuser STDVAR
   struct userrec *u;
   struct user_entry *e;
   int r;
+  module_entry *me;
 
   BADARGS(3, 999, " handle type ?setting....?");
-  
+
   if (!(et = find_entry_type(argv[2]))) {
     Tcl_AppendResult(irp, "No such info type: ", argv[2], NULL);
     return TCL_ERROR;
@@ -540,6 +542,12 @@ static int tcl_setuser STDVAR
       return TCL_ERROR;
     } else
       return TCL_OK; /* Silently ignore user * */
+  }
+  me = module_find("irc", 0, 0);
+  if (me && !strcmp(argv[2], "hosts") && argc == 3) {
+    Function *func = me->funcs;
+
+    (func[IRC_CHECK_THIS_USER]) (argv[1], 1, NULL);
   }
   if (!(e = find_user_entry(et, u))) {
     e = user_malloc(sizeof(struct user_entry));
@@ -554,6 +562,11 @@ static int tcl_setuser STDVAR
       (struct list_type *) e)))
     nfree(e);
     /* else maybe already freed... (entry_type==HOSTS) <drummer> */
+  if (me && !strcmp(argv[2], "hosts") && argc == 4) {
+    Function *func = me->funcs;
+
+    (func[IRC_CHECK_THIS_USER]) (argv[1], 0, NULL);
+  }
   return r;
 }
 

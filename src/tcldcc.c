@@ -2,11 +2,11 @@
  * tcldcc.c -- handles:
  *   Tcl stubs for the dcc commands
  *
- * $Id: tcldcc.c,v 1.47 2003/04/17 01:55:57 wcc Exp $
+ * $Id: tcldcc.c,v 1.51 2004/04/06 06:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -112,7 +112,7 @@ static int tcl_dccsimul STDVAR
   int idx;
 
   BADARGS(3, 3, " idx command");
-  
+
   idx = findidx(atoi(argv[1]));
   if (idx >= 0 && (dcc[idx].type->flags & DCT_SIMUL)) {
     int l = strlen(argv[2]);
@@ -151,7 +151,7 @@ static int tcl_hand2idx STDVAR
   BADARGS(2, 2, " nickname");
 
   for (i = 0; i < dcc_total; i++)
-    if ((dcc[i].type->flags & DCT_SIMUL) &&
+    if ((dcc[i].type->flags & (DCT_SIMUL | DCT_BOT)) &&
         !egg_strcasecmp(argv[1], dcc[i].nick)) {
       egg_snprintf(s, sizeof s, "%ld", dcc[i].sock);
       Tcl_AppendResult(irp, s, NULL);
@@ -327,7 +327,7 @@ static int tcl_strip STDVAR
   module_entry *me;
 
   BADARGS(2, 4, " idx ?strip-flags?");
-  
+
   i = findidx(atoi(argv[1]));
   if (i < 0 || dcc[i].type != &DCC_CHAT) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -439,7 +439,7 @@ static int tcl_control STDVAR
   void *hold;
 
   BADARGS(3, 3, " idx command");
-  
+
   idx = findidx(atoi(argv[1]));
   if (idx < 0) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -496,7 +496,7 @@ static int tcl_killdcc STDVAR
   if ((dcc[idx].sock == STDOUT) && !backgrd) /* Don't kill terminal socket */
     return TCL_OK;
 
-  
+
   if (dcc[idx].type->flags & DCT_CHAT) { /* Make sure 'whom' info is updated */
     chanout_but(idx, dcc[idx].u.chat->channel, "*** %s has left the %s%s%s\n",
                 dcc[idx].nick, dcc[idx].u.chat ? "channel" : "partyline",
@@ -520,7 +520,7 @@ static int tcl_putbot STDVAR
   char msg[401];
 
   BADARGS(3, 3, " botnick message");
-  
+
   i = nextbot(argv[1]);
   if (i < 0) {
     Tcl_AppendResult(irp, "bot is not on the botnet", NULL);
@@ -548,7 +548,7 @@ static int tcl_idx2hand STDVAR
   int idx;
 
   BADARGS(2, 2, " idx");
-  
+
   idx = findidx(atoi(argv[1]));
   if (idx < 0) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -564,7 +564,7 @@ static int tcl_islinked STDVAR
   int i;
 
   BADARGS(2, 2, " bot");
-  
+
   i = nextbot(argv[1]);
   if (i < 0)
     Tcl_AppendResult(irp, "0", NULL);
@@ -732,7 +732,7 @@ static int tcl_getdccidle STDVAR
   char s[21];
 
   BADARGS(2, 2, " idx");
-  
+
   idx = findidx(atoi(argv[1]));
   if (idx < 0) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -750,7 +750,7 @@ static int tcl_getdccaway STDVAR
   int idx;
 
   BADARGS(2, 2, " idx");
-  
+
   idx = findidx(atol(argv[1]));
   if (idx < 0 || dcc[idx].type != &DCC_CHAT) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -768,7 +768,7 @@ static int tcl_setdccaway STDVAR
   int idx;
 
   BADARGS(3, 3, " idx message");
-  
+
   idx = findidx(atol(argv[1]));
   if (idx < 0 || dcc[idx].type != &DCC_CHAT) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
@@ -813,7 +813,7 @@ static int tcl_unlink STDVAR
   char bot[HANDLEN + 1];
 
   BADARGS(2, 3, " bot ?comment?");
-  
+
   strncpyz(bot, argv[1], sizeof bot);
   i = nextbot(bot);
   if (i < 0)
@@ -837,16 +837,12 @@ static int tcl_connect STDVAR
   char s[81];
 
   BADARGS(3, 3, " hostname port");
-  
+
   if (dcc_total == max_dcc) {
     Tcl_AppendResult(irp, "out of dcc table space", NULL);
     return TCL_ERROR;
   }
-#ifdef USE_IPV6
-  sock = getsock(0, getprotocol(argv[1]));
-#else
   sock = getsock(0);
-#endif /* USE_IPV6 */
 
   if (sock < 0) {
     Tcl_AppendResult(irp, MISC_NOFREESOCK, NULL);
@@ -885,7 +881,7 @@ static int tcl_listen STDVAR
   struct portmap *pmap = NULL, *pold = NULL;
 
   BADARGS(3, 5, " port type ?mask?/?proc ?flag??");
-  
+
   port = realport = atoi(argv[1]);
   for (pmap = root; pmap; pold = pmap, pmap = pmap->next)
     if (pmap->realport == port) {
@@ -922,14 +918,7 @@ static int tcl_listen STDVAR
     j = port + 20;
     i = -1;
     while (port < j && i < 0) {
-#ifdef USE_IPV6
-      /* dum de dum, listen needs an af_def option, on linux this will listen on
-       * both ipv6 and ipv4 
-       */
-      i = open_listen_by_af(&port, AF_INET6);
-#else
       i = open_listen(&port);
-#endif /* USE_IPV6 */
       if (i == -1)
         port++;
       else if (i == -2)
@@ -944,11 +933,7 @@ static int tcl_listen STDVAR
       return TCL_ERROR;
     }
     idx = new_dcc(&DCC_TELNET, 0);
-#ifdef USE_IPV6
-    dcc[idx].addr = 0x00000000; /* it's not big enough to hold '0xffffffffffffffffffffffffffffffff' =P */
-#else
     dcc[idx].addr = iptolong(getmyip());
-#endif /* USE_IPV6 */
     dcc[idx].port = port;
     dcc[idx].sock = i;
     dcc[idx].timeval = now;
@@ -1014,7 +999,7 @@ static int tcl_boot STDVAR
   int i, ok = 0;
 
   BADARGS(2, 3, " user@bot ?reason?");
-  
+
   strncpyz(who, argv[1], sizeof who);
 
   if (strchr(who, '@') != NULL) {

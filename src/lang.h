@@ -2,11 +2,11 @@
  * lang.h
  *   Conversion definitions for language support
  *
- * $Id: lang.h,v 1.31 2003/03/11 01:22:25 wcc Exp $
+ * $Id: lang.h,v 1.33 2004/01/09 05:56:37 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -70,9 +70,9 @@
 #define MISC_RESTARTING         get_language(0x50c)
 #define MISC_MATCH_PLURAL       get_language(0x50d)
 #define MISC_LOGSWITCH          get_language(0x50e)
-#define MISC_OWNER              get_language(0x50f)
-#define MISC_MASTER             get_language(0x510)
-#define MISC_OP                 get_language(0x511)
+/* was: MISC_OWNER              0x50f            */
+/* was: MISC_MASTER             0x510            */
+/* was: MISC_OP                 0x511            */
 #define MISC_IDLE               get_language(0x512)
 #define MISC_AWAY               get_language(0x513)
 /* was: MISC_IGNORING           0x514            */

@@ -1,11 +1,11 @@
 /*
  * userchan.c -- part of channels.mod
  *
- * $Id: userchan.c,v 1.38 2003/03/19 23:44:49 wcc Exp $
+ * $Id: userchan.c,v 1.44 2004/01/09 05:56:37 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -172,9 +172,11 @@ static int u_setsticky_mask(struct chanset_t *chan, maskrec *u, char *uhost,
 {
   int j;
 
-  j = atoi(uhost);
-  if (!j)
+  if (str_isdigit(uhost))
+    j = atoi(uhost);
+  else
     j = -1;
+
   while (u) {
     if (j >= 0)
       j--;
@@ -184,7 +186,7 @@ static int u_setsticky_mask(struct chanset_t *chan, maskrec *u, char *uhost,
         u->flags |= MASKREC_STICKY;
       else if (!sticky)
         u->flags &= ~MASKREC_STICKY;
-      else                      /* We don't actually want to change, just skip over */
+      else /* We don't actually want to change, just skip over */
         return 0;
       if (!j)
         strcpy(uhost, u->mask);
@@ -197,6 +199,7 @@ static int u_setsticky_mask(struct chanset_t *chan, maskrec *u, char *uhost,
 
     u = u->next;
   }
+
   if (j >= 0)
     return -j;
 
@@ -237,7 +240,8 @@ static int u_delban(struct chanset_t *c, char *who, int doit)
   maskrec **u = (c) ? &c->bans : &global_bans;
   char temp[256];
 
-  if (!strchr(who, '!') && (j = atoi(who))) {
+  if (!strchr(who, '!') && str_isdigit(who)) {
+    j = atoi(who);
     j--;
     for (; (*u) && j; u = &((*u)->next), j--);
     if (*u) {
@@ -291,7 +295,8 @@ static int u_delexempt(struct chanset_t *c, char *who, int doit)
   maskrec *t, **u = c ? &(c->exempts) : &global_exempts;
   char temp[256];
 
-  if (!strchr(who, '!') && (j = atoi(who))) {
+  if (!strchr(who, '!') && str_isdigit(who)) {
+    j = atoi(who);
     j--;
     for (; (*u) && j; u = &((*u)->next), j--);
     if (*u) {
@@ -346,7 +351,8 @@ static int u_delinvite(struct chanset_t *c, char *who, int doit)
   maskrec **u = c ? &(c->invites) : &global_invites;
   char temp[256];
 
-  if (!strchr(who, '!') && (j = atoi(who))) {
+  if (!strchr(who, '!') && str_isdigit(who)) {
+    j = atoi(who);
     j--;
     for (; (*u) && j; u = &((*u)->next), j--);
     if (*u) {
@@ -1120,7 +1126,7 @@ static int write_exempts(FILE *f, int idx)
   for (e = global_exempts; e; e = e->next) {
     mask = str_escape(e->mask, ':', '\\');
     if (!mask ||
-        fprintf(f, "%s %s:%s%lu%s:+%lu:%lu:%s:%s\n", "%", e->mask,
+        fprintf(f, "%s %s:%s%lu%s:+%lu:%lu:%s:%s\n", "%", mask,
                 (e->flags & MASKREC_PERM) ? "+" : "", e->expire,
                 (e->flags & MASKREC_STICKY) ? "*" : "", e->added,
                 e->lastactive, e->user ? e->user : botnetnick,
@@ -1145,7 +1151,7 @@ static int write_exempts(FILE *f, int idx)
         for (e = chan->exempts; e; e = e->next) {
           mask = str_escape(e->mask, ':', '\\');
           if (!mask ||
-              fprintf(f, "%s %s:%s%lu%s:+%lu:%lu:%s:%s\n", "%", e->mask,
+              fprintf(f, "%s %s:%s%lu%s:+%lu:%lu:%s:%s\n", "%", mask,
                       (e->flags & MASKREC_PERM) ? "+" : "", e->expire,
                       (e->flags & MASKREC_STICKY) ? "*" : "", e->added,
                       e->lastactive, e->user ? e->user : botnetnick,
@@ -1175,7 +1181,7 @@ static int write_invites(FILE *f, int idx)
   for (ir = global_invites; ir; ir = ir->next) {
     mask = str_escape(ir->mask, ':', '\\');
     if (!mask ||
-        fprintf(f, "@ %s:%s%lu%s:+%lu:%lu:%s:%s\n", ir->mask,
+        fprintf(f, "@ %s:%s%lu%s:+%lu:%lu:%s:%s\n", mask,
                 (ir->flags & MASKREC_PERM) ? "+" : "", ir->expire,
                 (ir->flags & MASKREC_STICKY) ? "*" : "", ir->added,
                 ir->lastactive, ir->user ? ir->user : botnetnick,
@@ -1200,7 +1206,7 @@ static int write_invites(FILE *f, int idx)
         for (ir = chan->invites; ir; ir = ir->next) {
           mask = str_escape(ir->mask, ':', '\\');
           if (!mask ||
-              fprintf(f, "@ %s:%s%lu%s:+%lu:%lu:%s:%s\n", ir->mask,
+              fprintf(f, "@ %s:%s%lu%s:+%lu:%lu:%s:%s\n", mask,
                       (ir->flags & MASKREC_PERM) ? "+" : "", ir->expire,
                       (ir->flags & MASKREC_STICKY) ? "*" : "", ir->added,
                       ir->lastactive, ir->user ? ir->user : botnetnick,

@@ -1,10 +1,10 @@
 /*
  * snprintf.c - a portable implementation of snprintf and vsnprintf
  *
- * $Id: snprintf.c,v 1.17 2003/03/05 04:32:25 wcc Exp $
+ * $Id: snprintf.c,v 1.20 2004/01/13 10:21:00 wcc Exp $
  */
 /*
- * Portions Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Portions Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -156,6 +156,10 @@ static void dopr_outch(char *buffer, size_t *currlen, size_t maxlen, char c);
 #define DP_C_LDOUBLE 3
 
 #define char_to_int(p) (p - '0')
+
+#ifdef MAX
+#  undef MAX
+#endif
 #define MAX(p,q) ((p >= q) ? p : q)
 
 static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
@@ -216,7 +220,7 @@ static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
       }
       break;
     case DP_S_MIN:
-      if (isdigit(ch)) {
+      if (egg_isdigit(ch)) {
         min = 10 * min + char_to_int(ch);
         ch = *format++;
       } else if (ch == '*') {
@@ -235,7 +239,7 @@ static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
         state = DP_S_MOD;
       break;
     case DP_S_MAX:
-      if (isdigit(ch)) {
+      if (egg_isdigit(ch)) {
         if (max < 0)
           max = 0;
         max = 10 * max + char_to_int(ch);

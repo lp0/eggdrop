@@ -5,11 +5,11 @@
  *   note cmds
  *   note ignores
  *
- * $Id: notes.c,v 1.46 2003/03/08 04:29:44 wcc Exp $
+ * $Id: notes.c,v 1.50 2004/02/14 20:11:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -492,7 +492,7 @@ static void notes_read(char *hand, char *nick, char *srd, int idx)
   while (!feof(f)) {
     fgets(s, 600, f);
     i = strlen(s);
-    if (i && s[i - 1] == '\n')
+    if (i > 0 && s[i - 1] == '\n')
       s[i - 1] = 0;
     if (!feof(f)) {
       rmspace(s);
@@ -551,9 +551,9 @@ static void notes_read(char *hand, char *nick, char *srd, int idx)
         dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, NOTES_NO_MESSAGES);
     } else {
       if (idx >= 0)
-        dprintf(idx, "### %s.\n", NOTES_DCC_USAGE_READ);
+        dprintf(idx, "### %s\n", (ix != 2) ? NOTES_DCC_USAGE_READ : NOTES_DCC_USAGE_READ2);
       else
-        dprintf(DP_HELP, "NOTICE %s :(%d %s)\n", nick, ix - 1, MISC_TOTAL);
+        dprintf(DP_HELP, "NOTICE %s :%s: %d\n", nick, MISC_TOTAL, ix - 1);
     }
   } else if ((ir == 0) && (ix == 1)) {
     if (idx >= 0)
@@ -729,24 +729,26 @@ static int msg_notes(char *nick, char *host, struct userrec *u, char *par)
 
   if (!u)
     return 0;
+
   if (u->flags & (USER_BOT | USER_COMMON))
     return 1;
+
   if (!par[0]) {
     dprintf(DP_HELP, "NOTICE %s :%s: NOTES <pass> INDEX\n", nick, NOTES_USAGE);
-    dprintf(DP_HELP, "NOTICE %s :       NOTES <pass> TO <hand> <msg>\n", nick);
-    dprintf(DP_HELP, "NOTICE %s :       NOTES <pass> READ <# or ALL>\n", nick);
-    dprintf(DP_HELP, "NOTICE %s :       NOTES <pass> ERASE <# or ALL>\n", nick);
-    dprintf(DP_HELP, "NOTICE %s :       %s\n", nick, NOTES_MAYBE);
-    dprintf(DP_HELP, "NOTICE %s :       ex: NOTES mypass ERASE 2-4;8;16-\n",
-            nick);
+    dprintf(DP_HELP, "NOTICE %s :NOTES <pass> TO <hand> <msg>\n", nick);
+    dprintf(DP_HELP, "NOTICE %s :NOTES <pass> READ <# or ALL>\n", nick);
+    dprintf(DP_HELP, "NOTICE %s :NOTES <pass> ERASE <# or ALL>\n", nick);
+    dprintf(DP_HELP, "NOTICE %s :%s\n", nick, NOTES_MAYBE);
+    dprintf(DP_HELP, "NOTICE %s :Ex: NOTES mypass ERASE 2-4;8;16-\n", nick);
     return 1;
   }
-  if (!u_pass_match(u, "-")) {
-    /* they have a password set */
+
+  if (!u_pass_match(u, "-")) { /* Do the have a password set? */
     pwd = newsplit(&par);
     if (!u_pass_match(u, pwd))
       return 0;
   }
+
   fcn = newsplit(&par);
   if (!egg_strcasecmp(fcn, "INDEX"))
     notes_read(u->handle, nick, "+", -1);
@@ -810,14 +812,14 @@ static int msg_notes(char *nick, char *host, struct userrec *u, char *par)
       putlog(LOG_MISC, "*", "* %s", NOTES_NOTEFILE_UNREACHABLE);
       return 1;
     }
-    chmod(notefile, userfile_perm);     /* Use userfile permissions. */
+    chmod(notefile, userfile_perm); /* Use userfile permissions. */
     fprintf(f, "%s %s %lu %s\n", to, u->handle, now, par);
     fclose(f);
     dprintf(DP_HELP, "NOTICE %s :%s\n", nick, NOTES_DELIVERED);
     return 1;
   } else
-    dprintf(DP_HELP, "NOTICE %s :%s INDEX, READ, ERASE, TO\n",
-            nick, NOTES_DCC_USAGE_READ);
+    dprintf(DP_HELP, "NOTICE %s :%s: NOTES <pass> INDEX, READ, ERASE, TO\n",
+            nick, NOTES_USAGE);
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! NOTES %s %s", nick, host, u->handle, fcn,
          par[0] ? "..." : "");
   return 1;
@@ -858,8 +860,8 @@ static void notes_hourly()
     for (l = 0; l < dcc_total; l++) {
       k = num_notes(dcc[l].nick);
       if ((k > 0) && (dcc[l].type->flags & DCT_CHAT)) {
-        dprintf(l, NOTES_WAITING2, k, k == 1 ? "" : "s");
-        dprintf(l, NOTES_DCC_USAGE_READ2);
+        dprintf(l, NOTES_WAITING2, k, (k == 1) ? "" : "s");
+        dprintf(l, "### %s", (k != 1) ? NOTES_DCC_USAGE_READ : NOTES_DCC_USAGE_READ2);
       }
     }
   }
@@ -903,7 +905,7 @@ static void join_notes(char *nick, char *uhost, char *handle, char *par)
 
     i = num_notes(handle);
     if (i) {
-      dprintf(DP_HELP, NOTES_WAITING_ON, nick, i, i == 1 ? "" : "s", botname);
+      dprintf(DP_HELP, NOTES_WAITING_NOTICE, nick, i, (i == 1) ? "" : "s", botname);
       dprintf(DP_HELP, "NOTICE %s :%s /MSG %s NOTES <pass> INDEX\n",
               nick, NOTES_FORLIST, botname);
     }

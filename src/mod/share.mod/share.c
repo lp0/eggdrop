@@ -1,11 +1,11 @@
 /*
  * share.c -- part of share.mod
  *
- * $Id: share.c,v 1.75 2003/04/17 01:55:57 wcc Exp $
+ * $Id: share.c,v 1.81 2004/05/26 00:20:19 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -56,18 +56,6 @@ static int resync_time = 900;
 static int overr_local_bots = 0;        /* Override local bots?             */
 
 
-struct delay_mode {
-  struct delay_mode *next;
-  struct chanset_t *chan;
-  int plsmns;
-  int mode;
-  char *mask;
-  int seconds;
-};
-
-static struct delay_mode *start_delay = NULL;
-
-
 /* Store info for sharebots */
 struct share_msgq {
   struct chanset_t *chan;
@@ -102,55 +90,66 @@ static int private_globals_bitmask();
  *   Sup's delay code
  */
 
+struct delay_mode {
+  struct delay_mode *next;
+  struct chanset_t *chan;
+  int plsmns;
+  int mode;
+  char *mask;
+  time_t seconds;
+};
+
+static struct delay_mode *delay_head = NULL, *delay_tail = NULL;
+
 static void add_delay(struct chanset_t *chan, int plsmns, int mode, char *mask)
 {
   struct delay_mode *d = NULL;
 
   d = (struct delay_mode *) nmalloc(sizeof(struct delay_mode));
-  if (!d)
-    return;
+
   d->chan = chan;
   d->plsmns = plsmns;
   d->mode = mode;
+  d->seconds = now + randint(30);
+
   d->mask = (char *) nmalloc(strlen(mask) + 1);
-  if (!d->mask) {
-    nfree(d);
-    return;
-  }
   strncpyz(d->mask, mask, strlen(mask) + 1);
-  d->seconds = (int) (now + (random() % 20));
-  d->next = start_delay;
-  start_delay = d;
-}
 
-static void del_delay(struct delay_mode *delay)
-{
-  struct delay_mode *d = NULL, *old = NULL;
+  if (!delay_head)
+    delay_head = d;
+  else
+    delay_tail->next = d;
 
-  for (d = start_delay; d; old = d, d = d->next) {
-    if (d == delay) {
-      if (old)
-        old->next = d->next;
-      else
-        start_delay = d->next;
-      if (d->mask)
-        nfree(d->mask);
-      nfree(d);
-      break;
-    }
-  }
+  d->next = NULL;
+  delay_tail = d;
 }
 
 static void check_delay()
 {
-  struct delay_mode *d = NULL, *dnext = NULL;
+  struct delay_mode *d = NULL, *prev = NULL, *dnext = NULL;
 
-  for (d = start_delay; d; d = dnext) {
+  for (d = delay_head; d; d = dnext) {
     dnext = d->next;
+
     if (d->seconds <= now) {
+
       add_mode(d->chan, d->plsmns, d->mode, d->mask);
-      del_delay(d);
+
+      if (prev)
+        prev->next = d->next;
+      else
+        delay_head = d->next;
+
+      if (delay_tail == d)
+        delay_tail = prev;
+
+      if (d->mask)
+        nfree(d->mask);
+
+      nfree(d);
     }
+
+    prev = d;
   }
 }
 
@@ -158,13 +157,17 @@ static void delay_free_mem()
 {
   struct delay_mode *d = NULL, *dnext = NULL;
 
-  for (d = start_delay; d; d = dnext) {
+  for (d = delay_head; d; d = dnext) {
     dnext = d->next;
+
     if (d->mask)
       nfree(d->mask);
+
     nfree(d);
   }
-  start_delay = NULL;
+
+  delay_head = NULL;
+  delay_tail = NULL;
 }
 
 static int delay_expmem()
@@ -172,11 +175,14 @@ static int delay_expmem()
   int size = 0;
   struct delay_mode *d = NULL;
 
-  for (d = start_delay; d; d = d->next) {
+  for (d = delay_head; d; d = d->next) {
+
     if (d->mask)
       size += strlen(d->mask) + 1;
+
     size += sizeof(struct delay_mode);
   }
+
   return size;
 }
 
@@ -1128,11 +1134,7 @@ static void share_ufsend(int idx, char *par)
   } else {
     ip = newsplit(&par);
     port = newsplit(&par);
-#ifdef USE_IPV6
-    sock = getsock(SOCK_BINARY, getprotocol(ip)); /* Don't buffer this -> mark binary. */
-#else
     sock = getsock(SOCK_BINARY); /* Don't buffer this -> mark binary. */
-#endif /* USE_IPV6 */
     if (sock < 0 || open_telnet_dcc(sock, ip, port) < 0) {
       killsock(sock);
       putlog(LOG_BOTS, "*", "Asynchronous connection failed!");
@@ -1457,9 +1459,11 @@ static void check_expired_tbufs()
           /* ^ send it again in case they missed it */
         /* If it's a share bot that hasnt been sharing, ask again */
       } else if (!(dcc[i].status & STAT_SHARE)) {
-        if (dcc[i].user && (bot_flags(dcc[i].user) & BOT_AGGRESSIVE))
+        /* Patched from original source by giusc@gbss.it <20040207> */
+        if (dcc[i].user && (bot_flags(dcc[i].user) & BOT_AGGRESSIVE))  {
           dprintf(i, "s u?\n");
-        dcc[i].status |= STAT_OFFERED;
+          dcc[i].status |= STAT_OFFERED;
+        }
       }
     }
 }
@@ -1870,6 +1874,7 @@ static void finish_share(int idx)
   clear_userlist(ou);
   unlink(dcc[idx].u.xfer->filename);    /* Done with you!               */
   reaffirm_owners();            /* Make sure my owners are +n   */
+  check_tcl_event("userfile-loaded");
   updatebot(-1, dcc[j].nick, '+', 0);
 }
 
@@ -2119,7 +2124,7 @@ static void share_report(int idx, int details)
     dprintf(idx, "    Private owners: %s\n", (private_global ||
             (private_globals_bitmask() & USER_OWNER)) ? "yes" : "no");
     dprintf(idx, "    Allow resync: %s\n", allow_resync ? "yes" : "no");
-            
+
     for (i = 0; i < dcc_total; i++) {
       if (dcc[i].type == &DCC_BOT) {
         if (dcc[i].status & STAT_GETTING) {

@@ -1,3 +1,5 @@
+$Id: MODULES,v 1.29 2004/05/27 05:23:39 wcc Exp $
+
 Eggdrop Module Information
 Last revised: March 04, 2003
      _________________________________________________________________
@@ -27,8 +29,7 @@ Last revised: March 04, 2003
   2. Why use modules?
 
     Modules allow C coders to add their own enhancements to the bot while
-    keeping them optional and without increasing the size of the Eggdrop
-    core.
+    keeping them optional and without increasing the size of the Eggdrop core.
 
 
   3. How to install a module
@@ -90,7 +91,8 @@ Last revised: March 04, 2003
               other connections.
 
     filesys   This module provides an area within the bot where users can store
-              files. With this module, the bot is usable as a file server.
+              and manage files. With this module, the bot is usable as a file
+              server.
 
     irc       This module provides basic IRC support for your bot. You have to
               load this if you want your bot to come on IRC.
@@ -113,7 +115,7 @@ Last revised: March 04, 2003
     share     This module provides userfile sharing support between two
               directly linked bots.
 
-    transfer  The transfer module provides dcc send/get support and userfile
+    transfer  The transfer module provides DCC SEND/GET support and userfile
               transfer support for userfile sharing.
 
     uptime    This module reports uptime statistics to the uptime contest
@@ -391,4 +393,4 @@ Last revised: March 04, 2003
      which version Eggdrop the module is written for.
      _________________________________________________________________
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

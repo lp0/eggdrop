@@ -2,11 +2,11 @@
  * flags.c -- handles:
  *   all the flag matching/conversion functions in one neat package :)
  *
- * $Id: flags.c,v 1.25 2003/02/27 10:18:40 tothwolf Exp $
+ * $Id: flags.c,v 1.27 2004/01/09 05:56:36 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -322,15 +322,15 @@ char geticon(int idx)
   if (!dcc[idx].user)
     return '-';
   get_user_flagrec(dcc[idx].user, &fr, 0);
-  if (chan_owner(fr))
+  if (glob_owner(fr) || chan_owner(fr))
     return '*';
-  if (chan_master(fr))
+  if (glob_master(fr) || chan_master(fr))
     return '+';
   if (glob_botmast(fr))
     return '%';
-  if (chan_op(fr))
+  if (glob_op(fr) || chan_op(fr))
     return '@';
-  if (chan_halfop(fr))
+  if (glob_halfop(fr) || chan_halfop(fr))
     return '^';
   return '-';
 }

@@ -2,23 +2,23 @@
  * match.c
  *   wildcard matching functions
  *
- * $Id: match.c,v 1.8 2003/01/28 06:37:24 wcc Exp $
+ * $Id: match.c,v 1.11 2004/04/06 06:56:38 wcc Exp $
  *
  * Once this code was working, I added support for % so that I could
  * use the same code both in Eggdrop and in my IrcII client.
  * Pleased with this, I added the option of a fourth wildcard, ~,
  * which matches varying amounts of whitespace (at LEAST one space,
  * though, for sanity reasons).
- * 
+ *
  * This code would not have been possible without the prior work and
  * suggestions of various sourced.  Special thanks to Robey for
  * all his time/help tracking down bugs and his ever-helpful advice.
- * 
+ *
  * 04/09:  Fixed the "*\*" against "*a" bug (caused an endless loop)
- * 
+ *
  *   Chris Fuller  (aka Fred1@IRC & Fwitz@IRC)
  *     crf@cfox.bchs.uh.edu
- * 
+ *
  * I hereby release this code into the public domain
  *
  */
@@ -145,6 +145,20 @@ int _wild_match(register unsigned char *m, register unsigned char *n)
   n--;
 
   while (n >= na) {
+    /* If the mask runs out of chars before the string, fall back on
+     * a wildcard or fail. */
+    if (m < ma) {
+      if (lsm) {
+        n = --lsn;
+        m = lsm;
+        if (n < na)
+          lsm = 0;
+        sofar = 0;
+      }
+      else
+        return NOMATCH;
+    }
+
     switch (*m) {
     case WILDS:                /* Matches anything */
       do
@@ -154,6 +168,8 @@ int _wild_match(register unsigned char *m, register unsigned char *n)
       lsn = n;
       match += sofar;
       sofar = 0;                /* Update fallback pos */
+      if (m < ma)
+        return MATCH;
       continue;                 /* Next char, please */
     case WILDQ:
       m--;

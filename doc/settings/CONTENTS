@@ -1,5 +1,6 @@
 Directory Contents - doc/settings/
 Last revised: April 16, 2003
+$Id: CONTENTS,v 1.9 2004/05/27 05:23:39 wcc Exp $
      _________________________________________________________________
 
                      Directory Contents - doc/settings
@@ -60,4 +61,4 @@ mod.woobie
   Documentation for the woobie module is provided in this file.
     ________________________________________________________________________
 
-  Copyright (C) 2003 Eggheads Development Team
+  Copyright (C) 2003, 2004 Eggheads Development Team

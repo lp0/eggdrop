@@ -1,10 +1,10 @@
 /*
  * inet_aton.c -- provides inet_aton() if necessary.
  *
- * $Id: inet_aton.c,v 1.13 2003/04/01 05:33:40 wcc Exp $
+ * $Id: inet_aton.c,v 1.15 2004/01/09 05:56:37 wcc Exp $
  */
 /*
- * Portions Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Portions Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,8 +25,9 @@
 #include "inet_aton.h"
 
 #ifndef HAVE_ISASCII
-/* Let all checks succeed if we don't have isascii(). */
-#  define isascii(x) 1
+#  define inet_isascii(x) 1 /* Let checks succeed if we don't have isascii(). */
+#else
+#  define inet_isascii(x) egg_isascii(x)
 #endif
 
 #ifndef HAVE_INET_ATON
@@ -121,7 +122,7 @@ struct in_addr *addr;
      * Values are specified as for C:
      * 0x=hex, 0=octal, isdigit=decimal.
      */
-    if (!isdigit(c))
+    if (!egg_isdigit(c))
       goto ret_0;
     base = 10;
     if (c == '0') {
@@ -133,11 +134,11 @@ struct in_addr *addr;
     }
     val = 0;
     for (;;) {
-      if (isascii(c) && isdigit(c)) {
+      if (inet_isascii(c) && egg_isdigit(c)) {
         val = (val * base) + (c - '0');
         c = *++cp;
-      } else if (base == 16 && isascii(c) && isxdigit(c)) {
-        val = (val << 4) | (c + 10 - (islower(c) ? 'a' : 'A'));
+      } else if (base == 16 && inet_isascii(c) && egg_isxdigit(c)) {
+        val = (val << 4) | (c + 10 - (egg_islower(c) ? 'a' : 'A'));
         c = *++cp;
       } else
         break;
@@ -159,7 +160,7 @@ struct in_addr *addr;
   /*
    * Check for trailing characters.
    */
-  if (c != '\0' && (!isascii(c) || !isspace(c)))
+  if (c != '\0' && (!inet_isascii(c) || !egg_isspace(c)))
     goto ret_0;
   /*
    * Concoct the address according to

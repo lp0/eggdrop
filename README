@@ -1,3 +1,5 @@
+$Id: README,v 1.39 2004/04/13 03:57:51 wcc Exp $
+
 Readme
 Last revised: June 5, 2002
      _________________________________________________________________
@@ -133,8 +135,8 @@ Last revised: June 5, 2002
 
     This is intended only for users that know a good bit about Eggdrop. Be
     aware that the versions of Eggdrop that you get via CVS are still being
-    developed, and may be buggy. The Eggheads devteam will in NO WAY take
-    any responsibility for whatever might happen to you or your shell if
+    developed, and may be buggy. The Eggheads Development Team will in NO WAY
+    take any responsibility for whatever might happen to you or your shell if
     you use a CVS version of Eggdrop.
 
     To obtain Eggdrop over CVS, do as follows:
@@ -159,7 +161,7 @@ Last revised: June 5, 2002
 
       o You don't need to go through this whole process every time. If you
         want to get a CVS version of Eggdrop at a later time, you can just
-        'cd ~/eggdrop1.6' and type 'cvs update -dAP'.
+        'cd ~/eggdrop1.6' and type 'cvs update -CdAP'.
 
       o If you experience errors when using 'export', you might be using tclsh
         as a shell. If so, try using the command 'setenv' instead of 'export':
@@ -263,9 +265,9 @@ Last revised: June 5, 2002
 
     6a. WHAT DO I DO IF I GET THE ERROR "USER FILE NOT FOUND"?
 
-      1. Run Eggdrop with the "-m" option (i.e., "eggdrop -m eggdrop.conf").
+      1. Run Eggdrop with the "-m" option (i.e. "eggdrop -m eggdrop.conf").
 
-      2. Go to IRC and send "hello" to your bot (i.e., "/msg mybot hello").
+      2. Go to IRC and send "hello" to your bot (i.e. "/msg mybot hello").
 
       3. You will become an owner on your bot. You can leave the bot running
          (nobody else will become an owner if they say "hello"), but in the
@@ -395,7 +397,7 @@ Last revised: June 5, 2002
     6m. I GET A WHOLE PILE OF "Unresolved symbol 'Tcl_AppendResult'" (OR SOME
         OTHER SYMBOL) WHEN I TRY TO LOAD A MODULES.
 
-      POSSIBILITY A: See section 12.
+      POSSIBILITY A: See section 6l.
 
       POSSIBILITY B:
 
@@ -406,7 +408,7 @@ Last revised: June 5, 2002
              using './configure --enable-shared' when you configure Tcl (not
              the bot) and then remake, and reinstall.
 
-          2. If it's not your machine, you make have to resort to 'make static'
+          2. If it's not your machine, you may have to resort to 'make static'
              and 'make install DEST="path"' to make and install your bot.
 
           3. If you are of a more aggressive sense of mind, go beat the
@@ -551,7 +553,7 @@ Last revised: June 5, 2002
 
     We're trying to keep the documentation up to date. If you feel that
     anything is missing here or that anything should be added, etc, please
-    email eggheads@eggheads.org about it. Thank you.
+    e-mail docteam@eggheads.org about it. Thank you.
 
 
   (11) OBTAINING HELP
@@ -582,5 +584,5 @@ Last revised: June 5, 2002
   ________________________________________________________________________
 
 Copyright (C) 1997 Robey Pointer
-Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  

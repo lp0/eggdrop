@@ -1,5 +1,5 @@
 # Makefile for src/mod/
-# $Id: Makefile.in,v 1.14 2003/04/01 05:33:40 wcc Exp $
+# $Id: Makefile.in,v 1.18 2003/12/13 19:18:50 wcc Exp $
 
 SHELL = @SHELL@
 top_srcdir = @top_srcdir@
@@ -23,7 +23,6 @@ MOD_CFLAGS = @CFLAGS@ -I. -I../../.. -I$(MOD_UPDIR)$(top_srcdir) \
 MOD_CPPFLAGS = @CPPFLAGS@
 XLIBS = @XLIBS@
 MOD_EXT = @MOD_EXT@
-ENABLEIPV6 = @ENABLEIPV6@
 
 # Note: The following three lines are automatically adjusted by
 #       misc/modconfig. They have to be present here.
@@ -47,8 +46,8 @@ doofus:
 	@cd ../.. && $(MAKE)
 
 modules: $(mod_libs)
-	@echo "All modules compiled."
 	@echo ""
+	@echo "All modules compiled."
 
 static: $(mod_objs)
 	@$(modconfig) static.h
@@ -84,10 +83,9 @@ config:
 		if test -f $(srcdir)/$$i/configure; then \
 			modname=`echo $$i | sed -e 's/.mod//'`; \
 			echo ""; \
-			echo "Configuring module $${modname} ..."; \
-			echo ""; \
+			echo "Configuring module '$${modname}'."; \
 			if test ! -d $$i; then mkdir $$i; fi; \
-			(cd $$i && $(MOD_UPDIR)$(srcdir)/$$i/configure $(egg_ac_parameters) $(ENABLEIPV6) --cache-file=../../../config.cache --srcdir=$(MOD_UPDIR)$(top_srcdir)/src/mod/$$i); \
+			(cd $$i && $(MOD_UPDIR)$(srcdir)/$$i/configure $(egg_ac_parameters) --cache-file=../../../config.cache --srcdir=$(MOD_UPDIR)$(top_srcdir)/src/mod/$$i); \
 		fi; \
 	done; \
 	echo ""

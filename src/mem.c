@@ -3,11 +3,11 @@
  *   memory allocation and deallocation
  *   keeping track of what memory is being used by whom
  *
- * $Id: mem.c,v 1.20 2003/01/30 07:15:14 wcc Exp $
+ * $Id: mem.c,v 1.23 2004/02/06 22:36:28 stdarg Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -344,7 +344,7 @@ void *n_realloc(void *ptr, int size, const char *file, int line)
     return n_malloc(size, file, line);
 
   x = (void *) realloc(ptr, size);
-  if (x == NULL) {
+  if (x == NULL && size > 0) {
     i = i;
     putlog(LOG_MISC, "*", "*** FAILED REALLOC %s (%d)", file, line);
     return NULL;
@@ -389,10 +389,13 @@ void n_free(void *ptr, const char *file, int line)
     }
     memused -= memtbl[i].size;
     lastused--;
-    memtbl[i].ptr = memtbl[lastused].ptr;
-    memtbl[i].size = memtbl[lastused].size;
-    memtbl[i].line = memtbl[lastused].line;
-    strcpy(memtbl[i].file, memtbl[lastused].file);
+    /* We don't want any holes, so if this wasn't the last entry, swap it. */
+    if (i != lastused) {
+      memtbl[i].ptr = memtbl[lastused].ptr;
+      memtbl[i].size = memtbl[lastused].size;
+      memtbl[i].line = memtbl[lastused].line;
+      strcpy(memtbl[i].file, memtbl[lastused].file);
+    }
   }
 #endif
   free(ptr);

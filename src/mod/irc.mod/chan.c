@@ -6,11 +6,11 @@
  *   user kickban, kick, op, deop
  *   idle kicking
  *
- * $Id: chan.c,v 1.110 2003/03/04 08:51:45 wcc Exp $
+ * $Id: chan.c,v 1.116 2004/05/26 00:20:19 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -422,7 +422,7 @@ static void refresh_ban_kick(struct chanset_t *chan, char *user, char *nick)
           do_mask(chan, chan->channel.ban, b->mask, 'b');
           b->lastactive = now;
           if (b->desc && b->desc[0] != '@')
-            egg_snprintf(c, sizeof c, "%s%s", IRC_PREBANNED, b->desc);
+            egg_snprintf(c, sizeof c, "%s %s", IRC_PREBANNED, b->desc);
           else
             c[0] = 0;
           kick_all(chan, b->mask, c[0] ? c : IRC_YOUREBANNED, 0);
@@ -985,8 +985,7 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
     strcpy(botuserhost, m->userhost);   /* Yes, save my own userhost */
     m->joined = now;            /* set this to keep the whining masses happy */
   }
-  if ((strchr(flags, '@') != NULL) || (strchr(flags, '&') != NULL) ||
-      (strchr(flags, '~') != NULL))
+  if (strpbrk(flags, opchars) != NULL)
     m->flags |= (CHANOP | WASOP);
   else
     m->flags &= ~(CHANOP | WASOP);
@@ -1540,7 +1539,7 @@ static void set_delay(struct chanset_t *chan, char *nick)
   if (aop_min >= aop_max)
     a_delay = now + aop_min;
   else
-    a_delay = now + (random() % (aop_max - aop_min)) + aop_min + 1;
+    a_delay = now + randint(aop_max - aop_min) + aop_min + 1;
   for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
     if (m2->delay && !(m2->flags & FULL_DELAY))
       count++;
@@ -1928,7 +1927,8 @@ static int gotkick(char *from, char *origmsg)
   if (!chan)
     return 0;
   nick = newsplit(&msg);
-  if (match_my_nick(nick) && channel_pending(chan)) {
+  if (match_my_nick(nick) && channel_pending(chan) &&
+      !channel_inactive(chan)) {
     chan->status &= ~(CHAN_ACTIVE | CHAN_PEND);
     dprintf(DP_MODE, "JOIN %s %s\n",
             (chan->name[0]) ? chan->name : chan->dname,
@@ -1971,7 +1971,7 @@ static int gotkick(char *from, char *origmsg)
     putlog(LOG_MODES, chan->dname, "%s kicked from %s by %s: %s", s1,
            chan->dname, from, msg);
     /* Kicked ME?!? the sods! */
-    if (match_my_nick(nick)) {
+    if (match_my_nick(nick) && !channel_inactive(chan)) {
       chan->status &= ~(CHAN_ACTIVE | CHAN_PEND);
       dprintf(DP_MODE, "JOIN %s %s\n",
               (chan->name[0]) ? chan->name : chan->dname,
@@ -2184,7 +2184,7 @@ static int gotmsg(char *from, char *msg)
     get_user_flagrec(u, &fr, chan->dname);
     m = ismember(chan, nick);
     /* Discard -- kick user if it was to the channel */
-    if ((me_op(chan) || (me_halfop(chan) && !chan_hasop(m))) && m &&
+    if (m && (me_op(chan) || (me_halfop(chan) && !chan_hasop(m))) &&
         !chan_sentkick(m) && !chan_friend(fr) && !glob_friend(fr) &&
         !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) &&
         !chan_deop(fr)))) && !(use_exempts && ban_fun &&

@@ -1,13 +1,18 @@
+$Id: tcl-commands.doc,v 1.110 2004/05/27 01:30:10 wcc Exp $
+
 Eggdrop Tcl Commands
-Last revised: March 01, 2002
+Last revised: January 12, 2004
      _________________________________________________________________
+
+                           Eggdrop Tcl Commands
+
 
 This is an exhaustive list of all the Tcl commands added to Eggdrop. All
 of the normal Tcl built-in commands are still there, of course, but you
 can also use these to manipulate features of the bot. They are listed
 according to category.
 
-This list is accurate for Eggdrop v1.6.15. Scripts written for v1.3/v1.4
+This list is accurate for Eggdrop v1.6.16. Scripts written for v1.3/v1.4
 series of Eggdrop should probably work with a few minor modifications
 depending on the script. Scripts which were written for  v0.9, v1.0, v1.1
 or v1.2 will probably not work without modification. Commands which have
@@ -532,16 +537,16 @@ marked with vertical bars (|) on the left.
 
 *** CHANNEL COMMANDS ***
 
-  channel add <name> <option-list>
+  channel add <name> [option-list]
     Description: adds a channel record for the bot to monitor. The full
-      list of possible options are given in doc/settings.mod.channels. Note
+      list of possible options are given in doc/settings/mod.channels. Note
       that the channel options must be in a list (enclosed in {}).
     Returns: nothing
     Module: channels
 
   channel set <name> <options...>
     Description: sets options for the channel specified. The full list of
-      possible options are given in doc/settings.mod.channels.
+      possible options are given in doc/settings/mod.channels.
     Returns: nothing
     Module: channels
 
@@ -687,19 +692,19 @@ marked with vertical bars (|) on the left.
   chanbans <channel>
     Returns: a list of the current bans on the channel. Each element is
       a sublist of the form {<ban> <bywho> <age>}. age is seconds from the
-      bot's POV.
+      bot's point of view
     Module: irc
 
   chanexempts <channel>
     Returns: a list of the current exempts on the channel. Each element is
       a sublist of the form {<exempts> <bywho> <age>}. age is seconds from the
-      bot's POV.
+      bot's point of view
     Module: irc
 
   chaninvites <channel>
     Returns: a list of the current invites on the channel. Each element is
       a sublist of the form {<invites> <bywho> <age>}. age is seconds from the
-      bot's POV.
+      bot's point of view
     Module: irc
 
   resetbans <channel>
@@ -806,25 +811,25 @@ marked with vertical bars (|) on the left.
     Returns: 1 if the channel is a dynamic channel; 0 otherwise
     Module: channels
 
-|  setudef <flag/int/str> <name>
-|    Description: initializes a user defined channel flag, string or integer
-|      setting. You can use it like any other flag/setting. IMPORTANT: Don't
-|      forget to reinitialize your flags/settings after a restart, or it'll be
-|      lost.
-|    Returns: nothing
-|    Module: channels
+  setudef <flag/int/str> <name>
+    Description: initializes a user defined channel flag, string or integer
+      setting. You can use it like any other flag/setting. IMPORTANT: Don't
+      forget to reinitialize your flags/settings after a restart, or it'll be
+      lost.
+    Returns: nothing
+    Module: channels
 
-|  renudef <flag/int/str> <oldname> <newname>
-|    Description: renames a user defined channel flag, string, or integer
-|      setting.
-|    Returns: nothing
-|    Module: channels
+  renudef <flag/int/str> <oldname> <newname>
+    Description: renames a user defined channel flag, string, or integer
+      setting.
+    Returns: nothing
+    Module: channels
 
-|  deludef <flag/int/str> <name>
-|    Description: deletes a user defined channel flag, string, or integer
-|      setting.
-|    Returns: nothing
-|    Module: channels
+  deludef <flag/int/str> <name>
+    Description: deletes a user defined channel flag, string, or integer
+      setting.
+    Returns: nothing
+    Module: channels
 
 *** DCC COMMANDS ***
 
@@ -949,7 +954,7 @@ marked with vertical bars (|) on the left.
     Returns: number of dcc connections currently in use
     Module: core
 
-  dcclist ?type?
+  dcclist [type]
     Returns: a list of active connections, each item in the list is a
       sublist containing six elements:
         {<idx> <handle> <hostname> <type> {<other>} <timestamp>}.
@@ -1264,7 +1269,7 @@ marked with vertical bars (|) on the left.
     Returns: name of the command that was removed
     Module: core
 
-  binds ?type/mask?
+  binds [type/mask]
     Returns: a list of Tcl binds, each item in the list is a sublist of
       five elements:
         {<type> <flags> <name> <hits> <proc>}
@@ -1519,18 +1524,18 @@ marked with vertical bars (|) on the left.
       "Valis!valis@crappy.com")
     Module: server
 
-| server
-|   Value: the current server's real name (what server calls itself)
-|     and port bot is connected to (for example: "irc.math.ufl.edu:6667")
-|     Note that this does not nececerilly match the servers internet address.
-|   Module: server
+ server
+   Value: the current server's real name (what server calls itself)
+     and port bot is connected to (for example: "irc.math.ufl.edu:6667")
+     Note that this does not nececerilly match the servers internet address.
+   Module: server
 
-| serveraddress
-|   Value: the current server's internet address (hostname or IP) and port bot
-|     is connected to. This will correspond to the entry in server list (for
-|     example: "eu.undernet.org:6667"). Note that this does not necessarily
-|     match the name server calls itself.
-|   Module: server
+ serveraddress
+   Value: the current server's internet address (hostname or IP) and port bot
+     is connected to. This will correspond to the entry in server list (for
+     example: "eu.undernet.org:6667"). Note that this does not necessarily
+     match the name server calls itself.
+   Module: server
 
   version
     Value: current bot version "1.1.2+pl1 1010201 pl1";
@@ -1715,7 +1720,7 @@ marked with vertical bars (|) on the left.
          procname <nick> <user@host> <handle> <channel> <target> <reason>
 
          Description: triggered when someone is kicked off the channel. The
-           mask is matched against '#channel target' where the target is
+           mask is matched against '#channel target reason' where the target is
            the nickname of the person who got kicked (can contain wildcards).
            The proc is called with the nick, user@host, and handle of the
            kicker, plus the channel, the nickname of the person who was
@@ -1728,8 +1733,8 @@ marked with vertical bars (|) on the left.
 
          Description: triggered when someone changes nicknames. The mask
            is matched against '#channel newnick' and can contain wildcards.
-|          Channel is "*" if the user isn't on a channel (usually the bot not
-|          yet in a channel).
+           Channel is "*" if the user isn't on a channel (usually the bot not
+           yet in a channel).
          Module: irc
 
     (14) MODE   (stackable)
@@ -1785,19 +1790,18 @@ marked with vertical bars (|) on the left.
          Module: server
 
     (17) RAW (stackable)
-         bind raw <flags> <keyword-mask> <proc>
+         bind raw <flags> <keyword> <proc>
          procname <from> <keyword> <text>
 
          Description: previous versions of Eggdrop required a special compile
-           option to enable this binding, but it's now standard. The mask
-           is checked against the keyword (either a numeric, like "368",
-           or a keyword, like "PRIVMSG"). from will be the server name or
-           the source user (depending on the keyword); flags are ignored.
-           The order of the arguments is identical to the order that the
-           IRC server sends to the bot. The pre-processing only splits it
-           apart enough to determine the keyword. If the proc returns 1,
-           Eggdrop will not process the line any further (this could cause
-           your bot to behave oddly in some cases).
+           option to enable this binding, but it's now standard. The keyword
+           is either a numeric, like "368", or a keyword, such as "PRIVMSG".
+           from will be the server name or the source user (depending on
+           the keyword); flags are ignored. The order of the arguments is
+           identical to the order that the IRC server sends to the bot. The
+           pre-processing  only splits it apart enough to determine the
+           keyword. If the proc returns 1, Eggdrop will not process the line
+           any further (this could cause unexpected behavior in some cases).
          Module: server
 
     (18) BOT
@@ -1963,17 +1967,17 @@ marked with vertical bars (|) on the left.
            text of the action and can support wildcards.
          Module: core
 
-|   (33) WALL (stackable)
-|        bind wall <flags> <mask> <proc>
-|        proc-name <from> <msg>
-|
-|        Description: when the bot receives a wallops, it invokes this
-|          binding. flags are ignored; the mask is matched against the text
-|          of the wallops msg. Note that RFC shows the server name as a source
-|          of the message, whereas many IRCds send the nick!user@host of the
-|          actual sender, thus, Eggdrop will not parse it at all, but simply
-|          pass it to bind in its original form.
-|        Module: server
+   (33) WALL (stackable)
+        bind wall <flags> <mask> <proc>
+        proc-name <from> <msg>
+
+        Description: when the bot receives a wallops, it invokes this
+          binding. flags are ignored; the mask is matched against the text
+          of the wallops msg. Note that RFC shows the server name as a source
+          of the message, whereas many IRCds send the nick!user@host of the
+          actual sender, thus, Eggdrop will not parse it at all, but simply
+          pass it to bind in its original form.
+        Module: server
 
     (34) BCST (stackable)
          bind bcst <flags> <mask> <proc>
@@ -2059,16 +2063,17 @@ marked with vertical bars (|) on the left.
 
          Description: triggered whenever one of these events happen. flags
            are ignored; valid events are:
-             sighup     - called on a kill -HUP <pid>
-             sigterm    - called on a kill -TERM <pid>
-             sigill     - called on a kill -ILL <pid>
-             sigquit    - called on a kill -QUIT <pid>
-             save       - called when the userfile is saved
-             rehash     - called just after a rehash
-             prerehash  - called just before a rehash
-             prerestart - called just before a restart
-             logfile    - called when the logs are switched daily
-             loaded     - called when the bot is done loading
+             sighup          - called on a kill -HUP <pid>
+             sigterm         - called on a kill -TERM <pid>
+             sigill          - called on a kill -ILL <pid>
+             sigquit         - called on a kill -QUIT <pid>
+             save            - called when the userfile is saved
+             rehash          - called just after a rehash
+             prerehash       - called just before a rehash
+             prerestart      - called just before a restart
+             logfile         - called when the logs are switched daily
+             loaded          - called when the bot is done loading
+|            userfile-loaded - called after userfile has been loaded
 
              connect-server    - called just before we connect to an IRC server
              init-server       - called when we actually get on our IRC server
@@ -2241,4 +2246,4 @@ marked with vertical bars (|) on the left.
      words)
      _________________________________________________________________
 
-   Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+   Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team

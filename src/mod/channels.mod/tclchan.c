@@ -1,11 +1,11 @@
 /*
  * tclchan.c -- part of channels.mod
  *
- * $Id: tclchan.c,v 1.85 2003/03/24 02:48:01 wcc Exp $
+ * $Id: tclchan.c,v 1.88 2004/04/08 00:54:40 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1449,7 +1449,7 @@ static int tcl_channel_modify(Tcl_Interp *irp, struct chanset_t *chan,
       }
       if (!found) {
         if (irp && item[i][0])  /* ignore "" */
-          Tcl_AppendResult(irp, "illegal channel option: ", item[i], NULL);
+          Tcl_AppendResult(irp, "illegal channel option: ", item[i], "\n", NULL);
         x++;
       }
     }
@@ -1577,7 +1577,7 @@ static int tcl_savechannels STDVAR
   BADARGS(1, 1, "");
 
   if (!chanfile[0]) {
-    Tcl_AppendResult(irp, "no channel file");
+    Tcl_AppendResult(irp, "no channel file", NULL);
     return TCL_ERROR;
   }
   write_channels();
@@ -1589,7 +1589,7 @@ static int tcl_loadchannels STDVAR
   BADARGS(1, 1, "");
 
   if (!chanfile[0]) {
-    Tcl_AppendResult(irp, "no channel file");
+    Tcl_AppendResult(irp, "no channel file", NULL);
     return TCL_ERROR;
   }
   setstatic = 0;

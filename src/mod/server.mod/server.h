@@ -1,11 +1,11 @@
 /*
  * server.h -- part of server.mod
  *
- * $Id: server.h,v 1.18 2003/01/30 00:41:24 wcc Exp $
+ * $Id: server.h,v 1.21 2004/01/10 08:41:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -42,7 +42,7 @@
 /* 12 - 15 */
 #define match_my_nick ((int(*)(char *))server_funcs[12])
 #define check_tcl_flud ((int (*)(char *,char *,struct userrec *,char *,char *))server_funcs[13])
-/* #define fixfrom ((void (*)(char *))server_funcs[14]) -- moved to core */
+/* Was fixfrom (moved to core) */
 #define answer_ctcp (*(int *)(server_funcs[15]))
 /* 16 - 19 */
 #define trigger_on_ignore (*(int *)(server_funcs[16]))
@@ -76,12 +76,15 @@
 
 #else /* MAKING_SERVER */
 
-/* Macros for commonly used commands.
- */
-
+/* Macros for commonly used commands. */
 #define free_null(ptr)  do {                            \
         nfree(ptr);                                     \
         ptr = NULL;                                     \
+} while (0)
+
+#define write_to_server(x,y) do {                       \
+        tputs(serv, (x), (y));                          \
+        tputs(serv, "\r\n", 2);                         \
 } while (0)
 
 #endif /* MAKING_SERVER */
@@ -97,11 +100,11 @@ struct server_list {
 
 /* Available net types.  */
 enum {
-  NETT_EFNET = 0,               /* EFnet (non +e/+I Hybrid.) */
-  NETT_IRCNET = 1,              /* IRCnet.                   */
-  NETT_UNDERNET = 2,            /* UnderNet.                 */
-  NETT_DALNET = 3,              /* DALnet.                   */
-  NETT_HYBRID_EFNET = 4         /* +e/+I Hybrid.             */
+  NETT_EFNET        = 0, /* EFnet                    */
+  NETT_IRCNET       = 1, /* IRCnet                   */
+  NETT_UNDERNET     = 2, /* UnderNet                 */
+  NETT_DALNET       = 3, /* DALnet                   */
+  NETT_HYBRID_EFNET = 4  /* +e/+I/max-bans 20 Hybrid */
 } nett_t;
 
 #endif /* _EGG_MOD_SERVER_SERVER_H */

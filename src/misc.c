@@ -7,11 +7,11 @@
  *   help system
  *   motd display and %var substitution
  *
- * $Id: misc.c,v 1.64 2003/05/03 04:36:38 wcc Exp $
+ * $Id: misc.c,v 1.73 2004/05/27 06:29:46 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,32 +32,37 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <ctype.h>
 #include "chan.h"
 #include "tandem.h"
 #include "modules.h"
+
 #ifdef HAVE_UNAME
 #  include <sys/utsname.h>
 #endif
+
 #include "stat.h"
 
 extern struct dcc_t *dcc;
 extern struct chanset_t *chanset;
+
 extern char helpdir[], version[], origbotname[], botname[], admin[], network[],
             motdfile[], ver[], botnetnick[], bannerfile[], logfile_suffix[],
             textdir[];
-extern int backgrd, con_chan, term_z, use_stderr, dcc_total, keep_all_logs,
-           quick_logs, strict_host;
+extern int  backgrd, con_chan, term_z, use_stderr, dcc_total, keep_all_logs,
+            quick_logs, strict_host;
+
 extern time_t now;
 extern Tcl_Interp *interp;
 
 
-int shtime = 1;                 /* Whether or not to display the time
-                                 * with console output */
+int shtime = 1;                 /* Display the time with console output */
 log_t *logs = 0;                /* Logfiles */
 int max_logs = 5;               /* Current maximum log files */
 int max_logsize = 0;            /* Maximum logfile size, 0 for no limit */
-int conmask = LOG_MODES | LOG_CMDS | LOG_MISC;  /* Console mask */
 int raw_log = 0;                /* Disply output to server to LOG_SERVEROUT */
+
+int conmask = LOG_MODES | LOG_CMDS | LOG_MISC; /* Console mask */
 
 struct help_list_t {
   struct help_list_t *next;
@@ -252,6 +257,18 @@ char *splitnick(char **blah)
     return q;
   }
   return "";
+}
+
+void remove_crlf(char **line)
+{
+  char *p;
+
+  p = strchr(*line, '\n');
+  if (p != NULL)
+    *p = 0;
+  p = strchr(*line, '\r');
+  if (p != NULL)
+    *p = 0;
 }
 
 char *newsplit(char **rest)
@@ -487,22 +504,24 @@ void putlog EGG_VARARGS_DEF(int, arg1)
   char *format, *chname, s[LOGLINELEN], s1[256], *out, ct[81], *s2, stamp[34];
   va_list va;
   time_t now2 = time(NULL);
-  struct tm *t;
+  struct tm *t = localtime(&now2);
 
   type = EGG_VARARGS_START(int, arg1, va);
   chname = va_arg(va, char *);
   format = va_arg(va, char *);
 
   /* Create the timestamp */
+  t = localtime(&now2);
   if (shtime) {
-    t = localtime(&now2);
     egg_strftime(stamp, sizeof(stamp) - 2, LOG_TS, t);
     strcat(stamp, " ");
     tsl = strlen(stamp);
   }
+  else
+    *stamp = '\0';
 
   /* Format log entry at offset 'tsl,' then i can prepend the timestamp */
-  out = s+tsl;
+  out = s + tsl;
   /* No need to check if out should be null-terminated here,
    * just do it! <cybah>
    */
@@ -524,7 +543,7 @@ void putlog EGG_VARARGS_DEF(int, arg1)
     }
   }
   /* Place the timestamp in the string to be printed */
-  if ((out[0]) && (shtime)) {
+  if (out[0] && shtime) {
     strncpy(s, stamp, tsl);
     out = s;
   }
@@ -572,13 +591,15 @@ void putlog EGG_VARARGS_DEF(int, arg1)
       }
     }
   }
-  for (i = 0; i < dcc_total; i++)
+  for (i = 0; i < dcc_total; i++) {
     if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->con_flags & type)) {
       if ((chname[0] == '*') || (dcc[i].u.chat->con_chan[0] == '*') ||
-          (!rfc_casecmp(chname, dcc[i].u.chat->con_chan)))
+          !rfc_casecmp(chname, dcc[i].u.chat->con_chan)) {
         dprintf(i, "%s", out);
+      }
     }
-  if ((!backgrd) && (!con_chan) && (!term_z))
+  }
+  if (!backgrd && !con_chan && !term_z)
     dprintf(DP_STDOUT, "%s", out);
   else if ((type & LOG_MISC) && use_stderr) {
     if (shtime)
@@ -1342,7 +1363,7 @@ void show_motd(int idx)
   dprintf(idx, "\n");
 }
 
-/* Show banner to telnet user 
+/* Show banner to telnet user
  */
 void show_banner(int idx)
 {
@@ -1379,10 +1400,10 @@ void make_rand_str(char *s, int len)
   int j;
 
   for (j = 0; j < len; j++) {
-    if (random() % 3 == 0)
-      s[j] = '0' + (random() % 10);
+    if (!randint(3))
+      s[j] = '0' + randint(10);
     else
-      s[j] = 'a' + (random() % 26);
+      s[j] = 'a' + randint(26);
   }
   s[len] = 0;
 }
@@ -1480,6 +1501,19 @@ char *strchr_unescape(char *str, const char div, register const char esc_char)
   return NULL;
 }
 
+/* Is every character in a string a digit? */
+int str_isdigit(const char *str)
+{
+  if (!*str)
+    return 0;
+
+  for (; *str; ++str) {
+    if (!egg_isdigit(*str))
+      return 0;
+  }
+  return 1;
+}
+
 /* As strchr_unescape(), but converts the complete string, without
  * searching for a specific delimiter character.
  */
@@ -1488,7 +1522,7 @@ void str_unescape(char *str, register const char esc_char)
   (void) strchr_unescape(str, 0, esc_char);
 }
 
-/* Kills the bot. s1 is the reason shown to other bots, 
+/* Kills the bot. s1 is the reason shown to other bots,
  * s2 the reason shown on the partyline. (Sup 25Jul2001)
  */
 void kill_bot(char *s1, char *s2)

@@ -1,7 +1,7 @@
 # core.english.lang
 #   core language messages for eggdrop
 #
-# $Id: core.english.lang,v 1.37 2003/05/04 22:04:32 wcc Exp $
+# $Id: core.english.lang,v 1.42 2004/02/01 06:13:02 wcc Exp $
 
 # General stuff
 0x001,Usage
@@ -69,7 +69,7 @@ module, please consult the default config file for info.\n
 0x40e,Userfile creation not necessary--skipping
 0x40f,Rehashing...
 0x410,I don't know anyone by that name.\n
-0x411,No user record.
+0x411,No such user record.
 0x412,Backing up user file...
 0x413,Failed connection; aborted userfile transfer.
 0x414,Old style share request by
@@ -78,7 +78,7 @@ module, please consult the default config file for info.\n
 
 # MISC_
 0x500,expired
-0x501,total
+0x501,Total
 0x502,Erased
 0x504,on
 0x505,Matching
@@ -91,9 +91,6 @@ module, please consult the default config file for info.\n
 0x50c,Restarting...
 0x50d,es
 0x50e,Switching logfiles...
-0x50f,owner
-0x510,master
-0x511,op
 0x512,idle
 0x513,AWAY
 0x516,Disconnected
@@ -109,14 +106,14 @@ module, please consult the default config file for info.\n
 0x521,Use:
 0x522,<address>:<port#>[/<relay-port#>]
 0x526,pending
-0x527,want ops
+0x527,need ops
 0x528,lurking
 0x529,background
 0x52a,terminal mode
 0x52b,status mode
 0x52c,log dump mode
 0x52d,Online for
-0x52e,cache hit
+0x52e,Cache hit
 0x52f,Tcl library:
 0x530,New users get flags
 0x531,notify
@@ -184,7 +181,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x62b,Jumping servers...
 0x62c,Channel is currently hidden.
 0x62d,Now on channel
-0x62e,Never joined one of my channels.
+0x62e,Never seen on channel.
 0x62f,Last seen at
 0x630,I don't know you; please introduce yourself first.
 0x631,No help.
@@ -243,7 +240,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x667,You now get to pick a nick to use on the bot,\nand a password so nobody else can pretend to be you.\nPlease remember both!
 0x668,From now on, you don't need to use the -m option to start the bot.\nEnjoy !!
 0x669,Telnet connection flood from %s!  Placing on ignore!
-0x66a,banned:
+0x66a,Banned:
 0x66b,join flood
 0x66c,don't kick my friends, bud
 0x66d,...and don't come back.

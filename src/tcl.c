@@ -4,11 +4,11 @@
  *   Tcl initialization
  *   getting and setting Tcl/eggdrop variables
  *
- * $Id: tcl.c,v 1.73 2003/04/17 04:38:33 wcc Exp $
+ * $Id: tcl.c,v 1.76 2004/04/10 03:52:28 stdarg Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -49,11 +49,7 @@ extern char origbotname[], botuser[], motdfile[], admin[], userfile[],
             firewall[], helpdir[], notify_new[], hostname[], myip[], moddir[],
             tempdir[], owner[], network[], botnetnick[], bannerfile[],
             egg_version[], natip[], configfile[], logfile_suffix[], textdir[],
-#ifdef USE_IPV6
-            pid_file[], hostname6[], myip6[];
-#else
             pid_file[];
-#endif /* USE_IPV6 */
 
 extern int backgrd, flood_telnet_thr, flood_telnet_time, shtime, share_greet,
            require_p, keep_all_logs, allow_new_telnets, stealth_telnets,
@@ -378,7 +374,7 @@ void add_tcl_commands(tcl_cmds *table)
   while (table->name) {
     cdata = (void **) nmalloc(sizeof(void *) * 2);
     clientdata_stuff += sizeof(void *) * 2;
-    cdata[0] = table->func;
+    cdata[0] = (void *)table->func;
     cdata[1] = NULL;
     Tcl_CreateObjCommand(interp, table->name, utf_converter, (ClientData) cdata,
                          cmd_delete_callback);
@@ -393,7 +389,7 @@ void add_cd_tcl_cmds(cd_tcl_cmd *table)
   while (table->name) {
     cdata = (void **) nmalloc(sizeof(void *) * 2);
     clientdata_stuff += sizeof(void *) * 2;
-    cdata[0] = table->callback;
+    cdata[0] = (void *)table->callback;
     cdata[1] = table->cdata;
     Tcl_CreateObjCommand(interp, table->name, utf_converter, (ClientData) cdata,
                          cmd_delete_callback);
@@ -464,10 +460,6 @@ static tcl_strings def_tcl_strings[] = {
   {"owner",           owner,          120,           STR_PROTECT},
   {"my-ip",           myip,           120,                     0},
   {"my-hostname",     hostname,       120,                     0},
-#ifdef USE_IPV6
-  {"my-ip6",          myip6,          120,                     0},
-  {"my-hostname6",    hostname6,      120,                     0},
-#endif /* USE_IPV6 */
   {"network",         network,        40,                      0},
   {"whois-fields",    whois_fields,   1024,                    0},
   {"nat-ip",          natip,          120,                     0},

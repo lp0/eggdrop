@@ -14,22 +14,26 @@ NOTE: First check http://www.eggheads.org/bugzilla/ to see if the
       reporting.
 
 Instructions:
-1]  Please complete as many fields as possible.
-2]  Email the completed report to: bugs@eggheads.org
+[1]  Please complete as many fields as possible.
+[2]  Email the completed report to: bugs@eggheads.org
+
+DO NOT SEND HTML E-MAIL TO THE LISTS.
 
 =====================================================================
 1) INFORMATION ABOUT YOUR EGGDROP
 
-1.1) version:
+1.1) Eggdrop version:
      1.6.__
 
-1.2) make type:
+1.2) Make type:
      ( ) dynamic
      ( ) static
      ( ) debug
      ( ) sdebug
 
-1.3) list of patches and/or modules you use:
+1.3) List of any options passed to ./configure:
+
+1.4) List of patches and/or modules you use:
 
 =====================================================================
 2) INFORMATION ABOUT TCL
@@ -105,9 +109,8 @@ Instructions:
 
 4.7) Other comments?
 
-4.8) If you compiled the bot using the debug or sdebug options and it
-     dumped a 'core' file when it crashed, it would be *very* useful
-     if you could paste gdb's output during the following steps:
+4.8) If the bot dumped a 'core' file when it crashed, it would be *very*
+     useful if you could paste gdb's output during the following steps:
      First call gdb
          $ gdb eggdrop -c core
      and then enter 'bt' on gdb's command line:

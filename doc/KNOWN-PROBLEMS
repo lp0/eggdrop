@@ -1,3 +1,5 @@
+$Id: KNOWN-PROBLEMS,v 1.15 2004/01/09 05:56:35 wcc Exp $
+
 Known Problems
 Last revised: April 16, 2003
      _________________________________________________________________
@@ -22,4 +24,4 @@ Last revised: April 16, 2003
       Eggdrop can't handle these errors at the moment.
     ________________________________________________________________________
 
-    Copyright (C) 2003 Eggheads Development Team
+    Copyright (C) 2003, 2004 Eggheads Development Team

@@ -4,10 +4,10 @@
  *
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: dns.c,v 1.33 2003/04/17 01:55:57 wcc Exp $
+ * $Id: dns.c,v 1.35 2004/01/09 05:56:38 wcc Exp $
  */
 /*
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,14 +29,8 @@
 #include "src/mod/module.h"
 #include "dns.h"
 
-/* No async IPv6 dns in 1.6 */
-#ifdef USE_IPV6
-#  include "You cannot use the dns module with IPv6, re-run make iconfig and disable the dns module!"
-#endif /* USE_IPV6 */
-
 static void dns_event_success(struct resolve *rp, int type);
 static void dns_event_failure(struct resolve *rp, int type);
-
 
 static Function *global = NULL;
 

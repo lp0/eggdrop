@@ -2,11 +2,11 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.92 2003/03/08 04:29:44 wcc Exp $
+ * $Id: irc.c,v 1.98 2004/04/05 23:35:20 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,26 +25,28 @@
 
 #define MODULE_NAME "irc"
 #define MAKING_IRC
+
 #include "src/mod/module.h"
 #include "irc.h"
 #include "server.mod/server.h"
 #include "channels.mod/channels.h"
+
 #ifdef HAVE_UNAME
-#include <sys/utsname.h>
+# include <sys/utsname.h>
 #endif
 
 static p_tcl_bind_list H_topc, H_splt, H_sign, H_rejn, H_part, H_pub, H_pubm;
 static p_tcl_bind_list H_nick, H_mode, H_kick, H_join, H_need;
+
 static Function *global = NULL, *channels_funcs = NULL, *server_funcs = NULL;
 
 static int ctcp_mode;
 static int net_type;
 static int strict_host;
-static int wait_split = 300;    /* Time to wait for user to return from
-                                 * net-split. */
+static int wait_split = 300;    /* Time to wait for user to return from net-split. */
 static int max_bans = 20;       /* Modified by net-type 1-4 */
-static int max_exempts = 20;
-static int max_invites = 20;
+static int max_exempts = 20;    /* Modified by net-type 1-4 */
+static int max_invites = 20;    /* Modified by net-type 1-4 */
 static int max_modes = 20;      /* Modified by net-type 1-4 */
 static int bounce_bans = 1;
 static int bounce_exempts = 0;
@@ -67,12 +69,13 @@ static int prevent_mixing = 1;  /* Prevent mixing old/new modes */
 static int rfc_compliant = 1;   /* Value depends on net-type. */
 static int include_lk = 1;      /* For correct calculation in real_add_mode. */
 
+static char opchars[8];         /* the chars in a /who reply meaning op */
+
 #include "chan.c"
 #include "mode.c"
 #include "cmdsirc.c"
 #include "msgcmds.c"
 #include "tclirc.c"
-
 
 /* Contains the logic to decide wether we want to punish someone. Returns
  * true (1) if we want to, false (0) if not.
@@ -859,6 +862,11 @@ static void check_tcl_need(char *chname, char *type)
                  MATCH_MASK | BIND_STACKABLE);
 }
 
+static tcl_strings mystrings[] = {
+  {"opchars", opchars, 7, 0},
+  {NULL,      NULL,    0, 0}
+};
+
 static tcl_ints myints[] = {
   {"learn-users",     &learn_users,     0}, /* arthur2 */
   {"wait-split",      &wait_split,      0},
@@ -925,7 +933,7 @@ static void flush_modes()
 static void irc_report(int idx, int details)
 {
   struct flag_record fr = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
-  char ch[1024], q[160], *p;
+  char ch[1024], q[256], *p;
   int k, l;
   struct chanset_t *chan;
 
@@ -949,7 +957,7 @@ static void irc_report(int idx, int details)
       l = simple_sprintf(ch, "%s%s%s%s, ", chan->dname, p ? " (" : "",
                          p ? p : "", p ? ")" : "");
       if ((k + l) > 70) {
-        dprintf(idx, "   %s\n", q);
+        dprintf(idx, "    %s\n", q);
         strcpy(q, "          ");
         k = 10;
       }
@@ -958,64 +966,74 @@ static void irc_report(int idx, int details)
   }
   if (k > 10) {
     q[k - 2] = 0;
-    dprintf(idx, "   %s\n", q);
+    dprintf(idx, "    %s\n", q);
   }
 }
 
 static void do_nettype()
 {
   switch (net_type) {
-  case 0:                      /* EFnet */
+  case 0: /* EFnet */
     kick_method = 1;
     modesperline = 4;
     use_354 = 0;
-    use_exempts = 0;
-    use_invites = 0;
-    max_bans = 25;
-    max_modes = 25;
+    use_exempts = 1;
+    use_invites = 1;
+    max_bans = 100;
+    max_exempts = 100;
+    max_invites = 100;
+    max_modes = 100;
     rfc_compliant = 1;
     include_lk = 0;
     break;
-  case 1:                      /* IRCnet */
+  case 1: /* IRCnet */
     kick_method = 4;
     modesperline = 3;
     use_354 = 0;
     use_exempts = 1;
     use_invites = 1;
     max_bans = 30;
+    max_exempts = 30;
+    max_invites = 30;
     max_modes = 30;
     rfc_compliant = 1;
     include_lk = 1;
     break;
-  case 2:                      /* UnderNet */
+  case 2: /* UnderNet */
     kick_method = 1;
     modesperline = 6;
     use_354 = 1;
     use_exempts = 0;
     use_invites = 0;
     max_bans = 45;
+    max_exempts = 45;
+    max_invites = 45;
     max_modes = 45;
     rfc_compliant = 1;
     include_lk = 1;
     break;
-  case 3:                      /* DALnet */
+  case 3: /* DALnet */
     kick_method = 1;
     modesperline = 6;
     use_354 = 0;
     use_exempts = 0;
     use_invites = 0;
     max_bans = 100;
+    max_exempts = 100;
+    max_invites = 100;
     max_modes = 100;
     rfc_compliant = 0;
     include_lk = 1;
     break;
-  case 4:                      /* Hybrid-6+ */
+  case 4: /* Hybrid-6+ */
     kick_method = 1;
     modesperline = 4;
     use_354 = 0;
     use_exempts = 1;
-    use_invites = 0;
+    use_invites = 1;
     max_bans = 20;
+    max_exempts = 20;
+    max_invites = 20;
     max_modes = 20;
     rfc_compliant = 1;
     include_lk = 0;
@@ -1071,6 +1089,7 @@ static char *irc_close()
   del_bind_table(H_pubm);
   del_bind_table(H_pub);
   del_bind_table(H_need);
+  rem_tcl_strings(mystrings);
   rem_tcl_ints(myints);
   rem_builtins(H_dcc, irc_dcc);
   rem_builtins(H_msg, C_msg);
@@ -1164,6 +1183,8 @@ char *irc_start(Function *global_funcs)
   Tcl_TraceVar(interp, "rfc-compliant",
                TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
                traced_rfccompliant, NULL);
+  strcpy(opchars, "@");
+  add_tcl_strings(mystrings);
   add_tcl_ints(myints);
   add_builtins(H_dcc, irc_dcc);
   add_builtins(H_msg, C_msg);

@@ -4,11 +4,11 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  *
- * $Id: dcc.c,v 1.67 2003/04/17 01:55:57 wcc Exp $
+ * $Id: dcc.c,v 1.77 2004/04/06 06:56:38 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -234,11 +234,7 @@ void failed_link(int idx)
 
   /* Try next port */
   killsock(dcc[idx].sock);
-#ifdef USE_IPV6
-  dcc[idx].sock = getsock(SOCK_STRONGCONN, getprotocol(dcc[idx].host));
-#else
   dcc[idx].sock = getsock(SOCK_STRONGCONN);
-#endif /* USE_IPV6 */
   dcc[idx].port++;
   dcc[idx].timeval = now;
   if (dcc[idx].sock < 0 ||
@@ -511,6 +507,9 @@ static int dcc_bot_check_digest(int idx, char *remote_digest)
   int i;
   char *password = get_user(&USERENTRY_PASS, dcc[idx].user);
 
+  if (!password)
+    return 1;
+
   MD5_Init(&md5context);
 
   egg_snprintf(digest_string, 33, "<%x%x@", getpid(),
@@ -528,6 +527,7 @@ static int dcc_bot_check_digest(int idx, char *remote_digest)
 
   if (!strcmp(digest_string, remote_digest))
     return 1;
+
   putlog(LOG_BOTS, "*", "Response (password hash) from %s incorrect",
          dcc[idx].nick);
   return 0;
@@ -684,7 +684,7 @@ static void kill_dcc_general(int idx, void *x)
  * guy, but when you added this feature you forced people to either
  * use your *SHAREWARE* client or face screenfulls of crap!)
  */
-static void strip_mirc_codes(int flags, char *text)
+void strip_mirc_codes(int flags, char *text)
 {
   char *dd = text;
 
@@ -698,14 +698,14 @@ static void strip_mirc_codes(int flags, char *text)
       break;
     case 3:                    /* mIRC colors? */
       if (flags & STRIP_COLOR) {
-        if (isdigit(text[1])) { /* Is the first char a number? */
+        if (egg_isdigit(text[1])) { /* Is the first char a number? */
           text += 2;            /* Skip over the ^C and the first digit */
-          if (isdigit(*text))
+          if (egg_isdigit(*text))
             text++;             /* Is this a double digit number? */
           if (*text == ',') {   /* Do we have a background color next? */
-            if (isdigit(text[1]))
+            if (egg_isdigit(text[1]))
               text += 2;        /* Skip over the first background digit */
-            if (isdigit(*text))
+            if (egg_isdigit(*text))
               text++;           /* Is it a double digit? */
           }
         } else
@@ -736,7 +736,7 @@ static void strip_mirc_codes(int flags, char *text)
         text++;
         if (*text == '[') {
           text++;
-          while ((*text == ';') || isdigit(*text))
+          while ((*text == ';') || egg_isdigit(*text))
             text++;
           if (*text)
             text++;             /* also kill the following char */
@@ -819,9 +819,8 @@ struct dcc_table DCC_CHAT_PASS = {
   out_dcc_general
 };
 
-/* Make sure ansi code is just for color-changing
- */
-static int check_ansi(char *v)
+/* Make sure ANSI code is just for color-changing */
+int check_ansi(char *v)
 {
   int count = 2;
 
@@ -860,15 +859,20 @@ static void eof_dcc_chat(int idx)
 static void dcc_chat(int idx, char *buf, int i)
 {
   int nathan = 0, doron = 0, fixed = 0;
-  char *v, *d;
+  char *v, *d, filtbuf[2048];
 
   strip_telnet(dcc[idx].sock, buf, &i);
   if (buf[0] && (buf[0] != '.') &&
       detect_dcc_flood(&dcc[idx].timeval, dcc[idx].u.chat, idx))
     return;
   dcc[idx].timeval = now;
-  if (buf[0])
-    strcpy(buf, check_tcl_filt(idx, buf));
+  if (buf[0]) {
+    const char *filt = check_tcl_filt(idx, buf);
+    if (filt != buf) {
+      strncpyz(filtbuf, filt, sizeof(filtbuf));
+      buf = filtbuf;
+    }
+  }
   if (buf[0]) {
     /* Check for beeps and cancel annoying ones */
     v = buf;
@@ -1965,7 +1969,7 @@ struct dcc_table DCC_IDENT = {
   NULL
 };
 
-void dcc_telnet_got_ident(int i, char *host)
+static void dcc_telnet_got_ident(int i, char *host)
 {
   int idx;
   char x[1024];
@@ -2036,7 +2040,7 @@ void dcc_telnet_got_ident(int i, char *host)
   /* Copy acceptable-nick/host mask */
   strncpyz(dcc[i].nick, dcc[idx].host, HANDLEN);
   dcc[i].timeval = now;
-  strcpy(dcc[i].u.chat->con_chan, chanset ? chanset->name : "*");
+  strcpy(dcc[i].u.chat->con_chan, chanset ? chanset->dname : "*");
   /* Displays a customizable banner. */
   if (use_telnet_banner)
     show_banner(i);

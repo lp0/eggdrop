@@ -10,11 +10,11 @@
  *
  * dprintf'ized, 9nov1995
  *
- * $Id: users.c,v 1.41 2003/02/15 19:42:59 wcc Exp $
+ * $Id: users.c,v 1.43 2004/01/20 18:39:37 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1005,7 +1005,7 @@ void autolink_cycle(char *start)
   }                             /* new run through the user list */
   while (u && !autc) {
     while (u && !autc) {
-      if (u->flags & USER_BOT) {
+      if (u->flags & USER_BOT && strcmp(u->handle, botnetnick)) {              /* ignore our own user record */
         bfl = bot_flags(u);
         if (bfl & (BOT_HUB | BOT_ALT)) {
           linked = 0;
