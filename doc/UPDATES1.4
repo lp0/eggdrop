@@ -2,6 +2,29 @@
 Changes in eggdrop: (since v1.4.0)
 ----------------------------------
 
+1.4.5 (November 15, 2000)
+Foundby   Fixedby   What....
+          Tothwolf  Removed checks for bogus masks in +ban, +exempt, and
+                      +invite. Minor error message fixes. Minor source cleanups.
+          Fabian    Cleaned up readtclprog().
+various   prox      Fixed problems with high ASCII characters in loaded tcl
+                      configuration files.
+illi      Fabian    Added configure check for maths library (libm).
+Bob       Fabian    Removing a user in a tcl proc bound to join crashed the bot.
+various   guppy     tcl_binds was added; by default it will return a list of
+                      all binds in memory including ones added by the bot, it
+                      also accepts certain bind types and masks
+          jeffx     added +c and +R chanmode support for DALnet's
+                      Bahamut ircd
+          Eugene    we were missing 0xe33 in the core.german.lang
+Ben       Eugene    changed the priority of a WHO done when users are 
+                      deopped to DP_HELP from DP_MODE
+          Tothwolf  increased the size of whois_fields to 1024
+various   Eule      removed all the bogus ban/invite/etc ... checks
+          Sup       fixes various typos in the docs and a small bug when 
+                     doing '.help motd'
+Wiktor    Fabian    SHELL is now configurable. We prefer /bin/sh5 on Ultrix.
+
 1.4.4 (July 16, 2000)
 Foundby   Fixedby   What....
           Tit00n/   Updated and fixed french core language file.

@@ -9,7 +9,7 @@
  * dprintf'ized, 27oct1995
  * multi-channel, 8feb1996
  * 
- * $Id: chan.c,v 1.64 2000/07/02 23:41:01 guppy Exp $
+ * $Id: chan.c,v 1.67 2000/08/07 16:23:43 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -86,6 +86,10 @@ static char *getchanmode(struct chanset_t *chan)
     s[i++] = 's';
   if (atr & CHANMODER)
     s[i++] = 'm';
+  if (atr & CHANNOCLR)
+    s[i++] = 'c';
+  if (atr & CHANREGON)
+    s[i++] = 'R';
   if (atr & CHANTOPIC)
     s[i++] = 't';
   if (atr & CHANNOMSG)
@@ -580,6 +584,14 @@ static void recheck_channel_modes(struct chanset_t *chan)
       add_mode(chan, '+', 'm', "");
     else if (mns & CHANMODER && cur & CHANMODER)
       add_mode(chan, '-', 'm', "");
+    if (pls & CHANNOCLR && !(cur & CHANNOCLR))
+      add_mode(chan, '+', 'c', "");
+    else if (mns & CHANNOCLR && cur & CHANNOCLR)
+      add_mode(chan, '-', 'c', "");
+    if (pls & CHANREGON && !(cur & CHANREGON))
+      add_mode(chan, '+', 'R', "");
+    else if (mns & CHANREGON && cur & CHANREGON)
+      add_mode(chan, '-', 'R', "");
     if (pls & CHANTOPIC && !(cur & CHANTOPIC))
       add_mode(chan, '+', 't', "");
     else if (mns & CHANTOPIC && cur & CHANTOPIC)
@@ -751,6 +763,10 @@ static int got324(char *from, char *msg)
       chan->channel.mode |= CHANSEC;
     if (msg[i] == 'm')
       chan->channel.mode |= CHANMODER;
+    if (msg[i] == 'c')
+      chan->channel.mode |= CHANNOCLR;
+    if (msg[i] == 'R')
+      chan->channel.mode |= CHANREGON;
     if (msg[i] == 't')
       chan->channel.mode |= CHANTOPIC;
     if (msg[i] == 'n')
@@ -964,22 +980,6 @@ static int got368(char *from, char *msg)
     chan->status &= ~CHAN_ASKEDBANS;
     if (channel_clearbans(chan))
       resetbans(chan);
-    else {
-      masklist *b = chan->channel.ban;
-      int bogus;
-      char *p;
-
-      if (me_op(chan))
-	while (b && b->mask[0]) {
-	  bogus = 0;
-	  for (p = b->mask; *p; p++)
-	    if ((*p < 32) || (*p > 126))
-	      bogus = 1;
-	  if (bogus)
-	    add_mode(chan, '-', 'b', b->mask);
-	  b = b->next;
-	}
-    }
   }
   /* if i sent a mode -b on myself (deban) in got367, either */
   /* resetbans() or recheck_bans() will flush that */
@@ -1025,24 +1025,7 @@ static int got349(char *from, char *msg)
       chan->ircnet_status &= ~CHAN_ASKED_EXEMPTS;
       if (channel_clearbans(chan))
 	resetexempts(chan);
-      else {
-	masklist *e = chan->channel.exempt;
-	int bogus;
-	char * p;
-	
-	if (me_op(chan))
-	  while (e->mask[0]) {
-	    bogus = 0;
-	    for (p = e->mask; *p; p++)
-	      if ((*p < 32) || (*p > 126))
-		bogus = 1;
-	    if (bogus)
-	      add_mode(chan, '-', 'e', e->mask);
-	    e = e->next;
-	  }
-      }
     }  
-    
   }
   return 0;
 }
@@ -1085,22 +1068,6 @@ static int got347(char *from, char *msg)
       chan->ircnet_status &= ~CHAN_ASKED_INVITED;
       if (channel_clearbans(chan))
 	resetinvites(chan);
-      else {
-	masklist *inv = chan->channel.invite;
-	int bogus;
-	char * p;
-	
-	if (me_op(chan))
-	  while (inv && inv->mask[0]) {
-	    bogus = 0;
-	    for (p = inv->mask; *p; p++)
-	      if ((*p < 32) || (*p > 126))
-		bogus = 1;
-	    if (bogus)
-	      add_mode(chan, '-', 'I', inv->mask);
-	    inv = inv->next;
-	  }
-      }
     }
   }
   return 0;
@@ -1338,6 +1305,8 @@ static int gotjoin(char *from, char *chname)
       m = ismember(chan, nick);
       if (m && m->split && !strcasecmp(m->userhost, uhost)) {
 	check_tcl_rejn(nick, uhost, u, chan->name);
+	/* The tcl binding might have deleted the current user. Recheck. */
+	u = get_user_by_host(from);
 	m->split = 0;
 	m->last = now;
 	m->delay = 0L;
@@ -1366,6 +1335,10 @@ static int gotjoin(char *from, char *chname)
 	m->user = u;
 	m->flags |= STOPWHO;
 	check_tcl_join(nick, uhost, u, chname);
+	/* The tcl binding might have deleted the current user. Use the record
+	 * saved in the channel record as that always gets updated.
+	 */
+	u = m->user;
 	if (newmode)
 	  do_embedded_mode(chan, nick, m, newmode);
 	if (match_my_nick(nick)) {
@@ -1397,9 +1370,9 @@ static int gotjoin(char *from, char *chname)
 	    if (!cr && no_chanrec_info)
 	      li = get_user(&USERENTRY_LASTON, m->user);
 	    if (channel_greet(chan) && use_info &&
-		((cr && (now - cr->laston > wait_info)) ||
+		((cr && now - cr->laston > wait_info) ||
 		 (no_chanrec_info &&
-		  (!li || (now - li->laston > wait_info))))) {
+		  (!li || now - li->laston > wait_info)))) {
 	      char s1[512], *s;
 
 	      if (!(u->flags & USER_BOT)) {
@@ -1422,19 +1395,6 @@ static int gotjoin(char *from, char *chname)
       }
 	  /* ok, the op-on-join,etc, tests...first only both if Im opped */
 	  if (me_op(chan)) {
-	for (p = m->userhost; *p; p++)
-	  if (((unsigned char) *p) < 32) {
-		if (ban_bogus)
-		  u_addban(chan, quickban(chan, uhost), origbotname,
-			   CHAN_BOGUSUSERNAME, now + (60 * ban_time), 0);
-		if (kick_bogus) {
-		  dprintf(DP_MODE, "KICK %s %s :%s\n",
-			  chname, nick, CHAN_BOGUSUSERNAME);
-		  m->flags |= SENTKICK;
-		}
-		if (kick_bogus || (ban_bogus && channel_enforcebans(chan)))
-		  return 0;
-	}
 	if (channel_enforcebans(chan) &&
 	!chan_op(fr) && !glob_op(fr) && !glob_friend(fr) && !chan_friend(fr)) {
       for (b = chan->channel.ban; b->mask[0]; b = b->next) { 
