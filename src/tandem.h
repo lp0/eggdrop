@@ -39,7 +39,7 @@ typedef struct {
 /* minimum version that uses tokens & base64 ints */
 /* for channel msg's */
 #define NEAT_BOTNET 1029900
-#define GLOBAL_CHANS 10000
+#define GLOBAL_CHANS 100000
 
 #ifndef MAKING_MODS
 void send_tand_but(int, char *, int);

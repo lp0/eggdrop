@@ -10,9 +10,7 @@ DEST=@DEST@
 #   -Wall            if you're using gcc and it supports it (configure
 #                      usually detects this anyway now)
 #   -DEBUG_MEM       to be able to debug memory allocation (.debug)
-#   -DEBUG           logs random debugging comments to +d level (annoying
-#                      and useless to most people)
-# these can now be set by using 'make debug' & 'make debugmem'
+# this can now be set by using 'make debugmem'
 CFLGS = 
 
 # configure SHOULD set these...you may need to tweak them to get modules
@@ -72,9 +70,7 @@ dist: clean
 
 eggdrop: modegg modules
 
-debug: debugmod moddebug
-
-debugmem: memegg moddebug
+debugmem: memegg modules
 
 eggdrop.h:
 	@echo You do not have the eggdrop source!
@@ -97,21 +93,10 @@ GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS}'\
 'TCLLIB=${TCLLIB}' 'STRIP=${MOD_STRIP}' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC} -DEBUG' 'LD=${SHLIB_LD} -g' \
-'STRIP=touch' 'CFLAGS=${CFLAGS} -g'
-
-DMAKE_MOD = ${MAKE} 'CC=${MOD_CC} -DEBUG' 'LD=${MOD_LD} -g' 'OBJS=${OBJS}'\
-'CFLAGS=${CFLAGS} -g' 'XREQ=${XREQ}' \
-'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
-'XLIBS=@TCL_LIBS@ @LIBS@'
-
-DMAKE_MEM = ${MAKE} 'CC=${MOD_CC} -DEBUG -DEBUG_MEM' 'LD=${MOD_LD} -g' \
+DMAKE_MEM = ${MAKE} 'CC=${MOD_CC} -DEBUG_MEM' 'LD=${MOD_LD} -g' \
 'OBJS=${OBJS}' 'CFLAGS=${CFLAGS} -g' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
-
-DMAKE_STATIC = ${MAKE} 'CC=${CC} -g' 'LD=${LD} -g' 'OBJS=${OBJS}'\
-'STRIP=touch' 'CFLAGS=${CFLAGS} -DSTATIC' 'XLIBS=@TCL_LIBS@ @LIBS@'
 
 static: eggtest
 	@echo ""
@@ -123,10 +108,6 @@ static: eggtest
 	@echo "Making core eggdrop for static linking..."
 	@echo ""
 	@cd src;${GMAKE_STATIC} static
-
-sdebug: eggtest
-	@cd src/mod;${DMAKE_STATIC} static
-	@cd src;${DMAKE_STATIC} static
 
 modegg: modtest
 	@cd src;${GMAKE_MOD} eggdrop
@@ -140,23 +121,11 @@ modules:  modtest
 	@echo "modules made:"
 	@ls -la *.so
   
-debugmod: modtest
-	@cd src;${DMAKE_MOD} eggdrop
-	@echo
-	@./eggdrop -v
-	@ls -la eggdrop
-
 memegg:  modtest
 	@cd src;${DMAKE_MEM} eggdrop
 	@echo
 	@./eggdrop -v
 	@ls -la eggdrop
-
-moddebug: modtest
-	@cd src/mod;${DMAKE_SHLIB} modules
-	@echo
-	@echo "modules made:"
-	@ls -la *.so
 
 eggtest:
 	@if [ -f EGGMOD.stamp ]; then \
@@ -265,6 +234,6 @@ ainstall:
 
 install2:
 	@echo Installing mods -- DEST = $(REALDEST)
-	@cd src/mod;${MAKE} REALDEST=$(REALDEST) install; cd ../..
+	@cd src/mod;${MAKE} REALDEST=$(REALDEST) install CP1='${CP1}'; cd ../..
 
 #safety hash

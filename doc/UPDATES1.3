@@ -1,6 +1,33 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.5
+Foundby   Fixedby   What....
+mrbond    Beldin    remote boots were working
+melvan    Beldin    GLOBAL_CHANS was defined wrong in tandem.h
+C.massam  Beldin    default .fwd binding was wrong
+          DK        finally the dissapearing channel bans are fixed
+BB        Beldin    kicked ops were not being revenged
+BB        Beldin    lets get make install right
+          BB        .ignores are check before even ident lookup occurs
+GSCEGO    Beldin    getuser LASTON #channel was sick (wrong arg)
+          Beldin    .bottree bizzarely broken
+          Kirk      an enforced mode of -l was being interpreted as -p
+          Kirk      automation of adding a language file for modules
+          Kirk      wire.mod loads it's own .lang file
+          Kirk      filesys.mod has it's own .lang file (moved out of core)
+          Kirk      added install entries for installing .lang files
+Prime     Beldin    /msg whois response was incorrectly showing o/b/m
+          Beldin    all channels were being set static on startup
+Daklop    Beldin    'private-owner's could have their other flags changed.
+          BB        post-identd ignores check was broken
+	  BB        .simul was report incorrect user
+BB        Beldin    lets just merge in -DEBUG, it'll help debugging errors
+Bogus     Beldin    nkch binding was being called as link binding
+          Beldin    remote motds now show relevant highlighting
+Scuzzi    Beldin    you gotta worry about someone who stops 1/2 through
+                    modifying a function (enforced chanmodes)
+		    
 1.3.4
 Foundby   Fixedby   What....
           Darkfox   make install messup

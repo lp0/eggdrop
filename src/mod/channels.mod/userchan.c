@@ -506,6 +506,7 @@ static void channels_writeuserfile () {
    f = fopen(s, "a");
    write_bans(f,-1);
    fclose(f);
+   write_channels();
 }
 
 /* check for expired timed-bans */

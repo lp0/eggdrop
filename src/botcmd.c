@@ -207,6 +207,8 @@ static void bot_priv (int idx, char * par)
    tobot = newsplit(&par);
    splitc(to, tobot, '@');
    p = strchr(from, '@');
+   if ((to[0] == '!') || (to[0] == '#'))
+     to++;
    if (p != NULL)
       p++;
    else
@@ -812,12 +814,12 @@ static void bot_reject (int idx, char * par)
 	    u = get_user_by_handle(userlist,frombot);
 	    if (!(bot_flags(u) & BOT_SHARE)) {
 	       add_note(from, botnetnick, "No non sharebot boots.", -1, 0);
-	       return;
+	       ok = 1;
 	    }
 	 } else if (remote_boots == 0) {
 	    botnet_send_priv(idx, botnetnick, from, NULL, "%s", 
 			     BOT_NOREMOTEBOOT);
-	    ok = ok;
+	    ok = 1;
 	 }
 	 for (i = 0; (i < dcc_total) && (!ok); i++)
 	   if ((strcasecmp(who, dcc[i].nick) == 0) && 
@@ -935,18 +937,27 @@ static void bot_motd (int idx, char * par)
    
    context;
    who = newsplit(&par);
-   if ((!par[0]) || (strcasecmp(par, botnetnick) == 0)) {
+   if (!par[0] || !strcasecmp(par, botnetnick)) {
+      int irc = 0;
       p = strchr(who, ':');
       if (p)
-	 p++;
+	p++;
       else
-	 p = who;
+	p = who;
+      if (who[0] == '!') {
+	 irc = HELP_IRC;
+	 fr.global |= USER_HIGHLITE;
+	 who++;
+      } else if (who[0] == '#') {
+	 fr.global |= USER_HIGHLITE;
+	 who++;
+      }
       putlog(LOG_CMDS, "*", "#%s# motd", p);
       vv = fopen(motdfile, "r");
       if (vv != NULL) {
 	 botnet_send_priv(idx, botnetnick, who, NULL,
 			  "--- %s\n", MISC_MOTDFILE);
-	 help_subst(NULL, NULL, 0, 0, NULL);
+	 help_subst(NULL, NULL, 0, irc, NULL);
 	 while (!feof(vv)) {
 	    fgets(s, 120, vv);
 	    if (!feof(vv)) {
@@ -954,7 +965,7 @@ static void bot_motd (int idx, char * par)
 		  s[strlen(s) - 1] = 0;
 	       if (!s[0])
 		  strcpy(s, " ");
-	       help_subst(s, who, &fr, 1, dcc[idx].nick);
+	       help_subst(s, who, &fr, HELP_DCC, dcc[idx].nick);
 	       if (s[0])
 		 botnet_send_priv(idx, botnetnick, who, NULL, "%s", s);
 	    }

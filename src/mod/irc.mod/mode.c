@@ -576,7 +576,6 @@ static void gotmode (char * from, char * msg)
    char s[UHOSTLEN], ms[UHOSTLEN];
    char ms2[3];
    struct userrec * u;
-   int i;
    memberlist *m;
    struct chanset_t *chan;
    
@@ -595,7 +594,6 @@ static void gotmode (char * from, char * msg)
 	 u = get_user_by_host(from);
 	 get_user_flagrec(u,&user,ch);
 	 nick = splitnick(&from);
-	 i = 0;
 	 m = ismember(chan, nick);
 	 if (m && me_op(chan)) {
 	    if (chan_fakeop(m)) {
@@ -676,8 +674,8 @@ static void gotmode (char * from, char * msg)
 		     add_mode(chan, '+', 'l', s);
 		  }
 	       }
-	    }
-	    if (chg[i] == 'k') {
+	       break;
+	      case 'k':
 	       op = newsplit(&msg);
 	       fixcolon(op);
 	       simple_sprintf(ms, "%ck %s", ms2[0], op);
@@ -692,8 +690,8 @@ static void gotmode (char * from, char * msg)
 		    add_mode(chan, '+', 'k', chan->key_prot);
 		  set_key(chan, NULL);
 	       }
-	    }
-	    if (chg[i] == 'o') {
+	       break;
+	      case 'o':
 	       op = newsplit(&msg);
 	       fixcolon(op);
 	       simple_sprintf(ms, "%co %s", ms2[0], op);
@@ -702,8 +700,8 @@ static void gotmode (char * from, char * msg)
 		 got_op(chan, nick, from, op, &user);
 	       else
 		 got_deop(chan, nick, from, op);
-	    }
-	    if (chg[i] == 'v') {
+	       break;
+	      case 'v':
 	       op = newsplit(&msg);
 	       fixcolon(op);
 	       m = ismember(chan, op);
@@ -739,8 +737,8 @@ static void gotmode (char * from, char * msg)
 		     }
 		  }
 	       }
-	    }
-	    if (chg[i] == 'b') {
+	       break;
+	      case 'b':
 	       op = newsplit(&msg);
 	       fixcolon(op);
 	       simple_sprintf(ms, "%cb %s", ms2[0], op);
@@ -749,22 +747,23 @@ static void gotmode (char * from, char * msg)
 		 got_ban(chan, nick, from, op);
 	       else
 		 got_unban(chan, nick, from, op,u);
+	       break;
 	    }
 	    if (todo) {
 	       ms2[1] = *chg; 
-	       check_tcl_mode(nick,from,u,chan->name,ms);
+	       check_tcl_mode(nick,from,u,chan->name,ms2);
 	       if (ms2[0] == '+')
 		 chan->channel.mode |= todo;
 	       else
 		 chan->channel.mode &= ~todo;
-	       if ((((ms[0] == '+') && (chan->mode_mns_prot & todo)) ||
-		    ((ms[0] == '-') && (chan->mode_pls_prot & todo)))
+	       if ((((ms2[0] == '+') && (chan->mode_mns_prot & todo)) ||
+		    ((ms2[0] == '-') && (chan->mode_pls_prot & todo)))
 		   && !glob_master(user) && !chan_master(user))
-		 add_mode(chan, ms2[1] == '+' ? '-' : '+', *chg, "");
-	       else if ((reversing) && 
+		 add_mode(chan, ms2[0] == '+' ? '-' : '+', *chg, "");
+	       else if (reversing && 
 			((ms2[0] == '+') || (chan->mode_pls_prot & todo))
 			&& ((ms2[0] == '-') || (chan->mode_mns_prot & todo)))
-		 add_mode(chan, ms2[1] == '+' ? '-' : '+', *chg, "");
+		 add_mode(chan, ms2[0] == '+' ? '-' : '+', *chg, "");
 	    }
 	    chg++;
 	 }

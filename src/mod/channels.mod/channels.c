@@ -9,7 +9,7 @@
 #include "channels.h"
 #include <sys/stat.h>
 
-static int setstatic = 1;
+static int setstatic = 0;
 static int use_info = 1;
 static int ban_time = 60;
 static char chanfile [121];
@@ -130,7 +130,7 @@ static void get_mode_protect (struct chanset_t * chan, char * s)
 	 if (tst & CHANKEY)
 	   *p++ = 'k';
 	 if (tst & CHANLIMIT)
-	   *p++ = 'p';
+	   *p++ = 'l';
       }
       if (tst & CHANINV)
 	 *p++ = 'i';
@@ -535,10 +535,9 @@ static char *channels_close()
    rem_tcl_commands(channels_cmds);
    rem_tcl_strings(my_tcl_strings);
    rem_tcl_ints(my_tcl_ints);
-   del_hook(HOOK_USERFILE,write_channels);
+   del_hook(HOOK_USERFILE,channels_writeuserfile);
    del_hook(HOOK_REHASH,channels_rehash);
    del_hook(HOOK_PRE_REHASH,channels_prerehash);
-   del_hook(HOOK_USERFILE,channels_writeuserfile);
    del_hook(HOOK_MINUTELY,check_expired_bans);
    rem_help_reference("channels.help");
    rem_help_reference("chaninfo"); 
@@ -590,10 +589,9 @@ char *channels_start (Function * global_funcs)
      return "This module needs eggdrop1.3.0 or later";
    strcpy(chanfile,"chanfile");
    add_hook(HOOK_MINUTELY,check_expired_bans);
-   add_hook(HOOK_USERFILE,write_channels);
+   add_hook(HOOK_USERFILE,channels_writeuserfile);
    add_hook(HOOK_REHASH,channels_rehash);
    add_hook(HOOK_PRE_REHASH,channels_prerehash);
-   add_hook(HOOK_USERFILE,channels_writeuserfile);
    add_builtins(H_chon,my_chon,1);
    add_builtins(H_dcc,C_dcc_irc,15);
    add_tcl_commands(channels_cmds);
@@ -603,5 +601,6 @@ char *channels_start (Function * global_funcs)
    my_tcl_ints[0].val = &share_greet;
    add_tcl_ints(my_tcl_ints);
    read_channels(0);
+   setstatic = 1; 
    return NULL;
 }

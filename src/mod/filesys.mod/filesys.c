@@ -814,6 +814,7 @@ char *filesys_start (Function * global_funcs)
 	      sizeof(struct user_entry_type) - sizeof(char *));
    add_entry_type ( &USERENTRY_DCCDIR );
    DCC_FILES_PASS.timeout_val = &password_timeout;
+   cmd_loadlanguage(0,DP_LOG,"files.english");
    return NULL;
 }
 

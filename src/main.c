@@ -76,8 +76,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.4";
-int egg_numver = 1030400;
+char egg_version[1024] = "1.3.5";
+int egg_numver = 1030500;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -98,14 +98,9 @@ char textdir[121] = "";
 /* never erase logfiles, no matter how old they are? */
 int keep_all_logs = 0;
 /* context storage for fatal crashes */
-#ifdef EBUG
 char cx_file[16][30];
 int cx_line[16];
 int cx_ptr = 0;
-#else
-char cx_file[30];
-int cx_line;
-#endif
 /* unix-time that the bot loaded up */
 time_t online_since;
 /* using bot in make-userfile mode?  (first user to 'hello' becomes master) */
@@ -186,9 +181,8 @@ void write_debug()
 {
    int x;
    char s[80];
-#ifdef EBUG
    int y;
-#endif
+
    if (nested_debug) {
       /* yoicks, if we have this there's serious trouble */
       /* all of these are pretty reliable, so we'll try these */
@@ -198,15 +192,11 @@ void write_debug()
 	 strcpy(s, ctime(&now));
 	 dprintf(-x, "Debug (%s) written %s", ver, s);
 	 dprintf(-x, "Full Patch List: %s\n", egg_xtra);
-#ifdef EBUG
 	 dprintf(-x, "Context: ");
 	 for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) {
 	    dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
 	 }
 	 dprintf(-x, "%s/%d\n\n", cx_file[y], cx_line[y]);
-#else
-	 dprintf(-x, "Context: %s/%d\n", cx_file, cx_line);
-#endif
 	 killsock(x);
 	 close(x);
       }
@@ -214,11 +204,7 @@ void write_debug()
 		 * have caused the fault last time */
    } else
       nested_debug = 1;
-#ifdef EBUG
    putlog(LOG_MISC, "*", "* Last context: %s/%d", cx_file[cx_ptr], cx_line[cx_ptr]);
-#else
-   putlog(LOG_MISC, "*", "* Last context: %s/%d", cx_file, cx_line);
-#endif
    x = creat("DEBUG", 0644);
    setsock(x, SOCK_NONSOCK);
    if (x < 0) {
@@ -236,15 +222,11 @@ void write_debug()
       dprintf(-x, "Compile flags: %s\n", CCFLAGS);
       dprintf(-x, "Link flags   : %s\n", LDFLAGS);
       dprintf(-x, "Strip flags  : %s\n", STRIPFLAGS);
-#ifdef EBUG
       dprintf(-x, "Context: ");
       for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) {
 	 dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
       }
       dprintf(-x, "%s/%d\n\n", cx_file[cx_ptr], cx_line[cx_ptr]);
-#else
-      dprintf(-x, "Context: %s/%d\n", cx_file, cx_line);
-#endif
       tell_dcc(-x);
       dprintf(-x, "\n");
       debug_mem_to_dcc(-x);
@@ -258,7 +240,7 @@ static void got_bus (int z)
 {
    write_debug();
    fatal("BUS ERROR -- CRASHING!", 1);
-#if defined(EBUG) && defined(SA_RESETHAND) 
+#ifdef SA_RESETHAND 
    kill(getpid(),SIGBUS);
 #else
    exit(1);
@@ -269,7 +251,7 @@ static void got_segv (int z)
 {
    write_debug();
    fatal("SEGMENT VIOLATION -- CRASHING!", 1);
-#if defined(EBUG) && defined(SA_RESETHAND)
+#ifdef SA_RESETHAND
    kill(getpid(),SIGSEGV);
 #else
    exit(1);
@@ -585,7 +567,7 @@ int main (int argc, char ** argv)
    lastmin = nowtm->tm_min;
    srandom(now);
    init_mem();
-   init_language("english");
+   init_language("core.english");
    if (argc > 1)
       for (i = 1; i < argc; i++)
 	 do_arg(argv[i]);

@@ -131,6 +131,7 @@ int detect_dcc_flood (time_t *,struct chat_info *,int);
 
 /* language.c */
 char * get_language(int);
+int cmd_loadlanguage (struct userrec *,int,char *);
 
 /* main.c */
 void fatal (char *, int);

@@ -207,21 +207,6 @@ char * newsplit ( char ** rest ) {
    return r;
 }
 
-#ifdef EBUG
-/* return the index'd word without changing 'rest' */
-void stridx (char * first, char * rest, int index)
-{
-   char s[510];
-   int i;
-   context;
-   strcpy(s, rest);
-   for (i = 0; i < index; i++) {
-      splitc(first, s, ' ');
-      rmspace(s);
-   }
-}
-#endif
-
 /* convert "abc!user@a.b.host" into "*!user@*.b.host"
    or "abc!user@1.2.3.4" into "*!user@1.2.3.*"  */
 void maskhost (char * s, char * nw)
@@ -576,7 +561,7 @@ static void subst_addcol (char * s, char * newcol)
 #define HELP_REV   2
 #define HELP_UNDER 4
 #define HELP_FLASH 8
-#define HELP_IRC   16
+
 void help_subst (char * s, char * nick, struct flag_record * flags,
 		 int isdcc, char * topic)
 {
@@ -617,7 +602,7 @@ void help_subst (char * s, char * nick, struct flag_record * flags,
       chr = *(current + 1);
       *current = 0;
       if (!blind)    
-		  writeidx += my_strcpy(writeidx, readidx);
+	writeidx += my_strcpy(writeidx, readidx);
       towrite = NULL;
       switch (chr) {
 	case 'b':
@@ -918,7 +903,6 @@ void reload_help_data (void) {
    }
 }  
 
-#ifdef EBUG
 void debug_help (int idx) {
    struct help_ref * current;
    struct help_list * item;
@@ -931,7 +915,6 @@ void debug_help (int idx) {
       }
    } 
 }
-#endif
 
 FILE * resolve_help(int dcc, char * file) {
    char s[1024], *p;

@@ -1,4 +1,4 @@
- /* 
+/* 
    cmds.c -- handles:
    commands from a user via dcc
    (split in 2, this portion contains no-irc commands)
@@ -291,7 +291,7 @@ static void cmd_motd (struct userrec * u, int idx, char * par)
    int i;
    if (par[0]) {
       putlog(LOG_CMDS, "*", "#%s# motd %s", dcc[idx].nick, par);
-      if (strcasecmp(par, botnetnick) == 0)
+      if (!strcasecmp(par, botnetnick))
 	 show_motd(idx);
       else {
 	 i = nextbot(par);
@@ -299,7 +299,10 @@ static void cmd_motd (struct userrec * u, int idx, char * par)
 	    dprintf(idx, "That bot isn't connected.\n");
 	 else {
 	    char x[40];
-	    simple_sprintf(x,"%d:%s@%s",dcc[idx].sock,dcc[idx].nick,botnetnick);
+	    simple_sprintf(x,"%s%d:%s@%s",
+			   (u->flags & USER_HIGHLITE) ?
+			   ((dcc[idx].status & STAT_TELNET) ? "#" : "!") : "",
+			   dcc[idx].sock,dcc[idx].nick,botnetnick);
 	    botnet_send_motd(i,x,par);
 	 }
       }
@@ -995,15 +998,13 @@ void cmd_die (struct userrec * u, int idx, char * par)
 
 static void cmd_debug (struct userrec * u, int idx, char * par)
 {
-#ifdef EBUG
    if (!strcasecmp(par,"help")) {
       putlog(LOG_CMDS, "*", "#%s# debug help", dcc[idx].nick);
       debug_help(idx);
-      return;
+   } else {
+      putlog(LOG_CMDS, "*", "#%s# debug", dcc[idx].nick);
+      debug_mem_to_dcc(idx);
    }
-#endif
-   putlog(LOG_CMDS, "*", "#%s# debug", dcc[idx].nick);
-   debug_mem_to_dcc(idx);
 }
 
 static void cmd_simul (struct userrec * u, int idx, char * par)
@@ -1018,7 +1019,7 @@ static void cmd_simul (struct userrec * u, int idx, char * par)
    for (i = 0; i < dcc_total; i++)
       if (!strcasecmp(nick, dcc[i].nick) && !ok &&
 	  (dcc[i].type->flags & DCT_SIMUL)) {
-	 putlog(LOG_CMDS, "*", "#%s# simul %s %s", dcc[i].nick, nick, par);
+	 putlog(LOG_CMDS, "*", "#%s# simul %s %s", dcc[idx].nick, nick, par);
 	 if (dcc[i].type && dcc[i].type->activity) {
 	    dcc[i].type->activity(i,par,strlen(par));
 	    ok = 1;
@@ -1940,40 +1941,12 @@ static void cmd_page (struct userrec * u, int idx, char * par)
    dprintf(idx, "Usage: page <off or #>\n");
 }
 
-#ifdef EBUG
-static int check_cmd (int idx, char * msg)
-{
-   char s[512];
-   context;
-   stridx(s, msg, 1);
-   if (strcasecmp(s, "chpass") == 0) {
-      stridx(s, msg, 3);
-      if (s[0])
-	 return 1;
-   }
-   return 0;
-}
-#endif
-
 /* evaluate a Tcl command, send output to a dcc user */
 static void cmd_tcl (struct userrec * u, int idx, char * msg)
 {
    int code;
-#ifdef EBUG
-   int i = 0;
-   char s[512];
-   context;
-   if (msg[0])
-      i = check_cmd(idx, msg);
-   if (i) {
-      stridx(s, msg, 2);
-      if (s[0])
-	 debug1("tcl: evaluate (.tcl): chpass %s [something]", s);
-      else
-	 debug1("tcl: evaluate (.tcl): %s", msg);
-   } else
-      debug1("tcl: evaluate (.tcl): %s", msg);
-#endif
+   
+   debug1("tcl: evaluate (.tcl): %s", msg);
    set_tcl_vars();
    code = Tcl_GlobalEval(interp, msg);
    if (code == TCL_OK)

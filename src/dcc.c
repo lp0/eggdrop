@@ -872,7 +872,7 @@ static void dcc_telnet (int idx, char * buf,int i)
    unsigned long ip;
    unsigned short port;
    int j = 0,sock;
-   char s[UHOSTLEN];
+   char s[UHOSTLEN], s2[UHOSTLEN+20];
    
    if (dcc_total + 1 > max_dcc) {
       j = answer(dcc[idx].sock, s, &ip, &port, 0);
@@ -898,6 +898,11 @@ static void dcc_telnet (int idx, char * buf,int i)
 	 killsock(sock);
 	 return;
       }
+   }
+   sprintf(s2,"telnet!telnet@%s",s);
+   if (match_ignore(s2)) {
+      killsock(sock);
+      return;
    }
    i = new_dcc(&DCC_IDENTWAIT,0);
    dcc[i].sock = sock;
@@ -1552,6 +1557,7 @@ struct dcc_table DCC_IDENT = {
       
 void dcc_telnet_got_ident(int i, char * host) {
    int idx;
+   char x[1024];
 
    for (idx = 0;idx < dcc_total;idx++)
      if ((dcc[idx].type == &DCC_TELNET) && 
@@ -1562,13 +1568,12 @@ void dcc_telnet_got_ident(int i, char * host) {
      putlog(LOG_MISC,"*","Lost ident wait telnet socket!!");
    strncpy(dcc[i].host,host,UHOSTLEN);
    dcc[i].host[UHOSTLEN] = 0;
+   simple_sprintf(x,"telnet!%s",dcc[i].host);
    if (protect_telnet && !make_userfile) {
       struct userrec *u;
       int ok = 1;
-      char x[1024];
       
       context;
-      simple_sprintf(x,"telnet!%s",dcc[i].host);
       u=get_user_by_host(x);
       /* not a user or +p & require p OR +o */
       if (!u) 
@@ -1587,13 +1592,13 @@ void dcc_telnet_got_ident(int i, char * host) {
       }
    }
    context;
-   if (match_ignore(dcc[i].host)) {
+   if (match_ignore(x)) {
       killsock(dcc[i].sock);
       lostdcc(i);
       return;
    }
     /* script? */
-   if (strcmp(dcc[idx].nick, "(script)") == 0) {
+   if (!strcmp(dcc[idx].nick, "(script)")) {
       dcc[i].type = &DCC_SOCKET;
       dcc[i].u.other = NULL;
       strcpy(dcc[i].nick, "*");
@@ -1605,9 +1610,9 @@ void dcc_telnet_got_ident(int i, char * host) {
    bzero(dcc[i].u.chat,sizeof(struct chat_info));
    /* copy acceptable-nick/host mask */
    dcc[i].status = STAT_TELNET | STAT_ECHO;
-   if (strcmp(dcc[idx].nick, "(bots)") == 0)
+   if (!strcmp(dcc[idx].nick, "(bots)"))
      dcc[i].status |= STAT_BOTONLY;
-   if (strcmp(dcc[idx].nick, "(users)") == 0)
+   if (!strcmp(dcc[idx].nick, "(users)"))
      dcc[i].status |= STAT_USRONLY;
    /* copy acceptable-nick/host mask */
    strncpy(dcc[i].nick, dcc[idx].host, HANDLEN);

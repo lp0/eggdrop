@@ -16,8 +16,6 @@
    COPYING that was distributed with this code.
  */
 
-#define _DCCUTIL
-
 #include "main.h"
 #include <sys/stat.h>
 #include <varargs.h>

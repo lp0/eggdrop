@@ -8,7 +8,7 @@
  *
  * WILL DO:
  *		Upon loading:
- *		o	default loads english.lang, if possible.
+ *		o	default loads core.english.lang, if possible.
  *		Commands:
  *		DCC .language <language>
  *		DCC .ldump
@@ -66,7 +66,7 @@ static int add_message(int lidx, char *ltext)
    return 0;
 }
 
-static int cmd_loadlanguage (struct userrec * u,int idx, char *par)
+int cmd_loadlanguage (struct userrec * u,int idx, char *par)
 { 
 FILE	*FLANG;
 char	langfile[100];

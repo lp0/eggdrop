@@ -678,6 +678,7 @@ static void cmd_chanload (struct userrec * u, int idx, char * par)
    else {
       dprintf(idx, "Reloading all dynamic channel settings.\n");
       putlog(LOG_MISC, "*", "#%s# chanload", dcc[idx].nick);
+      setstatic = 0;
       read_channels(1);
    }
 }

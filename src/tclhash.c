@@ -489,11 +489,6 @@ static int builtin_dcc STDVAR {
    int idx;
    Function F = (Function) cd;
    
-#ifdef EBUG
-   int i = 0;
-   char s[1024];
-#endif
-   
    context;
    BADARGS(4, 4, " hand idx param");
    idx = findidx(atoi(argv[2]));
@@ -505,39 +500,12 @@ static int builtin_dcc STDVAR {
       Tcl_AppendResult(irp, "break", NULL);
       return TCL_OK;
    }
-#ifdef EBUG
    /* check if it's a password change, if so, don't show the password */
-   strcpy(s, &argv[0][5]);
-   if (strcmp(s, "newpass") == 0) {
-      if (argv[3][0])
-      debug3("tcl: builtin dcc call: %s %s %s [something]",
-             argv[0], argv[1], argv[2]);
-      else
-          i = 1;
-   } else if (strcmp(s, "chpass") == 0) {
-      stridx(s, argv[3], 1);
-      if (s[0])
-      debug4("tcl: builtin dcc call: %s %s %s %s [something]",
-             argv[0], argv[1], argv[2], s);
-      else
-      i = 1;
-      } else if (strcmp(s, "tcl") == 0) {
-       stridx(s, argv[3], 1);
-       if (strcmp(s, "chpass") == 0) {
-          stridx(s, argv[3], 2);
-          if (s[0])
-            debug4("tcl: builtin dcc call: %s %s %s chpass %s [something]",
-                   argv[0], argv[1], argv[2], s);
-          else
-            i = 1;
-       } else
-         i = 1;
-      } else
-     i = 1;
-   if (i)
-     debug4("tcl: builtin dcc call: %s %s %s %s", argv[0], argv[1], argv[2],
-          argv[3]);
-#endif
+   /* lets clean this up, it's debugging, we dont need pretty formats, just
+    * a cover up - and dont even bother with .tcl */
+   debug4("tcl: builtin dcc call: %s %s %s %s", argv[0], argv[1], argv[2],
+	  (!strcmp(argv[0]+5,"newpass") || !strcmp(argv[0]+5,"chpass")) ?
+	  "[something]" : argv[3]);
    context;
    (F) (dcc[idx].user, idx, argv[3]);
    context;
@@ -754,7 +722,6 @@ void check_tcl_chatactbcst (char * from, int chan, char * text,
    Tcl_SetVar(interp, "_cab1", from, 0);
    Tcl_SetVar(interp, "_cab2", s, 0);
    Tcl_SetVar(interp, "_cab3", text, 0);
-   context;
    check_tcl_bind(ht, text, 0, " $_cab1 $_cab2 $_cab3",
 		  MATCH_MASK | BIND_STACKABLE);
    context;
@@ -765,8 +732,7 @@ void check_tcl_nkch (char * ohand, char * nhand)
    context;
    Tcl_SetVar(interp, "_nkch1", ohand, 0);
    Tcl_SetVar(interp, "_nkch2", nhand, 0);
-   context;
-   check_tcl_bind(H_link, ohand, 0, " $_nkch1 $_nkch2",
+   check_tcl_bind(H_nkch, ohand, 0, " $_nkch1 $_nkch2",
 		  MATCH_MASK | BIND_STACKABLE);
    context;
 }

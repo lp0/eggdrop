@@ -670,7 +670,7 @@ int readuserfile (char * file, struct userrec ** ret, int private_owner)
 		  /* NOTE only remove bans for when getting a userfile
 		   * from another bot & that channel is shared */
 		  cst = findchan(lasthand);
-		  if ((bu == userlist) || channel_shared(cst)) {
+		  if ((*ret == userlist) || channel_shared(cst)) {
 		     while (cst->bans) {
 			struct banrec * b = cst->bans;
 			

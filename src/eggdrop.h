@@ -87,12 +87,6 @@
 # endif
 #endif
 
-#ifdef EBUG_OUTPUT
-# ifndef EBUG
-#  define EBUG
-# endif 
-#endif
-
 #if !HAVE_RENAME
 #define rename movefile
 #endif
@@ -125,7 +119,6 @@
 #define nrealloc(x,y) n_realloc((x),(y),__FILE__,__LINE__)
 #define nfree(x) n_free((x),__FILE__,__LINE__)
 
-#ifdef EBUG
 #define context { cx_ptr=((cx_ptr + 1) & 15); \
                   strcpy(cx_file[cx_ptr],__FILE__); \
                   cx_line[cx_ptr]=__LINE__; }
@@ -133,11 +126,6 @@
 extern int cx_line[16];
 extern char cx_file[16][30];
 extern int cx_ptr;
-#else
-#define context { strcpy(cx_file,__FILE__); cx_line=__LINE__; }
-extern int cx_line;
-extern char cx_file[30];
-#endif
 
 #undef malloc
 #undef free
@@ -164,19 +152,11 @@ typedef unsigned long IP;
   sprintf(&egg_xtra[strlen(egg_xtra)]," %s",str); \
 }
 
-#ifdef EBUG
 #define debug0(x) putlog(LOG_DEBUG,"*",x)
 #define debug1(x,a1) putlog(LOG_DEBUG,"*",x,a1)
 #define debug2(x,a1,a2) putlog(LOG_DEBUG,"*",x,a1,a2)
 #define debug3(x,a1,a2,a3) putlog(LOG_DEBUG,"*",x,a1,a2,a3)
 #define debug4(x,a1,a2,a3,a4) putlog(LOG_DEBUG,"*",x,a1,a2,a3,a4)
-#else
-#define debug0(x) ;
-#define debug1(x,a1) ;
-#define debug2(x,a1,a2) ;
-#define debug3(x,a1,a2,a3) ;
-#define debug4(x,a1,a2,a3,a4) ;
-#endif
 
 /***********************************************************************/
 
@@ -411,6 +391,7 @@ typedef struct {
 
 #define HELP_DCC     1
 #define HELP_TEXT    2
+#define HELP_IRC   16
 
 /* it's used in so many places, let's put it here */
 typedef int (*Function)();

@@ -143,10 +143,10 @@ static void share_chattr (int idx, char * par)
    /* don't let bot flags be altered */
    fr.match= FR_GLOBAL;
    break_down_flags(atr,&fr,0);
-   bfl = fr.global & USER_BOT;
+   bfl = u->flags & USER_BOT;
    if (private_owner) 
       fr.global = (fr.global & ~USER_OWNER) | (u->flags & USER_OWNER);
-   fr.global |= bfl;
+   fr.global = sanity_check(fr.global | bfl);
    set_user_flagrec(u,&fr,0);
    noshare = 0;
    build_flags(s,&fr,0);

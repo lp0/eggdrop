@@ -8,12 +8,13 @@
  *		  Wire will only compile and work on the latest Required
  *		  Eggdrop version listed below.
  *
- *    Version   Date            Req'd Eggver	Notes			Who
- *    .......   ..........      ............    ....................    ......
- *	1.0	1997-07-17	1.2.0		Initial.		BB
- *	1.1	1997-07-28	1.2.0		Release version.	BB
- *      1.2     1997-08-19      1.2.1		Update and bugfixes.	BB
- *      1.3     1997-09-24      1.2.2.0		Reprogrammed for 1.2.2	BB
+ *    Version   Date            Req'd Eggver	Notes			 Who
+ *    .......   ..........      ............    ....................     ......
+ *	1.0	1997-07-17	1.2.0		Initial.		 BB
+ *	1.1	1997-07-28	1.2.0		Release version.	 BB
+ *      1.2     1997-08-19      1.2.1		Update and bugfixes.	 BB
+ *      1.3     1997-09-24      1.2.2.0		Reprogrammed for 1.2.2	 BB
+ *      1.4     1997-11-25      1.2.2.0         Added language addition  Kirk
  *
  *   This module does not support wire usage in the files area.
  *
@@ -617,5 +618,12 @@ char *wire_start (Function * global_funcs)
    H_temp = find_bind_table("chof");
    add_builtins(H_chof, wire_chof,1);
    wirelist = 0; 
+   /* Absolutely HUGE! change to this module
+    * Ah well, at least the language file gets loaded 'on demand' - Kirk
+    */
+   cmd_loadlanguage(0,DP_LOG,"wire.english");
+   /* Even better thing is, all the modules can be lang'ed now :)
+    * and you just need this one line at the bottom of the code - Kirk
+    */
    return NULL;
 }

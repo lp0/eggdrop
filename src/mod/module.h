@@ -282,9 +282,11 @@
 #define masktype ((const char *(*)(int))global[201])
 #define stripmodes ((int(*)(char *))global[202])
 #define stripmasktype ((const char *(*)(int))global[203])
-/* 204 - 207 */
+/* 204 - 208 */
 #define sub_lang ((void(*)(int,char *))global[204])
 #define online_since (*(int *)(global[205]))
+#define cmd_loadlanguage ((int (*)(struct userrec *,int,char *))global[206])
+
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */

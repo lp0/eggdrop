@@ -559,6 +559,7 @@ static int tcl_loadchannels STDVAR
       Tcl_AppendResult(irp, "no channel file");
       return TCL_ERROR;
    }
+   setstatic = 0;
    read_channels(1);
    return TCL_OK;
 }

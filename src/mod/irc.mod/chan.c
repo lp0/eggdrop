@@ -1217,7 +1217,7 @@ static int gotkick (char * from, char * msg)
 	     /* wasnt *me* kicking them ? */
 	     && !match_my_nick(whodid)
 	     /* not kicking themselves? */
-	     && !strcasecmp(whodid,nick)) 
+	     && strcasecmp(whodid,nick)) 
 			  dprintf(DP_MODE, "KICK %s %s :don't kick my friends, bud\n", chname,
 				  whodid);
 			putlog(LOG_MODES, chname, "%s kicked from %s by %s: %s", s1, chname,

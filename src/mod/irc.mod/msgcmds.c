@@ -475,12 +475,12 @@ static int msg_whois (char * nick, char * host, struct userrec * u, char * par)
       chan = chan->next;
    }
    if (!ok)
-      sprintf(s1, "NOTICE %s :[%s] %s", nick, u->handle, IRC_NEVERJOINED);
-   if (glob_op(fr))
+      sprintf(s1, "NOTICE %s :[%s] %s", nick, u2->handle, IRC_NEVERJOINED);
+   if (u2->flags & USER_OP)
       strcat(s1, USER_ISGLOBALOP);
-   if (glob_bot(fr))
+   if (u2->flags & USER_BOT)
       strcat(s1, USER_ISBOT);
-   if (glob_master(fr))
+   if (u2->flags & USER_MASTER)
       strcat(s1, USER_ISMASTER);
    dprintf(DP_HELP, "%s\n", s1);
    return 1;

@@ -110,7 +110,7 @@ static void notes_change (char * oldnick, char * newnick)
 	 if ((s[0]) && (s[0] != '#') && (s[0] != ';')) {	/* not comment */
 	    s1 = s;
 	    to = newsplit(&s1);
-	    if (strcasecmp(to, oldnick) == 0) {
+	    if (!strcasecmp(to, oldnick)) {
 	       tot++;
 	       fprintf(g, "%s %s\n", newnick, s1);
 	    } else
@@ -772,7 +772,7 @@ static cmd_t notes_msgs [] = {
 };
 
 static cmd_t notes_cmds [] = {
-     { "fwd", "", (Function)cmd_fwd, NULL },
+     { "fwd", "m", (Function)cmd_fwd, NULL },
      { "notes", "", (Function)cmd_notes, NULL },
 };
 

@@ -126,14 +126,9 @@ void mod_context (char * module, char * file, int line)
    char x[100];
    sprintf(x, "%s:%s", module, file);
    x[30] = 0;
-#ifdef EBUG
    cx_ptr = ((cx_ptr + 1) & 15);
    strcpy(cx_file[cx_ptr], x);
    cx_line[cx_ptr] = line;
-#else
-   strcpy(cx_file, x);
-   cx_line = line;
-#endif
 }
 
 /* the horrible global lookup table for functions */
@@ -404,6 +399,7 @@ Function global_table [] =
      /* 204 - 207 */
      (Function) sub_lang,
      (Function) &online_since,
+     (Function) cmd_loadlanguage,
 };
 
 void init_modules(void)
