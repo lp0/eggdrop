@@ -212,4 +212,4 @@ proc cleanarg {arg} {
 # Announce that we've loaded the script.
 
 putlog "$userinfover by ButchBub loaded for: ${userinfo-fields}."
-
+putlog "use '.help userinfo' for comands."

@@ -181,7 +181,7 @@ char *ctcp_start (Function * global_funcs)
    context;
    module_register(MODULE_NAME, ctcp_table, 1, 0);
    if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0)))
-      return "You need the server module to user the ctcp module.";
+      return "You need the server module to use the ctcp module.";
    add_tcl_strings(mystrings);
    add_builtins(H_ctcp, myctcp,9);
    add_help_reference("ctcp.help");

@@ -145,7 +145,7 @@ struct userrec *check_dcclist_hand (char * handle)
 struct userrec *get_user_by_handle (struct userrec * bu, char * handle)
 {
    struct userrec *u = bu, *ret;
-   if (handle == NULL)
+   if (!handle)
       return NULL;
    rmspace(handle);
    if (!handle[0] || (handle[0] == '*'))
@@ -168,7 +168,7 @@ struct userrec *get_user_by_handle (struct userrec * bu, char * handle)
       cache_miss++;
    }
    while (u) {
-      if (strcasecmp(u->handle, handle) == 0) {
+      if (!strcasecmp(u->handle, handle)) {
 	 if (bu == userlist)
 	   lastuser = u;
 	 return u;
@@ -345,8 +345,10 @@ int write_user (struct userrec * u, FILE * f, int idx)
 	    fr.chan = ch->flags;
 	    fr.udef_chan = ch->flags_udef;
 	    build_flags(s,&fr,NULL);
-	    if (fprintf(f, "! %-20s %lu %-10s %s\n", ch->channel, ch->laston,
-			s, ch->info ? ch->info : "" ) == EOF)
+ 	    if (fprintf(f, "! %-20s %lu %-10s %s\n", ch->channel, ch->laston,
+			s, 
+			(((idx < 0) || share_greet) && ch->info) ? ch->info 
+			: "" ) == EOF)
 	      return 0;
 	 }
       }

@@ -590,15 +590,11 @@ static int got352or4 (struct chanset_t * chan, char * user, char * host,
      m->flags |= CHANVOICE;			/* Yes */
    else
      m->flags &= ~CHANVOICE;
-   if ((strcasecmp(nick, botname) == 0)
-       && (!waschanop) && (me_op(chan)))
+   if (match_my_nick(nick) && !waschanop && me_op(chan))
      recheck_channel(chan,1);
-   
-   if ((strcasecmp(nick, botname) == 0) && (any_ops(chan)) 
-       && (!me_op(chan))) {
-      if (chan->need_op[0])
-	do_tcl("need-op", chan->need_op);
-   }
+   if (match_my_nick(nick) && any_ops(chan) && !me_op(chan)
+       && chan->need_op[0])
+     do_tcl("need-op", chan->need_op);
    m->user = get_user_by_host(userhost);
    get_user_flagrec(m->user,&fr,chan->name);
    /* are they a chanop, and me too */

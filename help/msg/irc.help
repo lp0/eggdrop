@@ -2,10 +2,6 @@
 %b/MSG%b %B %bDIE%b <password>
    This makes me die (go away) -- not something you will
    probably be doing very often.
-%{help=email}
-%b/MSG%b %B %bEMAIL%b <my email address>
-   This will set your email address.  It's shown when
-   someone does a WHOIS on you (see HELP WHOIS).
 %{help=go}%{+o|o}
 %b/MSG%b %B %bGO%b <channel>
    This makes me leave a channel if I'm not a channel op.
@@ -13,7 +9,6 @@
 %{help=help}
 %bMSG%b commands for %b%B%b:
 %{cols=4/50}%{-}
-EMAIL
 INFO
 WHO
 IDENT

@@ -23,7 +23,6 @@ static int flush_tbuf (char * bot);
 static int can_resync (char * bot);
 static void dump_resync (int idx);
 static void q_resync (char * s, struct chanset_t * chan);
-static struct userrec *dup_userlist(int);
 static void cancel_user_xfer(int, void *);
 
 /* store info for sharebots */
@@ -1088,19 +1087,19 @@ static struct userrec *dup_userlist (int t)
    struct chanuserrec *ch;
    struct user_entry * ue;
    char * p;
-   int i;
    
    nu = retu = NULL;
    u = userlist;
    context;
    noshare = 1;
    while (u != NULL) {
-      if (((u->flags & (USER_BOT | USER_UNSHARED)) && (t)) ||
-	  (!(u->flags & (USER_BOT | USER_UNSHARED)) && (!t))) {
+      if (((u->flags & (USER_BOT | USER_UNSHARED)) && t) ||
+	  (!(u->flags & (USER_BOT | USER_UNSHARED)) && !t)) {
 
 	 
 	 p = get_user(&USERENTRY_PASS,u);
 	 u1 = adduser(NULL,u->handle,0,p, u->flags);
+	 u1->flags_udef = u->flags_udef;
 	 if (nu == NULL)
 	    nu = retu = u1;
 	 else {
@@ -1148,11 +1147,6 @@ static struct userrec *dup_userlist (int t)
 	 }
       } else 
 	u1 = NULL;
-      if (t) { /* we're duping locally, i.e. update dcc entries */
-	 for (i =0; i < dcc_total;i++) 
-	   if (dcc[i].user == u)
-	     dcc[i].user = u1;
-      }
       u = u->next;
    }
    noshare = 0;
@@ -1166,68 +1160,75 @@ static void restore_chandata(int idx)
    struct chanset_t *cst;
    char buf[181], hand[HANDLEN+1], *code,*s;
    static struct flag_record fr2 = {FR_CHAN,0,0,0,0,0};
-
-   context;
-   f = fopen(userfile, "r");
-   if (f == NULL) {
-      putlog(LOG_MISC, "*", "* %s", USERF_BADREREAD);
-      return;
-   }
-   s = buf;
-   fgets(s, 180, f);
-   /* Disregard opening statement.  We already know it should be good */
-   while (!feof(f)) {
-      s = buf;
-      fgets(s, 180, f);
-      if (!feof(f)) {
-	 rmspace(s);
-	 if ((s[0] != '#') && (s[0] != ';') && (s[0])) {
-	    code = newsplit(&s);
-	    if (strcasecmp(code, "!") == 0) {
-	       if (hand[0] && tbu) {
-		  char *chname, *st, *fl;
-		  time_t last;
-		  struct chanuserrec *cr = NULL;
-		  
-		  chname = newsplit(&s);
-		  st = newsplit(&s);
-		  fl = newsplit(&s);
-		  rmspace(s);
-		  fr.match = FR_CHAN;
-		  break_down_flags(fl,&fr,0);
-		  last = (time_t) atoi(st);
-		  if ((cst = findchan(chname))) {
-		     get_user_flagrec(dcc[idx].user,&fr2,chname);
-		     if (!channel_shared(cst) || !(fr2.chan & BOT_SHARE)) {
-			cr = get_chanrec(tbu, chname);
-			if (!cr)
-			  cr = add_chanrec(tbu, chname);
-			if (s[0])
-			  set_handle_chaninfo(tbu, hand, chname, s);
-			cr->flags = fr.chan;
-			cr->flags_udef = fr.udef_chan;
-			cr->laston = last;
-		     }
-		  }
-	       }
-	    } else if ((strcasecmp(code, "-") == 0) || 
-		       (strcasecmp(code, "+") == 0) ||
-		       (strcasecmp(code, "*") == 0) || 
-		       (strcasecmp(code, "=") == 0) ||
-		       (strcasecmp(code, ":") == 0) || 
-		       (strcasecmp(code, ".") == 0) ||
-		       (strcasecmp(code, "!!") == 0) || 
-		       (strcasecmp(code, "::") == 0)) {
-	       /* do nothing */
-	    } else {
-	       strncpy(hand, code, HANDLEN);
-	       hand[HANDLEN] = 0;
-	       tbu = get_user_by_handle(userlist, hand);
-	    }
-	 }
-      }
-   }
-   context;
+   int i;
+   
+   for (i = 0;i < dcc_total;i++) 
+     if ((i != idx) && !strcasecmp(dcc[i].nick,dcc[idx].nick)
+	 && (dcc[i].type == &DCC_BOT)) {
+	context;
+	f = fopen(userfile, "r");
+	if (f == NULL) {
+	   putlog(LOG_MISC, "*", "* %s", USERF_BADREREAD);
+	   return;
+	}
+	s = buf;
+	fgets(s, 180, f);
+	/* Disregard opening statement.  We already know it should be good */
+	while (!feof(f)) {
+	   s = buf;
+	   fgets(s, 180, f);
+	   if (!feof(f)) {
+	      rmspace(s);
+	      if ((s[0] != '#') && (s[0] != ';') && (s[0])) {
+		 code = newsplit(&s);
+		 if (strcasecmp(code, "!") == 0) {
+		    if (hand[0] && tbu) {
+		       char *chname, *st, *fl;
+		       time_t last;
+		       struct chanuserrec *cr = NULL;
+		       
+		       chname = newsplit(&s);
+		       st = newsplit(&s);
+		       fl = newsplit(&s);
+		       rmspace(s);
+		       fr.match = FR_CHAN;
+		       break_down_flags(fl,&fr,0);
+		       last = (time_t) atoi(st);
+		       if ((cst = findchan(chname))) {
+			  get_user_flagrec(dcc[i].user,&fr2,chname);
+			  if (!channel_shared(cst) || !(fr2.chan & BOT_SHARE)) {
+			     cr = get_chanrec(tbu, chname);
+			     if (!cr)
+			       cr = add_chanrec(tbu, chname);
+			     if (s[0])
+			       set_handle_chaninfo(tbu, hand, chname, s);
+			     cr->flags = fr.chan;
+			     cr->flags_udef = fr.udef_chan;
+			     cr->laston = last;
+			  } else if (!share_greet && s[0])
+			       set_handle_chaninfo(tbu, hand, chname, s);
+		       }
+		    }
+		 } else if ((strcasecmp(code, "-") == 0) || 
+			    (strcasecmp(code, "+") == 0) ||
+			    (strcasecmp(code, "*") == 0) || 
+			    (strcasecmp(code, "=") == 0) ||
+			    (strcasecmp(code, ":") == 0) || 
+			    (strcasecmp(code, ".") == 0) ||
+			    (strcasecmp(code, "!!") == 0) || 
+			    (strcasecmp(code, "::") == 0)) {
+		    /* do nothing */
+		 } else {
+		    strncpy(hand, code, HANDLEN);
+		    hand[HANDLEN] = 0;
+		    tbu = get_user_by_handle(userlist, hand);
+		 }
+	      }
+	   }
+	}
+	context;
+	return;
+     }
 }
 
 /* erase old user list, switch to new one */
@@ -1252,16 +1253,16 @@ static void finish_share (int idx)
    while (global_ign)
      delignore(global_ign->igmask);
    noshare = 0;
-   /* only match .user values for existing entries */
-   for (i = 0; i < dcc_total; i++) 
-     dcc[i].user = get_user_by_handle(u,dcc[i].nick);
+   ou = userlist;
+   userlist = NULL; /* do this to prevent .user messups */
    /* read the rest in */
+   for (i =0; i < dcc_total;i++) 
+     dcc[i].user = get_user_by_handle(u,dcc[i].nick);
    if (!readuserfile(dcc[idx].u.xfer->filename, &u,private_owner)) {
       putlog(LOG_MISC, "*", "%s",USERF_CANTREAD);
       return;
    }
    putlog(LOG_MISC, "*", "%s.", USERF_XFERDONE);
-   ou = userlist;
    userlist = u;
    clear_userlist(ou);
    lastuser = NULL;

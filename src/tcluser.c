@@ -480,9 +480,12 @@ static int tcl_getuser STDVAR
       Tcl_AppendResult(irp,"No such info type: ",argv[2],NULL);
       return TCL_ERROR;
    }
-   if (!(u = get_user_by_handle(userlist,argv[1]))) {  
-      Tcl_AppendResult(irp,"No such user.",NULL);
-      return TCL_ERROR;
+   if (!(u = get_user_by_handle(userlist,argv[1]))) {
+      if (argv[1][0] != '*') {
+	 Tcl_AppendResult(irp,"No such user.",NULL);
+	 return TCL_ERROR;
+      } else
+	return TCL_OK; /* silently ignore user * */
    }
    e = find_user_entry(et,u);
    
@@ -506,9 +509,12 @@ static int tcl_setuser STDVAR
       Tcl_AppendResult(irp,"No such info type: ",argv[2],NULL);
       return TCL_ERROR;
    }
-   if (!(u = get_user_by_handle(userlist,argv[1]))) {  
-      Tcl_AppendResult(irp,"No such user.",NULL);
-      return TCL_ERROR;
+   if (!(u = get_user_by_handle(userlist,argv[1]))) {
+      if (argv[1][0] != '*') {
+	 Tcl_AppendResult(irp,"No such user.",NULL);
+	 return TCL_ERROR;
+      } else
+	return TCL_OK; /* silently ignore user * */
    }
    if (!(e = find_user_entry(et,u))) {
       e = user_malloc(sizeof(struct user_entry));

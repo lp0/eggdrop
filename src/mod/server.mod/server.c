@@ -1000,7 +1000,7 @@ char *server_start (Function * global_funcs)
    quiet_reject = 1;
    waiting_for_awake = 0;
    server_online = 0;
-   server_cycle_wait =  0;
+   server_cycle_wait =  60;
    strcpy(botrealname,"A deranged product of evil coders");
    min_servs = 0;
    server_timeout = 60;

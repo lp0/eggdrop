@@ -661,7 +661,10 @@ static int filesys_DCC_CHAT(char * nick, char * from, char * handle,
       putlog(LOG_MISC, "*", DCC_TOOMANYDCCS2, "CHAT(file)", param, nick, from);
    } else if (glob_party(fr) || (!require_p && chan_op(fr)))
      return 0; /* allow ctcp.so to pick up the chat */
-   else if (u_pass_match(u,"-")) {
+   else if (!glob_xfer(fr)) {
+      dprintf(DP_HELP, "NOTICE %s :.\n", nick, DCC_REFUSED3);
+      putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED, nick, from);
+   } else if (u_pass_match(u,"-")) {
       dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
       putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
    } else if (!dccdir[0]) {

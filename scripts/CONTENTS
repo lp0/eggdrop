@@ -20,8 +20,12 @@ botchk
 getops-1.8.tcl
    a way to get ops from other bots on the botnet (if they're on the
    same channel)
+
+klined.tcl
+   removes servers from your server list that your bot has been k-lined on
+   to prevent admins getting peeved with constant connects from your bot's host
    
-ques3.tcl
+ques4.tcl
    makes web pages of who's on each channel, updated periodically
    (requires toolkit.tcl)
 

@@ -1,26 +1,5 @@
-BUG REPORTS: 
-=== =======
-(i.e. things that are broke, but aren't getting fixed anytime soon)
-
-* ---ALL--- tcl8.0 versions WILL crash, including 8.0b2. 
-  - 8.0release look ok (maybe..DOH! maybe NOT! 1 instance !!)
-* Solve to non-working alarm(10) in linux (calls to gethostbyaddr/name()
-  have blocked for long periods when bind/named doesn't resolve quickly,
-  and the alarm does not interrupt it).
-* High-bit characters are being filtered from channel names.   This is
-  a fault of the TCL interpreter, and not eggdrop.  The TCL interpreter
-  filters the characters when it reads a file for interpreting.
-
 Changes in eggdrop: (since v1.1.5)
 ==================
-
-1.3.0+bel1 - The omigod how did I dont believe i forgot that patch
-Foundby   Fixedby   What....
-David     Beldin    some machines dont have SA_ONESHOT, DOH :/
-          Beldin    eggdrop.conf.dist still mentioned putegg
-          Beldin    userinfo1.0.tcl + tcl8.0 didnt load correctly
-	  Beldin    filesys get <file> <nick> with nick > HANDLEN got truncated
-          Ec|ipse   Fixed weed c option to handle extra info
 	  
 1.3.0 let's do it
 Foundby   Fixedby   What....

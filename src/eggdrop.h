@@ -15,7 +15,7 @@
 #define _H_EGGDROP
 
 /* 
- * if you're *only* going to link to new version bots (1.2.1 or higher)
+ * if you're *only* going to link to new version bots (1.3.0 or higher)
  * then you can safely define this 
  */
 

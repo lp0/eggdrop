@@ -1350,9 +1350,9 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
    }
    if ((par[0] != '#') && (par[0] != '&')) {
       chg = newsplit(&par);
-      if (!par[0])
+      if (!par[0] && strpbrk(chg,"&|")) 
 	par = dcc[idx].u.chat->con_chan;
-      else if (!strpbrk(chg,"&|")) 
+      else if (par[0] && !strpbrk(chg,"&|"))
 	fl = ~FR_GLOBAL;
    }
    chan = findchan(par);
@@ -1360,8 +1360,6 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
       dprintf(idx, "No channel record for %s.\n", par);
       return;
    }
-   if (!chan)
-     chan = findchan(dcc[idx].u.chat->con_chan);
    user.match = FR_GLOBAL;
    if (chan)
      user.match |= FR_CHAN;
@@ -1448,13 +1446,11 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
 		chan->name, work);
       else
 	dprintf(idx, "No flags for %s on %s.\n", hand, chan->name);
-   }
-   if ((me = module_find("irc",1,1))) {
-      Function * func = me->funcs;
-      if (chan) 
-	(func[15])(chan,0);
-      else for (chan = chanset;chan;chan = chan->next)
-	(func[15])(chan,0);
+      if ((me = module_find("irc",1,1))) {
+	 Function * func = me->funcs;
+	 if (chan) 
+	   (func[15])(chan,0);
+      }
    }
 }
 

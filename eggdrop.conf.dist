@@ -18,8 +18,8 @@
 
 ##### GENERAL STUFF #####
 
-# the username the bot uses, this is only used if identd isnt working
-# on the machine the bot is runnin on.
+# the username the bot uses, this is only used if identd isn't working
+# on the machine the bot is running on.
 set username "lamest"
 
 # who's running this bot?
@@ -29,7 +29,7 @@ set admin "Lamer <email: lamer@lamest.lame.org>"
 # your botnet, for human curiosity only.
 set network "I.didnt.edit.my.config.file.net"
 
-# what timezone is you bot in?  this is simply used for scripting purposes.
+# what timezone is your bot in?  this is simply used for scripting purposes.
 set timezone "EST"
 
 # if you're using virtual hosting (your machine has more than 1 IP), you
@@ -45,9 +45,10 @@ set timezone "EST"
 #####  LOG FILES  #####
 
 
-# you can have up to 5 log files.  at midnight every day, the old log files
-# are renamed and a new log file begins.  by default, the old one is called
-# "(logfilename).yesterday", and any logfiles before yesterday are erased.
+# you can specify how many log files you can have upto.  at midnight every
+# day, the old log files are renamed and a new log file begins.  by default, 
+# the old one is called "(logfilename).yesterday", and any logfiles before
+# yesterday are erased.
 
 # events are logged by certain categories -- this way you can specify
 # exactly what kind of events you want sent to various logfiles.  the
@@ -63,6 +64,10 @@ set timezone "EST"
 #   r  (if defined in eggdrop.h) EVERYTHING sent to the bot by the server
 #   o  other: misc info, errors -- IMPORTANT STUFF
 #   w  wallops: msgs between IRCops (be sure to set the bot +w in init-server)
+
+# maximum number of logfiles to allow - this can be increased if needed
+# (don't decrease this)
+set max-logs 5
 
 # each logfile also belongs to a certain channel.  events of type 'k', 'j',
 # and 'p' are logged to whatever channel they happened on.  most other
@@ -159,8 +164,8 @@ set open-telnets 0
 # relay, etc) before it times out?
 set connect-timeout 15
 
-# number of messages from a user on dcc before the are considered to be
-# flooding (and therefor get booted)
+# number of messages from a user on dcc before they are considered to be
+# flooding (and therefore get booted)
 set dcc-flood-thr 3
 
 
@@ -178,7 +183,7 @@ set dcc-flood-thr 3
 # 10.0.0.0-10.255.255.255 and your firewall transparently changes your
 # address to a unique address for your box.) or you have IP masquerading
 # between you and the rest of the word, and /dcc chat,/ctcp chat or
-# userfile shareing arent working. Enter you outside IP here, and
+# userfile shareing aren't working. Enter your outside IP here, and
 # #define HAVE_NAT in eggdrop.h
 # Do not enter anything for my-ip or my-hostname.
 #set nat-ip "127.0.0.1"
@@ -192,7 +197,7 @@ set dcc-flood-thr 3
 # temporary ignores will last how many minutes?
 set ignore-time 15
 
-# enable logging of all informat sent *to* a server, via console mode 'v'
+# enable logging of all information sent *to* a server, via console mode 'v'
 # NOTE: This is a large security hole, allowing people to see passwords.
 # This is now restricted to +n users only. Please choose your owners with care.
 set debug-output 0
@@ -229,7 +234,7 @@ set whois-fields "url birthday"
 #   2 - allow any boots
 set remote-boots 2
 
-# if you dont want people to unlink your share bots from remote bots
+# if you don't want people to unlink your share bots from remote bots
 # set this to 0
 set share-unlinks 1
 
@@ -271,12 +276,12 @@ set allow-dk-cmds 1
 
 
 
-# You MUST remove that line for this config file to work.  This has been
+# You MUST remove this line for this config file to work.  This has been
 # added to prevent you from starting up a bot that is not fully configured.
 # Bots that have not been fully configured may join the wrong IRC network,
 # the wrong channels, or generally do things that you do not want.  Please
 # make sure that you have double-checked the settings you want.
-# Theres also a similar line lower down, just to make sure you're reading :)
+# There's also a similar line lower down, just to make sure you're reading :)
 
 die "Please edit your config file."
 
@@ -284,14 +289,14 @@ die "Please edit your config file."
 
 ############## MODULES #################
 
-# below are various settings for the modules avaliable with eggdrop,
+# below are various settings for the modules available with eggdrop,
 # PLEASE EDIT THEM CAREFULLY, READ THEM, even if you're an old hand
 # at eggdrop, lots of things have changed slightly
 
 # this is the directory to look for the modules in, if you run the
-# bot in the compilation directorys you will want to set this to ""
+# bot in the compilation directories you will want to set this to ""
 # if you use 'make install' (like all good kiddies do ;) this is a fine
-# default, otherwise, use yur head :)
+# default, otherwise, use your head :)
 set mod-path "modules/"
 
 
@@ -299,7 +304,7 @@ set mod-path "modules/"
 #### CHANNELS MODULE #####
 
 # this next module provides channel related support for the bot, without
-# it it will just sit on irc, it can respond to msg & ctcp commands, but
+# it, it will just sit on irc, it can respond to msg & ctcp commands, but
 # that's all
 loadmodule channels
 
@@ -322,7 +327,7 @@ set use-info 1
 channel add #lamest {
   chanmode "+nt-likm"
   idle-kick 0
-  need-op { putserv "PRIVMSG #lamest :op me please!" }
+  need-op { putserv "PRIVMSG #lamest :op me cos i'm lame!" }
   need-invite { putserv "PRIVMSG #lamest :let me in!" }
   need-key { putserv "PRIVMSG #lamest :let me in!" }
   need-unban { putserv "PRIVMSG #lamest :let me in!" }
@@ -409,7 +414,7 @@ channel set #lamest +autoop
 #   only let users with +o (op) flag be channel ops?
 channel set #lamest -bitch
 
-#   say a user's info line when she joins the channel?
+#   say a user's info line when they join the channel?
 channel set #lamest +greet
 
 #   re-op a user with the +o (op) flag if they get deopped?
@@ -427,7 +432,7 @@ channel set #lamest +stopnethack
 #   users with +f (friend) flag are exempt from revenge
 channel set #lamest +revenge
 
-#   voice users with +v (voice) flag when the join the channel?
+#   voice users with +v (voice) flag when they join the channel?
 channel set #lamest +autovoice
 
 #   prevent this channel from being listed on the botnet?  (for paranoid
@@ -458,10 +463,10 @@ loadmodule server
 set nick "Lamestbot"
 
 # an alternative nick to use if the nick specified by 'set nick' is
-# unavaliable
+# unavailable
 set altnick "Llamabot"
 
-# what to display in the real-name field of for the bot
+# what to display in the real-name field for the bot
 set realname "/msg LamestBot hello"
 
 # script to run (if any) when first connecting to a server
@@ -522,7 +527,7 @@ set never-give-up 1
 
 # If this setting is 1 then the eggdrop keeps a seperate list of the names
 # irc servers call themselves, retaining what you entered in the config file.
-# setting it to 0 will cause the bot to replace you're entry with what
+# setting it to 0 will cause the bot to replace your entry with what
 # the server actually calls itself
 set strict-servernames 0
 
@@ -531,7 +536,8 @@ set default-port 6667
 
 # number of seconds to wait between each server connect (0 = no wait)
 # useful for preventing ircu throttling
-set server-cycle-wait 0
+# setting this too low could make your server admins *very* unhappy
+set server-cycle-wait 60
 
 # how many seconds to wait for a response when connecting to a server
 # before giving up and moving on?
@@ -550,8 +556,8 @@ set check-stoned 1
 # enable console mode 'r'?  this mode shows every raw message from the 
 # server to owners with console 'r' selected -- will take a bit more 
 # cpu.  
-# NOTE: This is a large security hole, allowing people to see missent
-#       messages to the bot containing password
+# NOTE: This is a large security hole, allowing people to see mis-sent
+#       messages to the bot containing passwords
 # This is now restricted to +n users only. Please choose your owners with care.
 set use-console-r 0
 
@@ -563,7 +569,7 @@ set serverror-quit 1
 # will probably want to raise this -- most people are fine at 300 though
 set max-queue-msg 300
 
-# trigger bindings for ignores users?
+# trigger bindings for ignored users?
 set trigger-on-ignore 0
 
 # some IRC Networks use the ircdu's SILENCE command 
@@ -613,7 +619,7 @@ set wait-info 180
 #    Dalnet     6
 # they're all guaranteed to support at least 3, so that's the default,
 # but if you know your network supports more, you may want to adjust
-# this value. this value must be less that or equal to 6.
+# this value. this value must be less than or equal to 6.
 set modes-per-line 3
 
 # this is the maximum number of bytes to send in the arguments to mode's
@@ -621,7 +627,7 @@ set modes-per-line 3
 # be sufficient
 set mode-buf-length 200
 
-# use ircu2.10.01 specific /who requests, therefor only asking for
+# use ircu2.10.01 specific /who requests, therefore only asking for
 # exactly what's needed 
 set use-354 0
 
@@ -718,13 +724,13 @@ set max-filesize 1024
 # this provides support for storing of notes for users from each other
 # notes between currently online users is supported in the core, this is
 # only for storing the notes for later retrieval, direct user->user notes
-# are builtin
+# are built-in
 loadmodule notes
 
 # the notefile: where private notes between users are stored
 set notefile "LamestBot.notes"
 
-# maximum number of notes to allow stored for each user
+# maximum number of notes to allow to be stored for each user
 # (to prevent flooding)
 set max-notes 50
 
@@ -752,11 +758,11 @@ loadmodule console
 # .store)
 set console-autosave 1
 
-# if a user doesnt have any console settings saved, which channel
+# if a user doesn't have any console settings saved, which channel
 # do you want them automatically put on?
 set force-channel 0
 
-# display a users global info line when they join a botnet channel?
+# display a user's global info line when they join a botnet channel?
 set info-party 1
 
 
@@ -776,14 +782,6 @@ set info-party 1
 #loadmodule seen
 
 
-##### COMPAT MODULE #####
-
-# this provides support for tcl code getting info from userfile
-# with pre-1.3.0 commands
-#loadmodule compat
-
-
-
 ##### BLOWFISH MODULE #####
 
 ##### IF YOU DONT READ THIS YOU MAY RENDER YOUR USERFILE USELESS LATER
@@ -793,7 +791,7 @@ set info-party 1
 # is only one encryption option: blowfish
 
 # uncomment this line to load blowfish, the encryption module
-# for the bot, it will not start without it load, it's comment out
+# for the bot, it will not start without it loaded and commented out
 # to make sure you read the whole config file
 # this is checkmodule, because during .restart the module will already
 # be loaded
@@ -814,3 +812,10 @@ set info-party 1
 # these are some commonly loaded (and needed) scripts.
 source scripts/alltools.tcl
 source scripts/action.fix.tcl
+
+#this script provides many usefull minor informational commands
+# (like setting users url's, email address, etc) you can modify
+# it to add extra entries, you might also want to modify help/userinfo.help
+# and help/msg/userinfo.help to change the help files
+source scripts/userinfo1.0.tcl
+loadhelp userinfo.help

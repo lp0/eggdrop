@@ -333,7 +333,7 @@ static void cmd_stick_yn(int idx, char *par, int yn)
 {
    int i, j;
    struct chanset_t *chan;
-   char s[UHOSTLEN];
+   char s[UHOSTLEN+1];
    
    if (!par[0]) {
       dprintf(idx, "Usage: %sstick <ban>\n", yn ? "" : "un");
@@ -355,8 +355,10 @@ static void cmd_stick_yn(int idx, char *par, int yn)
    }
    if (i)
      simple_sprintf(s, "%d", -i);
-   else
-     strcpy(s, par);
+   else {
+      strncpy(s, par, UHOSTLEN);
+      s[UHOSTLEN] = 0;
+   }
    j = u_setsticky_ban(chan, s, yn);
    if (j > 0) {
       putlog(LOG_CMDS, "*", "#%s# %sstick %s", dcc[idx].nick,

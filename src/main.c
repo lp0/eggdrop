@@ -76,8 +76,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.1";
-int egg_numver = 1030100;
+char egg_version[1024] = "1.3.2";
+int egg_numver = 1030200;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -262,7 +262,7 @@ static void got_bus (int z)
 {
    write_debug();
    fatal("BUS ERROR -- CRASHING!", 1);
-#ifdef EBUG
+#if defined(EBUG) && defined(SA_RESETHAND) 
    kill(getpid(),SIGBUS);
 #else
    exit(1);
@@ -273,7 +273,7 @@ static void got_segv (int z)
 {
    write_debug();
    fatal("SEGMENT VIOLATION -- CRASHING!", 1);
-#ifdef EBUG
+#if defined(EBUG) && defined(SA_RESETHAND)
    kill(getpid(),SIGSEGV);
 #else
    exit(1);
@@ -550,15 +550,15 @@ int main (int argc, char ** argv)
    /* set up error traps: */
    sv.sa_handler = got_bus;
    sigemptyset(&sv.sa_mask);
-#ifdef SA_ONESHOT
-   sv.sa_flags = SA_ONESHOT;
+#ifdef SA_RESETHAND
+   sv.sa_flags = SA_RESETHAND;
 #else
    sv.sa_flags = 0;
 #endif
    sigaction(SIGBUS, &sv, NULL);
    sv.sa_handler = got_segv;
    sigaction(SIGSEGV, &sv, NULL);
-#ifdef SA_ONESHOT
+#ifdef SA_RESETHAND
    sv.sa_flags = 0;
 #endif
    sv.sa_handler = got_fpe;

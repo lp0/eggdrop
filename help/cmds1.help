@@ -200,14 +200,6 @@ See also: link, +bot
    This command can no longer be used to change bot flags, they
    are a seprated entity, changeable with the %b'.botattr'%b command.
 See also: whois
-%{help=chemail}%{+m}
-###  %bchemail%b <user> [email address]
-   Sets the email address for a user.  This info isn't really used by
-   the bot for any reason except to display.
-%{help=churl}%{+m}
-### %bchurl%b <user> [url address]
-   Sets the url addess for a users web site.  This info isn't really
-   used by the bot for any reasons except to display.
 %{help=chnick}%{+t}
 ###  %bchnick%b <oldnick> <newnick>
    Changes the handle/nickname of a user record.  For example, to
@@ -329,22 +321,6 @@ See also: whois
    on, then when you say something on the party line, it will be
    displayed to you just like everyone else will see it.  if it's off,
    then that won't happen.
-%{help=email}
-###  %bemail%b [email address]
-   sets your email address.  this data isn't really used by the bot,
-   but it will show up if someone does a %b'whois'%b on you.  if you
-   don't specify an address, the bot will show you the email address
-   it currently has for you (if any).
-###  %bemail none%b
-   clears your email address.
-%{help=url}
-###  %burl%b [url site address]
-   sets your url address.  this data isn't really used by the bot,  
-   but it will show up if someone does a %b'whois'%b on you.  if you
-   don't specify an address, the bot will show you the url address
-   it currently has for you (if any).
-###  %burl none%b
-   clears your url address.
 %{help=die}%{+n}
 ###  %bdie%b [reason]
    kills the bot.  the bot goes offline immediately, logging who gave
