@@ -1,7 +1,8 @@
+%{+O}
 ###  (the +c 'common' flag)
    sometimes a lot of people use irc from the same account -- for
    example, a telnet site.  in that case, a whole bunch of people
-   will have the same user@host.  so they can't use a traditional
+   will have the same user@host, so they can't use a traditional
    user record because they will appear to all be the same person.
   
    in this case, you create a user record for the account, and mark

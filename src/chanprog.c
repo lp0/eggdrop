@@ -30,8 +30,11 @@
 #include "eggdrop.h"
 #include "users.h"
 #include "chan.h"
-#include "proto.h"
 #include "tclegg.h"
+#ifdef MODULES
+#include "modules.h"
+extern module_entry * module_list;
+#endif
 
 extern int serv;
 extern int shtime;
@@ -61,8 +64,10 @@ extern char owner[];
 extern char firewall[];
 extern char altnick[];
 #ifndef NO_FILE_SYSTEM
+#ifndef MODULES
 extern char dccdir[];
 extern char dccin[];
+#endif
 #endif
 extern int botserverport;
 extern int dcc_total;
@@ -123,7 +128,7 @@ int default_port=6667;
 
 /* remove space characters from beginning and end of string */
 /* (more efficent by Fred1) */
-void rmspace(char *s)
+void rmspace PROTO1(char *,s)
 {
 #define whitespace(c) ( ((c)==32) || ((c)==9) || ((c)==13) || ((c)==10) )
   char *p;
@@ -511,6 +516,7 @@ void tell_settings PROTO1(int,idx)
     if (chan->stat&CHAN_STOPNETHACK) strcat(s,"stopnethack ");
     if (chan->stat&CHAN_SECRET) strcat(s,"secret ");
     if (chan->stat&CHAN_SHARED) strcat(s,"shared ");
+    if (!(chan->stat&CHANSTATIC)) strcat(s,"dynamic ");
     dprintf(idx,"\n   Options: %s\n",s); s[0]=0;
     if (chan->need_op[0])
       dprintf(idx,"   To get ops I do: %s\n",chan->need_op);
@@ -532,7 +538,8 @@ void tell_settings PROTO1(int,idx)
     dprintf(idx,"Notes can be stored, in: %s\n",notefile);
   else dprintf(idx,"Notes can not be stored.\n");
 #ifndef NO_FILE_SYSTEM
-  if (dccdir[0]) {
+#ifndef MODULES
+   if (dccdir[0]) {
     dprintf(idx,"DCC file path: %s",dccdir);
     if (upload_to_cd) dprintf(idx,"\n     incoming: (go to the current dir)\n");
     else if (dccin[0]) dprintf(idx,"\n     incoming: %s\n",dccin);
@@ -544,6 +551,7 @@ void tell_settings PROTO1(int,idx)
       dprintf(idx,"DCC max file size: %dk\n",dcc_maxsize);
   }
   else dprintf(idx,"(No active file transfer path defined.)\n");
+#endif
 #endif
 #ifndef NO_IRC
   if (min_servs)
@@ -568,6 +576,9 @@ void tell_settings PROTO1(int,idx)
     dprintf(idx,"Logfile #%d: %s on %s (%s: %s)\n",i+1,logs[i].filename,
 	    logs[i].chname,masktype(logs[i].mask),maskname(logs[i].mask));
   }
+#ifdef MODULES
+   do_module_report(idx);
+#endif
 }
 
 void reaffirm_owners()
@@ -594,7 +605,9 @@ void chanprog()
   admin[0]=0; helpdir[0]=0; initserver[0]=0; textdir[0]=0;
   notefile[0]=0; tempdir[0]=0;
 #ifndef NO_FILE_SYSTEM
-  dccdir[0]=0; dccin[0]=0;
+#ifndef MODULES
+   dccdir[0]=0; dccin[0]=0;
+#endif
 #endif
   for (i=0; i<MAXLOGS; i++) {
     if (logs[i].filename!=NULL) { nfree(logs[i].filename); logs[i].filename=NULL; }
@@ -651,8 +664,10 @@ void chanprog()
   if (serverlist==NULL) fatal("NO SERVER.",0);
 #endif
 #ifndef NO_FILE_SYSTEM
+# ifndef MODULES
   if (dccdir[0]) if (dccdir[strlen(dccdir)-1]!='/') strcat(dccdir,"/");
   if (dccin[0]) if (dccin[strlen(dccin)-1]!='/') strcat(dccin,"/");
+#endif
 #endif
   if (helpdir[0]) if (helpdir[strlen(helpdir)-1]!='/') strcat(helpdir,"/");
   if (tempdir[0]) if (tempdir[strlen(tempdir)-1]!='/') strcat(tempdir,"/");
@@ -696,7 +711,7 @@ void reload()
     for (i=0; i<dcc_total; i++)
       if ((dcc[i].type==DCC_BOT) && (dcc[i].u.bot->status&STAT_SHARE)) {
 	/* cancel any existing transfers */
-	if (dcc[i].u.bot->status&STAT_SENDING) cancel_user_xfer(i);
+	if (dcc[i].u.bot->status&STAT_SENDING) cancel_user_xfer(-i);
 	tprintf(dcc[i].sock,"userfile?\n");
 	dcc[i].u.bot->status|=STAT_OFFERED;
       }
@@ -722,7 +737,7 @@ void rehash()
       && (oldnick[0])) {
     /* change botname back, don't be premature */
     strcpy(botname,oldnick);
-    tprintf(serv,"TRACE %s\n",origbotname);
+    tprintf(serv,"NICK %s\n",origbotname);
   }
   /* change botname back incase we were using altnick previous to rehash */
   else if (oldnick[0]) strcpy(botname,oldnick);

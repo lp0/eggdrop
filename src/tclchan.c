@@ -23,7 +23,6 @@
 #include "tclegg.h"
 #include "users.h"
 #include "chan.h"
-#include "proto.h"
 #include "cmdt.h"
 
 extern Tcl_Interp *interp;
@@ -631,6 +630,8 @@ int tcl_channel_modify PROTO4(Tcl_Interp *,irp,struct chanset_t *,chan,
 int tcl_channel_add PROTO3(Tcl_Interp *,irp,char *,newname,char *,options)
 {
   int i; struct chanset_t *chan; int items; char **item;
+  if ((newname[0] != '#') && (newname[0] != '&'))
+    return TCL_ERROR;
   if (irp) 
      if (Tcl_SplitList(irp,options,&items,&item)!=TCL_OK)
        return TCL_ERROR;

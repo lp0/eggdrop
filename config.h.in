@@ -104,6 +104,15 @@
 /* define if big-endian chipset */
 #undef WORDS_BIGENDIAN
 
+/* we may need dlopen now (modules) so include it */
+#undef HAVE_DLOPEN
+
+/* this willl get defined if modules will work on your system */
+#undef MODULES_OK
+
+/* sunos 4.0 *sigh* */
+#undef DLOPEN_MUST_BE_1 
+
 /* assume nothing */
 #define SIZEOF_INT 0
 #define SIZEOF_LONG 0

@@ -1,4 +1,4 @@
 %{+n}
 ###  set require-p <0/1>
-   specifies whether users with 'g' (global op) also need
+   specifies whether users with 'o' (global op) also need
    the 'p' flag to join the party line.

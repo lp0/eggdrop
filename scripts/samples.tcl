@@ -36,7 +36,7 @@ bind dcc n unbind cmd_unbind
 
 # make a dcc command called 'report' that is just an alias for 'status',
 # but only requires +o to use
-bind dcc o report *status
+bind dcc o report *dcc:status
 
 # respond to "gross" on a channel :)
 proc pub_gross {nick uhost hand chan args} {

@@ -1,7 +1,5 @@
 #! /bin/sh
-#
-# script to install a patch -poptix@WildStar.Net May 1 1997
-#
+# script to install a patch <poptix@WildStar.Net> May 1 1997
 
 if test "$1" = ""; then
   echo ""
@@ -18,12 +16,12 @@ fi
 echo ""
 if test -r eggdrop; then ./eggdrop -v
 fi
-grep "  PATCH(" src/main.c |grep -v snarf |grep -v p1 | grep -v p2| cut -f2 -d "\"" >poptix.tmp
-TMP=`tail -n5 poptix.tmp`
+grep "  PATCH(" src/main.c |grep -v snarf |grep -v p1 | grep -v p2| cut -f2 -d "\"" >patch.tmp
+TMP=`tail -n5 patch.tmp`
 echo $TMP
 echo ""
 echo "These are the last 5 installed patches, If the patch you're "
-echo "installing is listed above you probrally don't want to install "
+echo "installing is listed above you probably don't want to install "
 echo "this patch. "
 echo -n "Are you sure you want to install the patch? (y/N) "
 read ans
@@ -32,8 +30,8 @@ if test "$ans" = "y"; then
   echo "Copying help files ..."
   patch -lp1 < $1
   echo "Checking for rejects..."
-  find . -name "*.rej" -print >tmp.poptix
-  if test `grep -c "rej" tmp.poptix` = 0; then
+  find . -name "*.rej" -print >tmp.patch
+  if test `grep -c "rej" tmp.patch` = 0; then
     echo "Yippie! No rejects!"
     else
     echo "It seems I found some rejects :/"
@@ -50,13 +48,13 @@ if test "$ans" = "y"; then
       rm -rf $BLAH
     fi
     if test "$opt" = "2"; then 
-      cat tmp.poptix |less
+      cat tmp.patch |less
     fi
   fi
   echo "Removing useless *.orig files..."
   TMPVAR=`find . -name "*.orig" -print`
-  rm -rf tmp.poptix poptix.tmp $TMPVAR
-  echo "Remeber, if you have any compiling problems check out /doc/compiling.FAQ"
+  rm -rf tmp.patch patch.tmp $TMPVAR
+  echo "Remember, if you have any compiling problems check out doc/compiling.FAQ"
 else
   echo "Okay, later."
 fi

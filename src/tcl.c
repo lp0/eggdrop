@@ -23,7 +23,6 @@
 #include <sys/types.h>
 #include "eggdrop.h"
 #include "tclegg.h"
-#include "proto.h"
 #include "cmdt.h"
 
 /* used for read/write to internal strings */
@@ -88,6 +87,9 @@ extern log_t logs[];
 #ifndef NO_FILE_SYSTEM
 extern char filedb_path[], dccdir[], dccin[];
 extern int dcc_block, dcc_limit, dcc_maxsize, dcc_users;
+#endif
+#ifdef HAVE_NAT
+extern char natip[];
 #endif
 
 /* prototypes for tcl */
@@ -171,7 +173,8 @@ void nick_change PROTO1(char *,new)
       putlog(LOG_MISC,"*","* IRC NICK CHANGE: %s -> %s",origbotname,new);
     strcpy(origbotname,new);
     /* start all over with nick chasing: */
-    strcpy(botname,origbotname); newbotname[0]=0;
+    strcpy(newbotname,botname); /* store old nick in case something goes wrong*/
+    strcpy(botname,origbotname);/* blah, this is kinda silly */
     if (serv>=0) tprintf(serv,"NICK %s\n",botname);
   }
 #endif
@@ -483,9 +486,11 @@ void init_traces()
   tcl_tracestr("init-server",initserver,120);
   tcl_tracestr("notefile",notefile,120);
 #ifndef NO_FILE_SYSTEM
+# ifndef MODULES
   tcl_tracedir("files-path",dccdir,-120);
   tcl_tracedir("incoming-path",dccin,-120);
   tcl_tracedir("filedb-path",filedb_path,-120);
+# endif
 #endif
   tcl_tracedir("help-path",helpdir,120);
   tcl_tracedir("temp-path",tempdir,120);
@@ -500,17 +505,23 @@ void init_traces()
   tcl_tracestr("network",network,40);
   tcl_tracestr("whois-fields",whois_fields,120);
   tcl_tracestr("timezone",time_zone,40);
+#ifdef HAVE_NAT
+  tcl_tracestr("nat-ip",natip,120);
+#endif
   /* ints */
   tcl_traceint("servlimit",&min_servs);
   tcl_traceint("ban-time",&ban_time);
   tcl_traceint("ignore-time",&ignore_time);
 #ifndef NO_FILE_SYSTEM
+#ifndef MODULES
   tcl_traceint("max-dloads",&dcc_limit);
   tcl_traceint("dcc-block",&dcc_block);
   tcl_traceint("max-filesize",&dcc_maxsize);
   tcl_traceint("max-file-users",&dcc_users);
   tcl_traceint("upload-to-pwd",&upload_to_cd);
   tcl_traceint("copy-to-tmp",&copy_to_tmp);
+  tcl_traceint("xfer-timeout",&wait_dcc_xfer);
+#endif
 #endif
   tcl_traceint("save-users-at",&save_users_at);
   tcl_traceint("notify-users-at",&notify_users_at);
@@ -549,7 +560,6 @@ void init_traces()
   tcl_traceint("max-queue-msg",&maxqmsg);
   tcl_traceint("wait-split",&wait_split);
   tcl_traceint("wait-info",&wait_info);
-  tcl_traceint("xfer-timeout",&wait_dcc_xfer);
   tcl_traceint("default-port",&default_port);
   tcl_traceint("note-life",&note_life);
   tcl_traceint("max-notes",&maxnotes);
@@ -619,6 +629,7 @@ void init_tcl()
   Q("getting-users",tcl_getting_users); Q("strip",tcl_strip);
   Q("page",tcl_page); Q("savechannels",tcl_savechannels);
   Q("loadchannels",tcl_loadchannels); Q("isdynamic",tcl_isdynamic);
+#ifndef MODULES
 #ifndef NO_FILE_SYSTEM
   Q("dccsend",tcl_dccsend); Q("getfileq",tcl_getfileq);
   Q("getdesc",tcl_getdesc); Q("getowner",tcl_getowner);
@@ -634,9 +645,13 @@ void init_tcl()
   Q("getflags",tcl_getflags); Q("setflags",tcl_setflags);
 #endif
   Q("assoc",tcl_assoc); Q("killassoc",tcl_killassoc);
+#endif
   Q("getchanmode",tcl_getchanmode); Q("pushmode",tcl_pushmode);
   Q("flushmode",tcl_flushmode); Q("isignore",tcl_isignore);
-  Q("encrypt",tcl_encrypt); Q("decrypt",tcl_decrypt); Q("connect",tcl_connect);
+#ifndef MODULES
+  Q("encrypt",tcl_encrypt); Q("decrypt",tcl_decrypt);
+#endif
+  Q("connect",tcl_connect);
   Q("getdccaway",tcl_getdccaway); Q("setdccaway",tcl_setdccaway);
   Q("newchanban",tcl_newchanban); Q("newban",tcl_newban);
   Q("killchanban",tcl_killchanban); Q("killban",tcl_killban);
@@ -650,6 +665,9 @@ void init_tcl()
   Q("addchanrec",tcl_addchanrec); Q("delchanrec",tcl_delchanrec);
   Q("getchanlaston",tcl_getchanlaston);
   Q("strftime",tcl_strftime); Q("notes",tcl_notes);
+#ifdef MODULES
+  Q("loadmodule",tcl_loadmodule); Q("unloadmodule",tcl_unloadmodule);
+#endif
 }
 
 /* set Tcl variables to match eggdrop internal variables */
@@ -804,3 +822,65 @@ int readtclprog PROTO1(char *,fname)
      a "pipe" which really just executes a shell command and redirects
      output.  so you were never truly safe anyway.  gee.
 */
+
+#ifdef MODULES
+#include "modules.h"
+
+void add_tcl_strings PROTO1(tcl_strings *,list) {
+   int i;
+   for (i=0;list[i].name;i++) {
+      if (list[i].length > 0) {
+	 char * p = Tcl_GetVar(interp,list[i].name,TCL_GLOBAL_ONLY);
+	 if (p!=NULL) {
+	   strncpy(list[i].buf,p,list[i].length);
+	   list[i].buf[list[i].length]=0;
+	 }
+      }
+      tcl_tracestr2(list[i].name,list[i].buf,
+		    (list[i].flags&STR_PROTECT)?-list[i].length:list[i].length,
+		    (list[i].flags&STR_DIR));
+      
+   }
+}
+void rem_tcl_strings PROTO1(tcl_strings *,list) {
+   int i;
+   strinfo *st;
+   
+   for (i=0;list[i].name;i++) {
+      st = (strinfo *)Tcl_VarTraceInfo(interp,list[i].name,
+	    TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
+	    tcl_eggstr,NULL);
+      if (st != NULL) {
+	 strtot-=sizeof(strinfo);
+	 nfree(st);
+      }
+      Tcl_UntraceVar(interp,list[i].name,
+		     TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
+		     tcl_eggstr,st);
+   }
+}
+
+void add_tcl_ints PROTO1(tcl_ints *,list) {
+   int i;
+   for (i=0;list[i].name;i++) {
+      char * p = Tcl_GetVar(interp,list[i].name,TCL_GLOBAL_ONLY);
+      if (p!=NULL)
+	*(list[i].val) = atoi(p);
+      Tcl_TraceVar(interp,list[i].name,
+		   TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
+		   tcl_eggint,(ClientData)list[i].val);
+   }
+}
+
+void rem_tcl_ints PROTO1(tcl_ints *,list) {
+   int i;
+   for (i=0;list[i].name;i++) {
+      char * p = Tcl_GetVar(interp,list[i].name,TCL_GLOBAL_ONLY);
+      if (p!=NULL)
+	 *(list[i].val) = atoi(p);
+      Tcl_UntraceVar(interp,list[i].name,
+		     TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS,
+		     tcl_eggint,(ClientData)list[i].val);
+   }
+}
+#endif

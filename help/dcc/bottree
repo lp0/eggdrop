@@ -2,5 +2,4 @@
    shows a tree-format diagram of the bots currently in the botnet.
    it's just a nice way to get a feel for how the bots are connected
    physically.
-see also: bots, link, botinfo
-
+see also: bots, botinfo

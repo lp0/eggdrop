@@ -3,7 +3,7 @@
 ###  status all
    displays a condensed block of information about how the bot
    is running.  here's an example from Snowbot:
-      I am Snowbot, running eggdrop v1.0:  400 users (mem: 42k)
+      I am Snowbot, running eggdrop v1.1.1:  400 users (mem: 42k)
       Admin: Robey <robey@wc130.residence.gatech.edu>
       #turtle   :  2 members, enforcing "+tn-mlk"  (greet, bitch)
       #gloom    :  3 members, enforcing "+tn-i"  (greet)

@@ -1,7 +1,7 @@
 %{+M}
 ### chaninfo <channel>
-     this lists all the settings for the bot on the given channel, 
-     it show any of the following:
+     this lists all the settings for the bot on the given channel. 
+     it shows any of the following:
         chanmode     which modes are enforced on the channel, both + and
 	             - modes can be enforced
 	idle-kick    kick idle users (non +f's anyway) on the channel 
@@ -30,10 +30,10 @@
 	greet        say a users info line when they join the channel
 	protectops   re-op a +o user who gets deopped?
 	statuslog    log the channel status every 5 minutes
-	stopnethack  de-op anyone why enters the channel with server
+	stopnethack  de-op anyone who enters the channel with server
 	             ops
 	revenge      take revenge on anyone who deops, kicks or
 	             bans the bot or any valid user
-	secret       dont provide info about the channel over the botnet
+	secret       don't provide info about the channel over the botnet
 %{+N}
 see also: %{+n}+chan, -chan,%{+N} chansave, chanload, chanset

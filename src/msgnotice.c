@@ -53,6 +53,11 @@ extern int require_p;
 extern char origbotname[];
 extern int ignore_time;
 extern int flood_ctcp_thr;
+#ifdef HAVE_NAT
+extern char natip[];
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 
 char ctcp_version[256];
 char ctcp_finger[256];
@@ -106,18 +111,18 @@ void gotctcp PROTO4(char *,ffrom,char *,to,char *,msg,int,ignoring)
   else if (ctcpcmp(code,"CLIENTINFO")==0) {
     p=NULL;
     if (!msg[0]) p=CLIENTINFO;
-    else if (ctcpcmp(msg,"sed")==0) p=CLIENTINFO_SED;
-    else if (ctcpcmp(msg,"version")==0) p=CLIENTINFO_VERSION;
-    else if (ctcpcmp(msg,"clientinfo")==0) p=CLIENTINFO_CLIENTINFO;
-    else if (ctcpcmp(msg,"userinfo")==0) p=CLIENTINFO_USERINFO;
-    else if (ctcpcmp(msg,"errmsg")==0) p=CLIENTINFO_ERRMSG;
-    else if (ctcpcmp(msg,"finger")==0) p=CLIENTINFO_FINGER;
-    else if (ctcpcmp(msg,"time")==0) p=CLIENTINFO_TIME;
-    else if (ctcpcmp(msg,"action")==0) p=CLIENTINFO_ACTION;
-    else if (ctcpcmp(msg,"dcc")==0) p=CLIENTINFO_DCC;
-    else if (ctcpcmp(msg,"utc")==0) p=CLIENTINFO_UTC;
-    else if (ctcpcmp(msg,"ping")==0) p=CLIENTINFO_PING;
-    else if (ctcpcmp(msg,"echo")==0) p=CLIENTINFO_ECHO;
+    else if (strcasecmp(msg,"sed")==0) p=CLIENTINFO_SED;
+    else if (strcasecmp(msg,"version")==0) p=CLIENTINFO_VERSION;
+    else if (strcasecmp(msg,"clientinfo")==0) p=CLIENTINFO_CLIENTINFO;
+    else if (strcasecmp(msg,"userinfo")==0) p=CLIENTINFO_USERINFO;
+    else if (strcasecmp(msg,"errmsg")==0) p=CLIENTINFO_ERRMSG;
+    else if (strcasecmp(msg,"finger")==0) p=CLIENTINFO_FINGER;
+    else if (strcasecmp(msg,"time")==0) p=CLIENTINFO_TIME;
+    else if (strcasecmp(msg,"action")==0) p=CLIENTINFO_ACTION;
+    else if (strcasecmp(msg,"dcc")==0) p=CLIENTINFO_DCC;
+    else if (strcasecmp(msg,"utc")==0) p=CLIENTINFO_UTC;
+    else if (strcasecmp(msg,"ping")==0) p=CLIENTINFO_PING;
+    else if (strcasecmp(msg,"echo")==0) p=CLIENTINFO_ECHO;
     if (p==NULL) {
       sprintf(&ctcp_reply[strlen(ctcp_reply)],"\001ERRMSG CLIENTINFO: %s is not a valid function\001",
 	      msg);
@@ -142,8 +147,13 @@ void gotctcp PROTO4(char *,ffrom,char *,to,char *,msg,int,ignoring)
 	  ix=i;
           /* do me a favour and don't change this back to a CTCP reply,
              CTCP replies are NOTICE's this has to be a PRIVMSG -poptix 5/1/97 */
-          mprintf(serv,"PRIVMSG %s :\001DCC CHAT chat %lu %u\001\n",
+#ifdef HAVE_NAT
+	   mprintf(serv,"PRIVMSG %s :\001DCC CHAT chat %lu %u\001\n",
+                  nick,iptolong((IP)inet_addr(natip)),dcc[ix].port);
+#else
+	   mprintf(serv,"PRIVMSG %s :\001DCC CHAT chat %lu %u\001\n",
                   nick,iptolong(getmyip()),dcc[ix].port);
+#endif
 	}
       }
       if (ix<0)

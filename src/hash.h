@@ -72,13 +72,21 @@ int cmd_pls_ban(), cmd_pls_bot(), cmd_chat(), cmd_pls_host(), cmd_pls_ignore(),
   cmd_simul(),
 #endif
 #ifndef NO_FILE_SYSTEM
+# ifndef MODULES
   cmd_files(), cmd_filestats(),
+#endif
 #endif
 #ifndef NO_IRC
   cmd_say(), cmd_act(), cmd_servers(), cmd_msg(), cmd_channel(), cmd_topic(),
   cmd_op(), cmd_deop(), cmd_dump(), cmd_kick(), cmd_kickban(), cmd_jump(),
   cmd_invite(), cmd_adduser(), cmd_deluser(), cmd_pls_chan(), cmd_mns_chan(),
   cmd_chaninfo(), cmd_chanset(), cmd_chansave(), cmd_chanload(),
+#endif
+#ifdef MODULES
+  cmd_modules(),
+#ifndef STATIC
+  cmd_pls_module(), cmd_mns_module(),
+#endif
 #endif
   cmd_su();
 
@@ -91,7 +99,9 @@ cmd_t C_dcc[]={
   { "+ban", 'O', cmd_pls_ban },
   { "+bot", 'B', cmd_pls_bot },
   { "+bothost", 'B', cmd_pls_host },
+#ifndef NO_IRC
   { "+chan", 'n', cmd_pls_chan },
+#endif
   { "+chrec", 'm', cmd_pls_chrec },
   { "+host", 'M', cmd_pls_host },
   { "+ignore", 'm', cmd_pls_ignore },
@@ -99,7 +109,9 @@ cmd_t C_dcc[]={
   { "-ban", 'O', cmd_mns_ban },
   { "-bot", 'B', cmd_mns_user },
   { "-bothost", 'B', cmd_mns_host },
+#ifndef NO_IRC
   { "-chan", 'n', cmd_mns_chan },
+#endif
   { "-chrec", 'm', cmd_mns_chrec },
   { "-host", 'M', cmd_mns_host },
   { "-ignore", 'm', cmd_mns_ignore },
@@ -112,7 +124,9 @@ cmd_t C_dcc[]={
   { "adduser", 'M', cmd_adduser },
   { "deluser", 'M', cmd_deluser },
 #endif
-  { "assoc", 'B', cmd_assoc },
+#ifndef MODULES
+  { "assoc", 'p', cmd_assoc },
+#endif
   { "away", '-', cmd_away },
   { "banner", 'm', cmd_banner },
   { "bans", 'O', cmd_bans },
@@ -151,8 +165,10 @@ cmd_t C_dcc[]={
   { "echo", '-', cmd_echo },
   { "email", '-', cmd_email },
 #ifndef NO_FILE_SYSTEM
+#ifndef MODULES
   { "files", '-', cmd_files },
-  { "filestats", 'o', cmd_filestats },
+  { "filestats", 'f', cmd_filestats },
+#endif
 #endif
   { "fixcodes", '-', cmd_fixcodes },
   { "flush", 'm', cmd_flush },
@@ -167,8 +183,14 @@ cmd_t C_dcc[]={
   { "kickban", 'O', cmd_kickban },
 #endif
   { "link", 'B', cmd_link },
-  { "match", 'o', cmd_match },
+#if defined(MODULES) && !defined(STATIC)
+  { "loadmodule", 'n', cmd_pls_module },
+#endif
+  { "match", 'O', cmd_match },
   { "me", '-', cmd_me },
+#ifdef MODULES
+  { "modules", 'm', cmd_modules },
+#endif
   { "motd", '-', cmd_motd },
 #ifndef NO_IRC
   { "msg", 'o', cmd_msg },
@@ -211,6 +233,9 @@ cmd_t C_dcc[]={
 #endif
   { "trace", '-', cmd_trace },
   { "unlink", 'B', cmd_unlink },
+#if defined(MODULES) && !defined(STATIC)
+  { "unloadmodule", 'n', cmd_mns_module },
+#endif  
   { "unstick", 'O', cmd_unstick },
   { "who", '-', cmd_who },
   { "whois", 'O', cmd_whois },
@@ -220,6 +245,7 @@ cmd_t C_dcc[]={
 
 
 #ifndef NO_FILE_SYSTEM
+#ifndef MODULES
 /* bleh. */
 int cmd_chdir(), cmd_desc(), cmd_get(), cmd_file_help(), cmd_hide(),
   cmd_unhide(), cmd_ls(), cmd_mv(), cmd_pwd(), cmd_rm(), cmd_cp(),
@@ -258,7 +284,7 @@ cmd_t C_file[]={
   END_FIELD
 };
 #endif
-
+#endif
 
 /* this sucks!! */
 int bot_pls_attr(), bot_pls_ban(), bot_killuser(), bot_link(),
@@ -276,7 +302,7 @@ int bot_pls_attr(), bot_pls_ban(), bot_killuser(), bot_link(),
   bot_filereq(), bot_filereject(), bot_filesend(), bot_mns_host(),
   bot_ufsend(), bot_error(), bot_ufyes3(), bot_join(), bot_part(),
   bot_away(), bot_unaway(), bot_idle(), bot_pls_bothost(), bot_chaddr(),
-  bot_chchinfo(), bot_pls_upload(), bot_pls_dnload();
+  bot_chchinfo(), bot_pls_upload(), bot_pls_dnload(),bot_stick();
   
 /* BOT COMMANDS */
 /* function call should be:
@@ -334,6 +360,7 @@ cmd_t C_bot[]={
   { "resync!", 0, bot_resync },
   { "resync-no", 0, bot_resync_no },
   { "resync?", 0, bot_resyncq },
+  { "stick", 0, bot_stick },
   { "thisbot", 0, bot_thisbot },
   { "trace", 0, bot_trace },
   { "traced", 0, bot_traced },

@@ -11,6 +11,9 @@
 #define _H_TCLEGG
 
 #include "../lush.h" /* include this here, since it's need in this file */
+#ifndef MAKING_MODS
+#include "proto.h" /* this file needs this */
+#endif
 
 /* types of commands */
 #define CMD_MSG   0
@@ -51,6 +54,25 @@
 #define CMD_TIME  35
 #define BINDS 36
 
+/* match types for check_tcl_bind */
+#define MATCH_PARTIAL       0
+#define MATCH_EXACT         1
+#define MATCH_MASK          2
+/* bitwise 'or' these: */
+#define BIND_USE_ATTR       4
+#define BIND_STACKABLE      8
+#define BIND_HAS_BUILTINS   16
+#define BIND_WANTRET        32
+#define BIND_ALTER_ARGS     64
+
+/* return values */
+#define BIND_NOMATCH    0
+#define BIND_AMBIGUOUS  1
+#define BIND_MATCHED    2    /* but the proc couldn't be found */
+#define BIND_EXECUTED   3
+#define BIND_EXEC_LOG   4    /* proc returned 1 -> wants to be logged */
+#define BIND_EXEC_BRK   5    /* proc returned BREAK (quit) */
+
 /* extra commands are stored in Tcl hash tables (one hash table for each type
    of command: msg, dcc, etc) */
 typedef struct tct {
@@ -79,6 +101,7 @@ typedef struct timer_str {
 #define X(A) int A()
 #define X5(A,B,C,D,E) X(A);X(B);X(C);X(D);X(E)
 
+#ifndef MAKING_MODS
 /***** prototypes! *****/
 
 X(tcl_builtin);
@@ -131,12 +154,16 @@ X5(tcl_getfiles, tcl_getdirs, tcl_hide, tcl_unhide, tcl_share);
 X5(tcl_unshare, tcl_encrypt, tcl_decrypt, tcl_dumpfile, tcl_dccdumpfile);
 X5(tcl_backup, tcl_die, tcl_strftime, tcl_mkdir, tcl_rmdir);
 X(tcl_getflags); X(tcl_setflags); X(tcl_mv); X(tcl_cp);
+#endif
 
+#ifdef MODULES
+X(tcl_loadmodule); X(tcl_unloadmodule);
+#endif
 #endif
 
 /* functions definitions moved here from proto.h */
 
-unsigned long add_timer(tcl_timer_t **,int, char *,unsigned long);
-int remove_timer(tcl_timer_t **,unsigned long);
-void list_timers(Tcl_Interp *, tcl_timer_t *);
-void wipe_timers(Tcl_Interp *, tcl_timer_t **);
+unsigned long add_timer PROTO((tcl_timer_t **,int, char *,unsigned long));
+int remove_timer PROTO((tcl_timer_t **,unsigned long));
+void list_timers PROTO((Tcl_Interp *, tcl_timer_t *));
+void wipe_timers PROTO((Tcl_Interp *, tcl_timer_t **));

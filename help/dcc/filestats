@@ -1,6 +1,7 @@
-%{+j}
+%{+O}
 ### filestats <user>
-     reports on the users upload & download statistics
+     reports on the users upload & download statistics. you need
+     at least +j to use this command.
 %{+m}
 ### filestats <user> clear
-     clears a users upload & download statistics
+     clears a users upload & download statistics.

@@ -16,7 +16,7 @@ Appendices:
 
 
 If you have questions or comments about this file, please send me email
-at <robey@netcom.com>.  Thanks.
+at <eggdrop@sodre.net> (after subscribing).  Thanks.
 
 
 
@@ -110,6 +110,8 @@ at <robey@netcom.com>.  Thanks.
          eggdrop create one, and give master/owner status to the first
          person that introduces himself or herself to it.  You'll need
          to do this when you first set up your bot, and never again.
+
+    -v   Show version info, then quit.
 
     Most people never use any of the options except -m, and you only
     need to use that once.
@@ -225,6 +227,8 @@ at <robey@netcom.com>.  Thanks.
 
     b  (bot)     marks a user that is really a bot
 
+    u  (unshare) user record is not sent to other bots
+
     Also, there are 10 user-defined flags numbered 0-9.  They may be
     "aliased" into letters of the alphabet for convenience, but they're
     also always recognized by their number.  Bots can have additional
@@ -247,9 +251,8 @@ at <robey@netcom.com>.  Thanks.
 
     n  (owner)   someone who owns the channel
 
-    Also, there are 10 user-defined flags numbered 0-9.  They may be
-    "aliased" into letters of the alphabet for convenience, but they're
-    also always recognized by their number.
+    Once again there are 10 user-defined flags numbered 0-9, as channel
+    flags.
 
 
 (5) THE PARTY LINE
@@ -509,6 +512,3 @@ at <robey@netcom.com>.  Thanks.
 
     Cool that I'm not the only one that makes mistakes. :)  And shame on
     the ircd hackers!
-
-
-(10sep94, 30may95, 10nov95, 30nov95)

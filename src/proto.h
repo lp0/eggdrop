@@ -52,14 +52,33 @@
 struct chanset_t; /* keeps the compiler warnings down :) */
 struct userrec;
 
+#ifndef MAKING_ASSOC
+#ifndef MODULES
+/* assoc.c */
+int expmem_assoc();
+char *get_assoc_name PROTO((int));
+int get_assoc PROTO((char *));
+#else
+char *(*get_assoc_name) PROTO((int));
+int (*get_assoc) PROTO((char *));
+void dump_assoc PROTO((int));
+void kill_assoc PROTO((int));
+void add_assoc PROTO((char *, int));
+#endif
+#endif
+
 /* blowfish.c */
 void init_blowfish();
 int expmem_blowfish();
-void encrypt_pass PROTO((char *, char *));
 void debug_blowfish PROTO((int)); 
+#if defined(MODULES) && !defined(MAKING_MODS)
+void (*encrypt_pass) PROTO((char *, char *));
+#endif
+#ifndef MODULES
+void encrypt_pass PROTO((char *, char *));
 char *encrypt_string PROTO((char *, char *));
 char *decrypt_string PROTO((char *, char *));
-
+#endif
 /* botcmd.c */
 
 /* botnet.c */
@@ -71,11 +90,6 @@ int nextbot PROTO((char *));
 int in_chain PROTO((char *));
 int get_tands();
 char *get_tandbot PROTO((int));
-char *get_assoc_name PROTO((int));
-int get_assoc PROTO((char *));
-void dump_assoc PROTO((int));
-void kill_assoc PROTO((int));
-void add_assoc PROTO((char *, int));
 void reject_bot PROTO((char *));
 void tell_bots PROTO((int));
 void tell_bottree PROTO((int));
@@ -266,6 +280,9 @@ void get_file_ptr PROTO((struct file_info **));
 void check_expired_dcc();
 void append_line  PROTO((int, char *));
 void flush_lines  PROTO((int));
+struct dcc_t * find_idx PROTO((int));
+int new_dcc PROTO((int));
+void del_dcc PROTO((int));
 
 /* filedb.c */
 long findempty PROTO((FILE *));
@@ -273,7 +290,11 @@ FILE *filedb_open PROTO((char *));
 void filedb_close PROTO((FILE *));
 void filedb_add PROTO((FILE *,char *,char *));
 void filedb_ls PROTO((FILE *,int,int,char *,int));
+#if defined(MODULES) && !defined(MAKING_MODS)
+extern void (*remote_filereq) PROTO((int, char*, char*));
+#else
 void remote_filereq PROTO((int, char*, char*));
+#endif
 void filedb_getowner PROTO((char *,char *,char *));
 void filedb_setowner PROTO((char *,char *,char *));
 void filedb_getdesc PROTO((char *,char *,char *));
@@ -312,13 +333,19 @@ void do_boot PROTO((int, char *, char *));
 int detect_dcc_flood PROTO((struct chat_info *,int));
 void wipe_tmp_filename PROTO((char *, int));
 void wipe_tmp_file PROTO((int));
+#if defined(MODULES) && !defined(MAKING_MODS)
+int (*raw_dcc_send) PROTO((char *,char *,char *,char *));
+#else
 int raw_dcc_send PROTO((char *,char *,char *,char *));
+#endif
 int do_dcc_send PROTO((int, char *, char *));
 
 /* hash.c */
 void gotcmd PROTO((char *,char *,char *,int));
 int got_dcc_cmd PROTO((int, char *));
+#ifndef MODULES
 int got_files_cmd PROTO((int, char *));
+#endif
 void dcc_bot PROTO((int, char *));
 void init_builtins();
 
@@ -449,12 +476,18 @@ int findidx PROTO((int));
 void init_hash();
 int expmem_tclhash();
 void *tclcmd_alloc PROTO((int));
+#ifdef MODULES
+void tclcmd_free PROTO((void *));
+#endif
+int check_tcl_bind PROTO((Tcl_HashTable *,char *,int,char *,int));
 int get_bind_type PROTO((char *));
 int cmd_bind PROTO((int,int,char *,char *));
 int cmd_unbind PROTO((int,int,char *,char *));
 int check_tcl_msg PROTO((char *,char *,char *,char *,char *));
 int check_tcl_dcc PROTO((char *,int,char *));
+#ifndef MODULES
 int check_tcl_fil PROTO((char *,int,char *));
+#endif
 int check_tcl_pub PROTO((char *,char *,char *,char *));
 void check_tcl_msgm PROTO((char *,char *,char *,char *,char *));
 void check_tcl_pubm PROTO((char *,char *,char *,char *));
@@ -477,8 +510,10 @@ int check_tcl_raw PROTO((char *,char *,char *));
 void check_tcl_bot PROTO((char *,char *,char *));
 void check_tcl_chon PROTO((char *, int));
 void check_tcl_chof PROTO((char *, int));
+#ifndef MODULES
 void check_tcl_sent PROTO((char *,char *,char *));
 void check_tcl_rcvd PROTO((char *,char *,char *));
+#endif
 void check_tcl_chat PROTO((char *,int,char *));
 void check_tcl_link PROTO((char *, char *));
 void check_tcl_disc PROTO((char *));
@@ -523,6 +558,7 @@ int pass_match_by_handle PROTO((char *,char *));
 int pass_match_by_host PROTO((char *,char *));
 int get_attr_host PROTO((char *));
 int get_attr_handle PROTO((char *));
+int get_allattr_handle PROTO((char *));
 int get_chanattr_handle PROTO((char *,char *));
 int get_chanattr_host PROTO((char *,char *));
 void change_chanflags PROTO((struct userrec *,char *,char *,unsigned int,unsigned int));

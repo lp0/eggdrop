@@ -505,6 +505,8 @@ just new commands) are marked with vertical bars on the left.
       with six elements: nickname, bot, hostname, access flag ('-', '@',
       '+', or '*'), minutes idle, and away message (blank if the user is
       not away)
+|     if you specify a channel of * every user on the botnet is returned
+|     with an extra argument indicating the channel the user is on
 
   getdccidle <idx>
     returns: number of seconds the dcc chat/file system/script user has

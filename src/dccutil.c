@@ -32,6 +32,11 @@
 #include "eggdrop.h"
 #include "chan.h"
 #include "proto.h"
+#ifdef MODULES
+#include "modules.h"
+#else
+extern int wait_dcc_xfer;
+#endif
 
 extern struct dcc_t dcc[];
 extern int dcc_total;
@@ -54,9 +59,6 @@ char motdfile[121]="motd";
 int server_timeout=15;
 /* how long to wait before a telnet connection times out */
 int connect_timeout=15;
-/* timeout time on DCC xfers */
-int wait_dcc_xfer = 300;
-
 
 int expmem_dccutil()
 {
@@ -156,6 +158,29 @@ void strip_mirc_codes PROTO2(int,flags, char *,text)
       if (flags&STRIP_UNDER) strcpy(text,text+1);
       else text++;
       break;
+    case 033:
+       context;
+      if (flags&STRIP_ANSI) {
+       context;
+	vv=text+1;
+       context;
+	if (*vv == '[') {
+       context;
+	  vv++; 
+       context;
+	  while ((*vv == ';') || ((*vv >= '0') && (*vv <= '9')))
+	    vv++;
+       context;
+	  if (*vv)
+	    vv++; /* also kill the following char */
+       context;
+	}
+       context;
+	strcpy(text,vv);
+       context;
+      } else 
+	text++;
+      break;
     default:
       text++;				/* Move on to the next char */
     }
@@ -176,8 +201,27 @@ va_dcl
   va_start(va);
   idx=va_arg(va,int); format=va_arg(va,char *);
   vsprintf(SBUF,format,va);
+  va_end(va);
   cr=0;  /* telnet people get a special linefeed type -- !!!!UGH!!!! */
-  if (idx>=0) switch (dcc[idx].type) {
+  if (idx<0) {
+     tputs(-idx,SBUF,strlen(SBUF));
+  } else if (idx > 0x7FF0) {
+     switch (idx) {
+      case DP_LOG:
+	putlog(LOG_MISC,"*","%s",SBUF);
+	break;
+      case DP_STDOUT:
+	tputs(STDOUT,SBUF,strlen(SBUF));
+	break;
+      case DP_SERVER:
+	mprintf(serv,"%s",SBUF);
+	break;
+      case DP_HELP:
+	hprintf(serv,"%s",SBUF);
+	break;
+     }
+     return;
+  } else switch (dcc[idx].type) {
   case DCC_CHAT:
     strip_mirc_codes(dcc[idx].u.chat->strip_flags,SBUF);
   case DCC_CHAT_PASS:
@@ -201,33 +245,33 @@ va_dcl
       if (dcc[idx].u.script->u.chat->status&STAT_TELNET) cr=1;
     }
     break;
-  }
-  if (cr) {
-    /* replace \n with \r\n */
-    for (p=SBUF; *p!=0; p++) if (*p=='\n') {
-      *p++='\r'; q=nmalloc(strlen(p)+1);
-      strcpy(q,p); *p++='\n';
-      strcpy(p,q); nfree(q); p--;
-    }
-  }
-  if (idx==DP_LOG) putlog(LOG_MISC,"*","%s",SBUF);
-  if (strlen(SBUF)>500) {    /* truncate to fit */
-    SBUF[500]=0;
-    if (cr) strcat(SBUF,"\r\n"); 
-    else strcat(SBUF,"\n");
-  }
-  /* dummy sentinel for STDOUT */
-  if (idx==DP_STDOUT) 
-    tputs(STDOUT,SBUF,strlen(SBUF));
-  else if (idx>=0) {
-    if ((dcc[idx].type==DCC_CHAT) && 
-	(dcc[idx].u.chat->status & STAT_PAGE)) {
-      append_line(idx,SBUF);
-      return;
-    }
+  case DCC_BOT:
     tputs(dcc[idx].sock,SBUF,strlen(SBUF));
+    idx = -1;
+    break;
   }
-  va_end(va);
+  if (idx >= 0) {
+     if (cr) {
+	/* replace \n with \r\n */
+	for (p=SBUF; *p!=0; p++) if (*p=='\n') {
+	   *p++='\r'; q=nmalloc(strlen(p)+1);
+	   strcpy(q,p); *p++='\n';
+	   strcpy(p,q); nfree(q); p--;
+	}
+     }
+     if (strlen(SBUF)>500) {    /* truncate to fit */
+	SBUF[500]=0;
+	if (cr) strcat(SBUF,"\r\n"); 
+	else strcat(SBUF,"\n");
+     }
+     /* dummy sentinel for STDOUT */
+     if ((dcc[idx].type==DCC_CHAT) && 
+	 (dcc[idx].u.chat->status & STAT_PAGE)) {
+	append_line(idx,SBUF);
+	return;
+     }
+     tputs(dcc[idx].sock,SBUF,strlen(SBUF));
+  }
 }
 
 void qprintf(va_alist)
@@ -617,7 +661,6 @@ void dcc_chatter PROTO1(int,idx)
 /* remove entry from dcc list */
 void lostdcc PROTO1(int,n)
 {
-  int i;
   switch(dcc[n].type) {
   case DCC_CHAT:
     if (dcc[n].u.chat->buffer) {
@@ -678,14 +721,14 @@ void lostdcc PROTO1(int,n)
     nfree(dcc[n].u.script); break;
   }
   dcc_total--;
-  for (i=n; i<dcc_total; i++) {
-    strcpy(dcc[i].nick,dcc[i+1].nick);
-    strcpy(dcc[i].host,dcc[i+1].host);
-    dcc[i].sock=dcc[i+1].sock;
-    dcc[i].addr=dcc[i+1].addr;
-    dcc[i].port=dcc[i+1].port;
-    dcc[i].type=dcc[i+1].type;
-    dcc[i].u.other=dcc[i+1].u.other;
+  if (n < dcc_total) {
+    strcpy(dcc[n].nick,dcc[dcc_total].nick);
+    strcpy(dcc[n].host,dcc[dcc_total].host);
+    dcc[n].sock=dcc[dcc_total].sock;
+    dcc[n].addr=dcc[dcc_total].addr;
+    dcc[n].port=dcc[dcc_total].port;
+    dcc[n].type=dcc[dcc_total].type;
+    dcc[n].u.other=dcc[dcc_total].u.other;
   }
 }
 
@@ -957,11 +1000,11 @@ void set_new_relay PROTO1(int,idx)
   dcc[idx].u.relay->chat=(struct chat_info *)nmalloc(sizeof(struct chat_info));
 }
 
-/* make a password, 6-9 random letters and digits */
+/* make a password, 10-15 random letters and digits */
 void makepass PROTO1(char *,s)
 {
   int i,j;
-  i=6+(random()%4);
+  i=10+(random()%6);
   for (j=0; j<i; j++) {
     if (random()%3==0) s[j]='0'+(random()%10);
     else s[j]='a'+(random()%26);
@@ -973,7 +1016,9 @@ void check_expired_dcc()
 {
   int i; time_t now;
 #ifndef NO_FILE_SYSTEM
+#ifndef MODULES
   char xx[121],*p;
+#endif   
 #endif
   now=time(NULL);
 #ifndef NO_IRC
@@ -1003,6 +1048,7 @@ void check_expired_dcc()
       }
     }
 #ifndef NO_FILE_SYSTEM
+# ifndef MODULES
     if (dcc[i].type==DCC_GET_PENDING) {
       if (now-dcc[i].u.xfer->pending > wait_dcc_xfer) {
 	if (strcmp(dcc[i].nick,"*users")==0) {
@@ -1068,6 +1114,7 @@ void check_expired_dcc()
       }
     }
 #endif
+#endif
     else if (dcc[i].type==DCC_CHAT_PASS) {
       if (now-dcc[i].u.chat->timer > 180) {
 	dprintf(i,"Timeout.\n");
@@ -1106,6 +1153,9 @@ void check_expired_dcc()
 	killsock(dcc[i].sock); lostdcc(i); i--;
       }
     }
+#ifdef MODULES
+     else call_hook(HOOK_TIMEOUT,i);
+#endif
   }
 }
 
@@ -1162,9 +1212,37 @@ void flush_lines PROTO1(int,idx)
     c++;
   }
   if (p!=NULL) {
-    tputs(dcc[idx].sock,"More...\r\n", 
-	  (dcc[idx].u.chat->status & STAT_TELNET)?9:8);
+     tputs(dcc[idx].sock,"[More]: ",8);
   }
   dcc[idx].u.chat->buffer=p;
   dcc[idx].u.chat->line_count=0;
+}
+
+int new_dcc PROTO1(int,type) {
+   int i = dcc_total;
+   if (dcc_total==MAXDCC) 
+     return -1;
+   dcc_total++;
+   memset(&dcc[i],0,sizeof(struct dcc_t));
+   dcc[i].type = type;
+   switch (type) {
+    case DCC_GET_PENDING:
+      set_xfer(i);
+      break;
+    default:
+      putlog(LOG_MISC,"*","woops new_dcc on unsupported type %d!\n");
+   }
+   return i;
+}
+
+int new_fork PROTO1(int,type) {
+   int i = dcc_total;
+   if (dcc_total==MAXDCC) 
+     return -1;
+   dcc_total++;
+   memset(&dcc[i],0,sizeof(struct dcc_t));
+   set_fork(i);
+   get_xfer_ptr(&(dcc[i].u.fork->u.xfer));
+   dcc[i].u.fork->type = type;
+   return i;
 }

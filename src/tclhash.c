@@ -22,7 +22,6 @@
 #include <string.h>
 #include <sys/types.h>
 #include "eggdrop.h"
-#include "proto.h"
 #include "cmdt.h"
 #include "tclegg.h"
 
@@ -100,6 +99,18 @@ void *tclcmd_alloc PROTO1(int,size)
   hashtot+=size;
   return (void *)x;
 }
+
+#ifdef MODULES
+void tclcmd_free PROTO1(void *,ptr)
+{
+  tcl_cmd_t *x=ptr;
+  hashtot-=sizeof(tcl_cmd_t);
+  hashtot-=strlen(x->func_name);
+  nfree(x->func_name);
+  nfree(x);
+}
+#endif
+
 
 /* returns hashtable for that type */
 /* also sets 'stk' if stackable, and sets 'name' the name, if non-NULL */
@@ -326,25 +337,6 @@ int tcl_builtin STDVAR
   return TCL_ERROR;
 }
 
-/* match types for check_tcl_bind */
-#define MATCH_PARTIAL       0
-#define MATCH_EXACT         1
-#define MATCH_MASK          2
-/* bitwise 'or' these: */
-#define BIND_USE_ATTR       4
-#define BIND_STACKABLE      8
-#define BIND_HAS_BUILTINS   16
-#define BIND_WANTRET        32
-#define BIND_ALTER_ARGS     64
-
-/* return values */
-#define BIND_NOMATCH    0
-#define BIND_AMBIGUOUS  1
-#define BIND_MATCHED    2    /* but the proc couldn't be found */
-#define BIND_EXECUTED   3
-#define BIND_EXEC_LOG   4    /* proc returned 1 -> wants to be logged */
-#define BIND_EXEC_BRK   5    /* proc returned BREAK (quit) */
-
 /* trigger (execute) a proc */
 int trigger_bind PROTO2(char *,proc,char *,param)
 {
@@ -498,41 +490,6 @@ int check_tcl_dcc PROTO3(char *,cmd,int,idx,char *,args)
     putlog(LOG_CMDS,"*","#%s# %s %s",dcc[idx].nick,cmd,args);
   return 0;
 }
-
-#ifndef NO_FILE_SYSTEM
-/* check for tcl-bound file command, return 1 if found */
-/* fil: proc-name <handle> <dcc-handle> <args...> */
-int check_tcl_fil PROTO3(char *,cmd,int,idx,char *,args)
-{
-  int atr,chatr,x; char s[5];
-  context;
-  atr=get_attr_handle(dcc[idx].nick);
-  chatr=get_chanattr_handle(dcc[idx].nick,dcc[idx].u.file->chat->con_chan);
-  if (chatr & CHANUSER_OP) atr |= USER_PSUEDOOP;
-  if (chatr & CHANUSER_MASTER) atr |= USER_PSUMST;
-  if (chatr & CHANUSER_OWNER) atr |= USER_PSUOWN;
-  sprintf(s,"%d",dcc[idx].sock);
-  Tcl_SetVar(interp,"_n",dcc[idx].nick,0);
-  Tcl_SetVar(interp,"_i",s,0);
-  Tcl_SetVar(interp,"_a",args,0);
-  context;
-  x=check_tcl_bind(&H_fil,cmd,atr," $_n $_i $_a",
-		   MATCH_PARTIAL|BIND_USE_ATTR|BIND_HAS_BUILTINS);
-  context;
-  if (x==BIND_AMBIGUOUS) {
-    dprintf(idx,"Ambigious command.\n");
-    return 0;
-  }
-  if (x==BIND_NOMATCH) {
-    dprintf(idx,"What?  You need 'help'\n");
-    return 0;
-  }
-  if (x==BIND_EXEC_BRK) return 1;
-  if (x==BIND_EXEC_LOG)
-    putlog(LOG_FILES,"*","#%s# files: %s %s",dcc[idx].nick,cmd,args);
-  return 0;
-}
-#endif
 
 int check_tcl_pub PROTO4(char *,nick,char *,from,char *,chname,char *,msg)
 {
@@ -868,40 +825,6 @@ void check_tcl_chof PROTO2(char *,hand,int,idx)
   context;
 }
 
-void check_tcl_sent PROTO3(char *,hand,char *,nick,char *,path)
-{
-  int atr;
-  context;
-  atr=get_attr_handle(hand);
-  if (op_anywhere(hand)) atr |= USER_PSUEDOOP;
-  if (master_anywhere(hand)) atr |= USER_PSUMST;
-  if (owner_anywhere(hand)) atr |= USER_PSUOWN;
-  Tcl_SetVar(interp,"_n",hand,0);
-  Tcl_SetVar(interp,"_a",nick,0);
-  Tcl_SetVar(interp,"_aa",path,0);
-  context;
-  check_tcl_bind(&H_sent,hand,atr," $_n $_a $_aa",
-		 MATCH_MASK|BIND_USE_ATTR|BIND_STACKABLE);
-  context;
-}
-
-void check_tcl_rcvd PROTO3(char *,hand,char *,nick,char *,path)
-{
-  int atr;
-  context;
-  atr=get_attr_handle(hand);
-  if (op_anywhere(hand)) atr |= USER_PSUEDOOP;
-  if (master_anywhere(hand)) atr |= USER_PSUMST;
-  if (owner_anywhere(hand)) atr |= USER_PSUOWN;
-  Tcl_SetVar(interp,"_n",hand,0);
-  Tcl_SetVar(interp,"_a",nick,0);
-  Tcl_SetVar(interp,"_aa",path,0);
-  context;
-  check_tcl_bind(&H_rcvd,hand,atr," $_n $_a $_aa",
-		 MATCH_MASK|BIND_USE_ATTR|BIND_STACKABLE);
-  context;
-}
-
 void check_tcl_chat PROTO3(char *,from,int,chan,char *,text)
 {
   char s[10];
@@ -977,6 +900,7 @@ void check_tcl_rejn PROTO4(char *,nick,char *,uhost,char *,hand,char *,chname)
 char *check_tcl_filt PROTO2(int,idx,char *,text)
 {
   char s[10]; int x,atr,chatr;
+   
   context;
   atr=get_attr_handle(dcc[idx].nick); sprintf(s,"%d",dcc[idx].sock);
   chatr=get_chanattr_handle(dcc[idx].nick,dcc[idx].u.chat->con_chan);

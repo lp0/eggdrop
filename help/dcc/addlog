@@ -1,4 +1,4 @@
-%{+o}
+%{+O}
 ###  addlog <text>
    writes your comment into the bot's log file.  bot masters can go
    back later and review the log, and will see your comment (with your

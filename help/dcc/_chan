@@ -1,19 +1,19 @@
 %{+n}
 ### -chan
-     this removes ALL information about a channel from the bot, it's not
+     this removes ALL information about a channel from the bot. it's not
      made permanent unless a channel-file has been defined in the user
-     file, then it's saved each time the usefile is, or by using .chansave
+     file, in which case it's saved each time the usefile is, or by using
+     .chansave.
      
      *** IMPORTANT ***
      
-     this erases ALL information about the channel,
-     ALL information, channel settings, channel records for users
-     EVERYTHING.
+     this erases ALL information about the channel, including channel
+     settings and channel records for users. EVERYTHING.
      
      *** IMPORTANT ***
 
-     DO NOT use it just to make a bot depart for a channel, that wont 
-     work.
+     DO NOT use it just to make a bot depart for a channel, because
+     that won't work.
 
      *** IMPORTANT ***
      
@@ -23,6 +23,6 @@
      *** IMPORTANT ***
      
      heck! don't use this unless you NEVER want the bot on the channel
-     again
+     again.
      
 see also: +chan, chansave, chanload, chanset, chaninfo

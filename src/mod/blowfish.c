@@ -7,20 +7,15 @@
    domain.
 */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
+#ifdef MODULES
+#define MODULE_NAME "blowfish"
 #endif
-#include <stdio.h>
-#include <string.h>
+#include "module.h"
 #include "blowfish.h"
 #include "bf_tab.h"             /* P-box P-array, S-box  */
-#include "eggdrop.h"
-#include "proto.h"
-
 
 /* each box takes up 4k so be very careful here */
 #define BOXES  3
-
 
 /* #define S(x,i) (bf_S[i][x.w.byte##i])  */
 #define S0(x) (bf_S[0][x.w.byte0])
@@ -31,7 +26,7 @@
 #define ROUND(a,b,n) (a.word ^= bf_F(b) ^ bf_P[n])
 
 /* keep a set of rotating P & S boxes */
-struct box_t {
+static struct box_t {
   UWORD_32bits *P;
   UWORD_32bits **S;
   char key[81];
@@ -46,22 +41,15 @@ static UWORD_32bits bf_S[4][256];
 static UWORD_32bits *bf_P;
 static UWORD_32bits **bf_S;
 
-/* initialize buffered boxes */
-void init_blowfish()
-{
-  int i;
-  for (i=0; i<BOXES; i++) {
-    box[i].P=NULL;
-    box[i].S=NULL;
-    box[i].key[0]=0;
-    box[i].lastuse=0L;
-  }
-}
 
+#ifdef MODULES
+static int blowfish_expmem()
+#else
 int expmem_blowfish()
+#endif
 {
   int i,tot=0;
-  context;
+  modcontext;
   for (i=0; i<BOXES; i++) if (box[i].P!=NULL) {
     tot+=((bf_N+2)*sizeof(UWORD_32bits));
     tot+=(4*sizeof(UWORD_32bits *));
@@ -70,6 +58,9 @@ int expmem_blowfish()
   return tot;
 }
 
+#ifdef MODULES
+static
+#endif
 void blowfish_encipher PROTO2(UWORD_32bits *,xl,UWORD_32bits *,xr)
 {
   union aword  Xl;
@@ -93,6 +84,9 @@ void blowfish_encipher PROTO2(UWORD_32bits *,xl,UWORD_32bits *,xr)
   *xl = Xr.word;
 }
 
+#ifdef MODULES
+static
+#endif
 void blowfish_decipher PROTO2(UWORD_32bits *,xl,UWORD_32bits *,xr)
 {
    union aword  Xl;
@@ -116,19 +110,26 @@ void blowfish_decipher PROTO2(UWORD_32bits *,xl,UWORD_32bits *,xr)
    *xr = Xl.word;
 }
 
+#ifdef MODULES
+static void blowfish_report PROTO1(int,idx) 
+#else
 void debug_blowfish PROTO1(int,idx) 
+#endif
 {
-  int i,tot=0;
-  for (i=0; i<BOXES; i++) if (box[i].P!=NULL) tot++;
-  if (idx<0) tprintf(-idx,"%d of %d boxes in use: ",tot,BOXES);
-  else dprintf(idx,"%d of %d boxes in use: ",tot,BOXES);
-  for (i=0; i<BOXES; i++) if (box[i].P!=NULL) {
-    if (idx<0) tprintf(-idx,"(age: %d) ",time(NULL)-box[i].lastuse);
-    else dprintf(idx,"(age: %d) ",time(NULL)-box[i].lastuse);
-  }
-  if (idx<0) tprintf(-idx,"\n"); else dprintf(idx,"\n");
+   int i,tot=0;
+   for (i=0; i<BOXES; i++) 
+     if (box[i].P!=NULL) tot++;
+   modprintf(idx,"%d of %d boxes in use: ",tot,BOXES);
+   for (i=0; i<BOXES; i++) 
+     if (box[i].P!=NULL) {
+	modprintf(idx,"(age: %d) ",time(NULL)-box[i].lastuse);
+     }
+   modprintf(idx,"\n");
 }
 
+#ifdef MODULES
+static 
+#endif
 void blowfish_init PROTO2(UBYTE_08bits *,key,short,keybytes)
 {
   int i,j,bx; time_t lowest;
@@ -161,17 +162,17 @@ void blowfish_init PROTO2(UBYTE_08bits *,key,short,keybytes)
       lowest=box[i].lastuse;
       bx=i;
     }
-    nfree(box[bx].P);
-    for (i=0; i<4; i++) nfree(box[bx].S[i]);
-    nfree(box[bx].S);
+    modfree(box[bx].P);
+    for (i=0; i<4; i++) modfree(box[bx].S[i]);
+    modfree(box[bx].S);
   }
 
   /* initialize new buffer */
   /* uh... this is over 4k */
-  box[bx].P=(UWORD_32bits *)nmalloc((bf_N+2)*sizeof(UWORD_32bits));
-  box[bx].S=(UWORD_32bits **)nmalloc(4*sizeof(UWORD_32bits *));
+  box[bx].P=(UWORD_32bits *)modmalloc((bf_N+2)*sizeof(UWORD_32bits));
+  box[bx].S=(UWORD_32bits **)modmalloc(4*sizeof(UWORD_32bits *));
   for (i=0; i<4; i++)
-    box[bx].S[i]=(UWORD_32bits *)nmalloc(256*sizeof(UWORD_32bits));
+    box[bx].S[i]=(UWORD_32bits *)modmalloc(256*sizeof(UWORD_32bits));
   bf_P=box[bx].P; bf_S=box[bx].S;
   box[bx].keybytes=keybytes;
   strncpy(box[bx].key,key,keybytes);
@@ -225,8 +226,11 @@ void blowfish_init PROTO2(UBYTE_08bits *,key,short,keybytes)
 #define SALT2  0x23f6b095
 
 /* convert 64-bit encrypted password to text for userfile */
-char *base64="./0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static char *base64="./0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
+#ifdef MODULES
+static
+#endif
 int base64dec PROTO1(char,c)
 {
   int i;
@@ -234,6 +238,9 @@ int base64dec PROTO1(char,c)
   return 0;
 }
 
+#ifdef MODULES
+static
+#endif
 void encrypt_pass PROTO2(char *,text,char *,new)
 {
   UWORD_32bits left,right; int n; char *p;
@@ -253,12 +260,15 @@ void encrypt_pass PROTO2(char *,text,char *,new)
 }
 
 /* returned string must be freed when done with it! */
+#ifdef MODULES
+static
+#endif
 char *encrypt_string PROTO2(char *,key, char *,str)
 {
   UWORD_32bits left,right; char *p,*s,*dest,*d; int i;
-  dest=(char *)nmalloc((strlen(str)+9)*2);
+  dest=(char *)modmalloc((strlen(str)+9)*2);
   /* pad fake string with 8 bytes to make sure there's enough */
-  s=(char *)nmalloc(strlen(str)+9);
+  s=(char *)modmalloc(strlen(str)+9);
   strcpy(s,str);
   p=s; while (*p) p++;
   for (i=0; i<8; i++) *p++=0;
@@ -278,17 +288,20 @@ char *encrypt_string PROTO2(char *,key, char *,str)
     }
   }
   *d=0;
-  nfree(s);
+  modfree(s);
   return dest;
 }
 
 /* returned string must be freed when done with it! */
+#ifdef MODULES
+static
+#endif
 char *decrypt_string PROTO2(char *,key,char *,str)
 {
   UWORD_32bits left,right; char *p,*s,*dest,*d; int i;
-  dest=(char *)nmalloc(strlen(str)+12);
+  dest=(char *)modmalloc(strlen(str)+12);
   /* pad encoded string with 0 bits in case it's bogus */
-  s=(char *)nmalloc(strlen(str)+12);
+  s=(char *)modmalloc(strlen(str)+12);
   strcpy(s,str); p=s; while (*p) p++;
   for (i=0; i<12; i++) *p++=0;
   blowfish_init(key,strlen(key));
@@ -302,6 +315,82 @@ char *decrypt_string PROTO2(char *,key,char *,str)
     for (i=0; i<4; i++) *d++ = (right & (0xff << ((3-i)*8))) >> ((3-i)*8);
   }
   *d=0;
-  nfree(s);
+  modfree(s);
   return dest;
 }
+
+#ifdef MODULES
+static
+#endif
+int tcl_encrypt STDVAR
+{
+  char *p;
+  BADARGS(3,3," key string");
+  p=encrypt_string(argv[1],argv[2]);
+  Tcl_AppendResult(irp,p,NULL);
+  modfree(p); return TCL_OK;
+}
+
+#ifdef MODULES
+static
+#endif
+int tcl_decrypt STDVAR
+{
+  char *p;
+  BADARGS(3,3," key string");
+  p=decrypt_string(argv[1],argv[2]);
+  Tcl_AppendResult(irp,p,NULL);
+  modfree(p); return TCL_OK;
+}
+
+#ifdef MODULES
+static tcl_cmds mytcls[] = {
+     { "encrypt", tcl_encrypt } ,
+     { "decrypt", tcl_decrypt } ,
+     { 0, 0 }
+};
+
+module_function * global;
+
+/* you CANT -module an encryption module , so -module just resets it */
+static char * blowfish_close() 
+{
+   return "You can't unload an encryption module";
+}
+
+char * blowfish_start PROTO((module_function *));
+
+static module_function blowfish_table[] = {
+   (module_function)blowfish_start,
+   (module_function)blowfish_close,
+   (module_function)blowfish_expmem,
+   (module_function)blowfish_report,
+};
+
+/* initialize buffered boxes */
+char * blowfish_start PROTO1(module_function *,globs)
+{
+   int i;
+   global = globs;
+#else
+void init_blowfish()
+{
+   int i;
+#endif
+   for (i=0; i<BOXES; i++) {
+      box[i].P=NULL;
+      box[i].S=NULL;
+      box[i].key[0]=0;
+      box[i].lastuse=0L;
+   }
+#ifndef MODULES
+}
+#else
+   modcontext;
+   module_register("blowfish",blowfish_table,1,0);
+   module_depend("blowfish","eggdrop",101,0);
+   add_tcl_commands(mytcls);
+   add_hook(HOOK_ENCRYPT_PASS,encrypt_pass);
+   return NULL;
+}
+#endif

@@ -505,7 +505,7 @@ int pass_match_by_host PROTO2(char *,pass,char *,host)
     if (strcmp(u->pass,pass)==0) return 1;
   }
   else {
-    if (strlen(pass)>9) pass[9]=0;
+    if (strlen(pass)>15) pass[15]=0;
     encrypt_pass(pass,new);
     if (strcmp(u->pass,new)==0) return 1;
   }
@@ -523,7 +523,7 @@ int pass_match_by_handle PROTO2(char *,pass,char *,handle)
     if (strcmp(u->pass,pass)==0) return 1;
   }
   else {
-    if (strlen(pass)>9) pass[9]=0;
+    if (strlen(pass)>15) pass[15]=0;
     encrypt_pass(pass,new);
     if (strcmp(u->pass,new)==0) return 1;
   }
@@ -555,7 +555,7 @@ int write_user PROTO3(struct userrec *,u,FILE *,f,int,shr)
   if (u->flags & USER_FLAG8) strcat(s,"8");
   if (u->flags & USER_FLAG9) strcat(s,"9");
   if (u->flags & USER_FLAG0) strcat(s,"0");
-  if (fprintf(f,"%-10s%-20s%-25s /%u %lu %u %lu\n",u->handle,u->pass,s,
+  if (fprintf(f,"%-10s %-19s %-24s /%u %lu %u %lu\n",u->handle,u->pass,s,
 	      u->uploads,u->upload_k,u->dnloads,u->dnload_k)==EOF)
     return 0;
   q=u->host; s[0]=0; while (q!=NULL) {
@@ -697,7 +697,7 @@ void change_pass_by_handle PROTO2(char *,handle,char *,pass)
   struct userrec *u; char new[20]; unsigned char *p;
   u=get_user_by_handle(userlist,handle);
   if (u==NULL) return;
-  if (strlen(pass)>9) pass[9]=0;
+  if (strlen(pass)>15) pass[15]=0;
   if ((pass[0]=='-') || (u->flags & USER_BOT))
     strcpy(u->pass,pass);
   else {
@@ -717,7 +717,7 @@ void change_pass_by_host PROTO2(char *,host,char *,pass)
   struct userrec *u; char new[20]; unsigned char *p;
   u=get_user_by_host(host);
   if (u==NULL) return;
-  if (strlen(pass)>9) pass[9]=0;
+  if (strlen(pass)>15) pass[15]=0;
   if ((pass[0]=='-') || (u->flags & USER_BOT))
     strcpy(u->pass,pass);
   else {
@@ -742,7 +742,7 @@ int change_handle PROTO2(char *,oldh,char *,newh)
     return 0;
   strcpy(u->handle,newh);
   /* yes, even send bot nick changes now: */
-  if ((!noshare) && !(u->flags*USER_UNSHARED))
+  if ((!noshare) && !(u->flags&USER_UNSHARED))
     shareout("chhand %s %s\n",oldh,newh);
   return 1;
 }
@@ -1162,6 +1162,18 @@ int get_attr_handle PROTO1(char *,handle)
   return u->flags;
 }
 
+int get_allattr_handle PROTO1(char *,handle)
+{
+  struct userrec *u; int atr;
+  u=get_user_by_handle(userlist,handle);
+  if (u==NULL) return 0;
+  atr = u->flags;
+  if (op_anywhere(handle)) atr |= USER_PSUEDOOP;
+  if (master_anywhere(handle)) atr |= USER_PSUMST;
+  if (owner_anywhere(handle)) atr |= USER_PSUOWN;
+  return atr;
+}
+
 int get_chanattr_handle PROTO2(char *,handle,char *,chname)
 {
   struct userrec *u; struct chanuserrec *ch;
@@ -1178,8 +1190,22 @@ void set_attr_handle PROTO2(char *,handle,unsigned int,flags)
   u=get_user_by_handle(userlist,handle);
   if (u==NULL) return;
   u->flags=flags;
-  if ((!noshare) && !(u->flags&USER_UNSHARED))
-    shareout("chattr %s %d\n",u->handle,(flags&BOT_MASK));
+  if ((!noshare) && !(u->flags&USER_UNSHARED)) {
+     char s[100];
+     flags2str((u->flags & USER_MASK),s);
+     /* for user-created flags that could have any name, depending: */
+     if (u->flags & USER_FLAG1) strcat(s,"1");
+     if (u->flags & USER_FLAG2) strcat(s,"2");
+     if (u->flags & USER_FLAG3) strcat(s,"3");
+     if (u->flags & USER_FLAG4) strcat(s,"4");
+     if (u->flags & USER_FLAG5) strcat(s,"5");
+     if (u->flags & USER_FLAG6) strcat(s,"6");
+     if (u->flags & USER_FLAG7) strcat(s,"7");
+     if (u->flags & USER_FLAG8) strcat(s,"8");
+     if (u->flags & USER_FLAG9) strcat(s,"9");
+     if (u->flags & USER_FLAG0) strcat(s,"0");
+     shareout("chattr %s %s\n",u->handle,s);
+  }
 }
 
 void set_chanattr_handle PROTO3(char *,handle,char *,chname,unsigned int,flags)
@@ -1194,8 +1220,22 @@ void set_chanattr_handle PROTO3(char *,handle,char *,chname,unsigned int,flags)
   }
   ch->flags=flags;
   cst=findchan(chname);
-  if ((!noshare) && !(u->flags&USER_UNSHARED) && (cst->stat&CHAN_SHARED))
-    shareout("chattr %s %d %s\n",u->handle,flags,chname);
+  if ((!noshare) && !(u->flags&USER_UNSHARED) && (cst->stat&CHAN_SHARED)) {
+     char s[100];
+     chflags2str((ch->flags & CHANUSER_MASK),s);
+     /* now fill in user-defined flags */
+     if (ch->flags & CHANUSER_1) strcat(s,"1");
+     if (ch->flags & CHANUSER_2) strcat(s,"2");
+     if (ch->flags & CHANUSER_3) strcat(s,"3");
+     if (ch->flags & CHANUSER_4) strcat(s,"4");
+     if (ch->flags & CHANUSER_5) strcat(s,"5");
+     if (ch->flags & CHANUSER_6) strcat(s,"6");
+     if (ch->flags & CHANUSER_7) strcat(s,"7");
+     if (ch->flags & CHANUSER_8) strcat(s,"8");
+     if (ch->flags & CHANUSER_9) strcat(s,"9");
+     if (ch->flags & CHANUSER_0) strcat(s,"0");
+     shareout("chattr %s %s %s\n",u->handle,s,chname);
+  }
 }
 
 void change_chanflags PROTO5(struct userrec *,bu,char *,handle,char *,chname,

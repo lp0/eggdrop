@@ -110,12 +110,13 @@ struct chanset_t {
 #define CHAN_STOPNETHACK    0x0200    /* deop netsplit hackers */
 #define CHAN_REVENGE        0x0400    /* get revenge on bad people */
 #define CHAN_SECRET         0x0800    /* don't advertise channel on botnet */
-
-#define CHANACTIVE  0x1000  /* like i'm actually on the channel and stuff */
-#define CHANPEND    0x2000  /* just joined; waiting for end of WHO list */
-#define CHANFLAGGED 0x4000  /* flagged during rehash for delete */
-#define CHANSTATIC  0x8000  /* channels that are NOT dynamic */
-#define CHAN_SHARED  0x10000 /* channel is being shared */
+#define CHANACTIVE          0x1000    /* like i'm actually on the channel and
+                                       * stuff */
+#define CHANPEND            0x2000    /* just joined; waiting for end of 
+                                       * WHO list */
+#define CHANFLAGGED         0x4000    /* flagged during rehash for delete */
+#define CHANSTATIC          0x8000    /* channels that are NOT dynamic */
+#define CHAN_SHARED        0x10000    /* channel is being shared */
 
 
 /* prototypes */

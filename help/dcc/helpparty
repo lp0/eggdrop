@@ -14,7 +14,7 @@
 The following commands are also available:
    bots      newpass   email     files     who       echo
    bottree   botinfo   info      away      notes     strip
-   trace
+   trace     page      su        fixcodes  motd
 Anything you type that doesn't begin with a '.' goes out to
 everyone on the party line.
 --- End of help.

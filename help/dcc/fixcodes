@@ -1,10 +1,5 @@
 ### fixcodes
      use this in those situations where the bot gets mixed up about your
-     type of connect, eg when you /ctcp chat the bot & it thinks your 
-     telnetting, and your actually using dcc, it effectively switches
-     telnet on and off
-### fixcodes
-     use this in those situations where the bot gets mixed up about your
-     type of connect, eg when you /ctcp chat the bot & it thinks your 
-     telnetting, and your actually using dcc, it effectively switches
-     telnet on and off
+     type of connect, eg: when you /ctcp chat the bot & it thinks you're
+     telnetting, and you're actually using dcc, it effectively switches
+     telnet on and off.

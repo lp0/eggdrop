@@ -1,5 +1,5 @@
 ###  strip [modes]
-   enablees you to remove embedded 'attribute' codes from within a
+   enables you to remove embedded 'attribute' codes from within a
    section of text. Valid options are:
       b  remove all boldface codes
       c  remove all color codes

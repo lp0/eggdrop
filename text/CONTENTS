@@ -1,0 +1,23 @@
+The files here are read various times when the bot msg's
+you some help for ident, new users, etc.
+
+badhost
+   identing a user
+
+banner
+   connecting to the bot
+
+files
+   joining the file secion
+
+intro
+   welcoming a new user
+
+newbot
+   when first msg'ing your bot hello
+
+newbot-limbo
+   when first starting up a limbo bot
+
+newuser
+   new user telneting onto the bot

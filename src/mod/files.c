@@ -13,18 +13,16 @@
    COPYING that was distributed with this code.
 */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#ifdef MODULES
+#define MODULE_NAME "filesys"
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "eggdrop.h"
-#include "proto.h"
-#include "files.h"
+#include "module.h"
+#include "../files.h"
+#include "filesys.h"
+#include "../cmdt.h"
+#endif
 
 /* 'configure' is supposed to make things easier for me now */
 /* PLEASE don't fail me, 'configure'! :)  */
@@ -54,13 +52,8 @@
 #define S_IFLNK 0120000
 #endif
 
-extern struct dcc_t dcc[];
-extern int dcc_total;
 extern char dccdir[];
 extern char dccin[];
-extern char botname[];
-extern struct userrec *userlist;
-extern char botnetnick[];
 
 #ifndef NO_FILE_SYSTEM
 /* maximum number of users can be in the file area at once */
@@ -68,16 +61,6 @@ int dcc_users=0;
 /* maximum number of simultaneous file downloads allowed */
 int dcc_limit=3;
 #endif
-
-/* low-level stuff for other modules */
-int is_file PROTO1(char *,s)
-{
-  struct stat ss;
-  int i=stat(s,&ss);
-  if (i<0) return 0;
-  if ((ss.st_mode&S_IFREG) || (ss.st_mode&S_IFLNK)) return 1;
-  return 0;
-}
 
 #ifndef NO_FILE_SYSTEM
 
@@ -116,7 +99,7 @@ void add_file PROTO3(char *,dir,char *,file,char *,nick)
 int welcome_to_files PROTO1(int,idx)
 {
   int atr=get_attr_handle(dcc[idx].nick); FILE *f;
-  dprintf(idx,"\n");
+  modprintf(idx,"\n");
   if (atr&USER_JANITOR) atr|=USER_MASTER;
   /* show motd if the user went straight here without going thru the party
      line */
@@ -130,9 +113,9 @@ int welcome_to_files PROTO1(int,idx)
     dcc[idx].u.file->dir[0]=0;
     f=filedb_open(dcc[idx].u.file->dir);
     if (f==NULL) {
-      dprintf(idx,FILES_BROKEN);
-      dprintf(idx,FILES_INVPATH);
-      dprintf(idx,"\n\n");
+      modprintf(idx,FILES_BROKEN);
+      modprintf(idx,FILES_INVPATH);
+      modprintf(idx,"\n\n");
       dccdir[0]=0;
       chanout2(dcc[idx].u.file->chat->channel,"%s rejoined the party line.\n",
 	       dcc[idx].nick);
@@ -140,7 +123,7 @@ int welcome_to_files PROTO1(int,idx)
     }
   }
   filedb_close(f);
-  dprintf(idx,"%s: /%s\n\n",FILES_CURDIR,dcc[idx].u.file->dir);
+  modprintf(idx,"%s: /%s\n\n",FILES_CURDIR,dcc[idx].u.file->dir);
   return 1;
 }
 
@@ -194,7 +177,7 @@ int resolve_dir PROTO4(char *,current,char *,change,char *,real,int,atr)
 	strcpy(real,current);
 	return 0;
       }
-      if (!flags_ok(fdb->flags_req,atr)) {
+      if (!flags_ok(str2flags(fdb->flags_req),atr)) {
         strcpy(real,current);
         return 0;
       }
@@ -245,47 +228,62 @@ void incr_file_gots PROTO1(char *,ppath)
 
 /*** COMMANDS ***/
 
+#ifdef MODULES
+static
+#endif
 void cmd_pwd PROTO2(int,idx,char *,par)
 {
   putlog(LOG_FILES,"*","files: #%s# pwd",dcc[idx].nick);
-  dprintf(idx,"%s: /%s\n",FILES_CURDIR,dcc[idx].u.file->dir);
+  modprintf(idx,"%s: /%s\n",FILES_CURDIR,dcc[idx].u.file->dir);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_pending PROTO2(int,idx,char *,par)
 {
   show_queued_files(idx);
   putlog(LOG_FILES,"*","files: #%s# pending",dcc[idx].nick);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_cancel PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
-    dprintf(idx,"%s: cancel <file-mask>\n",USAGE);
+    modprintf(idx,"%s: cancel <file-mask>\n",USAGE);
     return;
   }
   fileq_cancel(idx,par);
   putlog(LOG_FILES,"*","files: #%s# cancel %s",dcc[idx].nick,par);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_chdir PROTO2(int,idx,char *,msg)
 {
   char s[121]; int atr;
   if (!msg[0]) {
-    dprintf(idx,"%s: cd <new-dir>\n",USAGE);
+    modprintf(idx,"%s: cd <new-dir>\n",USAGE);
     return;
   }
   atr=get_attr_handle(dcc[idx].nick);
   if (!resolve_dir(dcc[idx].u.file->dir,msg,s,atr)) {
-    dprintf(idx,FILES_NOSUCHDIR);
+    modprintf(idx,FILES_NOSUCHDIR);
     return;
   }
   strcpy(dcc[idx].u.file->dir,s);
   set_handle_dccdir(userlist,dcc[idx].nick,dcc[idx].u.file->dir);
   putlog(LOG_FILES,"*","files: #%s# cd /%s",dcc[idx].nick,
          dcc[idx].u.file->dir);
-  dprintf(idx,"%s: /%s\n",FILES_NEWCURDIR,dcc[idx].u.file->dir);
+  modprintf(idx,"%s: /%s\n",FILES_NEWCURDIR,dcc[idx].u.file->dir);
 }
 
+#ifdef MODULES
+static
+#endif
 void files_ls PROTO3(int,idx,char *,par,int,showall)
 {
   char *p,s[DIRLEN],destdir[DIRLEN],mask[81]; int atr; FILE *f;
@@ -296,7 +294,7 @@ void files_ls PROTO3(int,idx,char *,par,int,showall)
       *p=0; strncpy(s,par,DIRLEN); s[DIRLEN-1]=0;
       strncpy(mask,p+1,80); mask[80]=0;
       if (!resolve_dir(dcc[idx].u.file->dir,s,destdir,atr)) {
-        dprintf(idx,FILES_ILLDIR);
+        modprintf(idx,FILES_ILLDIR);
         return;
       }
     }
@@ -321,34 +319,43 @@ void files_ls PROTO3(int,idx,char *,par,int,showall)
   }
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_ls PROTO2(int,idx,char *,par)
 {
   files_ls(idx,par,0);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_lsa PROTO2(int,idx,char *,par)
 {
   files_ls(idx,par,1);
 }
   
+#ifdef MODULES
+static
+#endif
 void cmd_get PROTO2(int,idx,char *,par)
 {
   int atr,ok=0,i; char *p,what[512],destdir[121],s[256];
   filedb *fdb; FILE *f; long where;
   if (!par[0]) {
-    dprintf(idx,"%s: get <file(s)> [nickname]\n",USAGE);
+    modprintf(idx,"%s: get <file(s)> [nickname]\n",USAGE);
     return;
   }
   atr=get_attr_handle(dcc[idx].nick);
   nsplit(what,par);   /* anything left in par is a new nickname */
   if (strlen(par)>NICKLEN) {
-    dprintf(idx,FILES_BADNICK);
+    modprintf(idx,FILES_BADNICK);
     return;
   }
   p=strrchr(what,'/'); if (p!=NULL) {
     *p=0; strncpy(s,what,120); s[120]=0;  strcpy(what,p+1);
     if (!resolve_dir(dcc[idx].u.file->dir,s,destdir,atr)) {
-      dprintf(idx,FILES_ILLDIR);
+      modprintf(idx,FILES_ILLDIR);
       return;
     }
   }
@@ -358,7 +365,7 @@ void cmd_get PROTO2(int,idx,char *,par)
   fdb=findmatch(f,what,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
@@ -369,14 +376,14 @@ void cmd_get PROTO2(int,idx,char *,par)
 	/* this is a link to a file on another bot... */
 	splitc(bot,fdb->sharelink,':');
 	if (!in_chain(bot)) {
-	  dprintf(idx,FILES_NOTAVAIL,fdb->filename);
+	  modprintf(idx,FILES_NOTAVAIL,fdb->filename);
 	}
 	else {
 	  i=nextbot(bot);
 	  strcpy(whoto,par); if (!whoto[0]) strcpy(whoto,dcc[idx].nick);
-	  tprintf(dcc[i].sock,"filereq %d:%s@%s %s:%s\n",dcc[idx].sock,
+	  modprintf(-dcc[i].sock,"filereq %d:%s@%s %s:%s\n",dcc[idx].sock,
 		  whoto,botnetnick,bot,fdb->sharelink);
-	  dprintf(idx,FILES_REQUESTED,fdb->sharelink,bot);
+	  modprintf(idx,FILES_REQUESTED,fdb->sharelink,bot);
 	  /* increase got count now (or never) */
 	  fdb->gots++;
 	  sprintf(s,"%s:%s",bot,fdb->sharelink); strcpy(fdb->sharelink,s);
@@ -396,10 +403,13 @@ void cmd_get PROTO2(int,idx,char *,par)
     fdb=findmatch(f,what,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else putlog(LOG_FILES,"*","files: #%s# get %s %s",dcc[idx].nick,what,par);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_file_help PROTO2(int,idx,char *,par)
 {
   char s[1024]; int atr;
@@ -416,11 +426,14 @@ void cmd_file_help PROTO2(int,idx,char *,par)
   }
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_hide PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
-    dprintf(idx,"%s: hide <file(s)>\n",USAGE);
+    modprintf(idx,"%s: hide <file(s)>\n",USAGE);
     return;
   }
   where=0L;
@@ -428,13 +441,13 @@ void cmd_hide PROTO2(int,idx,char *,par)
   fdb=findmatch(f,par,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
     if (!(fdb->stat & FILE_HIDDEN)) {
       fdb->stat |= FILE_HIDDEN; ok++;
-      dprintf(idx,"%s: %s\n",FILES_HID,fdb->filename);
+      modprintf(idx,"%s: %s\n",FILES_HID,fdb->filename);
       fseek(f,where,SEEK_SET);
       fwrite(fdb,sizeof(filedb),1,f);
     }
@@ -442,18 +455,21 @@ void cmd_hide PROTO2(int,idx,char *,par)
     fdb=findmatch(f,par,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else {
     putlog(LOG_FILES,"*","files: #%s# hide %s",dcc[idx].nick,par);
-    if (ok>1) dprintf(idx,"%s %d file%s.\n",FILES_HID,ok,ok==1?"":"s");
+    if (ok>1) modprintf(idx,"%s %d file%s.\n",FILES_HID,ok,ok==1?"":"s");
   }
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_unhide PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
-    dprintf(idx,"%s: unhide <file(s)>\n",USAGE);
+    modprintf(idx,"%s: unhide <file(s)>\n",USAGE);
     return;
   }
   where=0L;
@@ -461,13 +477,13 @@ void cmd_unhide PROTO2(int,idx,char *,par)
   fdb=findmatch(f,par,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
     if (fdb->stat & FILE_HIDDEN) {
       fdb->stat &= ~FILE_HIDDEN; ok++;
-      dprintf(idx,"%s: %s\n",FILES_UNHID,fdb->filename);
+      modprintf(idx,"%s: %s\n",FILES_UNHID,fdb->filename);
       fseek(f,where,SEEK_SET);
       fwrite(fdb,sizeof(filedb),1,f);
     }
@@ -475,18 +491,21 @@ void cmd_unhide PROTO2(int,idx,char *,par)
     fdb=findmatch(f,par,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else {
     putlog(LOG_FILES,"*","files: #%s# unhide %s",dcc[idx].nick,par);
-    if (ok>1) dprintf(idx,"%s %d file%s.\n",FILES_UNHID,ok,ok==1?"":"s");
+    if (ok>1) modprintf(idx,"%s %d file%s.\n",FILES_UNHID,ok,ok==1?"":"s");
   }
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_share PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
-    dprintf(idx,"%s: share <file(s)>\n",USAGE);
+    modprintf(idx,"%s: share <file(s)>\n",USAGE);
     return;
   }
   where=0L;
@@ -494,13 +513,13 @@ void cmd_share PROTO2(int,idx,char *,par)
   fdb=findmatch(f,par,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
     if (!(fdb->stat & (FILE_HIDDEN|FILE_DIR|FILE_SHARE))) {
       fdb->stat |= FILE_SHARE; ok++;
-      dprintf(idx,"%s: %s\n",FILES_SHARED,fdb->filename);
+      modprintf(idx,"%s: %s\n",FILES_SHARED,fdb->filename);
       fseek(f,where,SEEK_SET);
       fwrite(fdb,sizeof(filedb),1,f);
     }
@@ -508,18 +527,21 @@ void cmd_share PROTO2(int,idx,char *,par)
     fdb=findmatch(f,par,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else {
     putlog(LOG_FILES,"*","files: #%s# share %s",dcc[idx].nick,par);
-    if (ok>1) dprintf(idx,"%s %d file%s.\n",FILES_SHARED,ok,ok==1?"":"s");
+    if (ok>1) modprintf(idx,"%s %d file%s.\n",FILES_SHARED,ok,ok==1?"":"s");
   }
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_unshare PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
-    dprintf(idx,"%s: unshare <file(s)>\n",USAGE);
+    modprintf(idx,"%s: unshare <file(s)>\n",USAGE);
     return;
   }
   where=0L;
@@ -527,13 +549,13 @@ void cmd_unshare PROTO2(int,idx,char *,par)
   fdb=findmatch(f,par,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
     if ((fdb->stat & FILE_SHARE) && !(fdb->stat & (FILE_DIR|FILE_HIDDEN))) {
       fdb->stat &= ~FILE_SHARE; ok++;
-      dprintf(idx,"%s: %s\n",FILES_UNSHARED,fdb->filename);
+      modprintf(idx,"%s: %s\n",FILES_UNSHARED,fdb->filename);
       fseek(f,where,SEEK_SET);
       fwrite(fdb,sizeof(filedb),1,f);
     }
@@ -541,14 +563,17 @@ void cmd_unshare PROTO2(int,idx,char *,par)
     fdb=findmatch(f,par,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else {
     putlog(LOG_FILES,"*","files: #%s# unshare %s",dcc[idx].nick,par);
-    if (ok>1) dprintf(idx,"%s %d file%s.\n",FILES_UNSHARED,ok,ok==1?"":"s");
+    if (ok>1) modprintf(idx,"%s %d file%s.\n",FILES_UNSHARED,ok,ok==1?"":"s");
   }
 }
 
 /* link a file from another bot */
+#ifdef MODULES
+static
+#endif
 void cmd_ln PROTO2(int,idx,char *,par)
 {
   char share[512],newpath[121],newfn[81],*p; FILE *f; filedb fdb,*x;
@@ -557,13 +582,13 @@ void cmd_ln PROTO2(int,idx,char *,par)
   nsplit(share,par); share[60]=0;
   /* correct format? */
   if ((strchr(share,':')==NULL) || (!par[0])) {
-    dprintf(idx,"%s: ln <bot:path> <localfile>\n",USAGE);
+    modprintf(idx,"%s: ln <bot:path> <localfile>\n",USAGE);
     return;
   }
   p=strrchr(par,'/'); if (p!=NULL) {
     *p=0; strncpy(newfn,p+1,80); newfn[80]=0;
     if (!resolve_dir(dcc[idx].u.file->dir,par,newpath,atr)) {
-      dprintf(idx,FILES_NOSUCHDIR);
+      modprintf(idx,FILES_NOSUCHDIR);
       return;
     }
   }
@@ -575,37 +600,40 @@ void cmd_ln PROTO2(int,idx,char *,par)
   x=findfile(f,newfn,&where);
   if (x!=NULL) {
     if (!x->sharelink[0]) {
-      dprintf(idx,FILES_NORMAL,newfn);
+      modprintf(idx,FILES_NORMAL,newfn);
       filedb_close(f); return;
     }
     strcpy(x->sharelink,share);
     fseek(f,where,SEEK_SET);
     fwrite(x,sizeof(filedb),1,f);
     filedb_close(f);
-    dprintf(idx,FILES_CHGLINK,share);
+    modprintf(idx,FILES_CHGLINK,share);
     putlog(LOG_FILES,"*","files: #%s# ln %s %s",dcc[idx].nick,par,share);
     return;
   }
   /* new entry */
   where=findempty(f);
-  fdb.version=FILEVERSION; fdb.desc[0]=0; fdb.flags_req=0; fdb.size=0;
+  fdb.version=FILEVERSION; fdb.desc[0]=0; fdb.flags_req[0]=0; fdb.size=0;
   fdb.gots=0; strncpy(fdb.filename,newfn,30); fdb.filename[30]=0;
   strcpy(fdb.uploader,dcc[idx].nick); fdb.uploaded=time(NULL);
   strcpy(fdb.sharelink,share); fdb.stat=0;
   fseek(f,where,SEEK_SET);
   fwrite(&fdb,sizeof(filedb),1,f);
   filedb_close(f);
-  dprintf(idx,"%s %s -> %s\n",FILES_ADDLINK,fdb.filename,share);
+  modprintf(idx,"%s %s -> %s\n",FILES_ADDLINK,fdb.filename,share);
   putlog(LOG_FILES,"*","files: #%s# ln /%s%s%s %s",dcc[idx].nick,newpath,
 	 newpath[0]?"/":"",newfn,share);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_desc PROTO2(int,idx,char *,par)
 {
   char fn[512],desc[301],*p,*q; int atr,ok=0,lin; FILE *f; filedb *fdb;
   long where;
   nsplit(fn,par); if (!fn[0]) {
-    dprintf(idx,"%s: desc <filename> <new description>\n",USAGE);
+    modprintf(idx,"%s: desc <filename> <new description>\n",USAGE);
     return;
   }
   /* fix up desc */
@@ -636,7 +664,7 @@ void cmd_desc PROTO2(int,idx,char *,par)
   fdb=findmatch(f,fn,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
@@ -644,28 +672,31 @@ void cmd_desc PROTO2(int,idx,char *,par)
       ok=1;
       if ((!(atr&(USER_MASTER|USER_JANITOR))) &&
 	  (strcasecmp(fdb->uploader,dcc[idx].nick)!=0))
-	dprintf(idx,FILES_NOTOWNER,fdb->filename);
+	modprintf(idx,FILES_NOTOWNER,fdb->filename);
       else {
 	strcpy(fdb->desc,desc);
 	fseek(f,where,SEEK_SET);
 	fwrite(fdb,sizeof(filedb),1,f);
-	if (par[0]) dprintf(idx,"%s: %s\n",FILES_CHANGED,fdb->filename);
-	else dprintf(idx,"%s: %s\n",FILES_BLANKED,fdb->filename);
+	if (par[0]) modprintf(idx,"%s: %s\n",FILES_CHANGED,fdb->filename);
+	else modprintf(idx,"%s: %s\n",FILES_BLANKED,fdb->filename);
       }
     }
     where+=sizeof(filedb);
     fdb=findmatch(f,fn,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else putlog(LOG_FILES,"*","files: #%s# desc %s",dcc[idx].nick,fn);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_rm PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0; char s[256];
   if (!par[0]) {  
-    dprintf(idx,"%s: rm <file(s)>\n",USAGE);
+    modprintf(idx,"%s: rm <file(s)>\n",USAGE);
     return;
   }
   f=filedb_open(dcc[idx].u.file->dir);
@@ -673,7 +704,7 @@ void cmd_rm PROTO2(int,idx,char *,par)
   fdb=findmatch(f,par,&where);
   if (fdb==NULL) {
     filedb_close(f);
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     return;
   }
   while (fdb!=NULL) {
@@ -684,24 +715,27 @@ void cmd_rm PROTO2(int,idx,char *,par)
       fwrite(fdb,sizeof(filedb),1,f);
       /* shared file links won't be able to be unlinked */
       if (!(fdb->sharelink[0])) unlink(s);
-      dprintf(idx,"%s: %s\n",FILES_ERASED,fdb->filename);
+      modprintf(idx,"%s: %s\n",FILES_ERASED,fdb->filename);
     }
     where+=sizeof(filedb);
     fdb=findmatch(f,par,&where);
   }
   filedb_close(f);
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else {
     putlog(LOG_FILES,"*","files: #%s# rm %s",dcc[idx].nick,par);
-    if (ok>1) dprintf(idx,"%s %d file%s.\n",FILES_ERASED,ok,ok==1?"":"s");
+    if (ok>1) modprintf(idx,"%s %d file%s.\n",FILES_ERASED,ok,ok==1?"":"s");
   }
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_mkdir PROTO2(int,idx,char *,par)
 {
   char name[512],s[512]; FILE *f; filedb *fdb; long where;
   if (!par[0]) {
-    dprintf(idx,"%s: mkdir <dir> [required-flags]\n",USAGE);
+    modprintf(idx,"%s: mkdir <dir> [required-flags]\n",USAGE);
     return;
   }
   nsplit(name,par);
@@ -713,14 +747,15 @@ void cmd_mkdir PROTO2(int,idx,char *,par)
     sprintf(s,"%s%s/%s",dccdir,dcc[idx].u.file->dir,name);
     if (mkdir(s,0755)==0) {
       x.version=FILEVERSION; x.stat=FILE_DIR; x.desc[0]=0;
-      x.uploader[0]=0; strcpy(x.filename,name); x.flags_req=0;
+      x.uploader[0]=0; strcpy(x.filename,name); x.flags_req[0]=0;
       x.uploaded=time(NULL); x.size=0; x.gots=0; x.sharelink[0]=0;
-      dprintf(idx,"%s /%s%s%s\n",FILES_CREADIR,dcc[idx].u.file->dir,
+      modprintf(idx,"%s /%s%s%s\n",FILES_CREADIR,dcc[idx].u.file->dir,
 	      dcc[idx].u.file->dir[0]?"/":"",name);
       if (par[0]) {
-	x.flags_req=str2flags(par);
-	flags2str(x.flags_req,s);
-	dprintf(idx,FILES_REQACCESS,s);
+	flags2str(str2flags(par),s);
+	strncpy(x.flags_req,s,10);
+	x.flags_req[10] = 0;
+	modprintf(idx,FILES_REQACCESS,s);
       }
       where=findempty(f); fseek(f,where,SEEK_SET);
       fwrite(&x,sizeof(filedb),1,f);
@@ -728,28 +763,32 @@ void cmd_mkdir PROTO2(int,idx,char *,par)
       putlog(LOG_FILES,"*","files: #%s# mkdir %s %s",dcc[idx].nick,name,par);
       return;
     }
-    dprintf(idx,FAILED); filedb_close(f);
+    modprintf(idx,FAILED); filedb_close(f);
     return;
   }
   /* already exists! */
   if (!(fdb->stat&FILE_DIR)) {
-    dprintf(idx,FILES_NOSUCHDIR);
+    modprintf(idx,FILES_NOSUCHDIR);
     filedb_close(f); return;
   }
   if (par[0]) {
-    fdb->flags_req=str2flags(par);
-    flags2str(fdb->flags_req,s);
-    dprintf(idx,FILES_CHGACCESS,name,s);
+    flags2str(str2flags(par),s);
+    strncpy(fdb->flags_req,s,10);
+    fdb->flags_req[10]=0;
+    modprintf(idx,FILES_CHGACCESS,name,s);
   }
   else {
-    fdb->flags_req=0;
-    dprintf(idx,FILES_CHGNACCESS,name);
+    fdb->flags_req[0]=0;
+    modprintf(idx,FILES_CHGNACCESS,name);
   }
   fseek(f,where,SEEK_SET);
   fwrite(fdb,sizeof(filedb),1,f);
   filedb_close(f);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_rmdir PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; char s[256],name[80];
@@ -758,11 +797,11 @@ void cmd_rmdir PROTO2(int,idx,char *,par)
   f=filedb_open(dcc[idx].u.file->dir);
   fdb=findfile(f,name,&where);
   if (fdb==NULL) {
-    dprintf(idx,FILES_NOSUCHDIR);
+    modprintf(idx,FILES_NOSUCHDIR);
     filedb_close(f); return;
   }
   if (!(fdb->stat & FILE_DIR)) {
-    dprintf(idx,FILES_NOSUCHDIR);
+    modprintf(idx,FILES_NOSUCHDIR);
     filedb_close(f); return;
   }
   /* erase '.filedb' and '.files' if they exist */
@@ -770,7 +809,7 @@ void cmd_rmdir PROTO2(int,idx,char *,par)
   sprintf(s,"%s%s/%s/.files",dccdir,dcc[idx].u.file->dir,name); unlink(s);
   sprintf(s,"%s%s/%s",dccdir,dcc[idx].u.file->dir,name);
   if (rmdir(s)==0) {
-    dprintf(idx,"%s /%s%s%s\n",FILES_REMDIR,dcc[idx].u.file->dir,
+    modprintf(idx,"%s /%s%s%s\n",FILES_REMDIR,dcc[idx].u.file->dir,
 	    dcc[idx].u.file->dir[0]?"/":"",name);
     fdb->stat|=FILE_UNUSED;
     fseek(f,where,SEEK_SET);
@@ -779,10 +818,13 @@ void cmd_rmdir PROTO2(int,idx,char *,par)
     putlog(LOG_FILES,"*","files: #%s# rmdir %s",dcc[idx].nick,name);
     return;
   }
-  dprintf(idx,FAILED);
+  modprintf(idx,FAILED);
   filedb_close(f);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
 {
   char *p,fn[512],oldpath[161],s[161],s1[161],newfn[161],newpath[161];
@@ -790,13 +832,13 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
   long where,gwhere,wherez;
   atr=get_attr_handle(dcc[idx].nick);
   nsplit(fn,par); if (!par[0]) {
-    dprintf(idx,"%s: %s <oldfilepath> <newfilepath>\n",USAGE,copy?"cp":"mv");
+    modprintf(idx,"%s: %s <oldfilepath> <newfilepath>\n",USAGE,copy?"cp":"mv");
     return;
   }
   p=strrchr(fn,'/'); if (p!=NULL) {
     *p=0; strncpy(s,fn,160); s[160]=0; strcpy(fn,p+1);
     if (!resolve_dir(dcc[idx].u.file->dir,s,oldpath,atr)) {
-      dprintf(idx,FILES_ILLSOURCE);
+      modprintf(idx,FILES_ILLSOURCE);
       return;
     }
   }
@@ -808,7 +850,7 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
     if (p==NULL) { strcpy(newfn,s); s[0]=0; }
     else { *p=0; strcpy(newfn,p+1); }
     if (!resolve_dir(dcc[idx].u.file->dir,s,newpath,atr)) {
-      dprintf(idx,FILES_ILLDEST);
+      modprintf(idx,FILES_ILLDEST);
       return;
     }
   }
@@ -816,7 +858,7 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
   /* stupidness checks */
   if ((strcmp(oldpath,newpath)==0) &&
       ((!newfn[0]) || (strcmp(newfn,fn)==0))) {
-    dprintf(idx,FILES_STUPID,copy?FILES_COPY:FILES_MOVE);
+    modprintf(idx,FILES_STUPID,copy?FILES_COPY:FILES_MOVE);
     return;
   }
   /* be aware of 'cp * this.file' possibility: ONLY COPY FIRST ONE */
@@ -829,7 +871,7 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
   where=0L; ok=0;
   fdb=findmatch(f,fn,&where);
   if (fdb==NULL) {
-    dprintf(idx,FILES_NOMATCH);
+    modprintf(idx,FILES_NOMATCH);
     filedb_close(f);
     if (g!=NULL) filedb_close(g);
     return;
@@ -841,7 +883,7 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
       sprintf(s1,"%s%s%s%s",dccdir,newpath,newpath[0]?"/":"",newfn[0]?
 	      newfn:fdb->filename);
       if (strcmp(s,s1)==0) {
-	dprintf(idx,"%s /%s%s%s %s\n",FILES_SKIPSTUPID,copy?FILES_COPY:
+	modprintf(idx,"%s /%s%s%s %s\n",FILES_SKIPSTUPID,copy?FILES_COPY:
 		FILES_MOVE,newpath,newpath[0]?"/":"",newfn[0]?newfn:
 		fdb->filename);
 	skip_this=1;
@@ -856,7 +898,7 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
 	if (z->stat & FILE_DIR) {
 	  /* skip */
 	  skip_this=1;
-	  dprintf(idx,"%s /%s%s%s %s\n",FILES_DEST,
+	  modprintf(idx,"%s /%s%s%s %s\n",FILES_DEST,
 		  newpath,newpath[0]?"/":"",newfn[0]?newfn:fdb->filename,
 		  FILES_EXISTDIR);
 	}
@@ -878,7 +920,7 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
 	  ok++;
 	  if (g==NULL) gwhere=findempty(f);
 	  else gwhere=findempty(g);
-	  x.version=FILEVERSION; x.stat=fdb->stat; x.flags_req=0;
+	  x.version=FILEVERSION; x.stat=fdb->stat; x.flags_req[0]=0;
 	  strcpy(x.filename,fdb->filename); strcpy(x.desc,fdb->desc);
 	  if (newfn[0]) strcpy(x.filename,newfn);
 	  strcpy(x.uploader,fdb->uploader); x.uploaded=fdb->uploaded;
@@ -898,11 +940,11 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
 	    fseek(f,where,SEEK_SET);
 	    fwrite(fdb,sizeof(filedb),1,f);
 	  }
-	  dprintf(idx,"%s /%s%s%s to /%s%s%s\n",copy?FILES_COPIED:FILES_MOVED,
+	  modprintf(idx,"%s /%s%s%s to /%s%s%s\n",copy?FILES_COPIED:FILES_MOVED,
 		  oldpath,oldpath[0]?"/":"",fdb->filename,newpath,newpath[0]?
 		  "/":"",newfn[0]?newfn:fdb->filename);
 	}
-	else dprintf(idx,"%s /%s%s%s\n",FILES_CANTWRITE,newpath,newpath[0]?
+	else modprintf(idx,"%s /%s%s%s\n",FILES_CANTWRITE,newpath,newpath[0]?
 		     "/":"",newfn[0]?newfn:fdb->filename);
       }
     }
@@ -910,32 +952,75 @@ void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
     fdb=findmatch(f,fn,&where);
     if ((ok) && (only_first)) fdb=NULL;
   }
-  if (!ok) dprintf(idx,FILES_NOMATCH);
+  if (!ok) modprintf(idx,FILES_NOMATCH);
   else {
     putlog(LOG_FILES,"*","files: #%s# %s %s%s%s %s",dcc[idx].nick,
 	   copy?"cp":"mv",oldpath,oldpath[0]?"/":"",fn,par);
-    if (ok>1) dprintf(idx,"%s %d file%s.\n",copy?FILES_COPIED:FILES_MOVED,ok,
+    if (ok>1) modprintf(idx,"%s %d file%s.\n",copy?FILES_COPIED:FILES_MOVED,ok,
 		      ok==1?"":"s");
   }
   filedb_close(f);
   if (g!=NULL) filedb_close(g);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_mv PROTO2(int,idx,char *,par)
 {
   cmd_mv_cp(idx,par,0);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_cp PROTO2(int,idx,char *,par)
 {
   cmd_mv_cp(idx,par,1);
 }
 
+#ifdef MODULES
+static
+#endif
 void cmd_stats PROTO2(int,idx,char *,par)
 {
   tell_file_stats(idx,dcc[idx].nick);
   putlog(LOG_FILES,"*","files: #%s# stats",dcc[idx].nick);
 }
+
+#ifdef MODULES
+static int cmd_note_hook PROTO2(int,idx,char *,par) 
+{
+   return cmd_note(idx,par);
+}
+
+cmd_t myfiles[]={
+  { "cancel",  '-', (Function)cmd_cancel },
+  { "cd",      '-', (Function)cmd_chdir },
+  { "chdir",   '-', (Function)cmd_chdir },
+  { "cp",      'j', (Function)cmd_cp },
+  { "desc",    '-', (Function)cmd_desc },
+  { "get",     '-', (Function)cmd_get },
+  { "help",    '-', (Function)cmd_file_help },
+  { "hide",    'j', (Function)cmd_hide },
+  { "ln",      '-', (Function)cmd_ln },
+  { "ls",      '-', (Function)cmd_ls },
+  { "lsa",     '-', (Function)cmd_lsa },
+  { "mkdir",   'j', (Function)cmd_mkdir },
+  { "mv",      'j', (Function)cmd_mv },
+  { "note",    '-', (Function)cmd_note_hook },
+  { "pending", '-', (Function)cmd_pending },
+  { "pwd",     '-', (Function)cmd_pwd },
+  { "quit",    '-', (Function)CMD_LEAVE },
+  { "rm",      'j', (Function)cmd_rm },
+  { "rmdir",   'j', (Function)cmd_rmdir },
+  { "share",   'j', (Function)cmd_share },
+  { "stats",   '-', (Function)cmd_stats },
+  { "unhide",  'j', (Function)cmd_unhide },
+  { "unshare", 'j', (Function)cmd_unshare },
+  { 0, 0, 0 }
+};
+#endif
 
 /***** Tcl stub functions *****/
 
@@ -966,9 +1051,9 @@ int files_get PROTO3(int,idx,char *,fn,char *,nick)
     else {
       i=nextbot(bot);
       strcpy(whoto,nick); if (!whoto[0]) strcpy(whoto,dcc[idx].nick);
-      tprintf(dcc[i].sock,"filereq %d:%s@%s %s:%s\n",dcc[idx].sock,
+      modprintf(-dcc[i].sock,"filereq %d:%s@%s %s:%s\n",dcc[idx].sock,
 	      whoto,botnetnick,bot,fdb->sharelink);
-      dprintf(idx,FILES_REQUESTED,fdb->sharelink,bot);
+      modprintf(idx,FILES_REQUESTED,fdb->sharelink,bot);
       /* increase got count now (or never) */
       fdb->gots++;
       sprintf(s,"%s:%s",bot,fdb->sharelink); strcpy(fdb->sharelink,s);

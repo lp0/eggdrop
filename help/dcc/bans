@@ -23,7 +23,7 @@
 
    sometimes there will be a "!" or "*" right before the number.  a "!"
    means the ban is in the bot's permban list, but is not currently on
-   the channel.  a "*" marks a ban which is NOT in the perman list but
+   the channel.  a "*" marks a ban which is NOT in the permban list but
    IS on the channel.
 
    if you use 'bans' it will show you only the bans which are
@@ -39,4 +39,4 @@
    currently viewing in the console.  different bans may be active
    on different channels.  if you specify a channel name, that
    channel will be used instead of your current console channel.
-see also: -ban, +ban, kickban, console, set ban-time
+see also: -ban, +ban, kickban, console, set ban-time, stick, unstick

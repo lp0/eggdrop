@@ -270,6 +270,8 @@ void tell_verbose_chan_info PROTO2(int,idx, char *,chname)
   else sprintf(s1,"Desiring channel %s",chan->name);
   dprintf(idx,"%s, %d member%s, mode %s:\n",s1,chan->channel.members,
 	  chan->channel.members==1?"":"s",s);
+  if (chan->channel.topic[0])
+     dprintf(idx,"Channel Topic: %s\n",chan->channel.topic);
   m=chan->channel.member; i=0;
   if (chan->stat&CHANACTIVE) {
     dprintf(idx,"(m = master, o = op, d = deop, b = bot)\n");
@@ -880,7 +882,7 @@ void gotjoin PROTO2(char *,from,char *,chname)
 	else if ((chatr & CHANUSER_KICK) || (atr & USER_KICK)) {
 	  quickban(chan,s);
 	  get_handle_comment(handle,s1);
-	  if (s1[0])
+	  if (s1[0] && (s1[0] != '@'))
 	    mprintf(serv,"KICK %s %s :%s\n",chname,nick,s1);
 	  else
 	    mprintf(serv,"KICK %s %s :...and don't come back.\n",chname,nick);
@@ -1035,8 +1037,10 @@ void gotnick PROTO2(char *,ffrom,char *,msg)
     }
     chan=chan->next;
   }
+  if (strcasecmp(nick,botname)==0) strcpy(botname,msg);
   if (strcasecmp(nick,newbotname)==0) {
     /* regained nick! */
+    strcpy(botname,msg);
     newbotname[0]=0; waiting_for_awake=0;
     putlog(LOG_SERV|LOG_MISC,"*","Regained nickname '%s'.",msg);
   }
@@ -1298,7 +1302,8 @@ int add_chan_user PROTO3(char *,nick,int,idx,char *,hand)
     }
     dprintf(idx,"Added hostmask %s to %s.\n",s1,hand);
     addhost_by_handle(hand,s1);
-    if ((get_chanattr_handle(hand,chan->name) & CHANUSER_OP) &&
+    if (!(m->flags&CHANOP) && 
+	(get_chanattr_handle(hand,chan->name) & CHANUSER_OP) &&
 	(chan->stat & CHAN_OPONJOIN))
       add_mode(chan,'+','o',m->nick);
     return 1;

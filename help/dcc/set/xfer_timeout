@@ -1,5 +1,5 @@
 %{+n}
 ### set xfer-timeout <#>
-     sets the number of seconds to wait before a dcc send/get is
-     considered to have timeout, if no traffic occurs on the transfer
-     for the given time, it closes.
+   sets the number of seconds to wait before a dcc send/get is
+   considered to have timeout, if no traffic occurs on the transfer
+   for the given time, it closes.

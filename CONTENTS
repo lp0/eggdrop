@@ -1,15 +1,27 @@
 "What are all these files for?"
 
+COPYING
+   legal stuff
+
 FEATURES
    just tells you what eggdrop can do -- a kind of advertisement
+
+Makefile
+   help with automated making of bot
 
 README
    what you should read before trying to compile eggdrop -- contains
    tips on compiling, and an explanation of what eggdrop does
 
-botchk*
+addpatch
+   a script to easily add patches onto your current version
+
+botchk
    a sample shell script, suitable for crontab, which will make sure
    your bot is running
+
+config
+   scripts/files for automatic configure of the bot
 
 doc/
    lots of IMPORTANT DOCUMENTATION that you might want to read!
@@ -17,9 +29,27 @@ doc/
 eggdrop.conf
    sample configuration for your bot
 
-eggstat*
-   a small (very old) Tcl script to give you simple statistics about
-   your user file
+filesys/
+   sample filesystem
+
+help/
+   the online help files for the bot
+
+putegg 
+   a script for installing the bot in another directory
 
 motd
    sample "message of the day" displayed to party-line users as they join
+
+scripts/
+   some very good tcl scripts
+
+src/
+   the eggdrop source
+
+text/
+   text files used when the bot is running
+
+weed
+   a simple script to clear out old or unwanted users from your
+   userfile

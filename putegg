@@ -1,7 +1,5 @@
 #! /bin/sh
-#
 # script to copy vital files into another directory
-#
 
 if test "$1" = ""; then
   echo ""
@@ -51,8 +49,12 @@ echo ""
 ./eggdrop -v
 echo "Copying eggdrop files into $1 ..."
 rm -f $1/eggdrop
-cp eggdrop* $1
 cp README $1
+cp eggdrop $1
+cp weed $1
+if test -r assoc.so; then
+  cp *.so $1
+fi
 
 if test -r $1/doc; then
   if test ! -d $1/doc; then
@@ -139,4 +141,5 @@ echo "If you're just upgrading, then you can safely erase this directory."
 echo "Otherwise, you should probably keep it around for reference for a"
 echo "little while."
 echo ""
-
+echo "You may want to copy the file eggdrop.conf over as well."
+echo ""

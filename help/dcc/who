@@ -30,7 +30,7 @@
    the enhanced talk ircII script.
   
    in the final section (users that aren't on this channel), masters
-   will see the actual channel other users are on.  also, peole in
+   will see the actual channel other users are on.  also, people in
    the file system will be listed (as being in channel "files") -- 
    a '+' next to the nickname here means the user has access to return
    to the party line.

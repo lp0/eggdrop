@@ -22,7 +22,6 @@
 #include "eggdrop.h"
 #include "tclegg.h"
 #include "tandem.h"
-#include "proto.h"
 #include "cmdt.h"
 
 
@@ -86,43 +85,6 @@ int tcl_dccsimul STDVAR
   if (strlen(argv[2])>510) argv[2][510]=0;  /* restrict length of cmd */
   strcpy(cmd,argv[2]);
   dcc_activity(dcc[idx].sock,cmd,strlen(cmd));
-  return TCL_OK;
-}
-#endif
-
-#ifndef NO_FILE_SYSTEM
-int tcl_dccsend STDVAR
-{
-  char s[5],sys[512],*nfn; int i; FILE *f;
-  BADARGS(3,3," filename ircnick");
-  f=fopen(argv[1],"r"); if (f==NULL) {
-    /* file not found */
-    Tcl_AppendResult(irp,"3",NULL);
-    return TCL_OK;
-  }
-  fclose(f);
-  nfn=strrchr(argv[1],'/');
-  if (nfn==NULL) nfn=argv[1]; else nfn++;
-  if (at_limit(argv[2])) {
-    /* queue that mother */
-    if (nfn==argv[1]) queue_file("*",nfn,"(script)",argv[2]);
-    else {
-      nfn--; *nfn=0; nfn++;
-      sprintf(sys,"*%s",argv[1]);
-      queue_file(sys,nfn,"(script)",argv[2]);
-    }
-    Tcl_AppendResult(irp,"4",NULL);
-    return TCL_OK;
-  }
-  if (copy_to_tmp) {
-    sprintf(sys,"%s%s",tempdir,nfn);   /* new filename, in /tmp */
-    copyfile(argv[1],sys);
-  }
-  else strcpy(sys,argv[1]);
-  i=raw_dcc_send(sys,argv[2],"*",argv[1]);
-  if (i>0) wipe_tmp_filename(sys,-1);
-  sprintf(s,"%d",i);
-  Tcl_AppendResult(irp,s,NULL);
   return TCL_OK;
 }
 #endif
@@ -223,8 +185,8 @@ int tcl_dccputchan STDVAR
   int chan; char msg[401];
   BADARGS(3,3," channel message");
   chan=atoi(argv[1]);
-  if ((chan<0) || (chan>99999)) {
-    Tcl_AppendResult(irp,"channel out of range; must be 0 thru 99999",NULL);
+  if ((chan<0) || (chan>199999)) {
+    Tcl_AppendResult(irp,"channel out of range; must be 0 thru 199999",NULL);
     return TCL_ERROR;
   }
   strncpy(msg,argv[2],400); msg[400]=0;
@@ -478,11 +440,12 @@ int tcl_dcclist STDVAR
     case DCC_FILES: strcpy(typ,"files"); ok=1; break;
     case DCC_SCRIPT: strcpy(typ,"script"); ok=1; break;
     case DCC_SOCKET: strcpy(typ,"socket"); ok=1; break;
+/* dont return these....they cause problems with putdcc 
     case DCC_BOT: strcpy(typ,"bot"); ok=1; break;
     case DCC_SEND: strcpy(typ,"receiving_file"); ok=1; break;
     case DCC_GET: strcpy(typ,"sending_file"); ok=1; break;
     case DCC_GET_PENDING: strcpy(typ,"send_file_pending"); ok=1; break;
-    }
+*/    }
     if (ok) {
       sprintf(idxstr,"%d",dcc[i].sock);
       list[0]=idxstr; list[1]=dcc[i].nick; list[2]=dcc[i].host;
@@ -497,7 +460,7 @@ int tcl_dcclist STDVAR
 /* list of { nick bot host flag idletime awaymsg } */
 int tcl_whom STDVAR
 {
-  char c[2],idle[10],away[121],work[20],*list[6],*p;
+  char c[2],idle[10],away[121],work[20],*list[7],*p;
   int chan,i; time_t now=time(NULL);
   BADARGS(2,2," chan");
   if (argv[1][0] == '*')
@@ -662,72 +625,6 @@ int tcl_unlink STDVAR
       tprintf(dcc[i].sock,"unlink %s %s %s\n",botnetnick,lastbot(bot),bot);
   }
   sprintf(bot,"%d",x); Tcl_AppendResult(irp,bot,NULL);
-  return TCL_OK;
-}
-
-#ifndef NO_FILE_SYSTEM
-int tcl_filesend STDVAR
-{
-  int i,idx; char s[10];
-  BADARGS(3,4," idx filename ?nick?");
-  i=atoi(argv[1]); idx=findidx(i);
-  if (idx<0) {
-    Tcl_AppendResult(irp,"invalid idx",NULL);
-    return TCL_ERROR;
-  }
-  if (dcc[idx].type!=DCC_FILES) {
-    Tcl_AppendResult(irp,"invalid idx",NULL);
-    return TCL_ERROR;
-  }
-  if (argc==4) i=files_get(idx,argv[2],argv[3]);
-  else i=files_get(idx,argv[2],"");
-  sprintf(s,"%d",i);
-  Tcl_AppendResult(irp,s,NULL);
-  return TCL_OK;
-}
-#endif
-
-int tcl_assoc STDVAR
-{
-  int chan; char name[21],*p;
-  BADARGS(2,3," chan ?name?");
-  if ((argc == 2) && ((argv[1][0] < '0') || (argv[1][0] > '9'))) {
-     chan = get_assoc(argv[1]);
-     if (chan==-1)
-       Tcl_AppendResult(irp,"",NULL);
-     else { 
-       sprintf(name,"%d",chan);
-       Tcl_AppendResult(irp,name,NULL);
-     }
-     return TCL_OK;
-  }
-  chan=atoi(argv[1]);
-  if ((chan<1) || (chan>199999)) {
-    Tcl_AppendResult(irp,"invalid channel #",NULL);
-    return TCL_ERROR;
-  }
-  if (argc==3) {
-    strncpy(name,argv[2],20); name[20]=0;
-    add_assoc(name,chan);
-    tandout("assoc %d %s\n",chan,name);
-  }
-  p=get_assoc_name(chan);
-  if (p==NULL) name[0]=0; else strcpy(name,p);
-  Tcl_AppendResult(irp,name,NULL);
-  return TCL_OK;
-}
-
-int tcl_killassoc STDVAR
-{
-  int chan;
-  BADARGS(2,2," chan");
-  chan=atoi(argv[1]);
-  if ((chan<1) || (chan>199999)) {
-    Tcl_AppendResult(irp,"invalid channel #",NULL);
-    return TCL_ERROR;
-  }
-  kill_assoc(chan);
-  tandout("assoc %d 0\n",chan);
   return TCL_OK;
 }
 

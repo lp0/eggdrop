@@ -68,7 +68,7 @@ max-queue-msg
 modes-per-line
 share-greet
 wait-info
-wait-plit
+wait-split
 %{end}
    variables specific to the file system:
 %{cols=4}

@@ -4,4 +4,4 @@
    keep the ban active on the channel, even if the channel is
    using dynamic bans.  obviously if the channel isn't using
    dynamic bans, this has no effect.
-see also: bans, unstick
+see also: bans, unstick, +ban

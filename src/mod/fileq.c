@@ -15,25 +15,20 @@
    COPYING that was distributed with this code.
 */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "module.h"
+#ifdef MODULES
+#define MODULE_NAME "filesys"
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <netinet/in.h>
-#include "eggdrop.h"
-#include "proto.h"
-#include "../lush.h"
+#include "files.h"
+#include "filesys.h"
+#endif
 
 #ifndef NO_FILE_SYSTEM
 
 extern char dccdir[];
-extern char tempdir[];
-extern int serv;
-extern int dcc_total;
-extern struct dcc_t dcc[];
 extern int copy_to_tmp;
 
 typedef struct zarrf {
@@ -44,12 +39,13 @@ typedef struct zarrf {
   struct zarrf *next;
 } fileq_t;
 
+
 fileq_t *fileq=NULL;
 
 int expmem_fileq()
 {
   fileq_t *q=fileq; int tot=0;
-  context;
+  modcontext;
   while (q!=NULL) {
     tot+=strlen(q->dir)+strlen(q->file)+2+sizeof(fileq_t);
     q=q->next;
@@ -60,10 +56,10 @@ int expmem_fileq()
 void queue_file PROTO4(char *,dir,char *,file,char *,from,char *,to)
 {
   fileq_t *q=fileq;
-  fileq=(fileq_t *)nmalloc(sizeof(fileq_t));
+  fileq=(fileq_t *)modmalloc(sizeof(fileq_t));
   fileq->next=q;
-  fileq->dir=(char *)nmalloc(strlen(dir)+1);
-  fileq->file=(char *)nmalloc(strlen(file)+1);
+  fileq->dir=(char *)modmalloc(strlen(dir)+1);
+  fileq->file=(char *)modmalloc(strlen(file)+1);
   strcpy(fileq->dir,dir); strcpy(fileq->file,file);
   strcpy(fileq->nick,from); strcpy(fileq->to,to);
 }
@@ -77,7 +73,7 @@ void deq_this PROTO1(fileq_t *,this)
   if (q==NULL) return;   /* bogus ptr */
   if (last!=NULL) last->next=q->next;
   else fileq=q->next;
-  nfree(q->dir); nfree(q->file); nfree(q);
+  modfree(q->dir); modfree(q->file); modfree(q);
 }
 
 /* remove all files queued to a certain user */
@@ -111,7 +107,7 @@ void send_next_file PROTO1(char *,to)
     if (copyfile(s,s1)!=0) {
       putlog(LOG_FILES|LOG_MISC,"*","Refused dcc get %s: copy to %s FAILED!",
 	     this->file,tempdir);
-      mprintf(serv,"NOTICE %s :File system is broken; aborting queued files.\n",
+      modprintf(DP_HELP,"NOTICE %s :File system is broken; aborting queued files.\n",
 	      this->to);
       strcpy(s,this->to); flush_fileq(s);
       return;
@@ -124,7 +120,7 @@ void send_next_file PROTO1(char *,to)
   if (x==1) {
     wipe_tmp_filename(s1,-1);
     putlog(LOG_FILES,"*","DCC connections full: GET %s [%s]",s1,this->nick);
-    mprintf(serv,"NOTICE %s :DCC connections full; aborting queued files.\n",
+    modprintf(DP_HELP,"NOTICE %s :DCC connections full; aborting queued files.\n",
 	    this->to);
     strcpy(s,this->to); flush_fileq(s);
     return;
@@ -132,13 +128,13 @@ void send_next_file PROTO1(char *,to)
   if (x==2) {
     wipe_tmp_filename(s1,-1);
     putlog(LOG_FILES,"*","DCC socket error: GET %s [%s]",s1,this->nick);
-    mprintf(serv,"NOTICE %s :DCC socket error; aborting queued files.\n",
+    modprintf(DP_HELP,"NOTICE %s :DCC socket error; aborting queued files.\n",
 	    this->to);
     strcpy(s,this->to); flush_fileq(s);
     return;
   }
   if (strcasecmp(this->to,this->nick)!=0)
-    mprintf(serv,"NOTICE %s :Here is a file from %s ...\n",this->to,
+    modprintf(DP_HELP,"NOTICE %s :Here is a file from %s ...\n",this->to,
 	    this->nick);
   deq_this(this);
 }
@@ -165,14 +161,14 @@ void show_queued_files PROTO1(int,idx)
   while (q!=NULL) {
     if (strcasecmp(q->nick,dcc[idx].nick)==0) {
       if (!cnt) {
-	dprintf(idx,"  Send to    Filename\n");
-	dprintf(idx,"  ---------  --------------------\n");
+	modprintf(idx,"  Send to    Filename\n");
+	modprintf(idx,"  ---------  --------------------\n");
       }
       cnt++;
       if (q->dir[0]=='*')
-	dprintf(idx,"  %-9s  %s/%s\n",q->to,&q->dir[1],q->file);
+	modprintf(idx,"  %-9s  %s/%s\n",q->to,&q->dir[1],q->file);
       else
-	dprintf(idx,"  %-9s  /%s%s%s\n",q->to,q->dir,q->dir[0]?"/":"",
+	modprintf(idx,"  %-9s  /%s%s%s\n",q->to,q->dir,q->dir[0]?"/":"",
 		q->file);
     }
     q=q->next;
@@ -183,22 +179,22 @@ void show_queued_files PROTO1(int,idx)
 	 (strcasecmp(dcc[i].u.xfer->from,dcc[idx].nick)==0))) {
       char *nfn;
       if (!cnt) {
-	dprintf(idx,"  Send to    Filename\n");
-	dprintf(idx,"  ---------  --------------------\n");
+	modprintf(idx,"  Send to    Filename\n");
+	modprintf(idx,"  ---------  --------------------\n");
       }
       nfn=strrchr(dcc[i].u.xfer->filename,'/');
       if (nfn==NULL) nfn=dcc[i].u.xfer->filename; else nfn++;
       cnt++; 
       if (dcc[i].type==DCC_GET_PENDING)
-	dprintf(idx,"  %-9s  %s  [WAITING]\n",dcc[i].nick,nfn);
+	modprintf(idx,"  %-9s  %s  [WAITING]\n",dcc[i].nick,nfn);
       else
-	dprintf(idx,"  %-9s  %s  (%.1f%% done)\n",dcc[i].nick,nfn,
+	modprintf(idx,"  %-9s  %s  (%.1f%% done)\n",dcc[i].nick,nfn,
 		(100.0*((float)dcc[i].u.xfer->sent / 
 			(float)dcc[i].u.xfer->length)));
     }
   }
-  if (!cnt) dprintf(idx,"No files queued up.\n");
-  else dprintf(idx,"Total: %d\n",cnt);
+  if (!cnt) modprintf(idx,"No files queued up.\n");
+  else modprintf(idx,"Total: %d\n",cnt);
 }
 
 void fileq_cancel PROTO2(int,idx,char *,par)
@@ -212,11 +208,11 @@ void fileq_cancel PROTO2(int,idx,char *,par)
 	else
 	  sprintf(s,"/%s%s%s",q->dir,q->dir[0]?"/":"",q->file);
 	if (wild_match_file(par,s)) {
-	  dprintf(idx,"Cancelled: %s to %s\n",s,q->to);
+	  modprintf(idx,"Cancelled: %s to %s\n",s,q->to);
 	  fnd=1; deq_this(q); q=NULL; matches++;
 	}
 	if ((!fnd) && (wild_match_file(par,q->file))) {
-	  dprintf(idx,"Cancelled: %s to %s\n",s,q->to);
+	  modprintf(idx,"Cancelled: %s to %s\n",s,q->to);
 	  fnd=1; deq_this(q); q=NULL; matches++;
 	}
       }
@@ -230,9 +226,9 @@ void fileq_cancel PROTO2(int,idx,char *,par)
       char *nfn=strrchr(dcc[i].u.xfer->filename,'/');
       if (nfn==NULL) nfn=dcc[i].u.xfer->filename; else nfn++;
       if (wild_match_file(par,nfn)) {
-	dprintf(idx,"Cancelled: %s  (aborted dcc send)\n",nfn);
+	modprintf(idx,"Cancelled: %s  (aborted dcc send)\n",nfn);
 	if (strcasecmp(dcc[i].nick,dcc[idx].nick)!=0)
-	  mprintf(serv,"NOTICE %s :Transfer of %s aborted by %s\n",dcc[i].nick,
+	  modprintf(DP_HELP,"NOTICE %s :Transfer of %s aborted by %s\n",dcc[i].nick,
 		  nfn,dcc[idx].nick);
 	if (dcc[i].type==DCC_GET)
 	  putlog(LOG_FILES,"*","DCC cancel: GET %s (%s) at %lu/%lu",nfn,
@@ -242,8 +238,8 @@ void fileq_cancel PROTO2(int,idx,char *,par)
       }
     }
   }
-  if (!matches) dprintf(idx,"No matches.\n");
-  else dprintf(idx,"Cancelled %d file%s.\n",matches,matches>1?"s":"");
+  if (!matches) modprintf(idx,"No matches.\n");
+  else modprintf(idx,"Cancelled %d file%s.\n",matches,matches>1?"s":"");
   for (i=0; i<atot; i++)
     if (!at_limit(dcc[idx].nick)) send_next_file(dcc[idx].nick);
 }

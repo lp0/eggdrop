@@ -1,20 +1,27 @@
-# getops-1.7.tcl by dtM, a GainOps-like script for eggdrop 1.1.x
+# getops-1.8.tcl by dtM, a GainOps-like script for eggdrop 1.1.x
 
 # This script originated from getops-1.2.tcl by poptix, which, I found out,
 # did not work. I modified it to where it worked very nicely and
 # efficiently. Thanks to poptix for the ideas and something to do. :)
 
+# thanks to beldin/david/cfusion/oldgroo and anyone else who gave me
+#  suggestions/fixes :)
 
 # [0/1] do you want your bot to request to be unbanned if it becomes banned?
 set go_bot_unban 1
+
 # [0/1] do you want GetOps to wallop if there aren't any bots to talk to?
 set go_wallop 1
+
 # set this to the wallop msg for the above (go_wallop)
 set go_wallop_msg "Please op one of the bots :)"
+
 # [0/1] do you want GetOps to notice the channel if there are no ops?
 set go_cycle 1
+
 # set this to the notice txt for the above (go_cycle)
 set go_cycle_msg "Please part the channel so the bots can cycle!"
+
 # set this to the max number of msg/notice recipients you want
 set go_max_recips 10
 
@@ -73,7 +80,7 @@ proc gain_entrance {what chan} {
     set recips 0
     set go_wallop_sent($chan) 0
     foreach user1 [chanlist $chan] {
-     if {![onchansplit $user1 $chan] && [isop $user1 $chan]} {
+     if {![onchansplit $user1 $chan] && [isop $user1 $chan] && [iso $user1 $chan]} {
       if {![info exists oplist]} {
        set oplist $user1
       } {
@@ -81,7 +88,7 @@ proc gain_entrance {what chan} {
       }
       set recips [expr $recips + 1]
       if {$recips == $go_max_recips} {
-       putserv "NOTICE $oplist :$go_wallop_msg"
+       putserv "NOTICE $oplist :($chan) $go_wallop_msg"
        set go_wallop_sent($chan) 1
        unset oplist
        set recips 0
@@ -90,12 +97,12 @@ proc gain_entrance {what chan} {
     }
    }
    if {[info exists oplist]} {
-    putserv "NOTICE $oplist :$go_wallop_msg"
+    putserv "NOTICE $oplist :($chan) $go_wallop_msg"
     set go_wallop_sent($chan) 1
    }
-   if {$go_wallop_sent($chan) == 0} {
+   if {$go_wallop_sent($chan) == 0 && $go_cycle} {
     putlog "GetOps: No ops on $chan, sending cycle message."
-    putserv "NOTICE $chan :$go_cycle_msg"
+    putserv "NOTICE $chan :($chan) $go_cycle_msg"
    }
    set go_warned($chan) 1
    set go_have_friend($chan) 0
@@ -213,7 +220,7 @@ proc lbots {} {
 }
 
 proc iso {nick chan1} {
- if {[matchattr $nick o] || [matchchanattr $nick o $chan1]} {
+ if {[matchattr [nick2hand $nick $chan1] o] || [matchchanattr [nick2hand $nick $chan1] o $chan1]} {
   return 1
   break
  }
@@ -222,7 +229,7 @@ proc iso {nick chan1} {
 
 proc validchan {chan} {
  foreach channel [string tolower [channels]] {
-  if {[string tolower $chan] == $channel} {
+  if {([string tolower $chan] == $channel) && (![isdynamic $channel])} {
    return 1
   }
  }
@@ -231,21 +238,25 @@ proc validchan {chan} {
 
 proc do_channels {} {
  foreach a [string tolower [channels]] {
-  channel set $a need-op "gain_entrance op $a"
-  channel set $a need-key "gain_entrance key $a"
-  channel set $a need-invite "gain_entrance invite $a"
-  channel set $a need-unban "gain_entrance unban $a"
-  channel set $a need-limit "gain_entrance limit $a"
-  unset a
+  if {![isdynamic $a]} {
+   channel set $a need-op "gain_entrance op $a"
+   channel set $a need-key "gain_entrance key $a"
+   channel set $a need-invite "gain_entrance invite $a"
+   channel set $a need-unban "gain_entrance unban $a"
+   channel set $a need-limit "gain_entrance limit $a"
+   unset a
+  }
  }
  timer 5 do_channels
 }
 
-do_channels
+if {![string match "*do_channels*" [timers]]} { timer 5 do_channels }
 
 foreach go_array {go_have_friend go_warned go_wallop_sent go_resynch} {
  foreach go_chans [string tolower [channels]] {
-  set ${go_array}($go_chans) 0
+  if {![isdynamic $go_chans]} {
+   set ${go_array}($go_chans) 0
+  }
  }
 }
 
@@ -253,4 +264,4 @@ bind bot - gop botnet_request
 bind bot - gop_resp gop_resp
 
 set getops_loaded 1
-putlog "GetOps v1.7 by dtM loaded."
+putlog "GetOps v1.8 by dtM loaded."

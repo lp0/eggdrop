@@ -14,19 +14,14 @@
    COPYING that was distributed with this code.
 */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "module.h"
+#ifdef MODULES
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "eggdrop.h"
-#include "tclegg.h"
-#include "proto.h"
-#include "files.h"
+#include "../files.h"
+#include "filesys.h"
+#endif
 
 #ifndef NO_FILE_SYSTEM
 
@@ -47,11 +42,7 @@
 # endif
 #endif
 
-extern char botnetnick[];
 extern char dccdir[];
-extern char tempdir[];
-extern int dcc_total;
-extern struct dcc_t dcc[];
 extern int copy_to_tmp;
 
 /* where to put the filedb, if not in a hidden '.filedb' file in */
@@ -208,13 +199,18 @@ int convert_old_db PROTO2(char *,path,char *,newfiledb)
 	  fdb.version=FILEVERSION; fdb.stat=0; fdb.desc[0]=0;
 	  strcpy(fdb.filename,fn); strcpy(fdb.uploader,nick);
 	  fdb.gots=atoi(s); fdb.sharelink[0]=0; fdb.uploaded=atol(tm);
-	  fdb.flags_req=0;
+	  fdb.flags_req[0]=0;
 	  sprintf(s,"%s/%s",path,fn);
 	  if (stat(s,&st)==0) {
 	    /* file is okay */
 	    if (S_ISDIR(st.st_mode)) {
 	      fdb.stat|=FILE_DIR; 
-	      if (nick[0]=='+') fdb.flags_req=str2flags(&nick[1]);
+	      if (nick[0]=='+') {
+		 char x[100];
+		 flags2str(str2flags(&nick[1]),x); /* we only want valid flags*/
+		 strncpy(fdb.flags_req,x,10);
+		 fdb.flags_req[10]=0;
+	      }
 	    }
 	    fdb.size=st.st_size;
 	    fwrite(&fdb,sizeof(filedb),1,g);
@@ -262,7 +258,7 @@ void filedb_update PROTO2(char *,path,FILE *,f)
 	fdb1.stat=0;   /* by default, visible regular file */
 	strcpy(fdb1.filename,name);
 	fdb1.desc[0]=0; strcpy(fdb1.uploader,botnetnick);
-	fdb1.gots=0; fdb1.flags_req=0; fdb1.uploaded=time(NULL);
+	fdb1.gots=0; fdb1.flags_req[0]=0; fdb1.uploaded=time(NULL);
 	fdb1.size=st.st_size; fdb1.sharelink[0]=0;
 	if (S_ISDIR(st.st_mode)) fdb1.stat|=FILE_DIR;
 	fwrite(&fdb1,sizeof(filedb),1,f);
@@ -400,7 +396,7 @@ void filedb_ls PROTO5(FILE *,f,int,idx,int,atr,char *,mask,int,showall)
       if (fdb.stat&FILE_UNUSED) ok=0;
       if (fdb.stat&FILE_DIR) {
 	/* check permissions */
-	if (!flags_ok(fdb.flags_req,atr)) ok=0;
+	if (!flags_ok(str2flags(fdb.flags_req),atr)) ok=0;
       }
       if (ok) is=1;
       if (!wild_match_file(mask,fdb.filename)) ok=0;
@@ -408,24 +404,23 @@ void filedb_ls PROTO5(FILE *,f,int,idx,int,atr,char *,mask,int,showall)
       if (ok) {
 	/* display it! */
 	if (cnt==0) {
-	  dprintf(idx,FILES_LSHEAD1);
-	  dprintf(idx,FILES_LSHEAD2);
+	  modprintf(idx,FILES_LSHEAD1);
+	  modprintf(idx,FILES_LSHEAD2);
 	}
 	if (fdb.stat&FILE_DIR) {
 	  char s2[50];
 	  /* too long? */
 	  if (strlen(fdb.filename)>45) {
-	    dprintf(idx,"%s/\n",fdb.filename);
+	    modprintf(idx,"%s/\n",fdb.filename);
 	    s2[0]=0;
 	    /* causes filename to be displayed on its own line */
 	  }
 	  else sprintf(s2,"%s/",fdb.filename);
-	  if ((fdb.flags_req) && (atr&(USER_MASTER|USER_JANITOR))) {
-	    flags2str(fdb.flags_req,s);
-	    dprintf(idx,"%-45s <DIR%s>  (%s +%s)\n",s2,fdb.stat&FILE_SHARE?
-		    " SHARE":"",FILES_REQUIRES,s);
+	  if ((fdb.flags_req[0]) && (atr&(USER_MASTER|USER_JANITOR))) {
+	    modprintf(idx,"%-45s <DIR%s>  (%s +%s)\n",s2,fdb.stat&FILE_SHARE?
+		    " SHARE":"",FILES_REQUIRES,fdb.flags_req);
 	  }
-	  else dprintf(idx,"%-45s <DIR>\n",s2);
+	  else modprintf(idx,"%-45s <DIR>\n",s2);
 	}
 	else {
 	  char s2[41];
@@ -441,36 +436,40 @@ void filedb_ls PROTO5(FILE *,f,int,idx,int,atr,char *,mask,int,showall)
 	  if (fdb.sharelink[0]) strcpy(s1,"     ");
 	  /* too long? */
 	  if (strlen(fdb.filename)>30) {
-	    dprintf(idx,"%s\n",fdb.filename);
+	    modprintf(idx,"%s\n",fdb.filename);
 	    fdb.filename[0]=0;
 	    /* causes filename to be displayed on its own line */
 	  }
-	  dprintf(idx,"%-30s %s  %-9s (%s)  %6d%s\n",fdb.filename,s1,
+	  modprintf(idx,"%-30s %s  %-9s (%s)  %6d%s\n",fdb.filename,s1,
 		  fdb.uploader,s,fdb.gots,s2);
 	  if (fdb.sharelink[0]) {
-	    dprintf(idx,"   --> %s\n",fdb.sharelink);
+	    modprintf(idx,"   --> %s\n",fdb.sharelink);
 	  }
 	}
 	if (fdb.desc[0]) {
 	  p=strchr(fdb.desc,'\n');
 	  while (p!=NULL) {
-	    *p=0; if (fdb.desc[0]) dprintf(idx,"   %s\n",fdb.desc);
+	    *p=0; if (fdb.desc[0]) modprintf(idx,"   %s\n",fdb.desc);
 	    strcpy(fdb.desc,p+1); p=strchr(fdb.desc,'\n');
 	  }
-	  if (fdb.desc[0]) dprintf(idx,"   %s\n",fdb.desc);
+	  if (fdb.desc[0]) modprintf(idx,"   %s\n",fdb.desc);
 	}
 	cnt++;
       }
     }
   }
-  if (is==0) dprintf(idx,FILES_NOFILES);
-  else if (cnt==0) dprintf(idx,FILES_NOMATCH);
-  else dprintf(idx,"--- %d file%s.\n",cnt,cnt>1?"s":"");
+  if (is==0) modprintf(idx,FILES_NOFILES);
+  else if (cnt==0) modprintf(idx,FILES_NOMATCH);
+  else modprintf(idx,"--- %d file%s.\n",cnt,cnt>1?"s":"");
 }
 
 void remote_filereq PROTO3(int,idx,char *,from,char *,file)
 {
-  char *p,what[256],dir[256],s[256],s1[256]; FILE *f; filedb *fdb; int i;
+  char *p,what[256],dir[256],s[256],s1[256]; 
+   FILE *f; 
+   filedb *fdb; 
+   int i;
+
   strcpy(what,file);
   p=strrchr(what,'/'); if (p==NULL) dir[0]=0;
   else {
@@ -478,19 +477,19 @@ void remote_filereq PROTO3(int,idx,char *,from,char *,file)
   }
   f=filedb_open(dir);
   if (f==NULL) {
-    tprintf(dcc[idx].sock,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
+    modprintf(idx,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
 	    from,FILES_DIRDNE);
     return;
   }
   fdb=findfile(f,what,NULL);
   if (fdb==NULL) {
-    tprintf(dcc[idx].sock,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
+    modprintf(idx,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
 	    from,FILES_FILEDNE);
     filedb_close(f);
     return;
   }
   if ((!(fdb->stat&FILE_SHARE)) || (fdb->stat&(FILE_HIDDEN|FILE_DIR))) {
-    tprintf(dcc[idx].sock,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
+    modprintf(idx,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
 	    from,FILES_NOSHARE);
     filedb_close(f);
     return;
@@ -506,13 +505,13 @@ void remote_filereq PROTO3(int,idx,char *,from,char *,file)
   i=raw_dcc_send(s,"*remote",FILES_REMOTE,s);
   if (i>0) {
     wipe_tmp_filename(s,-1);
-    tprintf(dcc[idx].sock,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
+    modprintf(idx,"filereject %s:%s/%s %s %s\n",botnetnick,dir,what,
 	    from,FILES_SENDERR);
     return;
   }
   /* grab info from dcc struct and bounce real request across net */
   i=dcc_total-1;
-  tprintf(dcc[idx].sock,"filesend %s:%s/%s %s %lu %d %lu\n",botnetnick,dir,
+  modprintf(idx,"filesend %s:%s/%s %s %lu %d %lu\n",botnetnick,dir,
 	  what,from,iptolong(getmyip()),dcc[i].port,dcc[i].u.xfer->length);
   putlog(LOG_FILES,"*",FILES_REMOTEREQ,dir,dir[0]?"/":"",what);
 }
@@ -602,7 +601,7 @@ void filedb_setlink PROTO3(char *,dir,char *,fn,char *,link)
   }
   fdb.version=FILEVERSION; fdb.stat=0; fdb.desc[0]=0;
   strcpy(fdb.uploader,botnetnick); strncpy(fdb.filename,fn,30);
-  fdb.filename[30]=0; fdb.flags_req=0; fdb.uploaded=time(NULL);
+  fdb.filename[30]=0; fdb.flags_req[0]=0; fdb.uploaded=time(NULL);
   fdb.size=0; fdb.gots=0;
   strncpy(fdb.sharelink,link,60); fdb.sharelink[60]=0;
   where=findempty(f);

@@ -155,7 +155,7 @@ int msg_pass PROTO4(char *,hand,char *,nick,char *,host,char *,par)
   if (!old[0]) {
     putlog(LOG_CMDS,"*","(%s!%s) !%s! PASS...",nick,host,hand);
     nsplit(new,par);
-    if (strlen(new)>9) new[9]=0;
+    if (strlen(new)>15) new[15]=0;
     if (strlen(new)<4) {
       mprintf(serv,"NOTICE %s :Please use at least 4 characters.\n",nick);
       return 0;
@@ -170,7 +170,7 @@ int msg_pass PROTO4(char *,hand,char *,nick,char *,host,char *,par)
   }
   nsplit(new,par);
   putlog(LOG_CMDS,"*","(%s!%s) !%s! PASS...",nick,host,hand);
-  if (strlen(new)>9) new[9]=0;
+  if (strlen(new)>15) new[15]=0;
   if (strlen(new)<4) {
     mprintf(serv,"NOTICE %s :Please use at least 4 characters.\n",nick);
     return 0;
@@ -263,10 +263,12 @@ int msg_info PROTO4(char *,hand,char *,nick,char *,host,char *,par)
   if (!use_info) return 1;
   if (strcasecmp(hand,"*")==0) return 0;
   if (get_attr_handle(hand) & USER_COMMON) return 1;
-  nsplit(pass,par);
-  if (!pass_match_by_handle(pass,hand)) {
-    putlog(LOG_CMDS,"*","(%s!%s) !%s! failed INFO",nick,host,hand);
-    return 1;
+  if (!pass_match_by_handle("-",hand)) {
+    nsplit(pass,par);
+    if (!pass_match_by_handle(pass,hand)) {
+      putlog(LOG_CMDS,"*","(%s!%s) !%s! failed INFO",nick,host,hand);
+      return 1;
+    }
   }
   if ((par[0]=='#') || (par[0]=='+') || (par[0]=='&')) nsplit(chname,par);
   else chname[0]=0;
@@ -590,8 +592,11 @@ int msg_go PROTO4(char *,hand,char *,nick,char *,host,char *,par)
   }
   if (par[0]) {
     /* specific GO */
+    int chatr;
     chan=findchan(par); if (chan==NULL) return 0;
-    if (!(get_chanattr_handle(hand,chan->name) & CHANUSER_OP)) {
+    chatr = get_chanattr_handle(hand,chan->name);
+    if (!(chatr & CHANUSER_OP) &&
+	!((get_attr_handle(hand) & USER_GLOBAL) && !(chatr & CHANUSER_DEOP))) {
       putlog(LOG_CMDS,"*","(%s!%s) !%s! failed GO (not op)",nick,host,hand);
       return 1;
     }

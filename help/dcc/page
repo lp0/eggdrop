@@ -1,6 +1,6 @@
 ### page <# or off>
      allows you to slow down the number of lines the bot sends to you
-     at once whilst you're in chat mode, with this on, any commands
+     at once while you're in chat mode.  with this on, any commands
      that send greater than the specified number of lines will stop
      when the number is reached, and wait for you to type another
-     command (or press enter) to continue
+     command (or press enter) to continue.

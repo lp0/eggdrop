@@ -29,7 +29,14 @@
 #include "users.h"
 #include "chan.h"
 #include "proto.h"
-
+#ifdef MODULES
+#include "modules.h"
+#endif
+#ifdef HAVE_NAT
+char natip[121]="";
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#endif
 /* 
    bans:
    <banmask>:<expire-time>:[+<time-added>:<last-active>]:<user>:<encoded-desc>
@@ -115,6 +122,15 @@ int u_setsticky_ban PROTO3(struct userrec *, u, char *, uhost, int, sticky)
       if ((p!=NULL) && (!sticky)) strcpy(p,p+1);
       sprintf(s1,"%s:%s:%s",uhost,host,s);
       chg_q(q,s1);
+      if (!noshare) {
+	 if (strcasecmp(u->handle,BAN_NAME)==0)
+	   shareout("stick %s %c\n",uhost,sticky);
+	 else {
+	    struct chanset_t * cst=findchan(u->info);
+	    if (cst->stat&CHAN_SHARED)
+	      shareout("stick %s %c %s\n",uhost,sticky,u->info);
+	 }
+      }
       return 1;
     }
     q=q->next;
@@ -236,7 +252,7 @@ void refresh_ban_kick PROTO3(struct chanset_t *,chan,char *,user,char *,nick)
 	  }
 	  /* split off nick */
 	  splitc(s1,s,':');
-	  if (s[0]) {
+	  if (s[0] && (s[0] != '@')) {
 	    /* ban reason stored */
 	    p=strchr(s,'~'); while (p!=NULL) { *p=' '; p=strchr(s,'~'); }
 	    p=strchr(s,'`'); while (p!=NULL) { *p=','; p=strchr(s,'`'); }
@@ -852,7 +868,7 @@ void restore_chandata()
 /* begin the user transfer process */
 void start_sending_users PROTO1(int,idx)
 {
-  struct userrec *u; char s[161]; int i; struct eggqueue *q;
+  struct userrec *u; char s[161],s1[64]; int i=1; struct eggqueue *q;
   struct chanuserrec *ch; struct chanset_t *cst;
   sprintf(s,".share.user%lu",time(NULL));
   debug0("ufsend: copying userlist");
@@ -861,7 +877,9 @@ void start_sending_users PROTO1(int,idx)
   write_tmp_userfile(s,u);
   clear_userlist(u);
   debug0("ufsend: starting file transfer socket");
+#ifndef NO_FILE_SYSTEM
   i=raw_dcc_send(s,"*users","(users)",s);
+#endif
   if (i>0) {   /* abort */
     unlink(s);
     tprintf(dcc[idx].sock,"error Can't send userfile to you (internal error)\n");
@@ -871,8 +889,13 @@ void start_sending_users PROTO1(int,idx)
   dcc[idx].u.bot->status|=STAT_SENDING;
   i=dcc_total-1;
   strcpy(dcc[i].host,dcc[idx].nick);  /* store bot's nick */
-  tprintf(dcc[idx].sock,"ufsend %lu %d %lu\n",iptolong(getmyip()),dcc[i].port,
+#ifdef HAVE_NAT
+     tprintf(dcc[idx].sock,"ufsend %lu %d %lu\n",iptolong((IP)inet_addr(natip)),dcc[i].port,
 	  dcc[i].u.xfer->length);
+#else
+     tprintf(dcc[idx].sock,"ufsend %lu %d %lu\n",iptolong(getmyip()),dcc[i].port,
+	  dcc[i].u.xfer->length);
+#endif
   debug0("ufsend: queueing bot info");
   /* start up a tbuf to queue outgoing changes for this bot until the */
   /* userlist is done transferring */
@@ -892,13 +915,15 @@ void start_sending_users PROTO1(int,idx)
       sprintf(s,"chaddr %s %s\n",u->handle,u->info);
       q_tbuf(dcc[idx].nick,s);
       /* send user-flags */
-      sprintf(s,"chattr %s %d\n",u->handle,(u->flags&BOT_MASK));
+      flags2str((u->flags&BOT_MASK),s1);
+      sprintf(s,"chattr %s %s\n",u->handle,s1);
       q_tbuf(dcc[idx].nick,s);
       ch=u->chanrec; while (ch) {
 	if (ch->flags) {
           cst=findchan(ch->channel);
           if (cst->stat&CHAN_SHARED) {
-    	    sprintf(s,"chattr %s %d %s\n",u->handle,ch->flags,ch->channel);
+	    chflags2str(ch->flags,s1);
+    	    sprintf(s,"chattr %s %s %s\n",u->handle,s1,ch->channel);
 	    q_tbuf(dcc[idx].nick,s);
           }
 	}
@@ -1013,21 +1038,6 @@ void showinfo PROTO3(struct chanset_t *,chan,char *,who,char *,nick)
   if (s1[0] && (s[0]!='@' || s1[0]=='@')) strcpy(s,s1);
   if (s[0]=='@') strcpy(s,&s[1]);
   if (s[0]) mprintf(serv,"PRIVMSG %s :[%s] %s\n",chan->name,nick,s);
-}
-
-void tell_file_stats PROTO2(int,idx,char *,hand)
-{
-  struct userrec *u; float fr=(-1.0),kr=(-1.0);
-  u=get_user_by_handle(userlist,hand);
-  if (u==NULL) return;
-  dprintf(idx,"  uploads: %4u / %6luk\n",u->uploads,u->upload_k);
-  dprintf(idx,"downloads: %4u / %6luk\n",u->dnloads,u->dnload_k);
-  if (u->uploads) fr=((float)u->dnloads / (float)u->uploads);
-  if (u->upload_k) kr=((float)u->dnload_k / (float)u->upload_k);
-  if (fr<0.0) dprintf(idx,"(infinite file leech)\n");
-  else dprintf(idx,"leech ratio (files): %6.2f\n",fr);
-  if (kr<0.0) dprintf(idx,"(infinite size leech)\n");
-  else dprintf(idx,"leech ratio (size) : %6.2f\n",kr);
 }
 
 void tell_user PROTO3(int,idx,struct userrec *,u,int,master)
@@ -1198,7 +1208,7 @@ void tell_users_match PROTO6(int,idx,char *,mtch,int,start,int,limit,
 int readuserfile PROTO2(char *,file,struct userrec **,ret)
 {
   char *p,s[181],lasthand[181],host[181],attr[181],pass[181],code[181];
-  FILE *f; unsigned int flags; struct userrec *bu; int convpw=0,convch=0;
+  FILE *f; unsigned int flags; struct userrec *bu; int convpw=0;
   char s1[181],ignored[512]; int firstxtra=0;
   context;
   bu=(*ret); ignored[0]=0;
@@ -1215,11 +1225,6 @@ int readuserfile PROTO2(char *,file,struct userrec **,ret)
     convpw=1;
     putlog(LOG_MISC,"*","* Old userfile (unencrypted passwords)");
     putlog(LOG_MISC,"*","* Encrypting as I load ...");
-  }
-  if (s[1]<'3') {
-    convch=1;
-    putlog(LOG_MISC,"*","* Old userfile (single-channel records)");
-    putlog(LOG_MISC,"*","* Converting as I load ...");
   }
   if (s[1]>'3') fatal("Don't understand userfile encoding!",1);
   gban_total=0;
@@ -1320,10 +1325,6 @@ int readuserfile PROTO2(char *,file,struct userrec **,ret)
 	  }
 	  else {
 	    flags=str2flags(attr); strcpy(lasthand,code);
-	    if (convch) {
-	      /* okay, some fiddling for older userfiles: */
-	      if (strchr(attr,'o')!=NULL) flags|=USER_GLOBAL;  /* +g */
-	    }
 	    if (convpw) {
 	      if (strcasecmp(host,"$placeholder$")==0) host[0]=0;
 	      if (strcasecmp(host,"none")==0) host[0]=0;
@@ -1340,15 +1341,6 @@ int readuserfile PROTO2(char *,file,struct userrec **,ret)
 	      else if (!(flags & USER_BOT)) encrypt_pass(pass,pass);
 	    }
 	    bu=adduser(bu,code,host,pass,flags);
-	    if (convch) {
-	      /* for old user files: */
-	      if (strchr(attr,'f')!=NULL)
-		flags |= USER_FRIEND;
-	      if (strchr(attr,'k')!=NULL)
-		flags |= USER_KICK;
-	      if (strchr(attr,'d')!=NULL)
-		flags |= USER_DEOP;
-	    }
 	    /* if s starts with '/' it's got file info */
 	    if (s[0]=='/') {
 	      unsigned int up,dn; unsigned long upk,dnk;

@@ -1,4 +1,4 @@
-%{+M}
+%{+B}
 ###  +bothost <nickname> <hostmask>
    adds a hostmask to a bot's record on the bot.  the hostmasks
    are where the bot will identify that bot from.

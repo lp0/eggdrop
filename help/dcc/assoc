@@ -4,7 +4,7 @@
    botnet (if you're hooked into one) and can be used instead of the
    channel # when changing chat channels (see '.chat').  if you omit
    the channel # and name, it will just dump a list of the current
-   named channels, and their names. 
+   named channels.
 
 ###  assoc [<*channel #> <name>]
    creates a name for a local channel.  these channels are local to

@@ -3,5 +3,5 @@
    adds a hostmask to a user's record on the bot.  the hostmasks
    are where the bot will identify that user from.  usually you
    will not need to use this command since a user can add hostmasks
-   to her own record via the /MSG IDENT command.  but it's here if
+   to her own record via the /MSG IDENT command, but it's here if
    you need it.

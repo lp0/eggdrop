@@ -21,7 +21,6 @@
 #include <sys/types.h>
 #include "eggdrop.h"
 #include "users.h"
-#include "proto.h"
 #include "cmdt.h"
 #include "tclegg.h"
 #include "chan.h"
@@ -410,7 +409,7 @@ int tcl_chpass STDVAR
   char par[10],pass[10];
   BADARGS(2,3," handle ?password?");
   if (argc==3 && argv[2][0]) {
-    strncpy(par,argv[2],9); par[9]=0;
+    strncpy(par,argv[2],15); par[15]=0;
     nsplit(pass,par);
     change_pass_by_handle(argv[1],pass);
   }
@@ -425,11 +424,12 @@ int tcl_chnick STDVAR
   strncpy(hand,argv[2],9); hand[9]=0;
   for (i=0; i<strlen(hand); i++)
     if ((hand[i]<=32) || (hand[i]>=127) || (hand[i]=='@')) hand[i]='?';
-  if (strlen(hand)<1) x=0;
+  if (strchr("-,+*=:!.@#;$",hand[0])!=NULL) x=0;
+  else if (strlen(hand)<1) x=0;
   else if (is_user(hand)) x=0;
-  if ((strcasecmp(origbotname,hand)==0) || (strcasecmp(botnetnick,hand)==0))
+  else if ((strcasecmp(origbotname,hand)==0) || (strcasecmp(botnetnick,hand)==0))
     x=0;
-  if (hand[0]=='*') x=0;
+  else if (hand[0]=='*') x=0;
   if (x) {
     x=change_handle(argv[1],hand);
     if (x) {
@@ -542,42 +542,6 @@ int tcl_ignorelist STDVAR
     Tcl_AppendElement(irp,p); n_free(p,"",0);
     q=q->next;
   }
-  return TCL_OK;
-}
-
-int tcl_getuploads STDVAR
-{
-  struct userrec *u; char s[81];
-  BADARGS(2,2," handle");
-  u=get_user_by_handle(userlist,argv[1]);
-  if (u==NULL) return TCL_OK;
-  sprintf(s,"%u %lu",u->uploads,u->upload_k);
-  Tcl_AppendResult(irp,s,NULL);
-  return TCL_OK;
-}
-
-int tcl_getdnloads STDVAR
-{
-  struct userrec *u; char s[81];
-  BADARGS(2,2," handle");
-  u=get_user_by_handle(userlist,argv[1]);
-  if (u==NULL) return TCL_OK;
-  sprintf(s,"%u %lu",u->dnloads,u->dnload_k);
-  Tcl_AppendResult(irp,s,NULL);
-  return TCL_OK;
-}
-
-int tcl_setuploads STDVAR
-{
-  BADARGS(4,4," handle files k");
-  set_handle_uploads(userlist,argv[1],atoi(argv[2]),atoi(argv[3]));
-  return TCL_OK;
-}
-
-int tcl_setdnloads STDVAR
-{
-  BADARGS(4,4," handle files k");
-  set_handle_dnloads(userlist,argv[1],atoi(argv[2]),atoi(argv[3]));
   return TCL_OK;
 }
 

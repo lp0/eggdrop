@@ -1,4 +1,3 @@
-%{+B}
 ###  trace <bot>
    sends out a trace signal to another bot.  if that trace signal
    returns (and it should!) you will get an output something like

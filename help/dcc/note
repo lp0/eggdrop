@@ -1,4 +1,4 @@
-###  note <nickname> <message>
+###  note <nickname[@bot]> <message>
    sends a private note to a user on the party line.  if that user
    is currently on the party line, and not marked as away, she will
    receive the message immediately.  otherwise it will be stored

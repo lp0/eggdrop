@@ -1,9 +1,11 @@
 %{+B}
 ###  +bot <bot> <address:botport#[/userport#]>
    creates a user record for a new bot with the nickname given.
-   the hostmask table have one entry ("none"), and the bot (b)
-   flag will be set for the user.  the internet address field of
-   the user will also be set to the address given.  you can use
+   the hostmask table will have one entry ("none"), and the bot
+   (b) flag will be set for the user.  the internet address field
+   of the user will also be set to the address given.  you can use
    this command and 'chpass' to completely set up a record for a
-   future bot.  or you can let the two bots negotiate a password
-   for themselves, the first time they link.
+   future bot, or you can let the two bots negotiate a password
+   for themselves the first time they link.  if the bot has a
+   seperate port for bots and users they should be seperated with
+   a slash (/).

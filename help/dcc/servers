@@ -1,9 +1,8 @@
-%{+o}
+%{+O}
 ###  servers
    lists the servers that the bot has in its server list.  this is
    the list it rotates through when changing servers.  it starts
    with a static list which it loads from its config-file when the
    bot is booted up.  after that, you can add servers with the
    '.jump' command.  the server list will indicate which server the
-   bot is currently on, and, if a helpbot is running, which server
-   the helpbot is on.
+   bot is currently on.

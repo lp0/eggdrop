@@ -1,4 +1,4 @@
-/MSG %B INFO <password> [channel] [an info line]
+/MSG %B INFO [password] [channel] [an info line]
    Whatever you set as your info line will be shown when
    you join the channel, as long as you haven't been there
    in the past three minutes.  It is also shown to people
@@ -8,5 +8,5 @@
    Or you may set the default info line (used when there
    is no channel-specific one) like so:
       /MSG %B INFO mypass This is my default info.
-/MSG %B INFO <password> [channel] NONE
+/MSG %B INFO [password] [channel] NONE
    This erases your info line.

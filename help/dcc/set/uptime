@@ -1,4 +1,4 @@
 %{+n}
 ### set uptime
-     this read-only variable returns the time the bot has been running
-     in seconds.
+   this read-only variable returns the time the bot has been running
+   in seconds.

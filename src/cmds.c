@@ -23,7 +23,6 @@
 #include "eggdrop.h"
 #include "users.h"
 #include "chan.h"
-#include "proto.h"
 #include "tclegg.h"
 
 extern int serv;
@@ -54,6 +53,11 @@ extern int dcc_users;
 extern int gban_total;
 extern int do_restart;
 extern int default_port;
+
+/* include the chopped out bits if no modules */
+#ifndef MODULES
+#include "mod/filesys.c"
+#endif
 
 /* Do we have any flags that will allow us ops on a channel? */
 int has_op PROTO2(int,idx,char *,par)
@@ -208,57 +212,15 @@ void cmd_motd PROTO2(int,idx,char *,par)
   }
 }
 
-#ifndef NO_FILE_SYSTEM
-void cmd_files PROTO2(int,idx,char *,par)
-{
-  int atr=get_attr_handle(dcc[idx].nick);
-  if (dccdir[0]==0) dprintf(idx,"There is no file transfer area.\n");
-  else if (too_many_filers()) {
-    dprintf(idx,"The maximum of %d people are in the file area right now.\n",
-	    dcc_users);
-    dprintf(idx,"Please try again later.\n");
-  }
-  else {
-    if (!(atr & (USER_MASTER|USER_XFER)))
-      dprintf(idx,"You don't have access to the file area.\n");
-    else {
-      putlog(LOG_CMDS,"*","#%s# files",dcc[idx].nick);
-      dprintf(idx,"Entering file system...\n");
-      if (dcc[idx].u.chat->channel>=0) {
-	chanout2(dcc[idx].u.chat->channel,"%s is away: file system\n",
-		 dcc[idx].nick);
-	context;
-	if (dcc[idx].u.chat->channel<100000)
-          tandout("away %s %d file system\n",botnetnick,dcc[idx].sock);
-      }
-      set_files(idx); dcc[idx].type=DCC_FILES;
-      dcc[idx].u.file->chat->status|=STAT_CHAT;
-      if (!welcome_to_files(idx)) {
-	struct chat_info *ci=dcc[idx].u.file->chat;
-	nfree(dcc[idx].u.file); dcc[idx].u.chat=ci;
-	dcc[idx].type=DCC_CHAT;
-	putlog(LOG_FILES,"*","File system broken.");
-	if (dcc[idx].u.chat->channel>=0) {
-	  chanout2(dcc[idx].u.chat->channel,"%s has returned.\n",
-		   dcc[idx].nick);
-          context;
-	  if (dcc[idx].u.chat->channel<100000)
-	    tandout("unaway %s %d\n",botnetnick,dcc[idx].sock);
-	}
-      }
-    }
-  }
-}
-#endif
-
 void cmd_note PROTO2(int,idx,char *,par)
 {
   char handle[512],*p; int echo;
-  split(handle,par); if (!handle[0]) {
+ if (!par[0]) {
     dprintf(idx,"Usage: note <to-whom> <message>\n");
     return;
   }
   /* could be file system user */
+  nsplit(handle,par);
   echo=(dcc[idx].type==DCC_CHAT)?(dcc[idx].u.chat->status&STAT_ECHO):
         (dcc[idx].u.file->chat->status&STAT_ECHO);
   p=strchr(handle,','); while (p!=NULL) {
@@ -278,12 +240,12 @@ void cmd_away PROTO2(int,idx,char *,par)
 void cmd_newpass PROTO2(int,idx,char *,par)
 {
   char new[512];
-  nsplit(new,par);
-  if (!new[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: newpass <newpassword>\n");
     return;
   }
-  if (strlen(new)>9) new[9]=0;
+  nsplit(new,par);
+  if (strlen(new)>16) new[16]=0;
   if (strlen(new)<4) {
     dprintf(idx,"Please use at least 4 characters.\n");
     return;
@@ -344,10 +306,11 @@ void cmd_act PROTO2(int,idx,char *,par)
 void cmd_msg PROTO2(int,idx,char *,par)
 {
   char nick[512];
-  split(nick,par); if (!nick[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: msg <nick> <message>\n");
   }
   else {
+    nsplit(nick,par);
     putlog(LOG_CMDS,"*","#%s# msg %s %s",dcc[idx].nick,nick,par);
     mprintf(serv,"PRIVMSG %s :%s\n",nick,par);
   }
@@ -393,11 +356,11 @@ void cmd_kickban PROTO2(int,idx,char *,par)
 void cmd_op PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan; char nick[512];
-  nsplit(nick,par);
-  if (!nick[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: op <nick> [channel]\n");
     return;
   }
+  nsplit(nick,par);
   if (par[0]) {
     if (!has_op(idx,par)) return;
     chan=findchan(par);
@@ -421,11 +384,11 @@ void cmd_op PROTO2(int,idx,char *,par)
 void cmd_deop PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan; char nick[512];
-  nsplit(nick,par);
-  if (!nick[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: deop <nick> [channel]\n");
     return;
   }
+  nsplit(nick,par);
   if (par[0]) {
     if (!has_op(idx,par)) return;
     chan=findchan(par);
@@ -673,6 +636,10 @@ void cmd_whois PROTO2(int,idx,char *,par)
 void cmd_match PROTO2(int,idx,char *,par)
 {
   int start=1,limit=20; char s[512],s1[512],chname[512];
+  if (!par[0]) {
+   dprintf(idx,"Usage: match <nick/host>\n");
+   return;
+  }
   putlog(LOG_CMDS,"*","#%s# match %s",dcc[idx].nick,par);
   nsplit(s,par);
   if ((par[0]=='#') || (par[0]=='+') || (par[0]=='&')) nsplit(chname,par);
@@ -896,7 +863,7 @@ void cmd_console PROTO2(int,idx,char *,par)
 void cmd_adduser PROTO2(int,idx,char *,par)
 {
   char nick[512];struct chanset_t *chan;
-  if ((par==NULL) || (!par[0])) {
+  if (!par[0]) {
     dprintf(idx,"Usage: adduser <nick> [handle]\n");
     return;
   }
@@ -920,11 +887,11 @@ void cmd_adduser PROTO2(int,idx,char *,par)
 void cmd_pls_user PROTO2(int,idx,char *,par)
 {
   char handle[512],host[512];
-  nsplit(handle,par); nsplit(host,par);
-  if (!host[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: +user <handle> <hostmask>\n");
     return;
   }
+  nsplit(handle,par); nsplit(host,par);
   if (strlen(handle)>9) handle[9]=0;  /* max len = 9 */
   if (is_user(handle)) {
     dprintf(idx,"Someone already exists by that name.\n");
@@ -938,10 +905,11 @@ void cmd_pls_user PROTO2(int,idx,char *,par)
 void cmd_pls_bot PROTO2(int,idx,char *,par)
 {
   char handle[512],addr[512];
-  nsplit(handle,par); if (!par[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: +bot <handle> <address:port#>\n");
     return;
   }
+  nsplit(handle,par); 
   nsplit(addr,par);
   if (strlen(handle)>9) handle[9]=0;  /* max len = 9 */
   if (is_user(handle)) {
@@ -964,7 +932,7 @@ void cmd_pls_bot PROTO2(int,idx,char *,par)
 void cmd_deluser PROTO2(int,idx,char *,par)
 {
   char nick[512];struct chanset_t *chan;
-  if ((par==NULL) || (!par[0])) {
+  if (!par[0]) {
     dprintf(idx,"Usage: deluser <nick>\n");
     return;
   }
@@ -1033,8 +1001,8 @@ void cmd_chnick PROTO2(int,idx,char *,par)
   if (strlen(par)>9) par[9]=0;
   for (i=0; i<strlen(par); i++)
     if ((par[i]<=32) || (par[i]>=127) || (par[i]=='@')) par[i]='?';
-  if (par[0]=='*') {
-    dprintf(idx,"Bizarre quantum forces prevent nicknames from starting with *\n");
+  if (strchr("-,+*=:!.@#;$",par[0])!=NULL) {
+    dprintf(idx,"Bizarre quantum forces prevent nicknames from starting with %c\n",par[0]);
     return;
   }
   if ((is_user(par)) && (strcasecmp(hand,par)!=0)) {
@@ -1042,7 +1010,7 @@ void cmd_chnick PROTO2(int,idx,char *,par)
     return;
   }
   if ((strcasecmp(par,origbotname)==0) || (strcasecmp(par,botnetnick)==0)) {
-    dprintf(idx,"Hey!  That MY name!\n",par);
+    dprintf(idx,"Hey! That's MY name!\n",par);
     return;
   }
   if ((get_attr_handle(dcc[idx].nick) & USER_BOTMAST) &&
@@ -1096,8 +1064,8 @@ void cmd_nick PROTO2(int,idx,char *,par)
   if (strlen(par)>9) par[9]=0;
   for (i=0; i<strlen(par); i++)
     if ((par[i]<=32) || (par[i]>=127) || (par[i]=='@')) par[i]='?';
-  if (par[0]=='*') {
-    dprintf(idx,"Bizarre quantum forces prevent nicknames from starting with *\n");
+  if (strchr("-,+*=:!.@#;$",par[0])!=NULL) {
+    dprintf(idx,"Bizarre quantum forces prevent nicknames from starting with %c\n",par[0]);
     return;
   }
   if ((is_user(par)) && (strcasecmp(dcc[idx].nick,par)!=0)) {
@@ -1134,12 +1102,12 @@ void cmd_nick PROTO2(int,idx,char *,par)
 void cmd_pls_host PROTO2(int,idx,char *,par)
 {
   char handle[512],host[512]; int chatr;
-  nsplit(handle,par); nsplit(host,par);
-  chatr=get_chanattr_handle(handle,dcc[idx].u.chat->con_chan);
-  if (!host[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: +host <handle> <newhostmask>\n");
     return;
-  }
+  }            
+  nsplit(handle,par); nsplit(host,par);
+  chatr=get_chanattr_handle(handle,dcc[idx].u.chat->con_chan);
   if (!is_user(handle)) {
     dprintf(idx,"No such user.\n");
     return;
@@ -1174,12 +1142,12 @@ void cmd_pls_host PROTO2(int,idx,char *,par)
 void cmd_mns_host PROTO2(int,idx,char *,par)
 {
   char handle[512],host[512]; int chatr;
-  nsplit(handle,par); nsplit(host,par);
-  chatr=get_chanattr_handle(handle,dcc[idx].u.chat->con_chan);
-  if (!host[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: -host <handle> <hostmask>\n");
     return;
   }
+  nsplit(handle,par); nsplit(host,par);
+  chatr=get_chanattr_handle(handle,dcc[idx].u.chat->con_chan);
   if (!is_user(handle)) {
     dprintf(idx,"No such user.\n");
     return;
@@ -1221,32 +1189,32 @@ void cmd_chpass PROTO2(int,idx,char *,par)
     dprintf(idx,"Usage: chpass <handle> [password]\n");
     return;
   }
-  split(handle,par);
-  if (!handle[0]) {
-    if (!is_user(par)) {
+  nsplit(handle,par);
+  if (!par[0]) {
+    if (!is_user(handle)) {
       dprintf(idx,"No such user.\n");
       return;
     }
     if ((get_attr_handle(dcc[idx].nick) & USER_BOTMAST) &&
         (!(get_attr_handle(dcc[idx].nick) & (USER_MASTER|USER_OWNER))) &&
-        (!(get_attr_handle(par) & USER_BOT))) {
+        (!(get_attr_handle(handle) & USER_BOT))) {
       dprintf(idx,"You can't change password for non-bots.\n");
       return;
     }
 #ifdef OWNER
-    if ((get_attr_handle(par) & BOT_SHARE) && 
+    if ((get_attr_handle(handle) & BOT_SHARE) && 
         (!(get_attr_handle(dcc[idx].nick) & USER_OWNER))) {
       dprintf(idx,"You can't change shared bot's password.\n");
       return;
     }
-    if ((get_attr_handle(par) & USER_OWNER) &&
-        (strcasecmp(par,dcc[idx].nick)!=0)) {
+    if ((get_attr_handle(handle) & USER_OWNER) &&
+        (strcasecmp(handle,dcc[idx].nick)!=0)) {
       dprintf(idx,"Can't change the bot owner's password.\n");
       return;
     }
 #endif
-    putlog(LOG_CMDS,"*","#%s# chpass %s [nothing]",dcc[idx].nick,par);
-    change_pass_by_handle(par,"-");
+    putlog(LOG_CMDS,"*","#%s# chpass %s [nothing]",dcc[idx].nick,handle);
+    change_pass_by_handle(handle,"-");
     dprintf(idx,"Removed password.\n");
     return;
   }
@@ -1273,7 +1241,7 @@ void cmd_chpass PROTO2(int,idx,char *,par)
   }
 #endif
   nsplit(new,par);
-  if (strlen(new)>9) new[9]=0;
+  if (strlen(new)>16) new[16]=0;
   if (strlen(new)<4) {
     dprintf(idx,"Please use at least 4 characters.\n");
     return;
@@ -1286,11 +1254,11 @@ void cmd_chpass PROTO2(int,idx,char *,par)
 void cmd_chaddr PROTO2(int,idx,char *,par)
 {
   char handle[512],addr[512];
-  nsplit(handle,par); nsplit(addr,par);
-  if (!handle[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: chaddr <botname> <address:botport#/userport#>\n");
     return;
   }
+  nsplit(handle,par); nsplit(addr,par);
   if (!(get_attr_handle(handle) & USER_BOT)) {
     dprintf(idx,"Useful only for tandem bots.\n");
     return;
@@ -1310,10 +1278,11 @@ void cmd_chaddr PROTO2(int,idx,char *,par)
 void cmd_comment PROTO2(int,idx,char *,par)
 {
   char handle[512];
-  split(handle,par); if (!handle[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: comment <handle> <newcomment>\n");
     return;
   }
+  nsplit(handle,par);
   if (!is_user(handle)) {
     dprintf(idx,"No such user!\n");
     return;
@@ -1361,11 +1330,11 @@ void cmd_email PROTO2(int,idx,char *,par)
 void cmd_chemail PROTO2(int,idx,char *,par)
 {
   char handle[512];
-  nsplit(handle,par);
-  if (!handle[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: chemail <handle> [address]\n");
     return;
   }
+  nsplit(handle,par);
   if (!is_user(handle)) {
     dprintf(idx,"No such user.\n");
     return;
@@ -1587,7 +1556,7 @@ void cmd_chinfo PROTO2(int,idx,char *,par)
     dprintf(idx,"Info storage is turned off.\n");
     return;
   }
-  split(handle,par);
+  nsplit(handle,par);
   if (!handle[0]) {
     dprintf(idx,"Usage: chinfo <handle> [channel] <new-info>\n");
     return;
@@ -1636,6 +1605,10 @@ void cmd_simul PROTO2(int,idx,char *,par)
 {
   char nick[512]; int i,ok=0;
   nsplit(nick,par);
+  if (!par[0]) {
+    dprintf(idx,"Usage: simul <nick> <text>");
+    return;
+  }
   for (i=0; i<dcc_total; i++)
     if ((strcasecmp(nick,dcc[i].nick)==0) && (!ok) &&
 	((dcc[i].type==DCC_CHAT) || (dcc[i].type==DCC_FILES))) {
@@ -1649,6 +1622,10 @@ void cmd_simul PROTO2(int,idx,char *,par)
 void cmd_link PROTO2(int,idx,char *,par)
 {
   char s[512]; int i;
+  if (!par[0]) {
+   dprintf(idx,"Usage: link [some-bot] <new-bot>\n");
+   return;
+  }
   putlog(LOG_CMDS,"*","#%s# link %s",dcc[idx].nick,par);
   if (strchr(par,' ')==NULL) botlink(dcc[idx].nick,idx,par);
   else {
@@ -1750,8 +1727,8 @@ void cmd_topic PROTO2(int,idx,char *,par)
 
 void cmd_binds PROTO2(int,idx,char *,par)
 {
-  tell_binds(idx,par);
   putlog(LOG_CMDS,"*","#%s# binds %s",dcc[idx].nick,par);
+  tell_binds(idx,par);
 }
 
 void cmd_banner PROTO2(int,idx,char *,par)
@@ -1978,7 +1955,7 @@ int chatr;
 void cmd_chattr PROTO2(int,idx,char *,par)
 {
   char hand[512],s[21],chg[512]; struct chanset_t *chan;
-  int i,pos,f,atr,oatr,chatr=0,ochatr=0,recheck=0,own,chown=0;
+  int i,pos,f,atr,oatr,chatr=0,ochatr=0,own,chown=0;
   if (!par[0]) {
     dprintf(idx,"Usage: chattr <handle> [changes [channel]]\n");
     return;
@@ -1988,6 +1965,7 @@ void cmd_chattr PROTO2(int,idx,char *,par)
     dprintf(idx,"No such user!\n");
     return;
   }
+  chg[0]=0;
   own=(get_attr_handle(dcc[idx].nick) & USER_OWNER);
   oatr=atr=get_attr_handle(hand); pos=1;
   if (par[0]) {
@@ -2032,7 +2010,6 @@ void cmd_chattr PROTO2(int,idx,char *,par)
 	/* only owners and channel owners can +/- channel masters and owners */
 #endif
 	  change_chanflags(userlist,hand,par,(pos?f:0),(pos?0:f));
-	  recheck=1; /* any change to channel flags means recheck chans */
 	  /* FIXME: other stuff here? */
 	}
 	else {
@@ -2063,6 +2040,10 @@ void cmd_chattr PROTO2(int,idx,char *,par)
   if (!par[0]) {
     flags2str(atr,s);
     dprintf(idx,"Flags for %s are now +%s\n",hand,s);
+    chan=chanset; while (chan!=NULL) {
+      recheck_channel(chan);
+      chan=chan->next;
+    }
   }
   else if (par[0]=='*') {
     /* every channel */
@@ -2073,6 +2054,7 @@ void cmd_chattr PROTO2(int,idx,char *,par)
       chflags2str(chatr,s);
       dprintf(idx,"Flags for %s are now +%s %s\n",hand,s,chan->name);
       set_chanattr_handle(hand,chan->name,chatr);
+      recheck_channel(chan);
       chan=chan->next;
     }
   }
@@ -2083,12 +2065,7 @@ void cmd_chattr PROTO2(int,idx,char *,par)
     chflags2str(chatr,s);
     dprintf(idx,"Flags for %s are now +%s %s\n",hand,s,par);
     set_chanattr_handle(hand,par,chatr);
-  }
-  if (recheck) {
-    chan=chanset; while (chan!=NULL) {
-      recheck_channel(chan);
-      chan=chan->next;
-    }
+    recheck_channel(findchan(par));
   }
 }
 
@@ -2227,66 +2204,6 @@ void cmd_echo PROTO2(int,idx,char *,par)
   dprintf(idx,"Usage: echo <on/off>\n");
 }
 
-void cmd_assoc PROTO2(int,idx,char *,par)
-{
-  char num[512]; int chan;
-  if (!par[0]) {
-    putlog(LOG_CMDS,"*","#%s# assoc",dcc[idx].nick);
-    dump_assoc(idx);
-    return;
-  }
-  nsplit(num,par);
-  if (num[0]=='*') {
-    chan=100000+atoi(num+1);
-    if (chan<100000 || chan>199999) {
-      dprintf(idx,"Channel # out of range: must be *0-*99999\n");
-      return;
-    }
-  }
-  else {
-    chan=atoi(num);
-    if (chan==0) {
-      dprintf(idx,"You can't name the main party line; it's just a party line.\n");
-      return;
-    }
-    if ((chan<1) || (chan>99999)) {
-      dprintf(idx,"Channel # out of range: must be 1-99999\n");
-      return;
-    }
-  }
-  if (!par[0]) {
-    /* remove an association */
-    if (get_assoc_name(chan)==NULL) {
-      dprintf(idx,"Channel %s%d has no name.\n",
-	      (chan<100000) ? "":"*",chan%100000);
-      return;
-    }
-    kill_assoc(chan);
-    putlog(LOG_CMDS,"*","#%s# assoc %d",dcc[idx].nick,chan);
-    dprintf(idx,"Okay, removed name for channel %s%d.\n",
-	    (chan<100000)?"":"*",chan%100000);
-    chanout2(chan,"%s removed this channel's name.\n",dcc[idx].nick);
-    context;
-    if (chan<100000) tandout("assoc %d 0\n",chan);
-    return;
-  }
-  if (strlen(par)>20) {
-    dprintf(idx,"Channel's name can't be that long (20 chars max).\n");
-    return;
-  }
-  if ((par[0]>='0') && (par[0]<='9')) {
-    dprintf(idx,"First character of the channel name can't be a digit.\n");
-    return;
-  }
-  add_assoc(par,chan);
-  putlog(LOG_CMDS,"*","#%s# assoc %d %s",dcc[idx].nick,chan,par);
-  dprintf(idx,"Okay, channel %s%d is '%s' now.\n",
-	  (chan<100000)?"":"*",chan%100000,par);
-  chanout2(chan,"%s named this channel '%s'\n",dcc[idx].nick,par);
-  context;
-  if (chan<100000) tandout("assoc %d %s\n",chan,par);
-}
-
 void cmd_fries PROTO2(int,idx,char *,par)
 {
   dprintf(idx,"* %s juliennes some fries for you.\n",botnetnick);
@@ -2319,6 +2236,7 @@ int stripmodes(char *s)
       case 'c': res|=STRIP_COLOR; break;
       case 'r': res|=STRIP_REV; break;
       case 'u': res|=STRIP_UNDER; break;
+      case 'a': res|=STRIP_ANSI; break;
       case '*': res|=STRIP_ALL; break;
     }
   return res;
@@ -2331,6 +2249,7 @@ char *stripmasktype(int x)
   if (x&STRIP_COLOR) *p++='c';
   if (x&STRIP_REV) *p++='r';
   if (x&STRIP_UNDER) *p++='u';
+  if (x&STRIP_ANSI) *p++='a';
   *p=0;
   return s;
 }
@@ -2343,6 +2262,7 @@ char *stripmaskname(int x)
   if (x&STRIP_COLOR) strcat(s,"color, ");
   if (x&STRIP_REV) strcat(s,"reverse, ");
   if (x&STRIP_UNDER) strcat(s,"underline, ");
+  if (x&STRIP_ANSI) strcat(s,"ansi, ");
   if (!s[0]) strcpy(s,"none, ");
   s[strlen(s)-2]=0;
   return s;
@@ -2446,21 +2366,6 @@ void cmd_unstick PROTO2(int,idx,char *,par)
 {
   cmd_stick_yn(idx,par,0);
 }
-
-void cmd_filestats PROTO2(int,idx,char *,par)
-{
-  char nick[512];
-  context;
-  nsplit(nick,par);
-  if (nick[0]==0) tell_file_stats(idx,dcc[idx].nick);
-  else if (!is_user(nick)) dprintf(idx,"No such user.\n");
-  else if ((!strcmp(par,"clear")) &&
-	   !(get_attr_handle(dcc[idx].nick)&USER_MASTER)) {
-    set_handle_uploads(userlist,nick,0,0);
-    set_handle_dnloads(userlist,nick,0,0);
-  }
-  else tell_file_stats(idx,nick);
-}
    
 void cmd_pls_chrec PROTO2(int,idx,char *,par)
 {
@@ -2557,12 +2462,19 @@ void cmd_su PROTO2(int,idx,char *,par)
     dprintf(idx,"Can't su to a bot... then again, why would you wanna?\n");
     return;
   }
+  correct_handle(par);
   putlog(LOG_CMDS,"*","#%s# su %s",dcc[idx].nick,par);
   if (!(atr & USER_OWNER) || (get_attr_handle(par) & USER_OWNER)) {
     tandout("part %s %s %d\n",botnetnick,dcc[idx].nick,dcc[idx].sock);
     chanout2(dcc[idx].u.chat->channel,"%s left the party line.\n",
 	     dcc[idx].nick);
     context;
+    /* store the old nick in the away section, for weenies who can't get
+     * their password right ;) */
+    if (dcc[idx].u.chat->away!=NULL)
+       nfree(dcc[idx].u.chat->away);
+    dcc[idx].u.chat->away=nmalloc(strlen(dcc[idx].nick)+1);
+    strcpy(dcc[idx].u.chat->away,dcc[idx].nick);
     strcpy(dcc[idx].nick,par);
     dprintf(idx,"Enter password for %s\n",par);
     dcc[idx].type=DCC_CHAT_PASS;
@@ -2581,7 +2493,6 @@ void cmd_su PROTO2(int,idx,char *,par)
     context;
     return;
   }
-
 }
 
 #ifndef NO_IRC
@@ -2589,17 +2500,19 @@ void cmd_su PROTO2(int,idx,char *,par)
 void cmd_pls_chan PROTO2(int,idx,char *,par)
 {
   char chname[512],null[]="";
-  nsplit(chname,par);
-  if (!chname[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: +chan <#channel>\n");
     return;
   }
+  nsplit(chname,par);
   if (findchan(chname)!=NULL) {
     dprintf(idx,"That channel already exists!\n");
     return;
   }
-  tcl_channel_add(0,chname,null);
-  putlog(LOG_CMDS,"*","#%s# +chan %s",dcc[idx].nick,chname);
+  if (tcl_channel_add(0,chname,null) == TCL_ERROR)
+    dprintf(idx,"Invalid channel.\n"); 
+  else
+    putlog(LOG_CMDS,"*","#%s# +chan %s",dcc[idx].nick,chname);
 }
 
 void cmd_mns_chan PROTO2(int,idx,char *,par)
@@ -2607,12 +2520,11 @@ void cmd_mns_chan PROTO2(int,idx,char *,par)
   char chname[512];
   struct chanset_t *chan;
   int i;
-   
-  nsplit(chname,par);
-  if (!chname[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: -chan <#channel>\n");
     return;
   }
+  nsplit(chname,par);
   chan=findchan(chname);
   if (chan==NULL) {
     dprintf(idx,"That channel doesnt exist!\n");
@@ -2643,11 +2555,11 @@ void cmd_chaninfo PROTO2(int,idx,char *,par)
 {
   char chname[256],work[512];
   struct chanset_t *chan;
-  nsplit(chname,par);
-  if (!chname[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: chaninfo <channel>\n");
     return;
   }
+  nsplit(chname,par);
   chan=findchan(chname);
   if (chan==NULL) {
     dprintf(idx,"No such channel defined.\n");
@@ -2699,11 +2611,11 @@ void cmd_chanset PROTO2(int,idx,char *,par)
   char chname[512],work[512],args[512],answer[512];
   char *list[2];
   struct chanset_t *chan;
-  nsplit(chname,par);
-  if (!chname[0] || !par[0]) {
+  if (!par[0]) {
     dprintf(idx,"Usage: chanset <#channel> <settings>\n");
     return;
   }
+  nsplit(chname,par);
   chan=findchan(chname);
   if (chan==NULL) {
     dprintf(idx,"That channel doesnt exist!\n");

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# new botchk  (for eggdrop 1.0)
+# new botchk  (for eggdrop 1.1)
 #
 # This is a script suitable for use in a crontab.  It checks to make sure
 # your bot is running.  YOU NEED A SEPARATE CRON JOB FOR EACH BOT.  If your

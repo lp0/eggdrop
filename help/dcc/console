@@ -11,6 +11,7 @@
       j  display joins/parts/nick changes/signoffs/etc on the channel
       b  display bot links/unlinks/userfile-sharing
       s  display server messages and connect/disconnects
+      w  display msgs between IRCops (wallops)
 %{+M}
       c  display user commands (dcc and msg)
       o  display other bot notices [HIGHLY RECOMMENDED]

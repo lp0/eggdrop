@@ -1,4 +1,4 @@
-%{+o}
+%{+O}
 /MSG %B INVITE <password> <channel>
    This will make me invite you to a channel (if I'm on
    that channel).

@@ -10,5 +10,5 @@
 
    if the user is using a different nickname than the bot normally
    knows her by, you can specify her "handle" (the nickname that the
-   bot remembers).  got it?  good.
+   bot remembers).
 see also: +host, -host, +user, -user

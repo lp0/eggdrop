@@ -46,7 +46,7 @@
 
    /* enable the 'tcl' and 'set' command (let owners */
    /* directly execute Tcl commands)? */
-#undef ENABLE_TCL
+#define ENABLE_TCL
 
    /* add the 'simul' command (masters can manipulate other people on */
    /* the party line)? saves about 610 bytes :) */
@@ -76,7 +76,7 @@
    /* enable console mode 'r'?  this mode shows every raw message from the */
    /* server to people with console 'r' selected -- will take a bit more */
    /* cpu.  (the 'raw' binding no longer depends on this!) */
-#undef USE_CONSOLE_R
+#define USE_CONSOLE_R
 
    /* This enables the 'raw' binding for TCL scripts it takes a bit more */
    /* CPU than a regular binding because it checks everything from the   */
@@ -125,6 +125,9 @@
   /* define this if you want to bounce all server bans */
 #define BOUNCE_SERVER_BANS
 
+  /* define if you have a Cisco PIX firewall */
+#undef HAVE_NAT
+
 /***********************************************************************/
 /***** the 'configure' script should make this next part automatic *****/
 /***********************************************************************/
@@ -157,6 +160,10 @@
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
+#endif
+
+#if defined(MODULES) && !defined(MODULES_OK)
+#include "you/can't/compile/with/module/support/on/this/system"
 #endif
 
 /* almost every module needs some sort of time thingy, so... */
@@ -378,6 +385,7 @@ struct bot_info {
   time_t timer;
   char version[121];        /* channel/version info */
   char linker[21];          /* who requested this link */
+  int numver;
 };
 
 #define DCC_RELAY       12  /* relayed connection to a bot */
@@ -434,7 +442,8 @@ struct script_info {
 #define STRIP_BOLD   2      /* remove bold codes */
 #define STRIP_REV    4      /* remove reverse video codes */
 #define STRIP_UNDER  8      /* remove underline codes */
-#define STRIP_ALL    15     /* remove every damn thing! */
+#define STRIP_ANSI   16     /* remove ALL ansi codes */
+#define STRIP_ALL    31     /* remove every damn thing! */
 
 /* for dcc bot links: */
 #define STAT_PINGED  0x01   /* waiting for ping to return */
@@ -448,7 +457,7 @@ struct script_info {
 
 /* bug: changing the order of these will mess up filedb */
 #define USER_GLOBAL   0x00000001  /* o   user is +o on all channels */
-#define USER_DEOP     0x00800002  /* d   user is global de-op */
+#define USER_DEOP     0x00000002  /* d   user is global de-op */
 #define USER_KICK     0x00000004  /* k   user is global auto-kick */
 #define USER_FRIEND   0x00000008  /* f   user is global friend*/
 #define USER_MASTER   0x00000010  /* m   user has full bot access */
@@ -578,9 +587,11 @@ typedef struct {
 #define SOCK_NONSOCK    0x10    /* used for file i/o on debug */
 #define SOCK_STRONGCONN 0x20    /* don't report success until sure */
 
-/* fake idx's for dprintf */
-#define DP_STDOUT       -1
-#define DP_LOG          -2
+/* fake idx's for dprintf - these should be rediculously large +ve nums */
+#define DP_STDOUT       0x7FF1
+#define DP_LOG          0x7FF2
+#define DP_SERVER       0x7FF3
+#define DP_HELP         0x7FF4
 
 #define NORMAL          0
 #define QUICK           1
@@ -593,4 +604,8 @@ typedef struct {
 #define NOTE_TCL        4   /* tcl binding caught it */
 #define NOTE_AWAY       5   /* away; stored */
 
+/* builtins values for add_builins */
+#define BUILTIN_DCC   1
+#define BUILTIN_MSG   2
+#define BUILTIN_FILES 3
 #endif

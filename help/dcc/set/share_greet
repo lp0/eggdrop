@@ -1,4 +1,4 @@
 %{+n}
 ### set share-geet 0/1
-     if on (1) then share-bots will share their user's info lines
-     with other share bots
+   if on (1) then share-bots will share their user's info lines
+   with other share bots.

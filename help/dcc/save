@@ -1,6 +1,6 @@
 %{+M}
 ###  save
-   makes the robot write its entire user list to the disk.  this is
+   makes the bot write its entire user list to the disk.  this is
    useful if you think the bot is about to crash or something, since
    the user file is only written to disk about once an hour.
 see also: reload, rehash

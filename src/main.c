@@ -50,9 +50,19 @@
 /* some systems have a working sys/wait.h even though configure will */
 /* decide it's not bsd compatable.  oh well. */
 #include "eggdrop.h"
-#include "tclegg.h"
 #include "chan.h"
-#include "proto.h"
+#include "tclegg.h"
+#ifdef MODULES
+#include "modules.h"
+#else
+#ifndef NO_FILE_SYSTEM
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <netinet/in.h>
+#include "../lush.h"
+#include "files.h"
+#endif
+#endif
 
 /* number of seconds to wait between transmitting queued lines to the server */
 /* lower this value at your own risk.  ircd is known to start flood control */
@@ -89,7 +99,12 @@ extern char ctcp_version[];
 extern Tcl_Interp *interp;
 extern int default_port;
 
-
+#ifndef MODULES
+extern char tempdir[];
+#include "mod/filedb.c"
+#include "mod/files.c"
+#include "mod/fileq.c"
+#endif
 /*
    Please use the PATCH macro instead of directly altering the version
    string from now on (it makes it much easier to maintain patches).
@@ -99,8 +114,9 @@ extern int default_port;
    Note: Loading more than 10 patches could make your patch level "roll
    over" to the next release!  So try not to do that. :)
 */
-char egg_version[1024]="1.1.2";
-int egg_numver=1010200;
+char egg_version[1024]="1.1.4";
+int egg_numver=1010400;
+int min_share =1010300; /* minimum version I will share with */
 
 /* socket that the server is on */
 int serv=(-1);
@@ -211,13 +227,6 @@ void fatal PROTO2(char *,s,int,recoverable)
   exit(1);
 }
 
-#ifdef NO_FILE_SYSTEM
-int expmem_fileq()
-{
-  return 0;
-}
-#endif
-
 /* for mem.c : calculate memory we SHOULD be using */
 int expected_memory()
 {
@@ -225,7 +234,15 @@ int expected_memory()
   context;
   tot=expmem_chan()+expmem_chanprog()+expmem_misc()+expmem_users()+
     expmem_dccutil()+expmem_botnet()+expmem_tcl()+expmem_tclhash()+
-    expmem_net()+expmem_blowfish()+expmem_fileq();
+    expmem_net();
+#ifndef MODULES
+  tot+=expmem_assoc()+expmem_blowfish();
+#ifndef NO_FILE_SYSTEM
+  tot+=expmem_fileq();
+#endif
+#else
+  tot+=expmem_modules(0);
+#endif
   return tot;
 }
 
@@ -311,9 +328,14 @@ void trace_fail PROTO2(char *,from,char *,msg)
 void got432 PROTO2(char *,from,char *,msg)
 {
   putlog(LOG_MISC,"*","Server says my nickname is invalid.");
-  /* make random nick. */
-  makepass(botname); newbotname[0]=0;
-  tprintf(serv,"NICK %s\n",botname);
+  /* make random nick. */ 
+  if (!newbotname[0]) { /* if it's due to an attempt to change nicks ..*/
+    makepass(botname);
+    tprintf(serv,"NICK %s\n",botname);
+  } else {              /* go back to old nick */
+    strcpy(botname,newbotname);
+    newbotname[0]=0;
+  }
 }
 
 /* 433 : nickname in use */
@@ -550,7 +572,7 @@ void write_debug()
 #ifdef EBUG
       tprintf(x,"Context: ");
       for (y=((cx_ptr+1)&15); y!=cx_ptr; y=((y+1)&15)) {
-        tprintf(x,"%s/%d, ",cx_file[y],cx_line[y]);
+        tprintf(x,"%s/%d,\n         ",cx_file[y],cx_line[y]);
       }
       tprintf(x,"%s/%d\n\n",cx_file[y],cx_line[y]);
 #else
@@ -569,24 +591,15 @@ void write_debug()
   x=creat("DEBUG",0644); setsock(x,SOCK_NONSOCK);
   if (x<0) { putlog(LOG_MISC,"*","* Failed to write DEBUG"); }
   else {
-#ifdef EBUG
-    char work[1024], *p;
-#endif
     strcpy(s,ctime(&now));
     tprintf(x,"Debug (%s) written %s",ver,s);
     tprintf(x,"Full Patch List: %s\n",egg_xtra);
 #ifdef EBUG
-    y = cx_ptr +1;
-    if (y > 15)
-      y = 0;
-    p = work;
-    while (y != cx_ptr) {
-      p += sprintf(p,"%s/%d, ",cx_file[y],cx_line[y]);
-      y++;
-      if (y > 15)
-	y = 0;
+    tprintf(x,"Context: ");
+    for (y=((cx_ptr+1)&15); y!=cx_ptr; y=((y+1)&15)) {
+       tprintf(x,"%s/%d,\n         ",cx_file[y],cx_line[y]);
     }
-    tprintf(x,"Context: %s%s/%d\n\n",work,cx_file[cx_ptr],cx_line[cx_ptr]);
+    tprintf(x,"%s/%d\n\n",cx_file[cx_ptr],cx_line[cx_ptr]);
 #else
     tprintf(x,"Context: %s/%d\n",cx_file,cx_line);
 #endif
@@ -835,6 +848,7 @@ void periodic_timers()
   /* ONCE A SECOND */
   now=time(NULL); if (now!=then) {    /* once a second */
     context;
+    random(); /* woop, lest really jumble things */
     timecnt++;  /* time to dequeue a msg? */
     if (timecnt==msgrate) { deq_msg(); timecnt=0; }
     check_utimers();  /* secondly timers */
@@ -863,11 +877,12 @@ void periodic_timers()
 	tprintf(serv,"TRACE %s\n",origbotname);
 	/* will return 206(undernet), 401(other),
 	   or 402(efnet) numeric if not online */
-      }
+      } /* if no nick change after a minute...assumin it succeeded???? 
+	 * seems a bit silly to me
       else if (newbotname[0]) {
 	newbotname[0]=0; waiting_for_awake=0;
 	putlog(LOG_MISC,"*","Regained nickname '%s'.  (?)",botname);
-      }
+      } */
     }
     check_idle_kick();
     /* join any channels that aren't active or pending */
@@ -1004,8 +1019,6 @@ void periodic_timers()
   else hourli=0;
 }
 
-
-
 int main PROTO2(int,argc,char **,argv)
 {
   int xx,i; char buf[520],s[520]; FILE *f;
@@ -1017,6 +1030,10 @@ int main PROTO2(int,argc,char **,argv)
   for (i=0;i<16;i++) { context; }
    
   /* --- PATCH INFO GOES HERE --- */
+   
+#ifdef MODULES
+   PATCH("modules");
+#endif
    
   /* --- END OF PATCH INFO --- */
 
@@ -1063,10 +1080,22 @@ int main PROTO2(int,argc,char **,argv)
   now=time(NULL);
   botname[0]=0; botserver[0]=0; newbotname[0]=0; chanset=NULL;
   nowtm=localtime(&now); lastmin=nowtm->tm_min;
-  srandom((unsigned short int)time(NULL));
-  init_mem(); init_misc(); init_bots(); init_net(); init_blowfish();
+  srandom(time(NULL));
+  init_mem(); init_misc(); init_bots(); init_net(); 
+#ifdef MODULES
+  init_modules();
+#else
+  init_blowfish();
+#endif
   init_tcl(); chanprog();
   context;
+#ifdef MODULES
+  if (encrypt_pass==0) {
+     printf("You have installed modules but have not selected an encryption\n");
+     printf("module, please consult the default config file for info.\n");
+     exit(1);
+  }
+#endif
   cache_miss=0; cache_hit=0;
   getmyhostname(bothost);
   context;

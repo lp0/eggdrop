@@ -1,3 +1,4 @@
+
 /*
    botcmd.c -- handles:
      commands that comes across the botnet
@@ -24,8 +25,10 @@
 #include "tandem.h"
 #include "users.h"
 #include "chan.h"
-#include "proto.h"
 #include "tclegg.h"
+#ifdef MODULES
+#include "modules.h"
+#endif
 
 extern tand_t tand[];
 extern int tands;
@@ -44,6 +47,7 @@ extern int serv;
 extern char ban_time;
 extern char ignore_time;
 extern char network[];
+extern int min_share;
 
 /* static buffer for goofy bot stuff */
 char TBUF[1024];
@@ -174,7 +178,6 @@ void bot_bye PROTO2(int,idx,char *,par)
   tandout_but(idx,"unlinked %s\n",dcc[idx].nick);
   tandout_but(idx,"chat %s Disconnected from: %s\n",botnetnick,dcc[idx].nick);
   cancel_user_xfer(idx);
-  rembot(dcc[idx].nick,dcc[idx].nick); unvia(idx,dcc[idx].nick);
   tprintf(dcc[idx].sock,"*bye\n"); killsock(dcc[idx].sock); lostdcc(idx);
 }
 
@@ -198,19 +201,27 @@ void bot_who PROTO2(int,idx,char *,par)
 
 void bot_version PROTO2(int,idx,char *,par)
 {
+  if ((par[0] >= '0') && (par[0] <= '9')) {
+    char work[600];
+    nsplit(work,par);
+    dcc[idx].u.bot->numver=atoi(work);
+  } else
+    dcc[idx].u.bot->numver=0;
   strcpy(dcc[idx].u.bot->version,par);
-  if ((share_users) && (get_attr_handle(dcc[idx].nick)&BOT_SHARE)) {
-    if (passive) {
-      if (dcc[idx].u.bot->status&STAT_CALLED) {
-	if (can_resync(dcc[idx].nick)) tprintf(dcc[idx].sock,"resync?\n");
-	else tprintf(dcc[idx].sock,"userfile?\n");
-	dcc[idx].u.bot->status|=STAT_OFFERED;
+  if (dcc[idx].u.bot->numver >= min_share) {
+    if ((share_users) && (get_attr_handle(dcc[idx].nick)&BOT_SHARE)) {
+      if (passive) {
+        if (dcc[idx].u.bot->status&STAT_CALLED) {
+  	  if (can_resync(dcc[idx].nick)) tprintf(dcc[idx].sock,"resync?\n");
+	  else tprintf(dcc[idx].sock,"userfile?\n");
+	  dcc[idx].u.bot->status|=STAT_OFFERED;
+        }
       }
-    }
-    else {
-      if (can_resync(dcc[idx].nick)) tprintf(dcc[idx].sock,"resync?\n");
-      else tprintf(dcc[idx].sock,"userfile?\n");
-      dcc[idx].u.bot->status|=STAT_OFFERED;
+      else {
+        if (can_resync(dcc[idx].nick)) tprintf(dcc[idx].sock,"resync?\n");
+        else tprintf(dcc[idx].sock,"userfile?\n");
+        dcc[idx].u.bot->status|=STAT_OFFERED;
+      }
     }
   }
 }
@@ -346,7 +357,7 @@ void bot_ufobsolete PROTO2(int,idx,char *,par)
 	      botnetnick,dcc[idx].nick);
   chatout("*** Disconnected %s (incompatible userfile transfer)\n",
 	  dcc[idx].nick);
-  rembot(dcc[idx].nick,dcc[idx].nick); unvia(idx,dcc[idx].nick);
+  unvia(idx,dcc[idx].nick);
   killsock(dcc[idx].sock); lostdcc(idx);
 }
 
@@ -366,9 +377,17 @@ void bot_userfileq PROTO2(int,idx,char *,par)
   int ok=1,i;
   flush_tbuf(dcc[idx].nick);
   if (!share_users) tprintf(dcc[idx].sock,"uf-no Not sharing userfile.\n");
+#ifdef MODULES
+  else if (find_module("filesys",0,0)==NULL)
+    tprintf(dcc[idx].sock,"uf-no No file system intalled.\n");
+#endif
   else if (!passive) tprintf(dcc[idx].sock,"uf-no Aggressive mode active.\n");
   else if (!(get_attr_handle(dcc[idx].nick) & BOT_SHARE))
     tprintf(dcc[idx].sock,"uf-no You are not +s for me.\n");
+  else if (min_share > dcc[idx].u.bot->numver) 
+    tprintf(dcc[idx].sock,
+	    "uf-no Your version is not high enough, need v%d.%d.%d\n",
+	    (min_share/1000000),(min_share/10000)%100,(min_share/100)%100);
   else {
     for (i=0; i<dcc_total; i++) if (dcc[i].type==DCC_BOT)
       if ((dcc[i].u.bot->status&STAT_SHARE) &&
@@ -532,7 +551,7 @@ void bot_chattr PROTO2(int,idx,char *,par)
   if (par[0]) {
     if (defined_channel(par)) {
       cst=findchan(par);
-      natr=atoi(atr);
+      natr=str2chflags(atr);
       if (cst->stat&CHAN_SHARED) {
         set_chanattr_handle(hand,par,natr);
         noshare=0; chflags2str(get_chanattr_handle(hand,par),s);
@@ -545,7 +564,7 @@ void bot_chattr PROTO2(int,idx,char *,par)
   }
   /* don't let bot flags be altered */
   oatr=(get_attr_handle(hand) & ~BOT_MASK);
-  natr=atoi(atr);
+  natr=str2flags(atr);
 #ifdef PRIVATE_OWNER
   oatr|=(get_attr_handle(hand) & USER_OWNER);
   natr&=(~USER_OWNER);
@@ -888,7 +907,6 @@ void bot_nlinked PROTO2(int,idx,char *,par)
   if (reject) {
     tandout_but(idx,"unlinked %s\n",dcc[idx].nick);
     cancel_user_xfer(idx);
-    rembot(dcc[idx].nick,dcc[idx].nick); unvia(idx,dcc[idx].nick);
     tprintf(dcc[idx].sock,"bye\n");
     killsock(dcc[idx].sock); lostdcc(idx); return;
   }
@@ -908,8 +926,7 @@ void bot_linked PROTO2(int,idx,char *,par)
   tandout_but(idx,"chat %s Disconnected %s (outdated)\n",botnetnick,
 	      dcc[idx].nick);
   tandout_but(idx,"unlinked %s\n",dcc[idx].nick);
-  cancel_user_xfer(idx);
-  rembot(dcc[idx].nick,dcc[idx].nick); unvia(idx,dcc[idx].nick);
+  cancel_user_xfer(idx); 
   killsock(dcc[idx].sock); lostdcc(idx);
 }
 
@@ -987,7 +1004,6 @@ void bot_reject PROTO2(int,idx,char *,par)
 		  dcc[i].nick,from);
       chatout("*** Disconnected %s (rejected by %s)\n",dcc[i].nick,from);
       cancel_user_xfer(i);
-      rembot(dcc[i].nick,dcc[i].nick); unvia(i,dcc[i].nick);
       killsock(dcc[i].sock); lostdcc(i);
     }
     else {
@@ -1044,7 +1060,7 @@ void bot_thisbot PROTO2(int,idx,char *,par)
     tandout_but(idx,"chat %s Disconnected %s (imposter)\n",botnetnick,
 		dcc[idx].nick);
     chatout("*** Disconnected %s (imposter)\n",dcc[idx].nick);
-    rembot(dcc[idx].nick,dcc[idx].nick); unvia(idx,dcc[idx].nick);
+    unvia(idx,dcc[idx].nick);
     killsock(dcc[idx].sock); lostdcc(idx); return;
   }
   if (get_attr_handle(par) & BOT_LEAF)
@@ -1143,45 +1159,16 @@ void bot_motd PROTO2(int,idx,char *,par)
   }
 }
 
+#ifdef MODULES
+extern void (*do_bot_assoc) PROTO((int,char *));
 /* assoc [link-flag] <chan#> <name> */
 /* link-flag is Y if botlinking */
 void bot_assoc PROTO2(int,idx,char *,par)
 {
-  char *s=TBUF,*s1;
-  int linking=0;
-  nsplit(s,par);
-  if (s[0]=='Y') {
-    linking=1;
-    nsplit(s,par);
-  }
-  if ((atoi(s)<1) || (atoi(s)>99999)) return;
-  s1=get_assoc_name(atoi(s));
-  if (linking && ((s1==NULL) || (s1[0]==0) ||
-      (get_attr_handle(dcc[idx].nick) & BOT_HUB))) {
-    add_assoc(par,atoi(s));
-    tandout_but(idx,"assoc %s %s\n",s,par);
-  }
-  else if (par[0]=='0') {
-    s1=get_assoc_name(atoi(s)); if (s1!=NULL) {
-      if (s1[0]==0) kill_assoc(atoi(s));
-      else add_assoc("",atoi(s));
-    }
-    tandout_but(idx,"assoc %s 0\n",s);
-  }
-  else if (get_assoc(par)!=atoi(s)) {
-    /* new one i didn't know about -- pass it on */
-    s1=get_assoc_name(atoi(s)); if (s1!=NULL) {
-      if (s1[0]==0) {
-	/* recently killed assoc */
-	tandout_but(idx,"assoc %s 0\n",s);
-	kill_assoc(atoi(s));
-	return;
-      }
-    }
-    add_assoc(par,atoi(s));
-    tandout_but(idx,"assoc %s %s\n",s,par);
-  }
+  context;
+  do_bot_assoc(idx,par);
 }
+#endif
 
 /* filereject <bot:filepath> <sock:nick@bot> <reason...> */
 void bot_filereject PROTO2(int,idx,char *,par)
@@ -1213,11 +1200,18 @@ void bot_filereq PROTO2(int,idx,char *,par)
   nsplit(from,par); splitc(tobot,par,':');
   if (strcasecmp(tobot,botnetnick)==0) {  /* for me! */
     /* process this */
-#ifdef NO_FILE_SYSTEM
-    tprintf(dcc[idx].sock,"priv %s %s I have no file system to grab files from.\n",
-	    botnetnick,from);
-#else
-    remote_filereq(idx,from,par);
+#ifdef MODULES
+    if (remote_filereq == NULL)
+#endif
+#if defined(MODULES) || defined(NO_FILE_SYSTEM)
+       tprintf(dcc[idx].sock,"priv %s %s I have no file system to grab files from.\n",
+	       botnetnick,from);
+#endif
+#ifdef MODULES
+     else 
+#endif
+#ifndef NO_FILE_SYSTEM
+       remote_filereq(idx,from,par);
 #endif
   }
   else {   /* pass it on */
@@ -1325,4 +1319,27 @@ void bot_idle PROTO2(int,idx,char *,par)
   if (sock==0) sock=partysock(bot,etc);
   partysetidle(bot,sock,atoi(par));
   tandout_but(idx,"idle %s %d %s\n",bot,sock,par);
+}
+
+void bot_stick(idx,par)
+int idx; char *par;
+{
+   char *host=TBUF,*val=TBUF+512;
+   int yn;
+   
+   nsplit(host,par);
+   nsplit(val,par);
+   yn = atoi(val);
+   noshare = 1;
+   if (!par[0]) {/* global ban */
+      if (setsticky_ban(par,yn) >0)
+	putlog(LOG_CMDS,"*","%s: stick %s %c",dcc[idx].nick,host,yn?'y':'n');
+   } else {
+      struct chanset_t * chan=findchan(dcc[idx].u.chat->con_chan);
+      if (chan != NULL) 
+	if (u_setsticky_ban(chan->bans,par,yn)>0)
+	  putlog(LOG_CMDS,"*","%s: stick %s %c %s",dcc[idx].nick,host,
+		 yn?'y':'n',par);
+   }
+   noshare = 0;
 }

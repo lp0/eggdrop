@@ -1,5 +1,5 @@
 %{+n}
 ### set timezone <timezone>
-     This is an optional setting provided to allow you to specify
-     what timezone your bot is in, so users get a general idea 
-     on the time difference between the bot & them.
+   this is an optional setting provided to allow you to specify
+   what timezone your bot is in, so users get a general idea 
+   on the time difference between the bot and them.

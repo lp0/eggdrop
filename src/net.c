@@ -670,14 +670,14 @@ int sockgets PROTO2(char *,s,int *,len)
 }
 
 /* dump something to a socket */
+/* DO NOT PUT CONTEXTS IN HERE IF YOU WANT DEBUG TO BE MEANINGFULL!!!*/
 void tputs PROTO3(int,z,char *,s,unsigned int,len)
 {
   int i,x; char *p;
-  context;
-  if (z<0) { context; return; } /* um... HELLO?!  sanity check please! */
+  if (z<0) return; /* um... HELLO?!  sanity check please! */
   if (((z==STDOUT) || (z==STDERR)) && (!backgrd || use_stderr)) {
     write(z,s,len);
-    context; return;
+    return;
   }
   for (i=0; i<MAXSOCKS; i++) {
     if (!(socklist[i].flags & SOCK_UNUSED) && (socklist[i].sock==z)) {
@@ -686,13 +686,13 @@ void tputs PROTO3(int,z,char *,s,unsigned int,len)
 	p=(char *)nrealloc(socklist[i].outbuf,socklist[i].outbuflen+len);
 	my_memcpy(p+socklist[i].outbuflen,s,len);
 	socklist[i].outbuf=p; socklist[i].outbuflen+=len;
-	context; return;
+        return;
       }
 /* this fucks up dcc chat */
 /*      if (socklist[i].flags & SOCK_CONNECT) {
 	* hold yer fuckin' horses! *
 	socklist[i].outbuf=(char *)nmalloc(strlen(s)+1);
-	strcpy(socklist[i].outbuf,s); context; return;
+	strcpy(socklist[i].outbuf,s); return;
       }
 */
       /* try. */
@@ -704,7 +704,7 @@ void tputs PROTO3(int,z,char *,s,unsigned int,len)
 	my_memcpy(socklist[i].outbuf,&s[x],len-x);
 	socklist[i].outbuflen=len-x;
       }
-      context; return;
+      return;
     }
   }
   putlog(LOG_MISC,"*","!!! writing to nonexistent socket: %d",z);

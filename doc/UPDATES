@@ -3,6 +3,8 @@ TO-DO:  LEAVE THIS HERE WHERE WE CAN SEE IT :)
 """""
 - files '.mv' move directories  [andrej]
 - '.sort' to sort files
+- fix .restart to reset tcl_interp right, recycle modules, do chon's again
+  (beldin is working on this one...:)
 
 BUG REPORTS:
 * DCC sends are causing memory leaks on some systems.  This affects shared
@@ -10,6 +12,7 @@ BUG REPORTS:
 * Some tcl scripts handling idxes that worked before are spitting out invalid
   idx errors
 * tcl8.0 doesnt like eggdrop in some situations
+* solve to non-working alarm(10) in linux
 
 SUGGESTIONS:
 
@@ -17,9 +20,103 @@ SUGGESTIONS:
 * Channel specific file ownerships (ie, only people on a certain channel
   can get certain files)
 * Move more things into NO_IRC such as bans and hostmasks
+* Make a chan/global +s for sharing, instead of the +shared option?
 
 Changes in eggdrop:
 """"""""""""""""""
+
+v1.1.4 
+
+* WOOP modules seems to work on Linux, FreeBSD, SunOS, BSD3.0, now
+  we just gotta debug each module... [beldin]
+* some minor fixes to nick changing [beldin]
+* fixed dcc_chat wasnt cleaning up control chars propery [beldin]
+* fixed .dccsimul Usage [beldin]
+* fixed .chattr <user> [beldin]
+* .adduser only ops non @'s on chan [beldin]
+* passwords can now be upto 15 characters long [beldin]
+
+v1.1.3+pl3
+
+* +nat patch added [Bill Brandt]
+* stickybans will now be sent over the botnet [beldin]
+* you should be able to -DEBUG_MEM again no problems [beldin]
+* .bots/.set should truncate right now [beldin]
+* .status all shows dynamic channels [beldin]
+* .chattr user +o  (global) now rechecks channels [beldin]
+* getops-1.8.tcl [dtm]
+* more alltools [david]
+
+v1.1.3+pl2
+
+* minor fixes [beldin]
+* encryption module - bot requires AN encryption modules [beldin]
+* additions to action.fix.tcl, console.tcl + addition of alltools.tc
+  [david]
+* fixed my dprintf messups, it's now you're generic output friend [beldin]
+* dccputchan works for local chans now [david]
+* .channel should now display the channel topic [eraseme]
+* woops, the filedb size was wrong [beldin]
+
+v1.1.3+pl1
+
+* made dozens of fixes to the help files, doc's, eggdrop.conf [EraseMe]
+* upgraded weed to 1.1 format [dtm/eclipse]
+
+v1.1.3
+
+* loadable code modules, see MODULES for info [beldin]
+  this is a lot of changes, beware! :)
+  this includes:
+    * +module/-module/modules dcc commands
+    * loadmodule/unloadmodule tcl commands
+    * a whole pile of support functions (see modules.c/.h)
+    * creating 2 example modules assoc & filesys
+  *THIS WILL ONLY WORK CURRENTLY ON SYSTEMS WITH dlopen*
+  so dont try it if you dont have dlopen ;)
+
+* tcl binds wasnt return all the bindings on error [beldin]
+* doc updates to various function [beldin]
+* msg info shouldnt need a password if the user doesnt have one [beldin]
+* fixes to dtm's fixes <G> [beldin]
+* Makefiles now use Makefile.dep and have a general cleanup [beldin]
+* checks in dcc_telnet_new/cmd_chnick/cmd_nick to prevent nicks starting
+  with characters that will screw the userfile [found by robey] [beldin]
+* su now fixes your nick correctly [robey]
+* filestat wasnt loggin [found by robey]
+* dprintf does everything now, buts (go directly to tputs) & server [beldin]
+* lostdcc pops the last dcc entry into the lost ones place rather than 
+  copying them all down 1 [beldin]
+* new_dcc & new_fork for creating new dcc entries [beldin]
+* neatened init_builtins [beldin]
+* global ops can do GO now too [beldin]
+
+v1.1.2+pl2
+
+* fixed up eggdrop.conf, botchk, CONTENTS, eggdrop.doc, deleted some older
+  scripts, and deleted files lying around where they shouldn't have been,
+  as well as some spelling mistakes in addpatch, etc [EraseMe]
+* upgraded samples.tcl to 1.1 format [EraseMe] 
+
+v1.1.2+pl1(dtm/bel)
+
+* botnet version now sends the version number and this is used to check
+  for userfile sharing (wont share with a bot with version < min_share in 
+  main.c) [beldin]
+* sharebots now pass chattr as flags rather than an int [beldin]
+* filedb's now store flags as flags rather than an int [beldin]
+  [NOTE- this changes the way the filedb info is stored and may cause some
+  lost settings, and require you to rm .filedb files- beldin]
+* channel add & .+chan wont let you set non #/& channels [beldin]
+* only 1 bit per userflag please! *doh* [beldin]
+* some tclegg.h prototypes needed PROTO()' & therefore tclegg.h incudes
+  proto.h now [beldin]
+* copied a few detail in nick updating the were missed when it returned
+  to the old method [beldin]
+* GO will work for global +o now [beldin]
+* strip will now strip ansi codes too (+a) [beldin]
+* kick/ban comments starting with @ will not be displayed [beldin]
+* dtm's fixes for tcl8.0 & non-argument commands [dtm]
 
 v1.1.2
 

@@ -23,7 +23,6 @@
 #include "eggdrop.h"
 #include "cmdt.h"
 #include "hash.h"
-#include "proto.h"
 #include "tclegg.h"
 
 extern struct dcc_t dcc[];
@@ -57,19 +56,6 @@ int got_dcc_cmd PROTO2(int,idx,char *,msg)
   return check_tcl_dcc(code,idx,msg);
 }
 
-#ifndef NO_FILE_SYSTEM
-/* hash function for file area commands */
-int got_files_cmd PROTO2(int,idx,char *,msg)
-{
-  char total[512],code[512];
-  strcpy(msg,check_tcl_filt(idx,msg));
-  if (!msg[0]) return 1;
-  if (msg[0]=='.') strcpy(msg,&msg[1]);
-  strcpy(total,msg); rmspace(msg); nsplit(code,msg); rmspace(msg);
-  return check_tcl_fil(code,idx,msg);
-}
-#endif
-
 /* hash function for tandem bot commands */
 void dcc_bot PROTO2(int,idx,char *,msg)
 {
@@ -85,50 +71,122 @@ void dcc_bot PROTO2(int,idx,char *,msg)
 }
 
 /* bring the default msg/dcc/fil commands into the Tcl interpreter */
-void init_builtins()
+int add_builtins PROTO2(int,table,cmd_t *,cc) 
 {
-  int i,j,flags,new; Tcl_HashTable *ht=NULL; Tcl_HashEntry *he;
-  tcl_cmd_t *tt; cmd_t *cc=NULL; char s[2];
-#ifdef NO_FILE_SYSTEM
-# define _max 2   /* only dcc, msg */
-#else
-# define _max 3   /* dcc, msg, fil */
-#endif
-  for (j=0; j<_max; j++) {
-#ifdef NO_IRC
-    if (j==1) j++;
-#endif
-    switch(j) {
-    case 0:
-      ht=&H_dcc; cc=C_dcc; break;
-#ifndef NO_IRC
-    case 1:
-      ht=&H_msg; cc=C_msg; break;
-#endif
-#ifndef NO_FILE_SYSTEM
-    case 2:
-      ht=&H_fil; cc=C_file; break;
-#endif
-    }
-    i=0; s[1]=0;
-    while (cc[i].name!=NULL) {
-      s[0]=cc[i].flag; flags=str2flags(s);
+   int i,flags,new; 
+   Tcl_HashTable *ht=NULL;
+   Tcl_HashEntry *he;
+   tcl_cmd_t *tt; 
+   char s[2], *p;
+   
+   switch (table) {
+    case BUILTIN_DCC:
+      ht = &H_dcc;
+      p = "*dcc:";
+      break;
+    case BUILTIN_MSG:
+      ht = &H_msg;
+      p = "*msg:";
+      break;
+    case BUILTIN_FILES:
+      ht = &H_fil;
+      p = "*fil:";
+      break;
+    default:
+      return -1;
+   }
+   i=0; 
+   s[1]=0;
+   while (cc[i].name!=NULL) {
+      s[0]=cc[i].flag; 
+      flags=str2flags(s);
       tt=(tcl_cmd_t *)tclcmd_alloc(strlen(cc[i].name)+6);
-      tt->flags_needed=flags; tt->next=NULL;
-      strcpy(tt->func_name,(j==0?"*dcc:" : (j==1?"*msg:" : "*fil:")));
+      tt->flags_needed=flags;
+      tt->next=NULL;
+      strcpy(tt->func_name,p);
       strcat(tt->func_name,cc[i].name);
       he=Tcl_CreateHashEntry(ht,cc[i].name,&new);
       if (!new) {
-	/* append old entry */
-	tcl_cmd_t *ttx=(tcl_cmd_t *)Tcl_GetHashValue(he);
-	Tcl_DeleteHashEntry(he);
-	tt->next=ttx;
+	 /* append old entry */
+	 tcl_cmd_t *ttx=(tcl_cmd_t *)Tcl_GetHashValue(he);
+	 Tcl_DeleteHashEntry(he);
+	 tt->next=ttx;
       }
       Tcl_SetHashValue(he,tt);
       /* create command entry in Tcl interpreter */
       Tcl_CreateCommand(interp,tt->func_name,tcl_builtin,
 			(ClientData)cc[i].func,NULL);
       i++;
-    }
-  }
+   }
+   return i;
+}
+
+#ifdef MODULES
+/* bring the default msg/dcc/fil commands into the Tcl interpreter */
+int rem_builtins PROTO2(int,table,cmd_t *,cc) 
+{
+   int i; 
+   Tcl_HashTable *ht=NULL;
+   Tcl_HashEntry *he;
+   char s[200], *p;
+   
+   switch (table) {
+    case BUILTIN_DCC:
+      ht = &H_dcc;
+      p = "*dcc:";
+      break;
+    case BUILTIN_MSG:
+      ht = &H_msg;
+      p = "*msg:";
+      break;
+    case BUILTIN_FILES:
+      ht = &H_fil;
+      p = "*fil:";
+      break;
+    default:
+      return -1;
+   }
+   i=0; 
+   while (cc[i].name!=NULL) {
+      strcpy(s,p);
+      strcat(s,cc[i].name);
+      he=Tcl_FindHashEntry(ht,cc[i].name);
+      if (he != NULL) {
+	 tcl_cmd_t *ttx=(tcl_cmd_t *)Tcl_GetHashValue(he),*tt = NULL;
+	 while (ttx) {
+	    if (strcmp(ttx->func_name,s)) {
+	       tt=ttx;
+	       ttx=ttx->next;
+	    } else
+	      break;
+	 }
+	 if (ttx) {
+	    if (tt) {
+	       tt->next = ttx->next;
+	    } else if (ttx->next) {
+	       Tcl_SetHashValue(he,ttx->next);
+	    } else {
+	       Tcl_DeleteHashEntry(he);
+	    }
+	    tclcmd_free(ttx);
+	    Tcl_DeleteCommand(interp,s);
+	 }
+      }
+      i++;
+   }
+   return i;
+}
+#endif
+
+void init_builtins()
+{
+   add_builtins(BUILTIN_DCC,C_dcc);
+#ifndef NO_IRC
+   add_builtins(BUILTIN_MSG,C_msg);
+#endif
+#ifndef NO_FILE_SYSTEM
+#ifndef MODULES
+   add_builtins(BUILTIN_FILES,C_file);
+#endif
+#endif
 }

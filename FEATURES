@@ -39,25 +39,7 @@ it is still regularly updated.  Its features include:
     fly, by means of the TCL script language, giving you the power of TOTAL
     customization of your bot -- similar to ircII script
 
-  * ability to look almost exactly like an ircII client -- sadly, this is
-    almost a necessity these days for bots
-
   * slices, dices, and juliennes fries
-
-
-The latest version of eggdrop is always available via web or ftp:
-
-(1) WEB:
-    The web site at:
-       http://www.valuserve.com/~robey/eggdrop/
-    has links to the latest versions, as well as other information like
-    Tcl reference pages and botnet pages.
-
-(2) FTP:
-    The ftp site at:
-       ftp.sodre.net:/pub/eggdrop
-    has the latest version.  It is also mirrored at dozens of places,
-    listed on the web site.
 
 
 !!!  WARNING  !!!

@@ -30,6 +30,9 @@
 #include <varargs.h>
 #include "eggdrop.h"
 #include "proto.h"
+#ifndef MODULES
+#include "mod/blowfish.c"
+#endif
 
 extern int serv;
 extern char notefile[];
@@ -111,6 +114,16 @@ void init_misc()
 
 /***** MISC FUNCTIONS *****/
 
+/* low-level stuff for other modules */
+int is_file PROTO1(char *,s)
+{
+  struct stat ss;
+  int i=stat(s,&ss);
+  if (i<0) return 0;
+  if ((ss.st_mode&S_IFREG) || (ss.st_mode&S_IFLNK)) return 1;
+  return 0;
+}
+
 #define upcase(c) (((c)>='a' && (c)<='z') ? (c)-'a'+'A' : (c))
 
 /* determine if littles is contained in bigs (ignoring case) */
@@ -159,10 +172,9 @@ void stridx PROTO3(char *,first,char *,rest,int,index)
   context;
   strcpy(s,rest);
   for (i=0; i<index; i++) {
-    splitc(first,rest,' ');
-    rmspace(rest);
+    splitc(first,s,' ');
+    rmspace(s);
   }
-  strcpy(rest,s);
 }
 #endif
 
@@ -272,8 +284,8 @@ void dumplots PROTO3(int,idx,char *,prefix,char *,data)
   if (!(*data)) {
     dprintf(idx,"%s\n",prefix); return;
   }
-  while (strlen(p)>490) {
-    q=p+490;
+  while (strlen(p)>480) {
+    q=p+480;
     /* search for embedded linefeed first */
     n=strchr(p,'\n'); if ((n!=NULL) && (n<q)) {
       /* great! dump that first line then start over */
@@ -283,7 +295,7 @@ void dumplots PROTO3(int,idx,char *,prefix,char *,data)
     else {
       /* search backwards for the last space */
       while ((*q!=' ') && (q!=p)) q--;
-      if (q==p) q=p+490;
+      if (q==p) q=p+480;
       /* ^ 1 char will get squashed cos there was no space -- too bad */
       c=*q; *q=0; dprintf(idx,"%s%s\n",prefix,p);
       *q=c; p=q+1;
@@ -675,7 +687,7 @@ void help_subst PROTO4(char *,s,char *,nick,int,flags,int,isdcc)
 	if (q[0]=='+') {
 	  int reqflags=str2flags(q);
 	  if (!flags_ok(reqflags,flags)) blind=1;
-	  if ((strchr(q,'o')!=NULL) && op_anywhere(nick)) blind=0;
+	  else blind = 0;
 	}
 	if (q[0]=='-') blind=0;
 	if (strcasecmp(q,"end")==0) {

@@ -11,10 +11,10 @@
 
 /* structure for file database (per directory) */
 struct filler {
-  char xxx[1+61+301+10+61+16];
+  char xxx[1+61+301+10+11+61+16];
   unsigned short int uuu[2];
   time_t ttt[2];
-  unsigned int iii[3];
+  unsigned int iii[2];
 };
 
 typedef struct {
@@ -24,7 +24,7 @@ typedef struct {
   char filename[61];
   char desc[301];              /* should be plenty */
   char uploader[10];           /* where this file came from */
-  unsigned int flags_req;      /* (unused) from version 1.0 */
+  unsigned char flags_req[11]; /* (unused) from version 1.0 */
   time_t uploaded;             /* time it was uploaded */
   unsigned int size;           /* file length */
   unsigned short int gots;     /* times the file was downloaded */
@@ -34,8 +34,8 @@ typedef struct {
   char unused[512-sizeof(struct filler)];
 } filedb;
 
-#define FILEVERSION     0x00
-/* #define FILEVERSION    0x01 */
+/* #define FILEVERSION     0x00 */
+#define FILEVERSION    0x01
 
 #define FILE_UNUSED     0x0001    /* (deleted entry) */
 #define FILE_DIR        0x0002    /* it's actually a directory */

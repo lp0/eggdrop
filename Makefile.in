@@ -14,8 +14,28 @@
 #                      and useless to most people)
 #   -DREDHATSUX      if you get dprintf already defined errors in redhat
 #
+# ok, Im a linux weenie, these settings with work for linux
+#
 CFLGS = -g
 
+# configure SHOULD set these...you may need to tweak them to get modules
+# to compile .. if you do...let the devel-team know the working settings
+# btw to turn STRIP of, do STRIP=touch not STRIP=
+
+#normal make
+CC=@CC@
+LD=@CC@
+STRIP= @STRIP@
+
+#making eggmod
+MOD_CC = @BEL_MOD_CC@
+MOD_LD = @BEL_MOD_LD@
+MOD_STRIP = @BEL_MOD_STRIP@
+
+#makind modules
+SHLIB_CC = @SHLIB_CC@
+SHLIB_LD  = @SHLIB_LD@
+SHLIB_STRIP = @SHLIB_STRIP@
 
 # STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
 # - - - - - - - - do not edit anything below this line. - - - - - - - - #
@@ -38,8 +58,9 @@ help:
 	@echo "   % make eggdrop"
 
 clean:
-	@rm -f eggdrop egg core *.o *.a
-	@cd src ; rm -f eggdrop egg core *.o *.a
+	@rm -f eggdrop egg core *.o *.a *.so *~
+	@cd src ; rm -f eggdrop egg core *.o *.a *~
+	@cd src/mod ; rm -f *.o *.so *~
 
 dist: clean
 	@rm -f Makefile config.cache config.log config.status config.h lush.h
@@ -51,6 +72,7 @@ eggdrop: always
 	@mv src/@EGGEXEC@ .
 	@echo ""
 	@./eggdrop -v
+	@ls -la eggdrop
 	@echo ""
 	@echo "To copy the help files and executables into your bot's"
 	@echo "directory, type:"
@@ -71,16 +93,68 @@ src/libtcle.a: ${TCLLIB}/lib@TCLLIBFN@
 	ar d src/libtcle.a tclMain.o
 	@RANLIB@ src/libtcle.a
 
-GMAKE = ${MAKE} 'CC=@CC@' 'OBJS=${OBJS}' 'TCLLIBFN=@TCLLIBFN@'\
+GMAKE = ${MAKE} 'CC=${CC}' 'LD=${LD}' 'OBJS=${OBJS}' 'TCLLIBFN=@TCLLIBFN@'\
 	'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' 'XLIBS=@TCL_LIBS@ @LIBS@'\
-	'TCLLIB=${TCLLIB}' 'RANLIB=@RANLIB@' 'STRIP=@STRIP@'
+	'TCLLIB=${TCLLIB}' 'RANLIB=@RANLIB@' 'STRIP=${STRIP}'
 
 eggdrop.h:
 	@echo You do not have the eggdrop source!
 	@exit 1
 
-OBJS = blowfish.o botcmd.o botnet.o chan.o chanprog.o chanset.o cmds.o\
-	dcc.o dccutil.o filedb.o fileq.o files.o gotdcc.o hash.o main.o\
+OBJS = botcmd.o botnet.o chan.o chanprog.o chanset.o cmds.o\
+	dcc.o dccutil.o gotdcc.o hash.o main.o\
 	match.o mem.o misc.o mode.o msgcmds.o msgnotice.o net.o notes.o\
 	tcl.o tclchan.o tcldcc.o tclhash.o tclmisc.o tcluser.o userrec.o\
 	users.o
+
+GMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
+'STRIP=${SHLIB_STRIP}' 'CFLAGS=${CFLAGS} -DMODULES' 'XLIBS=@TCL_LIBS@ @LIBS@'
+
+GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS} modules.o'\
+'CFLAGS=${CFLAGS} -DMODULES' 'XREQ=${XREQ}' \
+'TCLLIB=${TCLLIB}' 'STRIP=${MOD_STRIP}' 'RANLIB=@RANLIB@' \
+'XLIBS=@TCL_LIBS@ @LIBS@'
+
+DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
+'STRIP=touch' 'CFLAGS=${CFLAGS}' 'XLIBS=@TCL_LIBS@ @LIBS@'
+
+DMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS} modules.o'\
+'CFLAGS=${CFLAGS} -DMODULES' 'XREQ=${XREQ}' \
+'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
+'XLIBS=@TCL_LIBS@ @LIBS@'
+
+eggmod: always
+	@cd src;${GMAKE_MOD} eggdrop
+	@mv src/@EGGEXEC@ .
+	@echo ""
+	@./eggdrop -v
+	@ls -la eggdrop
+	@echo ""
+	@echo "Now would be a good time to 'make modules' if you haven't already"
+	@echo ""
+	
+modules: always
+	@cd src/mod;${GMAKE_SHLIB} modules
+	@mv src/mod/*.so .
+	@echo ""
+	@echo "modules made:"
+	@ls -la *.so
+	@echo ""
+	@echo "Now would be a good time to 'make eggmod' if you haven't already"
+	@echo ""
+
+debugmod: always
+	@cd src;${DMAKE_MOD} eggdrop
+	@mv src/@EGGEXEC@ .
+	@echo
+	@./eggdrop -v
+	@ls -la eggdrop
+	
+moddebug: always
+	@cd src/mod;${DMAKE_SHLIB} modules
+	@mv src/mod/*.so .
+	@echo
+	@echo "modules made:"
+	@ls -la *.so
+
+#safety hash
