@@ -9,7 +9,7 @@
  * dprintf'ized, 27oct1995
  * multi-channel, 8feb1996
  * 
- * $Id: chan.c,v 1.60 2000/03/04 18:57:42 guppy Exp $
+ * $Id: chan.c,v 1.64 2000/07/02 23:41:01 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -230,7 +230,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
     if (which == FLOOD_DEOP)
       chan->deopd[0] = 0;
     u = get_user_by_host(from);
-    if (check_tcl_flud(floodnick, from, u, ftype, chan->name))
+    if (check_tcl_flud(floodnick, floodhost, u, ftype, chan->name))
       return 0;
     switch (which) {
     case FLOOD_PRIVMSG:
@@ -557,13 +557,69 @@ static void resetmasks(struct chanset_t *chan, masklist *m, maskrec *mrec, maskr
   }
 }
 
+static void recheck_channel_modes(struct chanset_t *chan)
+{
+  int cur = chan->channel.mode,
+      pls = chan->mode_pls_prot,
+      mns = chan->mode_mns_prot;
+
+  if (!(chan->status & CHAN_ASKEDMODES)) {
+    if (pls & CHANINV && !(cur & CHANINV))
+      add_mode(chan, '+', 'i', "");
+    else if (mns & CHANINV && cur & CHANINV)
+      add_mode(chan, '-', 'i', "");
+    if (pls & CHANPRIV && !(cur & CHANPRIV))
+      add_mode(chan, '+', 'p', "");
+    else if (mns & CHANPRIV && cur & CHANPRIV)
+      add_mode(chan, '-', 'p', "");
+    if (pls & CHANSEC && !(cur & CHANSEC))
+      add_mode(chan, '+', 's', "");
+    else if (mns & CHANSEC && cur & CHANSEC)
+      add_mode(chan, '-', 's', "");
+    if (pls & CHANMODER && !(cur & CHANMODER))
+      add_mode(chan, '+', 'm', "");
+    else if (mns & CHANMODER && cur & CHANMODER)
+      add_mode(chan, '-', 'm', "");
+    if (pls & CHANTOPIC && !(cur & CHANTOPIC))
+      add_mode(chan, '+', 't', "");
+    else if (mns & CHANTOPIC && cur & CHANTOPIC)
+      add_mode(chan, '-', 't', "");
+    if (pls & CHANNOMSG && !(cur & CHANNOMSG))
+      add_mode(chan, '+', 'n', "");
+    else if ((mns & CHANNOMSG) && (cur & CHANNOMSG))
+      add_mode(chan, '-', 'n', "");
+    if ((pls & CHANANON) && !(cur & CHANANON))
+      add_mode(chan, '+', 'a', "");
+    else if ((mns & CHANANON) && (cur & CHANANON))
+      add_mode(chan, '-', 'a', "");
+    if ((pls & CHANQUIET) && !(cur & CHANQUIET))
+      add_mode(chan, '+', 'q', "");
+    else if ((mns & CHANQUIET) && (cur & CHANQUIET))
+      add_mode(chan, '-', 'q', "");
+    if ((chan->limit_prot != (-1)) && (chan->channel.maxmembers == -1)) {
+      char s[50];
+
+      sprintf(s, "%d", chan->limit_prot);
+      add_mode(chan, '+', 'l', s);
+    } else if ((mns & CHANLIMIT) && (chan->channel.maxmembers >= 0))
+      add_mode(chan, '-', 'l', "");
+    if (chan->key_prot[0]) {
+      if (rfc_casecmp(chan->channel.key, chan->key_prot) != 0) {
+        if (chan->channel.key[0])
+	  add_mode(chan, '-', 'k', chan->channel.key);
+        add_mode(chan, '+', 'k', chan->key_prot);
+      }
+    } else if ((mns & CHANKEY) && (chan->channel.key))
+      add_mode(chan, '-', 'k', chan->channel.key);
+  }
+}
+
 /* things to do when i just became a chanop: */
 static void recheck_channel(struct chanset_t *chan, int dobans)
 {
   memberlist *m;
   char s[UHOSTLEN], *p;
   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
-  int cur, pls, mns;
   static int stacking = 0;
 
   if (stacking)
@@ -658,56 +714,7 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
   }
   if (dobans && channel_enforcebans(chan))
     enforce_bans(chan);
-  pls = chan->mode_pls_prot;
-  mns = chan->mode_mns_prot;
-  cur = chan->channel.mode;
-  if (!(chan->status & CHAN_ASKEDMODES)) {
-    if (pls & CHANINV && !(cur & CHANINV))
-      add_mode(chan, '+', 'i', "");
-    else if (mns & CHANINV && cur & CHANINV)
-      add_mode(chan, '-', 'i', "");
-    if (pls & CHANPRIV && !(cur & CHANPRIV))
-      add_mode(chan, '+', 'p', "");
-    else if (mns & CHANPRIV && cur & CHANPRIV)
-      add_mode(chan, '-', 'p', "");
-    if (pls & CHANSEC && !(cur & CHANSEC))
-      add_mode(chan, '+', 's', "");
-    else if (mns & CHANSEC && cur & CHANSEC)
-      add_mode(chan, '-', 's', "");
-    if (pls & CHANMODER && !(cur & CHANMODER))
-      add_mode(chan, '+', 'm', "");
-    else if (mns & CHANMODER && cur & CHANMODER)
-      add_mode(chan, '-', 'm', "");
-    if (pls & CHANTOPIC && !(cur & CHANTOPIC))
-      add_mode(chan, '+', 't', "");
-    else if (mns & CHANTOPIC && cur & CHANTOPIC)
-      add_mode(chan, '-', 't', "");
-    if (pls & CHANNOMSG && !(cur & CHANNOMSG))
-      add_mode(chan, '+', 'n', "");
-    else if ((mns & CHANNOMSG) && (cur & CHANNOMSG))
-      add_mode(chan, '-', 'n', "");
-    if ((pls & CHANANON) && !(cur & CHANANON))
-      add_mode(chan, '+', 'a', "");
-    else if ((mns & CHANANON) && (cur & CHANANON))
-      add_mode(chan, '-', 'a', "");
-    if ((pls & CHANQUIET) && !(cur & CHANQUIET))
-      add_mode(chan, '+', 'q', "");
-    else if ((mns & CHANQUIET) && (cur & CHANQUIET))
-      add_mode(chan, '-', 'q', "");
-    if ((chan->limit_prot != (-1)) && (chan->channel.maxmembers == -1)) {
-      sprintf(s, "%d", chan->limit_prot);
-      add_mode(chan, '+', 'l', s);
-    } else if ((mns & CHANLIMIT) && (chan->channel.maxmembers >= 0))
-      add_mode(chan, '-', 'l', "");
-    if (chan->key_prot[0]) {
-      if (rfc_casecmp(chan->channel.key, chan->key_prot) != 0) {
-        if (chan->channel.key[0])
-	  add_mode(chan, '-', 'k', chan->channel.key);
-        add_mode(chan, '+', 'k', chan->key_prot);
-      }
-    } else if ((mns & CHANKEY) && (chan->channel.key))
-      add_mode(chan, '-', 'k', chan->channel.key);
-  }
+  recheck_channel_modes(chan);
   if ((chan->status & CHAN_ASKEDMODES) && dobans &&
      !channel_inactive(chan)) /* spot on guppy, this just keeps the
  	                       * checking sane */
@@ -795,10 +802,8 @@ static int got324(char *from, char *msg)
 static int got352or4(struct chanset_t *chan, char *user, char *host,
 		     char *nick, char *flags)
 {
-  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
-  char userhost[UHOSTLEN], *p;
+  char userhost[UHOSTLEN];
   memberlist *m;
-  int waschanop;
 
   m = ismember(chan, nick);	/* In my channel list copy? */
   if (!m) {			/* Nope, so update */
@@ -817,7 +822,6 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
     strcpy(botuserhost, m->userhost);	/* Yes, save my own userhost */
     m->joined = now;		/* set this to keep the whining masses happy */
   }
-  waschanop = me_op(chan);	/* Am I opped here? */
   if (strchr(flags, '@') != NULL)	/* Flags say he's opped? */
     m->flags |= (CHANOP | WASOP);	/* Yes, so flag in my table */
   else
@@ -828,51 +832,10 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
     m->flags &= ~CHANVOICE;
   if (!(m->flags & (CHANVOICE | CHANOP)))
     m->flags |= STOPWHO;
-  if (match_my_nick(nick) && !waschanop && me_op(chan))
-    recheck_channel(chan, 1);
   if (match_my_nick(nick) && any_ops(chan) && !me_op(chan) &&
       chan->need_op[0])
     do_tcl("need-op", chan->need_op);
   m->user = get_user_by_host(userhost);
-  get_user_flagrec(m->user, &fr, chan->name);
-  /* are they a chanop, and me too */
-  if (chan_hasop(m) && me_op(chan) &&
-  /* are they a channel or global de-op */
-      ((chan_deop(fr) || (glob_deop(fr) && !chan_op(fr))) ||
-  /* or is it bitch mode & they're not an op anywhere */
-       (channel_bitch(chan) && !chan_op(fr) &&
-	!(glob_op(fr) && !chan_deop(fr)))) &&
-  /* and of course it's not me */
-      !match_my_nick(nick)) {
-    add_mode(chan, '-', 'o', nick);
-  }
-  /* if channel is enforce bans */
-  if (channel_enforcebans(chan) &&
-  /* and user matches a ban */
-      (u_match_mask(global_bans, userhost) ||
-       u_match_mask(chan->bans, userhost)) &&
-  /* and it's not me, and i'm an op */
-      !match_my_nick(nick) && me_op(chan) &&
-      !chan_friend(fr) && !glob_friend(fr) &&
-      !isexempted(chan, userhost) &&
-      !(channel_dontkickops(chan) &&
-	(chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) {	/* arthur2 */
-    /* *bewm* */
-    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick, IRC_BANNED);
-    m->flags |= SENTKICK;
-  }
-  /* if the user is a +k */
-  else if ((chan_kick(fr) || glob_kick(fr)) &&
-    /* and it's not me :) who'd set me +k anyway, a sicko? */
-    /* and if im an op */
-	   !match_my_nick(nick) && me_op(chan)) {
-    /* cya later! */
-    p = get_user(&USERENTRY_COMMENT, m->user);
-    quickban(chan, userhost);
-    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick,
-	    p ? p : IRC_POLITEKICK);
-    m->flags |= SENTKICK;
-  }
   return 0;
 }
 
@@ -945,6 +908,8 @@ static int got315(char *from, char *msg)
     chan->status &= ~CHAN_ACTIVE;
     dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
   }
+  else if (me_op(chan))
+    recheck_channel(chan, 1);
   /* do not check for i-lines here. */
   return 0;
 }
@@ -1194,26 +1159,6 @@ static int got474(char *from, char *msg)
   chan = findchan(chname);
   if (chan && chan->need_unban[0])
     do_tcl("need-unban", chan->need_unban);
-  return 0;
-}
-
-/* got 442: not on channel */
-static int got442(char *from, char *msg)
-{
-  char *chname;
-  struct chanset_t *chan;
-
-  newsplit(&msg);
-  chname = newsplit(&msg);
-  chan = findchan(chname);
-  if (chan) {
-    if (!channel_inactive(chan)) {
-      putlog(LOG_MISC, chname, IRC_SERVNOTONCHAN, chname);
-      clear_channel(chan, 1);
-      chan->status &= ~CHAN_ACTIVE;
-      dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
-    }  
-  }
   return 0;
 }
 
@@ -1738,11 +1683,11 @@ static int gotquit(char *from, char *msg)
     alt = get_altbotnick();
     if (!rfc_casecmp(nick, origbotname)) {
       putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-      dprintf(DP_MODE, "NICK %s\n", origbotname);
+      dprintf(DP_SERVER, "NICK %s\n", origbotname);
     } else if (alt[0]) {
       if (!rfc_casecmp(nick, alt) && strcmp(botname, origbotname)) {
 	putlog(LOG_MISC, "*", IRC_GETALTNICK, alt);
-	dprintf(DP_MODE, "NICK %s\n", alt);
+	dprintf(DP_SERVER, "NICK %s\n", alt);
       }
     }
   }
@@ -1981,7 +1926,6 @@ static cmd_t irc_raw[] =
   {"471", "", (Function) got471, "irc:471"},
   {"473", "", (Function) got473, "irc:473"},
   {"474", "", (Function) got474, "irc:474"},
-  {"442", "", (Function) got442, "irc:442"},
   {"475", "", (Function) got475, "irc:475"},
   {"INVITE", "", (Function) gotinvite, "irc:invite"},
   {"TOPIC", "", (Function) gottopic, "irc:topic"},

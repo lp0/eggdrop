@@ -5,7 +5,7 @@
  * 
  * dprintf'ized, 3nov1995
  * 
- * $Id: cmds.c,v 1.35 2000/02/04 19:03:18 per Exp $
+ * $Id: cmds.c,v 1.38 2000/07/01 06:28:03 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -1629,7 +1629,8 @@ static void cmd_botattr(struct userrec *u, int idx, char *par)
     return;
   }
   for (idx2 = 0; idx2 < dcc_total; idx2++)
-    if ((dcc[idx2].type != &DCC_RELAY) && !strcasecmp(dcc[idx2].nick, hand))
+    if ((dcc[idx2].type != &DCC_RELAY) && (dcc[idx2].type != &DCC_FORK_BOT) &&
+    !strcasecmp(dcc[idx2].nick, hand))
       break;
   if (idx2 != dcc_total) {
     dprintf(idx, "You may not change the attributes of a directly linked bot.\n");
@@ -2077,8 +2078,8 @@ static void cmd_su(struct userrec *u, int idx, char *par)
       correct_handle(par);
       putlog(LOG_CMDS, "*", "#%s# su %s", dcc[idx].nick, par);
       if (!(atr & USER_OWNER) ||
-	  ((atr & USER_OWNER) && !(isowner(dcc[idx].nick))) ||
-	  ((u->flags & USER_OWNER) && (isowner(par)))) {
+	  ((u->flags & USER_OWNER) && (isowner(par)) &&
+	   !(isowner(dcc[idx].nick)))) {
 	/* This check is only important for non-owners */
 	if (u_pass_match(u, "-")) {
 	  dprintf(idx, "No password set for user. You may not .su to them\n");
@@ -2166,7 +2167,6 @@ static void cmd_page(struct userrec *u, int idx, char *par)
     dcc[idx].u.chat->line_count = 0;
     dcc[idx].u.chat->current_lines = 0;
     putlog(LOG_CMDS, "*", "#%s# page %d", dcc[idx].nick, a);
-    return;
   } else {
     dprintf(idx, "Usage: page <off or #>\n");
     return;
@@ -2241,7 +2241,7 @@ static void cmd_loadmod(struct userrec *u, int idx, char *par)
      }
   Context;
   if (!par[0]) {
-    dprintf(idx, "%s: loadmod <module>\n", USAGE);
+    dprintf(idx, "%s: loadmod <module>\n", MISC_USAGE);
   } else {
     p = module_load(par);
     if (p)
@@ -2264,7 +2264,7 @@ static void cmd_unloadmod(struct userrec *u, int idx, char *par)
      }
   Context;
   if (!par[0]) {
-    dprintf(idx, "%s: unloadmod <module>\n", USAGE);
+    dprintf(idx, "%s: unloadmod <module>\n", MISC_USAGE);
   } else {
     p = module_unload(par, dcc[idx].nick);
     if (p)

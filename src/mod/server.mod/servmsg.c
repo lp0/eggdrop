@@ -1,7 +1,7 @@
 /* 
  * servmsg.c -- part of server.mod
  * 
- * $Id: servmsg.c,v 1.29 2000/03/20 19:50:02 guppy Exp $
+ * $Id: servmsg.c,v 1.32 2000/05/28 18:31:32 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -254,6 +254,7 @@ static int got001(char *from, char *msg)
   /* init-server */
   if (initserver[0])
     do_tcl("init-server", initserver);
+  check_tcl_event("init-server");
   x = serverlist;
   if (x == NULL)
     return 0;			/* uh, no server list */
@@ -291,13 +292,44 @@ static int got001(char *from, char *msg)
   return 0;
 }
 
+/* got 442: not on channel */
+static int got442(char *from, char *msg)
+{
+  char *chname;
+  struct chanset_t *chan;
+  struct server_list *x = serverlist;
+  module_entry *me;
+  int i = 0;
+
+  while (x != NULL) {
+    if (i == curserv) {
+      if (strcasecmp(from, x->realname ? x->realname : x->name))
+        return 0;
+      break;
+      }
+    x = x->next;
+    i++;
+  }
+  newsplit(&msg);
+  chname = newsplit(&msg);
+  chan = findchan(chname);
+  if (chan) {
+    if (!channel_inactive(chan)) {
+      putlog(LOG_MISC, chname, IRC_SERVNOTONCHAN, chname);
+      if ((me = module_find("channels", 0, 0)) && me->funcs)
+        (me->funcs[CHANNEL_CLEAR]) (chan, 1);
+      chan->status &= ~CHAN_ACTIVE;
+      dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
+    }  
+  }
+  return 0;
+}
+
 /* close the current server connection */
 static void nuke_server(char *reason)
 {
   if (serv >= 0) {
     int servidx = findanyidx(serv);
-
-    server_online = 0;
     if (reason && (servidx > 0))
       dprintf(servidx, "QUIT :%s\n", reason);
     disconnect_server(servidx);
@@ -371,7 +403,7 @@ static int detect_flood(char *floodnick, char *floodhost,
     lastmsgtime[which] = 0;
     lastmsghost[which][0] = 0;
     u = get_user_by_host(from);
-    if (check_tcl_flud(floodnick, from, u, ftype, "*"))
+    if (check_tcl_flud(floodnick, floodhost, u, ftype, "*"))
       return 0;
     /* private msg */
     simple_sprintf(h, "*!*@%s", p);
@@ -691,11 +723,11 @@ static void minutely_checks()
 	/* save space and use the same ISON :P */
 	alt = get_altbotnick();
 	if (alt[0] && strcasecmp (botname, alt))
-	  dprintf(DP_MODE, "ISON :%s %s %s\n", botname, origbotname, alt);
+	  dprintf(DP_SERVER, "ISON :%s %s %s\n", botname, origbotname, alt);
 	else
-          dprintf(DP_MODE, "ISON :%s %s\n", botname, origbotname);
+          dprintf(DP_SERVER, "ISON :%s %s\n", botname, origbotname);
       } else
-	dprintf(DP_MODE, "TRACE %s\n", origbotname);
+	dprintf(DP_SERVER, "TRACE %s\n", origbotname);
       /* will return 206(undernet), 401(other), or 402(efnet) numeric if
        * not online */
     }
@@ -757,10 +789,10 @@ static void got303(char *from, char *msg)
     }
     if (!ison_orig) {
       putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-      dprintf(DP_MODE, "NICK %s\n", origbotname);
+      dprintf(DP_SERVER, "NICK %s\n", origbotname);
     } else if (alt[0] && !ison_alt && rfc_casecmp(botname, alt)) {
       putlog(LOG_MISC, "*", IRC_GETALTNICK, alt);
-      dprintf(DP_MODE, "NICK %s\n", alt);
+      dprintf(DP_SERVER, "NICK %s\n", alt);
     }
   }
 }
@@ -771,7 +803,7 @@ static void trace_fail(char *from, char *msg)
 {
   if (keepnick && !use_ison  && !strcasecmp (botname, origbotname)) {
     putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-    dprintf(DP_MODE, "NICK %s\n", origbotname);
+    dprintf(DP_SERVER, "NICK %s\n", origbotname);
   }
 }
 
@@ -901,11 +933,11 @@ static int gotnick(char *from, char *msg)
       putlog(LOG_SERV | LOG_MISC, "*", "Nickname changed to '%s'???", msg);
       if (!rfc_casecmp(nick, origbotname)) {
         putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-        dprintf(DP_MODE, "NICK %s\n", origbotname);
+        dprintf(DP_SERVER, "NICK %s\n", origbotname);
       } else if (alt[0] && !rfc_casecmp(nick, alt)
 		 && strcasecmp(botname, origbotname)) {
         putlog(LOG_MISC, "*", IRC_GETALTNICK, alt);
-        dprintf(DP_MODE, "NICK %s\n", alt);
+        dprintf(DP_SERVER, "NICK %s\n", alt);
       }
     } else
       putlog(LOG_SERV | LOG_MISC, "*", "Nickname changed to '%s'???", msg);
@@ -913,11 +945,11 @@ static int gotnick(char *from, char *msg)
     /* only do the below if there was actual nick change, case doesn't count */
     if (!rfc_casecmp(nick, origbotname)) {
       putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-      dprintf(DP_MODE, "NICK %s\n", origbotname);
+      dprintf(DP_SERVER, "NICK %s\n", origbotname);
     } else if (alt[0] && !rfc_casecmp(nick, alt) &&
 	    strcasecmp(botname, origbotname)) {
       putlog(LOG_MISC, "*", IRC_GETALTNICK, altnick);
-      dprintf(DP_MODE, "NICK %s\n", altnick);
+      dprintf(DP_SERVER, "NICK %s\n", altnick);
     }
   }
   return 0;
@@ -947,6 +979,8 @@ static int gotmode(char *from, char *msg)
 
 static void disconnect_server(int idx)
 {
+  if (server_online > 0)
+    check_tcl_event("disconnect-server");
   server_online = 0;
   if (dcc[idx].sock >= 0)
     killsock(dcc[idx].sock);
@@ -1063,6 +1097,7 @@ static cmd_t my_raw_binds[] =
   {"437", "", (Function) got437, NULL},
   {"438", "", (Function) got438, NULL},
   {"451", "", (Function) got451, NULL},
+  {"442", "", (Function) got442, NULL},
   {"NICK", "", (Function) gotnick, NULL},
   {"ERROR", "", (Function) goterror, NULL},
   {0, 0, 0, 0}
@@ -1096,6 +1131,7 @@ static void connect_server(void)
   if (!cycle_time) {
     if (connectserver[0])	/* drummer */
       do_tcl("connect-server", connectserver);
+    check_tcl_event("connect-server");
     next_server(&curserv, botserver, &botserverport, pass);
     putlog(LOG_SERV, "*", "%s %s:%d", IRC_SERVERTRY, botserver, botserverport);
     serv = open_telnet(botserver, botserverport);

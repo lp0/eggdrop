@@ -2,6 +2,65 @@
 Changes in eggdrop: (since v1.4.0)
 ----------------------------------
 
+1.4.4 (July 16, 2000)
+Foundby   Fixedby   What....
+          Tit00n/   Updated and fixed french core language file.
+          Lucas
+Tothwolf  Fabian    CR and escape sequences were not filtered out during
+                      relay sessions. Removed usage of CR were unneeded.
+TaKeDa    Sup       adduser() failed to detect empty hostnames.
+          Eule      recheck_channel not before end of who, remove several
+                    lines in got352or4 because in recheck_channel present
+          Eule      Removed call to enforce_bans in real_add_mode().
+          Eule      minor update to getops-2.2d
+          Fabian    The dcc `page' command did not always properly store the
+                      console settings.
+various   Fabian    fixed minor notice bug in notes module.
+plan9     Fabian    call_hook*() now allows hook_list modification during a
+                      hook run.
+          SuperS    Added support for Tcl8.4 to configure script.
+          RebuM/    Prefixed `USAGE' and `FAILED' language defines with `MISC_'.
+          Tothwolf
+          guppy/    removed CHAN_PERMBANNED and reworked a tiny bit of sloppy
+          |^Raven^|   code.
+          Sup       Added various sanity checks for inactive channels.
+          Sup       `.msg' was not correctly requiring a message parameter.
+Charvel   Fabian    Telnet status was dropped during relay connections.
+Ben       Eule      new in u_addban: if (expire_time==now) return 1;
+Tothwolf  Eule      added for cmd_botattr DCC_FORK_BOT-check.
+          Eule      Added further bot-link check to securely avoid loops at   
+                      an earlier stage.
+Wiktor    Fabian    `.su' was requesting passwords from non-perm-owners.
+ITE       guppy     removed duplicate filesys #define's in lang.h
+MBroLad   Fabian    added tcl var global-idle-kick to provide a default value
+                      for idle-kick channel settings.
+          Murf      adjusted compiler flag and added explicit variable cast
+                      in module.c to fix errors on Tru64 Unix 5.0.
+          Sup       fixed output of `.stick' for missing parameters.
+          Sup       minor fixes to the core help-file.
+paravoid  Eugene    kick_msg in the revenge code was mixed up
+Wiktor    guppy     msg_die now sends the reason along with the BOT SHUTDOWN
+                      message
+          Sup       added .help tcl
+          Fabian    Cleaned up language load messages. Most are now moved to
+                      debug level. Each "Module loaded:" message also states
+                      wether the module has language support. \t is supported
+                      in language entries. tcl_language is depreciated.
+          guppy     changed the output of +statuslog to be more effective
+Ben       Fabian/   Lowered server-queue priority of nick-regain commands from
+          guppy       DP_MODE to DP_SERVER (both ISON and TRACE methods)
+          blaster   bind flud was getting the nickname passed in the
+                      user@host information
+kirben    guppy     changed the userinfo version from 1.05 to 1.06
+Wiktor    guppy     added three new events, 'init-server', 'connect-server'
+                      and 'disconnect-server'
+LtGen     Fabian    Enhanced `.unlink' to remove ghost bots (as a temporary
+                      work-around).
+Felix3339 Fabian    `chanset chanmode' now forces the bot to immediately
+                      recheck the currently set channel modes.
+          Eule      in got442: if remote-server return
+guppy     Fabian    fixed 1 byte buffer overflow in add_note().
+
 1.4.3 (April 11, 2000)
 Foundby   Fixedby   What....
           Wiktor    added ghost bug to KNOWN-PROBLEMS file
@@ -10,7 +69,7 @@ Foundby   Fixedby   What....
           Wiktor    modified the docs to show the proper CVS usage
           guppy     removed some excessive Context calls in core_secondly
           aba       minor fixes for HPUX
-          Eule      fixed +host sharing bug
+Felix3339 Eule      fixed +host sharing bug
           guppy     tcl_getdccidle now can be used on all idx types
           guppy     tcl_boot now uses strncpy
           Jason     added HTML documentation to doc/web_docs/.

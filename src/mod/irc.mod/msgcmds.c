@@ -4,7 +4,7 @@
  * 
  * dprintf'ized, 4feb1996
  * 
- * $Id: msgcmds.c,v 1.20 2000/03/18 19:22:37 guppy Exp $
+ * $Id: msgcmds.c,v 1.22 2000/06/22 03:45:05 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -393,7 +393,7 @@ static int msg_who(char *nick, char *host, struct userrec *u, char *par)
     return 1;
   if (!par[0]) {
     dprintf(DP_HELP, "NOTICE %s :%s: /msg %s who <channel>\n", nick,
-	    USAGE, botname);
+	    MISC_USAGE, botname);
     return 0;
   }
   chan = findchan(par);
@@ -642,7 +642,7 @@ static int msg_key(char *nick, char *host, struct userrec *u, char *par)
     if (!u_pass_match(u, "-")) {
       if (!(chan = findchan(par))) {
 	dprintf(DP_HELP, "NOTICE %s :%s: /MSG %s key <pass> <channel>\n",
-		nick, USAGE, botname);
+		nick, MISC_USAGE, botname);
 	return 1;
       }
       if (!channel_active(chan)) {
@@ -747,7 +747,7 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
     }
     if (!(chan = findchan(par))) {
       dprintf(DP_HELP, "NOTICE %s :%s: /MSG %s invite <pass> <channel>\n",
-	      nick, USAGE, botname);
+	      nick, MISC_USAGE, botname);
       return 1;
     }
     if (!channel_active(chan)) {
@@ -884,7 +884,10 @@ static int msg_die(char *nick, char *host, struct userrec *u, char *par)
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! DIE", nick, host, u->handle);
   dprintf(-serv, "NOTICE %s :%s\n", nick, BOT_MSGDIE);
+  if (!par[0])
   simple_sprintf(s, "BOT SHUTDOWN (authorized by %s)", u->handle);
+  else
+    simple_sprintf(s, "BOT SHUTDOWN (%s: %s)", u->handle, par);
   chatout("*** %s\n", s);
   botnet_send_chat(-1, botnetnick, s);
   botnet_send_bye();

@@ -7,7 +7,7 @@
  * 
  * dprintf'ized, 5aug1996
  * 
- * $Id: notes.c,v 1.16 2000/01/08 21:23:16 per Exp $
+ * $Id: notes.c,v 1.18 2000/07/01 06:28:03 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -591,7 +591,7 @@ static void notes_del(char *hand, char *nick, char *sdl, int idx)
     if (idx >= 0)
       dprintf(idx, "%s.\n", BOT_NOMESSAGES);
     else
-      dprintf(DP_HELP, "NOTICE %s :BOT_NOMESSAGES.\n", nick);
+      dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
     return;
   }
   sprintf(s, "%s~new", notefile);
@@ -732,7 +732,7 @@ static int msg_notes(char *nick, char *host, struct userrec *u, char *par)
   if (u->flags & (USER_BOT | USER_COMMON))
     return 1;
   if (!par[0]) {
-    dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] INDEX\n", nick, USAGE);
+    dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] INDEX\n", nick, MISC_USAGE);
     dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] TO <nick> <msg>\n", nick);
     dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] READ <# or ALL>\n", nick);
     dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] ERASE <# or ALL>\n", nick);
@@ -768,7 +768,7 @@ static int msg_notes(char *nick, char *host, struct userrec *u, char *par)
     to = newsplit(&par);
     if (!par[0]) {
       dprintf(DP_HELP, "NOTICE %s :%s: NOTES [pass] TO <nick> <message>\n",
-	      nick, USAGE);
+	      nick, MISC_USAGE);
       return 0;
     }
     u2 = get_user_by_handle(userlist, to);

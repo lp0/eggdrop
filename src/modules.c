@@ -4,7 +4,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.28 2000/01/08 21:23:14 per Exp $
+ * $Id: modules.c,v 1.32 2000/07/01 06:28:03 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -477,6 +477,7 @@ Function global_table[] =
   (Function) & protect_readonly, /* int */
   (Function) del_lang_section,
   /* 236 - 239 */
+  (Function) check_tcl_event,
 };
 
 void init_modules(void)
@@ -682,7 +683,10 @@ const char *module_load(char *name)
     return e;
   }
   check_tcl_load(name);
-  putlog(LOG_MISC, "*", "%s %s", MOD_LOADED, name);
+  if (exist_lang_section(name))
+    putlog(LOG_MISC, "*", MOD_LOADED_WITH_LANG, name);
+  else
+    putlog(LOG_MISC, "*", MOD_LOADED, name);
   Context;
   return NULL;
 }
@@ -908,7 +912,7 @@ void add_hook(int hook_num, Function func)
       }
       break;
     case HOOK_MATCH_NOTEREJ:
-      if (match_noterej == false_func)
+      if (match_noterej == (int (*)(struct userrec *, char *))false_func)
 	match_noterej = func;
       break;
     }
@@ -955,7 +959,7 @@ void del_hook(int hook_num, Function func)
 	add_mode = null_func;
       break;
     case HOOK_MATCH_NOTEREJ:
-      if (match_noterej == func)
+      if (match_noterej == (int (*)(struct userrec *, char *))false_func)
 	match_noterej = false_func;
       break;
     }
@@ -963,16 +967,15 @@ void del_hook(int hook_num, Function func)
 
 int call_hook_cccc(int hooknum, char *a, char *b, char *c, char *d)
 {
-  struct hook_entry *p;
+  struct hook_entry *p, *pn;
   int f = 0;
 
   if (hooknum >= REAL_HOOKS)
     return 0;
-  p = hook_list[hooknum];
   Context;
-  while ((p != NULL) && !f) {
+  for (p = hook_list[hooknum]; p && !f; p = pn) {
+    pn = p->next;
     f = p->func(a, b, c, d);
-    p = p->next;
   }
   return f;
 }

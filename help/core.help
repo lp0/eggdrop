@@ -20,14 +20,13 @@
 DCC COMMANDS for %B, %V:
 %b  who          away         quit         whom         me%b
 %b  whois        page         match        motd         bots%b
-%b  addlog       newpass      bottree      console      chat%b
-%b  nick         echo         botinfo      strip        su%b
-%b  trace        fixcodes%b
+%b  addlog       newpass      console      chat         handle%b
+%b  echo         strip        su           trace        fixcodes%b
 %{+t}
 For botnet masters:
-%b  +bot         chattr       chnick       chpass       +host%b
+%b  +bot         botattr      chhandle     chpass       +host%b
 %b  -bot         link         chaddr       relay        -host%b
-%b  unlink       boot%b
+%b  unlink       boot         bottree      botinfo%b
 %{+m|m}
 For masters:
 %b  chattr       save         backup       reload       status%b
@@ -111,6 +110,12 @@ The following commands are also available:
 %b%{+x}   files%{-}%b
 Anything you type that doesn't begin with a '.' goes out to
 everyone on the party line.
+%{help=tcl}%{+n}
+###  %btcl%b <command>
+   executes the command using tcl.
+
+   See doc/tcl-commands.doc for details on tcl commands added to eggdrop
+   and visit http://dev.scriptics.com/ for more information on tcl.
 %{help=set}%{+n}
 ###  %bset%b <variable> [value]
    changes the values of internal settings of the bot, or, if used
@@ -168,14 +173,13 @@ telnet-flood
 ###  %bcore%b commands
 %b  who          away         quit         whom         me%b
 %b  whois        page         match        motd         bots%b
-%b  addlog       newpass      bottree      console      chat%b
-%b  nick         echo         botinfo      strip        su%b
-%b  trace        fixcodes%b
+%b  addlog       newpass      console      chat         handle%b
+%b  echo         strip        su           trace        fixcodes%b
 %{+t}
 For botnet masters:
-%b  +bot         chattr       chnick       chpass       +host%b
+%b  +bot         chattr       chhandle     chpass       +host%b
 %b  -bot         link         chaddr       relay        -host%b
-%b  unlink       boot%b
+%b  unlink       boot         bottree      botinfo%b
 %{+m|m}
 For masters:
 %b  chattr       save         backup       reload       status%b
