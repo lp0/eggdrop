@@ -1,7 +1,7 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.56 2002/01/02 03:46:37 guppy Exp $
+ * $Id: module.h,v 1.58 2002/02/24 07:17:57 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -228,7 +228,7 @@
 #define debug_output (*(int *)(global[106]))
 #define noshare (*(int *)(global[107]))
 /* 108 - 111 */
-#define gban_total (*(int*)global[108])
+/* 108: gban_total -- UNUSED (Eule) */
 #define make_userfile (*(int*)global[109])
 #define default_flags (*(int*)global[110])
 #define dcc_total (*(int*)global[111])
@@ -370,8 +370,8 @@
 /* 220 - 223 */
 #define global_exempts (*(maskrec **)(global[220]))
 #define global_invites (*(maskrec **)(global[221]))
-#define ginvite_total (*(int*)global[222])
-#define gexempt_total (*(int*)global[223])
+/* 222: ginvite_total -- UNUSED (Eule) */
+/* 223: gexempt_total -- UNUSED (Eule) */
 /* 224 - 227 */
 #define H_event (*(p_tcl_bind_list *)(global[224]))
 #define use_exempts (*(int *)(global[225]))	/* drummer/Jason */
@@ -451,6 +451,7 @@
 #define quit_msg ((char *)(global[272]))
 #define module_load ((char *(*)(char *))global[273])
 #define module_unload ((char *(*)(char *, char *))global[274])
+#define parties (*(int *)global[275])
 
 /* This is for blowfish module, couldnt be bothered making a whole new .h
  * file for it ;)

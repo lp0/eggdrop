@@ -3,7 +3,7 @@
  *   commands that comes across the botnet
  *   userfile transfer and update commands from sharebots
  *
- * $Id: botcmd.c,v 1.24 2002/01/02 03:46:35 guppy Exp $
+ * $Id: botcmd.c,v 1.27 2002/03/10 18:47:52 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -467,10 +467,18 @@ static void bot_endlink(int idx, char *par)
  */
 static void bot_infoq(int idx, char *par)
 {
-  char s[200], s2[32];
+  char s[200], s2[32], *realnick;
   struct chanset_t *chan;
   time_t now2;
   int hr, min;
+
+  /* Strip the idx from user@bot */
+  realnick = strchr(par, ':');
+  if (realnick)
+    realnick++;
+  else
+    realnick = par;
+  putlog(LOG_BOTS, "*", "#%s# botinfo", realnick);
 
   now2 = now - online_since;
   s2[0] = 0;
@@ -653,8 +661,8 @@ static void bot_nlinked(int idx, char *par)
     /* Loop! */
     putlog(LOG_BOTS, "*", "%s %s (mutual: %s)",
 	   BOT_LOOPDETECT, dcc[idx].nick, newbot);
-    simple_sprintf(s, "%s (%s): %s %s", MISC_LOOP, newbot, MISC_DISCONNECTED,
-		   dcc[idx].nick);
+    simple_sprintf(s, "%s %s: disconnecting %s", MISC_LOOP, newbot,
+        dcc[idx].nick);
     dprintf(idx, "error Loop (%s)\n", newbot);
   }
   if (!s[0]) {
@@ -898,7 +906,8 @@ static void bot_reject(int idx, char *par)
 	  }
 	  do_boot(i, from, par);
 	  ok = 1;
-	  putlog(LOG_CMDS, "*", "#%s# boot %s (%s)", from, dcc[i].nick, par);
+	  putlog(LOG_CMDS, "*", "#%s# boot %s (%s)", from, who, 
+		 par[0] ? par : "No reason");
 	}
     } else {
       i = nextbot(destbot);

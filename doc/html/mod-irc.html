@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: mod-irc.html,v 1.12 2002/01/03 01:05:43 guppy Exp $ -->
+<!-- $Id: mod-irc.html,v 1.14 2002/03/09 21:14:15 wcc Exp $ -->
 
 <html>
   <head>
@@ -14,13 +14,11 @@
 
     <p>This module controls the bots interaction on IRC. Allows the bot to
     join channels, handles channel userlists, etc. You have to load this if
-    you want your bot to come on irc.</p>
+    you want your bot to come on IRC.</p>
 
     <blockquote>
       <ol>
         <li><a href="#config">Config file settings</a></li>
-
-        <li><a href="#tclcmds">Tcl commands</a></li>
       </ol>
     </blockquote>
     <hr>
@@ -28,12 +26,6 @@
     <p><a name="config"></a>1. <strong>Config file settings</strong></p>
 
     <blockquote>
-      <p>Lines in <strong>bold</strong> are the lines that need to be
-      included in the Eggdrop config file if you want to use the share
-      module. Lines in <strong><em>bold italics</em></strong> are optional
-      and only required if you wish to change the default behaviour for 
-      that particular feature.</p>
-
       <p>Put this line into your Eggdrop configuration file to load the
       irc module:</p>
 
@@ -45,110 +37,110 @@
 
     <blockquote>
       <dl>
-        <dt><strong><em>set bounce-bans 1</em></strong></dt>
+        <dt><strong>set bounce-bans 1</strong></dt>
 
         <dd>
           <p>Set this to 1 if you want to bounce all server bans.</p>
         </dd>
 
-        <dt><strong><em>set bounce-modes 0</em></strong></dt>
+        <dt><strong>set bounce-modes 0</strong></dt>
 
         <dd>
           <p>Set this to 1 if you want to bounce all server modes.</p>
         </dd>
 
-        <dt><strong><em>set max-modes 30</em></strong></dt>
+        <dt><strong>set max-modes 30</strong></dt>
 
         <dd>
-          <p>Set here the global limit for +b/+e/+I modes on your IRC server. 
+          <p>Set here the global limit for +b/+e/+I modes on your IRC server.
           This limit is set to 30 on 2.10 IRCd servers.</p>
         </dd>
 
-        <dt><strong><em>set max-bans 20</em></strong></dt>
+        <dt><strong>set max-bans 20</strong></dt>
 
         <dd>
           <p> Set here the maximum number of bans you want the bot to set on a
-          channel. Eggdrop will not place any more bans if this limit is 
+          channel. Eggdrop will not place any more bans if this limit is
           reached.</p>
         </dd>
 
-        <dt><strong><em>set kick-fun 0</em></strong></dt>
+        <dt><strong>set kick-fun 0</strong></dt>
 
         <dd>
-          <p>Set this to 1 if you want the bot to kick for control 
+          <p>Set this to 1 if you want the bot to kick for control
           character/ctcp avalanches to a channel. Remember that if it does,
           it won&#39;t ban them. This can start kick floods.</p>
         </dd>
 
-        <dt><strong><em>set ban-fun 0</em></strong></dt>
+        <dt><strong>set ban-fun 0</strong></dt>
 
         <dd>
-          <p>Set this to 1 if you want the bot to ban for control 
-          character/ctcp avalanches to a channel. This can prevent kick 
+          <p>Set this to 1 if you want the bot to ban for control
+          character/ctcp avalanches to a channel. This can prevent kick
           floods, but it also can fill the banlist.</p>
         </dd>
 
-        <dt><strong><em>set learn-users 0</em></strong></dt>
+        <dt><strong>set learn-users 0</strong></dt>
 
         <dd>
           <p>If you want people to be able to add themselves to the bot&#39;s
-          userlist with the default userflags (defined above in the config 
+          userlist with the default userflags (defined above in the config
           file) via the &#39;hello&#39; msg command, set this to 1.</p>
         </dd>
 
-        <dt><strong><em>set wait-split 300</em></strong></dt>
+        <dt><strong>set wait-split 300</strong></dt>
 
         <dd>
-          <p>Set here the time (in seconds) to wait for someone to return 
+          <p>Set here the time (in seconds) to wait for someone to return
           from a netsplit (i.e. wasop will expire afterwards). Set this to
           1500 on IRCnet since it&#39;s nick delay stops after 30 minutes.</p>
         </dd>
 
-        <dt><strong><em>set wait-info 15</em></strong></dt>
+        <dt><strong>set wait-info 15</strong></dt>
 
         <dd>
-          <p>Set here the time (in seconds) that someone must have been 
+          <p>Set here the time (in seconds) that someone must have been
           off-channel before re-displaying their info line.</p>
         </dd>
 
-        <dt><strong><em>set mode-buf-length 200</em></strong></dt>
+        <dt><strong>set mode-buf-length 200</strong></dt>
 
         <dd>
-          <p>Set this to the maximum number of bytes to send in the 
+          <p>Set this to the maximum number of bytes to send in the
           arguments of modes sent to the server. Most servers default this
           to 200.</p>
         </dd>
 
-        <dt><strong><em>unbind msg - hello *msg:hello<br>
-        bind msg - myword *msg:hello</em></strong></dt>
-        
+        <dt><strong>unbind msg - hello *msg:hello<br>
+        bind msg - myword *msg:hello</strong></dt>
+
         <dd>
           <p>Many IRCops find bots by seeing if they reply to &#39;hello&#39;
           in a msg. You can change this to another word by un-commenting the
-          these two lines and changing &quot;myword&quot; to the word wish 
+          these two lines and changing &quot;myword&quot; to the word wish
           to use instead of &#39;hello&#39;. It must be a single word.</p>
         </dd>
 
-        <dt><strong><em>unbind msg - ident *msg:ident<br>
-        unbind msg - addhost *msg:addhost</em></strong></dt>
-        
+        <dt><strong>unbind msg - ident *msg:ident<br>
+        unbind msg - addhost *msg:addhost</strong></dt>
+
         <dd>
-          <p>Many takeover attempts occur due to lame users blindly /msg 
+          <p>Many takeover attempts occur due to lame users blindly /msg
           ident&#39;ing to the bot and attempting to guess passwords. We now
           unbind this command by default to discourage them. You can enable
           this command by un-commenting these two lines.</p>
         </dd>
 
-        <dt><strong><em>set no-chanrec-info 0</em></strong></dt>
+        <dt><strong>set no-chanrec-info 0</strong></dt>
 
         <dd>
-          <p>If you are so lame you want the bot to display peoples info 
-          lines even when you are too lazy to add their chanrecs to a 
+          <p>If you are so lame you want the bot to display peoples info
+          lines even when you are too lazy to add their chanrecs to a
           channel, set this to 1.</p>
 
           <p><strong>NOTE:</strong> This means <strong>every</strong> user
-          with an info line will have their info line displayed on EVERY 
-          channel they join (provided they have been gone longer than 
+          with an info line will have their info line displayed on EVERY
+          channel they join (provided they have been gone longer than
           wait-info).</p>
         </dd>
       </dl>
@@ -165,21 +157,21 @@
 
     <blockquote>
       <dl>
-        <dt><strong><em>set bounce-exempts 0</em></strong></dt>
+        <dt><strong>set bounce-exempts 0</strong></dt>
 
         <dd>
           <p>Set this to 1 if you want to bounce all server exemptions
           (+e modes).</p>
         </dd>
 
-        <dt><strong><em>set bounce-invites 0</em></strong></dt>
+        <dt><strong>set bounce-invites 0</strong></dt>
 
         <dd>
-          <p>Set this to 1 if you want to bounce all server invitations 
+          <p>Set this to 1 if you want to bounce all server invitations
           (+I modes).</p>
         </dd>
 
-        <dt><strong><em>set max-exempts 20</em></strong></dt>
+        <dt><strong>set max-exempts 20</strong></dt>
 
         <dd>
           <p>Set here the maximum number of exempts you want Eggdrop to set
@@ -187,7 +179,7 @@
          limit is reached.</p>
         </dd>
 
-        <dt><strong><em>set max-invites 20</em></strong></dt>
+        <dt><strong>set max-invites 20</strong></dt>
 
         <dd>
           <p>Set here the maximum number of invites you want Eggdrop to set
@@ -195,8 +187,7 @@
           limit is reached.</p>
         </dd>
 
-        <dt><em><strong>set use-exempts 0</strong></em> (Disabled by
-        Default)</dt>
+        <dt><strong>set use-exempts 0</strong> (Disabled by default)</dt>
 
         <dd>
           <p>If you set this feature to 0 in your Eggdrop config file, the
@@ -204,20 +195,19 @@
           in nettype 1.</p>
         </dd>
 
-        <dt><strong><em>set use-invites 0</em></strong> (Disabled by
-        Default)</dt>
+        <dt><strong>set use-invites 0</strong> (Disabled by default)</dt>
 
         <dd>
-          <p>If you set this feature to 0 in your Eggdrop config file, 
-          the bot wont use any invites. This setting is set to 1 as a 
+          <p>If you set this feature to 0 in your Eggdrop config file,
+          the bot won&#39;t use any invites. This setting is set to 1 as a
           default in nettype 1.</p>
         </dd>
 
-        <dt><strong><em>set prevent-mixing 1</em></strong></dt>
+        <dt><strong>set prevent-mixing 1</strong></dt>
 
         <dd>
-          <p>At the moment, the current IRCnet IRCd version (2.10) 
-          doesn&#39;t support the mixing of b,o and v modes with e and I 
+          <p>At the moment, the current IRCnet IRCd version (2.10)
+          doesn&#39;t support the mixing of b,o and v modes with e and I
           modes. This might be changed in the future, so use 1 at the
           moment for this  setting.</p>
         </dd>
@@ -231,129 +221,46 @@
 
     <blockquote>
       <dl>
-        <dt><strong><em>set kick-method 1</em></strong></dt>
+        <dt><strong>set kick-method 1</strong></dt>
 
         <dd>
           <p>If your network supports more users per kick command then 1,
-          you can change this behavior here. Set this to the number of 
+          you can change this behavior here. Set this to the number of
           users to kick at once, or set this to 0 for all at once.</p>
         </dd>
 
-        <dt><strong><em>set modes-per-line 3</em></strong></dt>
+        <dt><strong>set modes-per-line 3</strong></dt>
 
         <dd>
-          <p>Some networks allow you to stack lots of channel modes into 
-          one line. They&#39;re all guaranteed to support at least 3, so 
-          that&#39;s the default. If you know your network supports more, 
+          <p>Some networks allow you to stack lots of channel modes into
+          one line. They&#39;re all guaranteed to support at least 3, so
+          that&#39;s the default. If you know your network supports more,
           you may  want to adjust this.</p>
         </dd>
 
-        <dt><strong><em>set include-lk 1</em></strong></dt>
+        <dt><strong>set include-lk 1</strong></dt>
 
         <dd>
           <p>Some networks don&#39;t include the +l limit and +k or -k key modes
-          in the modes-per-line (see above) limitation. Set include-lk to 0 
+          in the modes-per-line (see above) limitation. Set include-lk to 0
           for these networks.</p>
         </dd>
 
-        <dt><strong><em>set use-354 0</em></strong></dt>
+        <dt><strong>set use-354 0</strong></dt>
 
         <dd>
-          <p>Set this to 1 if your network uses IRCu2.10.01 specific /who 
+          <p>Set this to 1 if your network uses IRCu2.10.01 specific /who
           requests. Eggdrop can, therefore, ask only for exactly what&#39;s
           needed.</p>
         </dd>
 
-        <dt><strong><em>set rfc-compliant 1</em></strong> (Disabled by
-        default)</dt>
+        <dt><strong>set rfc-compliant 1</strong> (Disabled by default)</dt>
 
         <dd>
-          <p>If your network doesn&#39;t use rfc 1459 compliant string 
+          <p>If your network doesn&#39;t use rfc 1459 compliant string
           matching routines, set this to 0.</p>
         </dd>
       </dl>
-    </blockquote>
-    <hr>
-
-    <p><a name="tclcmds"></a>2. <strong>Tcl commands</strong></p>
-
-    <p>See doc/tcl-commands.doc for information on each of these 
-    commands.</p>
-
-    <blockquote>
-      <ul>
-        <li><strong>botisop &lt;channel&gt;</strong></li>
-
-        <li><strong>botisvoice &lt;channel&gt;</strong></li>
-
-        <li><strong>isop &lt;nickname&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>isvoice &lt;nickname&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>onchan &lt;nickname&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>botonchan &lt;channel&gt;</strong></li>
-
-        <li><strong>nick2hand &lt;nickname&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>handonchan &lt;handle&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>hand2nick &lt;handle&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>chanbans &lt;channel&gt;</strong></li>
-
-        <li><strong>ischanban &lt;ban&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>resetbans &lt;channel&gt;</strong></li>
-
-        <li><strong>chanexempts &lt;channel&gt;</strong></li>
-
-        <li><strong>ischanexempt &lt;exempt&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>ischanjuped [channel]</strong></li>
-
-        <li><strong>resetexempts &lt;channel&gt;</strong></li>
-
-        <li><strong>chaninvites &lt;channel&gt;</strong></li>
-
-        <li><strong>ischaninvite &lt;invite&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>resetinvites &lt;channel&gt;</strong></li>
-
-        <li><strong>resetchan &lt;channel&gt;</strong></li>
-
-        <li><strong>getchanhost &lt;nickname&gt;
-        &lt;channel&gt;</strong></li>
-
-        <li><strong>getchanjoin &lt;nickname&gt;
-        &lt;channel&gt;</strong></li>
-
-        <li><strong>onchansplit &lt;nick&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>chanlist &lt;channel&gt;
-        [flags[&amp;chanflags]]</strong></li>
-
-        <li><strong>getchanidle &lt;nickname&gt;
-        &lt;channel&gt;</strong></li>
-
-        <li><strong>getchanmode &lt;channel&gt;</strong></li>
-
-        <li><strong>pushmode &lt;channel&gt; &lt;mode&gt; [arg]</strong></li>
-
-        <li><strong>flushmode &lt;channel&gt;</strong></li>
-
-        <li><strong>topic &lt;channel&gt;</strong></li>
-
-        <li><strong>wasop &lt;nickname&gt; &lt;channel&gt;</strong></li>
-
-        <li><strong>channame2dname &lt;channel-name&gt;</strong></li>
-
-        <li><strong>chandname2name &lt;channel-dname&gt;</strong></li>
-
-        <li><strong>putkick &lt;channel&gt; &lt;nick,nick,...&gt; [reason]</strong></li>
-
-        <li><strong>maskhost &lt;nick!user@host&gt;</strong></li>
-      </ul>
     </blockquote>
     <hr>
 

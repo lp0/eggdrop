@@ -7,7 +7,7 @@
  *   linking, unlinking, and relaying to another bot
  *   pinging the bots periodically and checking leaf status
  *
- * $Id: botnet.c,v 1.39 2002/01/02 03:55:19 guppy Exp $
+ * $Id: botnet.c,v 1.41 2002/03/07 04:22:59 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -303,6 +303,7 @@ void partyaway(char *bot, int sock, char *msg)
 void rembot(char *who)
 {
   tand_t **ptr = &tandbot, *ptr2;
+  struct userrec *u;
 
   while (*ptr) {
     if (!egg_strcasecmp((*ptr)->bot, who))
@@ -313,6 +314,10 @@ void rembot(char *who)
     /* May have just .unlink *'d */
     return;
   check_tcl_disc(who);
+
+  u = get_user_by_handle(userlist, who);
+  if (u != NULL)
+    touch_laston(u, "unlinked", now);
 
   ptr2 = *ptr;
   *ptr = ptr2->next;
@@ -1028,7 +1033,8 @@ int botlink(char *linker, int idx, char *nick)
       strcpy(dcc[i].nick, nick);
       strcpy(dcc[i].host, bi->address);
       dcc[i].u.dns->ibuf = idx;
-      dcc[i].u.dns->cptr = linker;
+      dcc[i].u.dns->cptr = get_data_ptr(strlen(linker) + 1);
+      strcpy(dcc[i].u.dns->cptr, linker);
       dcc[i].u.dns->host = get_data_ptr(strlen(dcc[i].host) + 1);
       strcpy(dcc[i].u.dns->host, dcc[i].host);
       dcc[i].u.dns->dns_success = botlink_resolve_success;
@@ -1048,6 +1054,7 @@ static void botlink_resolve_failure(int i)
 
   putlog(LOG_BOTS, "*", DCC_LINKFAIL, dcc[i].nick);
   strcpy(s, dcc[i].nick);
+  nfree(dcc[i].u.dns->cptr);
   lostdcc(i);
   autolink_cycle(s);          /* Check for more auto-connections */
 }
@@ -1065,6 +1072,7 @@ static void botlink_resolve_success(int i)
   dcc[i].u.bot->numver = idx;
   dcc[i].u.bot->port = dcc[i].port;		/* Remember where i started */
   dcc[i].sock = getsock(SOCK_STRONGCONN);
+  nfree(linker);
   if (dcc[i].sock < 0 ||
       open_telnet_raw(dcc[i].sock, iptostr(htonl(dcc[i].addr)),
 		      dcc[i].port) < 0)

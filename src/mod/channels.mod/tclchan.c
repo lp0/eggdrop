@@ -1,7 +1,7 @@
 /*
  * tclchan.c -- part of channels.mod
  *
- * $Id: tclchan.c,v 1.54 2002/01/02 03:46:37 guppy Exp $
+ * $Id: tclchan.c,v 1.56 2002/03/11 04:34:16 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -832,7 +832,10 @@ static int tcl_channel_info(Tcl_Interp * irp, struct chanset_t *chan)
     Tcl_AppendElement(irp, "+nodesynch");
   else
     Tcl_AppendElement(irp, "-nodesynch");
-  for (ul = udef; ul && ul->defined && ul->name; ul = ul->next) {
+  for (ul = udef; ul; ul = ul->next) {
+      /* If it's undefined, skip it. */
+      if (!ul->defined || !ul->name) continue;
+
       if (ul->type == UDEF_FLAG) {
         simple_sprintf(s, "%c%s", getudef(ul->values, chan->dname) ? '+' : '-',
 		       ul->name);
@@ -1564,8 +1567,10 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
   char **item;
   char buf[2048], buf2[256];
 
-  if (!newname || !newname[0] || !strchr(CHANMETA, newname[0]))
+  if (!newname || !newname[0] || !strchr(CHANMETA, newname[0])) {
+    Tcl_AppendResult(irp, "invalid channel prefix", NULL);
     return TCL_ERROR;
+  }
 
   convert_element(glob_chanmode, buf2);
   simple_sprintf(buf, "chanmode %s ", buf2);

@@ -2,7 +2,7 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.65 2002/01/02 03:46:39 guppy Exp $
+ * $Id: irc.c,v 1.67 2002/03/10 17:34:32 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -233,7 +233,7 @@ static void punish_badguy(struct chanset_t *chan, char *whobad,
   /* Kick the offender */
   if ((chan->revenge_mode > 1) &&
       /* ... or don't we kick ops? */
-      (channel_dontkickops(chan) &&
+      (!channel_dontkickops(chan) ||
         !(chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))) &&
       /* ... or have we sent the kick already? */
       !chan_sentkick(m) &&
@@ -900,6 +900,8 @@ static void flush_modes()
   struct chanset_t *chan;
   memberlist *m;
 
+  if (modesperline > 6)
+    modesperline = 6; 
   for (chan = chanset; chan; chan = chan->next) {
     for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
       if (m->delay && m->delay <= now) {

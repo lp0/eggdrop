@@ -4,7 +4,7 @@
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  *
- * $Id: mode.c,v 1.54 2002/01/02 03:46:39 guppy Exp $
+ * $Id: mode.c,v 1.59 2002/03/07 15:10:17 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -28,13 +28,13 @@
 /* Reversing this mode? */
 static int reversing = 0;
 
-#define PLUS    1
-#define MINUS   2
-#define CHOP    4
-#define BAN     8
-#define VOICE   16
-#define EXEMPT  32
-#define INVITE  64
+#define PLUS    0x01
+#define MINUS   0x02
+#define CHOP    0x04
+#define BAN     0x08
+#define VOICE   0x10
+#define EXEMPT  0x20
+#define INVITE  0x40
 
 static struct flag_record user   = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 static struct flag_record victim = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
@@ -109,7 +109,8 @@ static void flush_mode(struct chanset_t *chan, int pri)
 
   /* Do -{b,e,I} before +{b,e,I} to avoid the server ignoring overlaps */
   for (i = 0; i < modesperline; i++) {
-    if (chan->cmode[i].type & MINUS && postsize > strlen(chan->cmode[i].op)) {
+    if ((chan->cmode[i].type & MINUS) &&
+        postsize > strlen(chan->cmode[i].op)) {
       if (plus) {
         *p++ = '-', plus = 0;
       }
@@ -129,7 +130,8 @@ static void flush_mode(struct chanset_t *chan, int pri)
 
   /* now do all the + modes... */
   for (i = 0; i < modesperline; i++) {
-    if (chan->cmode[i].type & PLUS && postsize > strlen(chan->cmode[i].op)) {
+    if ((chan->cmode[i].type & PLUS) &&
+        postsize > strlen(chan->cmode[i].op)) {
       if (plus != 1) {
         *p++ = '+', plus = 1;
       }
@@ -497,34 +499,23 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
   if (me_op(chan)) {
     int ok = 1;
 
-    if (glob_master(victim) || chan_master(victim))
-      ok = 0;
-    else if ((glob_op(victim) || glob_friend(victim)) && !chan_deop(victim))
-      ok = 0;
-    else if (chan_op(victim) || chan_friend(victim))
-      ok = 0;
-    if (!ok && !match_my_nick(nick) &&
-       rfc_casecmp(who, nick) && had_op &&
-	!match_my_nick(who)) {	/* added 25mar1996, robey */
-      /* Do we want to reop? */
+    /* if they aren't d|d then check if they are something we should protect */
+    if (!glob_deop(victim) && !chan_deop(victim)) {
+      if (channel_protectops(chan) && (glob_master(victim) || chan_master(victim) ||
+	       glob_op(victim) || chan_op(victim)))
+	ok = 0;
+      else if (channel_protectfriends(chan) && (glob_friend(victim) ||
+	       chan_friend(victim)))
+	ok = 0;
+    }
+
+    /* do we want to reop victim? */
+    if (!ok && had_op && !match_my_nick(nick) && rfc_casecmp(who, nick) && 
+	!match_my_nick(who)) {
       /* Is the deopper NOT a master or bot? */
-      if (!glob_master(user) && !chan_master(user) && !glob_bot(user) &&
-	  /* and is the channel protectops? */
-	  ((channel_protectops(chan) &&
-	    /* and it's not +bitch ... */
-	    (!channel_bitch(chan) ||
-	    /* or the user's a valid op? */
-	     chan_op(victim) || (glob_op(victim) && !chan_deop(victim)))) ||
-	   /* or is the channel protectfriends? */
-           (channel_protectfriends(chan) &&
-	     /* and the users a valid friend? */
-             (chan_friend(victim) || (glob_friend(victim) &&
-				      !chan_deop(victim))))) &&
-       /* and the users not a de-op? */
-       !(chan_deop(victim) || (glob_deop(victim) && !chan_op(victim))))
-	/* Then we'll bless them */
-	add_mode(chan, '+', 'o', who);
-      else if (reversing)
+      if (reversing || (!glob_master(user) && !chan_master(user) && !glob_bot(user) &&
+	  !channel_bitch(chan)))
+	/* Then we'll bless the victim */
 	add_mode(chan, '+', 'o', who);
     }
   }

@@ -1,8 +1,9 @@
 IRC Module
-Last revised: January 1, 2002
+Last revised: February 28, 2002
      _________________________________________________________________
 
                                 IRC Module
+
 
 This module controls the bots interaction on IRC. Allows the bot to
 join channels, handles channel userlists, etc. You have to load this if
@@ -56,7 +57,7 @@ There are also some variables you can set in your config file:
   set wait-split 600
     Set here the time (in seconds) to wait for someone to return from
     a netsplit (i.e. wasop will expire afterwards). Set this to 1500
-    on IRCnet since it's nick delay stops after 30 minutes.
+    on IRCnet since its nick delay stops after 30 minutes.
   
   
   set wait-info 180
@@ -130,7 +131,7 @@ Attention: Use these settings *only* if you set 'net-type' to 1!
 
   set use-invites 0
     If you set this feature to 0 in your Eggdrop config file, the bot
-    wont use any invites. This setting is set to 1 as a default in
+    won't use any invites. This setting is set to 1 as a default in
     nettype 1.
 
 
@@ -167,78 +168,6 @@ Attention: Use this settings *only* if you set 'net-type' to 5!
   set rfc-compliant 1
     If your network doesn't use rfc 1459 compliant string matching routines,
     set this to 0.
-
-Tcl commands provided by the IRC module:
-
-See doc/tcl-commands.doc for information on each command.
-
-  * botisop <channel> 
-
-  * botisvoice <channel> 
-
-  * isop <nickname> <channel> 
-
-  * isvoice <nickname> <channel> 
-
-  * onchan <nickname> <channel> 
-
-  * botonchan <channel> 
-
-  * nick2hand <nickname> <channel> 
-
-  * handonchan <handle> <channel> 
-
-  * hand2nick <handle> <channel> 
-
-  * chanbans <channel> 
-
-  * ischanban <ban> <channel> 
-
-  * resetbans <channel> 
-
-  * chanexempts <channel> 
-
-  * ischanexempt <exempt> <channel> 
-
-  * ischanjuped [channel] 
-
-  * resetexempts <channel> 
-
-  * chaninvites <channel> 
-
-  * ischaninvite <invite> <channel> 
-
-  * resetinvites <channel> 
-
-  * resetchan <channel> 
-
-  * getchanhost <nickname> <channel> 
-
-  * getchanjoin <nickname> <channel> 
-
-  * onchansplit <nick> <channel> 
-
-  * chanlist <channel> [flags[&chanflags]] 
-
-  * getchanidle <nickname> <channel> 
-
-  * getchanmode <channel> 
-
-  * pushmode <channel> <mode> [arg] 
-
-  * flushmode <channel> 
-
-  * topic <channel> 
-
-  * wasop <nickname> <channel> 
-
-  * channame2dname <channel-name> 
-
-  * chandname2name <channel-dname> 
-
-  * putkick <channel> <nick,nick,...> [reason] 
-
-  * maskhost <nick!user@host> 
 
      _________________________________________________________________
 

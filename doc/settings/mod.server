@@ -1,8 +1,9 @@
 Server Module
-Last revised: January 1, 2002
+Last revised: February 28, 2002
      _________________________________________________________________
 
                               Server Module
+
 
 This module provides the core server support. You have to load this
 if you want your bot to come on IRC. Not loading this is equivalent
@@ -179,7 +180,7 @@ There are also some variables you can set in your config file:
 
   set use-penalties 1 (default on net-type 1)
     This enables Eggdrop's penalty calculation. Every command Eggdrop sends to
-    the IRC server raises it's penalty points. If Eggdrop reaches a server limit,
+    the IRC server raises its penalty points. If Eggdrop reaches a server limit,
     it gets disconnected with "excess flood" message. Eggdrop is able to count
     internal those penalty points, too and take measures against excess flooding.
     Note: it's highly advised to turn this on!
@@ -218,23 +219,6 @@ Attention: Use this settings *only* if you set 'net-type' to 5!
     your network. The default setting is 9. The maximum supported length by
     Eggdrop is 32.
 
-Tcl commands provided by the server module:
-
-See doc/tcl-commands.doc for information on each command.
-
-  * putserv <text> 
-
-  * putquick <text> 
-
-  * puthelp <text> 
-
-  * queuesize [queue] 
-
-  * clearqueue <queue> 
-
-  * dumpfile <nick> <filename> 
-
-  * jump [server [port [password]]] 
      _________________________________________________________________
 
    Copyright (C) 2000, 2001, 2002 Eggheads Development Team

@@ -10,7 +10,7 @@
  *
  * dprintf'ized, 9nov1995
  *
- * $Id: users.c,v 1.28 2002/01/02 03:46:36 guppy Exp $
+ * $Id: users.c,v 1.31 2002/03/07 15:41:17 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -53,9 +53,6 @@ extern time_t now;
 
 char userfile[121] = "";	/* where the user records are stored */
 int ignore_time = 10;		/* how many minutes will ignores last? */
-int gban_total = 0;		/* Total number of global bans */
-int gexempt_total = 0;          /* Total number of global exempts */
-int ginvite_total = 0;          /* Total number of global invites */
 
 /* is this nick!user@host being ignored? */
 int match_ignore(char *uhost)
@@ -126,14 +123,24 @@ int delignore(char *ign)
 
 void addignore(char *ign, char *from, char *mnote, time_t expire_time)
 {
-  struct igrec *p;
+  struct igrec *p = NULL, *l;
 
-  if (equals_ignore(ign))
-    delignore(ign);		/* remove old ignore */
-  p = user_malloc(sizeof(struct igrec));
+  for (l = global_ign; l; l = l->next)
+    if (!rfc_casecmp(l->igmask, ign)) {
+      p = l;
+      break;
+    }
 
-  p->next = global_ign;
-  global_ign = p;
+  if (p == NULL) {
+    p = user_malloc(sizeof(struct igrec));
+    p->next = global_ign;
+    global_ign = p;
+  } else {
+    nfree(p->igmask);
+    nfree(p->user);
+    nfree(p->msg);
+  }
+
   p->expire = expire_time;
   p->added = now;
   p->flags = expire_time ? 0 : IGREC_PERM;
@@ -467,7 +474,7 @@ static void restore_ignore(char *host)
 void tell_user(int idx, struct userrec *u, int master)
 {
   char s[81], s1[81];
-  int n, l = HANDLEN - strlen(u->handle);
+  int n;
   time_t now2;
   struct chanuserrec *ch;
   struct user_entry *ue;
@@ -484,26 +491,29 @@ void tell_user(int idx, struct userrec *u, int master)
   li = get_user(&USERENTRY_LASTON, u);
   if (!li || !li->laston)
     strcpy(s1, "never");
-  else {
+  else
+    {
     now2 = now - li->laston;
     if (now2 > 86400)
       egg_strftime(s1, 7, "%d %b", localtime(&li->laston));
     else
       egg_strftime(s1, 6, "%H:%M", localtime(&li->laston));
   }
-  spaces[l] = 0;
-  dprintf(idx, "%s%s %-5s%5d %-15s %s (%-10.10s)\n", u->handle, spaces,
-	  get_user(&USERENTRY_PASS, u) ? "yes" : "no", n, s, s1,
+
+  dprintf(idx, "%s%s %-5s%5d %-15s %s (%s)\n", u->handle, spaces, get_user(&USERENTRY_PASS, u) ? "yes" : "no", n, s, s1,
 	  (li && li->lastonplace) ? li->lastonplace : "nowhere");
-  spaces[l] = ' ';
+
   /* channel flags? */
-  for (ch = u->chanrec; ch; ch = ch->next) {
+  for (ch = u->chanrec; ch; ch = ch->next)
+    {
     fr.match = FR_CHAN | FR_GLOBAL;
     get_user_flagrec(dcc[idx].user, &fr, ch->channel);
-    if (glob_op(fr) || chan_op(fr)) {
+      if (glob_op(fr) || chan_op(fr))
+        {
       if (ch->laston == 0L)
 	strcpy(s1, "never");
-      else {
+          else
+            {
 	now2 = now - (ch->laston);
 	if (now2 > 86400)
 	  egg_strftime(s1, 7, "%d %b", localtime(&ch->laston));
@@ -514,64 +524,100 @@ void tell_user(int idx, struct userrec *u, int master)
       fr.chan = ch->flags;
       fr.udef_chan = ch->flags_udef;
       build_flags(s, &fr, NULL);
-      spaces[HANDLEN - 9] = 0;
-      dprintf(idx, "%s  %-18s %-15s %s\n", spaces, ch->channel, s, s1);
-      spaces[HANDLEN - 9] = ' ';
+          dprintf(idx, "%s  %-18s %-15s %s\n", spaces2, ch->channel, s, s1);
       if (ch->info != NULL)
 	dprintf(idx, "    INFO: %s\n", ch->info);
     }
   }
+
   /* user-defined extra fields */
   for (ue = u->entries; ue; ue = ue->next)
+    {
     if (!ue->name && ue->type->display)
       ue->type->display(idx, ue);
+    }
 }
 
 /* show user by ident */
 void tell_user_ident(int idx, char *id, int master)
 {
+  int x, y;
   struct userrec *u;
 
   u = get_user_by_handle(userlist, id);
   if (u == NULL)
     u = get_user_by_host(id);
-  if (u == NULL) {
+  if (u == NULL)
+    {
     dprintf(idx, "%s.\n", USERF_NOMATCH);
     return;
   }
-  spaces[HANDLEN - 6] = 0;
+  if ((x = strlen(u->handle)) < 9)
+    {
+      x = 9;
+    }
+  y = x - 6;
+
+  spaces[y] = 0;
   dprintf(idx, "HANDLE%s PASS NOTES FLAGS           LAST\n", spaces);
-  spaces[HANDLEN - 6] = ' ';
+  spaces[y] = ' ';
+
+  if ((y = strlen(u->handle)) > x)
+    {
+      y = 0;
+    }
+  else
+    {
+      y = x - y;
+    }
+  spaces[y] = 0;
   tell_user(idx, u, master);
+  spaces[y] = ' ';
 }
 
 /* match string:
  * wildcard to match nickname or hostmasks
  * +attr to find all with attr */
-void tell_users_match(int idx, char *mtch, int start, int limit,
-		      int master, char *chname)
+void tell_users_match(int idx, char *mtch, int start, int limit, int master, char *chname)
 {
   struct userrec *u;
-  int fnd = 0, cnt, nomns = 0, flags = 0;
+  int fnd = 0, cnt, nomns = 0, flags = 0, x = 0, y;
   struct list_type *q;
   struct flag_record user, pls, mns;
 
   dprintf(idx, "*** %s '%s':\n", MISC_MATCHING, mtch);
   cnt = 0;
-  spaces[HANDLEN - 6] = 0;
+
+  for (u = userlist; u; u = u->next)
+    {
+      if ((y = strlen(u->handle)) > x)
+        {
+          x = y;
+        }
+    }
+  if (x < 9)
+    {
+      x = 9;
+    }
+  y = x - 6;
+
+  spaces[y] = 0;
   dprintf(idx, "HANDLE%s PASS NOTES FLAGS           LAST\n", spaces);
-  spaces[HANDLEN - 6] = ' ';
+  spaces[y] = ' ';
+
   if (start > 1)
     dprintf(idx, "(%s %d)\n", MISC_SKIPPING, start - 1);
-  if (strchr("+-&|", *mtch)) {
+
+  if (strchr("+-&|", *mtch))
+    {
     user.match = pls.match = FR_GLOBAL | FR_BOT | FR_CHAN;
     break_down_flags(mtch, &pls, &mns);
     mns.match = pls.match ^ (FR_AND | FR_OR);
-    if (!mns.global && !mns.udef_global && !mns.chan && !mns.udef_chan &&
-	!mns.bot) {
+      if (!mns.global && !mns.udef_global && !mns.chan && !mns.udef_chan && !mns.bot)
+        {
       nomns = 1;
-      if (!pls.global && !pls.udef_global && !pls.chan && !pls.udef_chan &&
-	  !pls.bot) {
+          if (!pls.global && !pls.udef_global && !pls.chan && !pls.udef_chan && !pls.bot)
+            {
 	/* happy now BB you weenie :P */
 	dprintf(idx, "Unknown flag specified for matching!!\n");
 	return;
@@ -581,11 +627,25 @@ void tell_users_match(int idx, char *mtch, int start, int limit,
       chname = dcc[idx].u.chat->con_chan;
     flags = 1;
   }
-  for (u = userlist; u; u = u->next) {
-    if (flags) {
+
+  for (u = userlist; u; u = u->next)
+    {
+      if ((y = strlen(u->handle)) > x)
+        {
+          y = 0;
+        }
+      else
+        {
+          y = x - y;
+        }
+      spaces[y] = 0;
+      if (flags)
+        {
       get_user_flagrec(u, &user, chname);
-      if (flagrec_eq(&pls, &user)) {
-	if (nomns || !flagrec_eq(&mns, &user)) {
+          if (flagrec_eq(&pls, &user))
+            {
+              if (nomns || !flagrec_eq(&mns, &user))
+                {
 	  cnt++;
 	  if ((cnt <= limit) && (cnt >= start))
 	    tell_user(idx, u, master);
@@ -593,19 +653,26 @@ void tell_users_match(int idx, char *mtch, int start, int limit,
 	    dprintf(idx, MISC_TRUNCATED, limit);
 	}
       }
-    } else if (wild_match(mtch, u->handle)) {
+        }
+      else if (wild_match(mtch, u->handle))
+        {
       cnt++;
       if ((cnt <= limit) && (cnt >= start))
 	tell_user(idx, u, master);
       if (cnt == limit + 1)
 	dprintf(idx, MISC_TRUNCATED, limit);
-    } else {
+        }
+      else
+        {
       fnd = 0;
-      for (q = get_user(&USERENTRY_HOSTS, u); q; q = q->next) {
-	if ((wild_match(mtch, q->extra)) && (!fnd)) {
+          for (q = get_user(&USERENTRY_HOSTS, u); q; q = q->next)
+            {
+              if ((wild_match(mtch, q->extra)) && (!fnd))
+                {
 	  cnt++;
 	  fnd = 1;
-	  if ((cnt <= limit) && (cnt >= start)) {
+                  if ((cnt <= limit) && (cnt >= start))
+                    {
 	    tell_user(idx, u, master);
 	  }
 	  if (cnt == limit + 1)
@@ -613,7 +680,9 @@ void tell_users_match(int idx, char *mtch, int start, int limit,
 	}
       }
     }
+      spaces[y] = ' ';
   }
+
   dprintf(idx, MISC_FOUNDMATCH, cnt, cnt == 1 ? "" : "es");
 }
 
@@ -684,9 +753,6 @@ int readuserfile(char *file, struct userrec **ret)
   }
   if (s[1] > '4')
     fatal(USERF_INVALID, 0);
-  gban_total = 0;
-  gexempt_total = 0;
-  ginvite_total = 0;
   while (!feof(f)) {
     s = buf;
     fgets(s, 511, f);
@@ -714,10 +780,8 @@ int readuserfile(char *file, struct userrec **ret)
 	    else if (lasthand[0] == '*') {
 	      if (lasthand[1] == 'i')
 		restore_ignore(s);
-	      else {
+	      else
 		restore_chanban(NULL, s);
-		gban_total++;
-	      }
 	    } else if (lasthand[0])
 	      set_user(&USERENTRY_HOSTS, u, s);
 	  }
@@ -728,10 +792,8 @@ int readuserfile(char *file, struct userrec **ret)
 	    if (lasthand[0] == '#' || lasthand[0] == '+')
 	      restore_chanexempt(cst,s);
 	    else if (lasthand[0] == '*')
-	      if (lasthand[1] == 'e') {
+	      if (lasthand[1] == 'e')
 		restore_chanexempt(NULL, s);
-		gexempt_total++;
-	      }
 	  }
 	} else if (!strcmp(code, "@")) { /* Invitemasks */
 	  if (!lasthand[0])
@@ -740,10 +802,8 @@ int readuserfile(char *file, struct userrec **ret)
 	    if (lasthand[0] == '#' || lasthand[0] == '+')
 	      restore_chaninvite(cst,s);
 	    else if (lasthand[0] == '*')
-	      if (lasthand[1] == 'I') {
+	      if (lasthand[1] == 'I')
 		restore_chaninvite(NULL, s);
-		ginvite_total++;
-	      }
 	  }
 	} else if (!strcmp(code, "!")) {
 	  /* ! #chan laston flags [info] */

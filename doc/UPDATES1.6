@@ -1,7 +1,85 @@
-$Id: UPDATES1.6,v 1.290 2002/01/02 20:23:39 guppy Exp $
+$Id: UPDATES1.6,v 1.340 2002/03/10 18:47:52 wcc Exp $
 
 Changes in Eggdrop: (since v1.6.0)
 ----------------------------------
+
+1.6.9 (10 March 2002)
+Found by  Fixed by  What...
+          BarkerJr/ "Detected loop: two bots exist named bot2: disconnecting
+          Wcc       bot3" sounds better than "Detected loop: disconnecting
+                    (bot2): Disconnected bot3".
+          Wcc/      Added a few channels to the README and readme.html
+          SiDEWiNDR and made references to other docs in the html files
+                    links to their respective html files.
+various   Eule      modes-per-line is limited to a max of 6 modes per line
+          Wcc       more doc fixes
+          Wcc       removed an extra space from the "Writing channel
+                    file..." message
+          Amir      fixed a problem with uff not adding entries properly
+          Boing     made cmd_channel, cmd_dccstat, cmd_who, cmd_whois, cmd_match handlen
+                    friendly
+          Amir      botlink() now safely copies the linker string
+various   Eule      fixed crashes relating to flushmodes
+Wanderer| dw	    tcl command modules missing in doc/tcl-commands.doc
+          guppy     users with only +x can now only login via dcc chat, they cannot use 
+                    telnet
+          Wcc       more documentation updates
+          Eule/     changed how protectops and protectfriends works a bit:
+          guppy       if the user has either glob +d or chan +d then no protection
+                      protectfriends now only protects +f users
+                      protectops now only protects +m and +o users
+various   guppy     doc/compiling.FAQ now includes info about setting LD_LIBRARY_PATH
+Boing     guppy     fixed +protectops from reopping users with only +f and +protectfriends
+                    from reopping users with only +o
+          Wcc       made a few cosmetic changes to the configure script
+          Wcc       more plural fixes for commands and error messages
+Xerxes    guppy     "channel remove" will not crash the bot anymore if you are removing
+                    the channel for which the bind was called
+MC_8      stdarg    "channel info" will properly list all user-defined settings
+various   guppy     fixed a problem with modconfig not being found when rerunning
+                    ./configure
+          ITE       made modconfig more portable across various bourne shell flavours
+          Eule      removed gban_total, gexempt_total and ginvite_total since they were
+                    unused
+          TaKeDa/   configure should recognize a dynamic tcl library now on cygwin
+          ITE
+dw        guppy     fixed a crash that would happen when we disconnected from our server
+                    but did not reconnect to a server before we checked if a server was
+                    stoned
+          BHAB      lets compile on solaris now
+BarkerJr  TaKeDa    update a bot's laston info when the bot unlinks
+          Wcc       more cosmetic fixes to src/cmds.c
+          Eule      small cosmetic fix to cmd_store
+          TaKeDa    changed how kicking flooders works when -dontkickops
+                      flood-kick: don't punish people with +mf
+                      flood-deop: don't punish people with +mf
+                      other floods: don't punish people with +f
+          TaKeDa    fixed a bug where revenge-mode > 1 wouldn't kick users if dontkickops
+                    was set
+          Eule      missing sanity check in check_this_member
+Paladinz  guppy     ircu2.10.11 properly formats PART messages; however, eggdrop did not
+                    understand them
+          Wcc       fixed a couple of cosmetic problems in cmd_pls_user
+          Wcc       do not eval init-server on rehash since this variable is used for
+                    performing tcl commands on a succesful server connection
+MaSsKilla dw	    Couldn't introduce new users through telnet if a
+		      handle named "new" existed.
+SiD3WiNDR Wcc       MISC_USERFCREATE1 should use origbotname instead of botnetnick
+          Wcc       added a warning about allow-resync in the config file
+          TaKeDa    prevent botnet flooding when adding ignores which already exist
+          Wcc       some docs were not getting installed correctly
+          Wcc       [pass] should be <pass> in usage notices
+          Wcc       more cosmetic changes
+          Wcc       a bunch of little cosmetic changes
+          Wcc       more doc updates
+blaster^  Eule      fixed a memleak when adding users
+          ITE       more 64bit arch fixes
+          BarkerJr  lets log remote botinfo calls
+          blaster^  
+          BarkerJr  update a bot's laston info when the bot links
+jedis     guppy     some more remote boot fixes 
+|^Raven^| stdarg/   hand2nick, nick2hand, handonchan, and chanlist might not always return
+          guppy     that a user is known even if we know they are -- this has been fixed
 
 1.6.8 (2 January 2002)
 Found by  Fixed by  What...

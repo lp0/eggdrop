@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  *
- * $Id: dcc.c,v 1.51 2002/01/02 03:46:35 guppy Exp $
+ * $Id: dcc.c,v 1.54 2002/02/28 05:28:40 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -204,6 +204,7 @@ static void bot_version(int idx, char *par)
   chatout("*** Linked to %s\n", dcc[idx].nick);
   botnet_send_nlinked(idx, dcc[idx].nick, botnetnick, '!',
 		      dcc[idx].u.bot->numver);
+  touch_laston(dcc[idx].user, "linked", now);
   dump_links(idx);
   dcc[idx].type = &DCC_BOT;
   addbot(dcc[idx].nick, dcc[idx].nick, botnetnick, '-',
@@ -1367,12 +1368,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
   }
   if (!ok && (glob_party(fr) || glob_bot(fr)))
     ok = 1;
-  if (!ok && glob_xfer(fr)) {
-    module_entry *me = module_find("filesys", 0, 0);
 
-    if (me && me->funcs[FILESYS_ISVALID] && (me->funcs[FILESYS_ISVALID])())
-      ok = 1;
-  }
   if (!ok) {
     dprintf(idx, "You don't have access.\n");
     putlog(LOG_BOTS, "*", DCC_INVHANDLE, dcc[idx].host, buf);
@@ -1534,7 +1530,6 @@ static void dcc_telnet_new(int idx, char *buf, int x)
 
   buf[HANDLEN] = 0;
   strip_telnet(dcc[idx].sock, buf, &x);
-  strcpy(dcc[idx].nick, buf);
   dcc[idx].timeval = now;
   for (x = 0; x < strlen(buf); x++)
     if ((buf[x] <= 32) || (buf[x] >= 127))
@@ -1553,6 +1548,7 @@ static void dcc_telnet_new(int idx, char *buf, int x)
   } else if (!egg_strcasecmp(buf, botnetnick)) {
     dprintf(idx, "Sorry, can't use my name for a nick.\n");
   } else {
+    strcpy(dcc[idx].nick, buf);
     if (make_userfile)
       userlist = adduser(userlist, buf, "-telnet!*@*", "-",
 			 sanity_check(default_flags | USER_PARTY |
