@@ -7,11 +7,11 @@
  *   linking, unlinking, and relaying to another bot
  *   pinging the bots periodically and checking leaf status
  *
- * $Id: botnet.c,v 1.57 2004/06/11 06:06:24 wcc Exp $
+ * $Id: botnet.c,v 1.60 2006-03-28 02:35:49 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -288,21 +288,29 @@ void partyaway(char *bot, int sock, char *msg)
   }
 }
 
-/* Remove a tandem bot from the chain list
- */
-void rembot(char *who)
+/* Remove a tandem bot from the chain list. */
+void rembot(char *whoin)
 {
   tand_t **ptr = &tandbot, *ptr2;
   struct userrec *u;
+  char *who = NULL;
+  size_t len = 0;
+
+  /* Need to save the nick for later as it MAY be a pointer to ptr->bot, and we free(ptr) in here. */
+  len = strlen(whoin);
+  who = nmalloc(len + 1);
+  strncpyz(who, whoin, len + 1);
 
   while (*ptr) {
     if (!egg_strcasecmp((*ptr)->bot, who))
       break;
     ptr = &((*ptr)->next);
   }
-  if (!*ptr)
-    /* May have just .unlink *'d */
+  if (!*ptr) {
+    /* May have just .unlink *'d. */
+    nfree(who);
     return;
+  }
   check_tcl_disc(who);
 
   u = get_user_by_handle(userlist, who);
@@ -315,6 +323,7 @@ void rembot(char *who)
   tands--;
 
   dupwait_notify(who);
+  nfree(who);
 }
 
 void remparty(char *bot, int sock)

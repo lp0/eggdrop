@@ -1,5 +1,5 @@
 # Makefile for doc/
-# $Id: Makefile.in,v 1.23 2004/08/08 18:17:00 wcc Exp $
+# $Id: Makefile.in,v 1.23 2004-08-08 18:17:00 wcc Exp $
 
 SHELL = @SHELL@
 top_srcdir = @top_srcdir@

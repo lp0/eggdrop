@@ -2,11 +2,11 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  *
- * $Id: cmdschan.c,v 1.70 2004/01/09 05:56:37 wcc Exp $
+ * $Id: cmdschan.c,v 1.73 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1398,7 +1398,7 @@ static void cmd_chaninfo(struct userrec *u, int idx, char *par)
 
     if (u->flags & USER_OWNER) {
       tmp = 0;
-      
+
       for (ul = udef; ul; ul = ul->next) {
         if (ul->defined && ul->type == UDEF_STR) {
           char *p = (char *) getudef(ul->values, chan->dname);

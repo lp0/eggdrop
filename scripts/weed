@@ -29,7 +29,7 @@ do \
 done; \
 exec tclsh$lastver "$0" "$@"
 #
-# $Id: weed,v 1.8 2001/11/11 20:24:46 guppy Exp $
+# $Id: weed,v 1.8 2001-11-11 20:24:46 guppy Exp $
 #
 # weed out certain undesirables from an eggdrop userlist
 # try just typing 'tclsh weed' to find out the options

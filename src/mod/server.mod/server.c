@@ -2,11 +2,11 @@
  * server.c -- part of server.mod
  *   basic irc server support
  *
- * $Id: server.c,v 1.118 2004/07/02 21:02:02 wcc Exp $
+ * $Id: server.c,v 1.124 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -72,6 +72,8 @@ static int cycle_time;          /* cycle time till next server connect */
 static int default_port;        /* default IRC port */
 static char oldnick[NICKLEN];   /* previous nickname *before* rehash */
 static int trigger_on_ignore;   /* trigger bindings if user is ignored ? */
+static int exclusive_binds;     /* configures PUBM and MSGM binds to be
+                                 * exclusive of PUB and MSG binds. */
 static int answer_ctcp;         /* answer how many stacked ctcp's ? */
 static int lowercase_ctcp;      /* answer lowercase CTCP's (non-standard) */
 static int check_mode_r;        /* check for IRCnet +r modes */
@@ -459,7 +461,7 @@ static int fast_deq(int which)
     nextcmd = newsplit(&nextmsg);
     nextto = newsplit(&nextmsg);
     len = strlen(nextto);
-    if (strcmp(to, nextto) &&!strcmp(cmd, nextcmd) && !strcmp(msg, nextmsg) &&
+    if (strcmp(to, nextto) && !strcmp(cmd, nextcmd) && !strcmp(msg, nextmsg) &&
         ((strlen(cmd) + strlen(victims) + strlen(nextto) + strlen(msg) + 2) <
         510) && (!stack_limit || cmd_count < stack_limit - 1)) {
       cmd_count++;
@@ -882,7 +884,7 @@ static void queue_server(int which, char *buf, int len)
 
     q->len = len;
     q->msg = nmalloc(len + 1);
-    memcpy(q->msg, buf, len);
+    egg_memcpy(q->msg, buf, len);
     q->msg[len] = 0;
     h->tot++;
     h->warned = 0;
@@ -1362,6 +1364,7 @@ static tcl_ints my_tcl_ints[] = {
   {"optimize-kicks",    &optimize_kicks,            0},
   {"isjuped",           &nick_juped,                0},
   {"stack-limit",       &stack_limit,               0},
+  {"exclusive-binds",   &exclusive_binds,           0},
   {NULL,                NULL,                       0}
 };
 
@@ -1482,7 +1485,7 @@ static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
       return 1;
     i = new_dcc(&DCC_DNSWAIT, sizeof(struct dns_info));
     if (i < 0) {
-      putlog(LOG_MISC, "*", "DCC connection: CHAT (%s!%s)", dcc[i].nick, ip);
+      putlog(LOG_MISC, "*", "DCC connection: CHAT (%s!%s)", nick, ip);
       return 1;
     }
     dcc[i].addr = my_atoul(ip);
@@ -1492,7 +1495,6 @@ static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
     strcpy(dcc[i].host, from);
     dcc[i].timeval = now;
     dcc[i].user = u;
-    dcc[i].addr = my_atoul(ip);
     dcc[i].u.dns->ip = dcc[i].addr;
     dcc[i].u.dns->dns_type = RES_HOSTBYIP;
     dcc[i].u.dns->dns_success = dcc_chat_hostresolved;
@@ -1825,10 +1827,11 @@ static Function server_table[] = {
   (Function) & H_ctcp,          /* p_tcl_bind_list                      */
   (Function) & H_ctcr,          /* p_tcl_bind_list                      */
   (Function) ctcp_reply,
-  /* 36 - 38 */
+  /* 36 - 39 */
   (Function) get_altbotnick,    /* char *                               */
   (Function) & nick_len,        /* int                                  */
-  (Function) check_tcl_notc
+  (Function) check_tcl_notc,
+  (Function) & exclusive_binds  /* int                                  */
 };
 
 char *server_start(Function *global_funcs)
@@ -1870,6 +1873,7 @@ char *server_start(Function *global_funcs)
   default_port = 6667;
   oldnick[0] = 0;
   trigger_on_ignore = 0;
+  exclusive_binds = 0;
   answer_ctcp = 1;
   lowercase_ctcp = 0;
   check_mode_r = 0;

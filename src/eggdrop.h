@@ -4,11 +4,11 @@
  *
  *   IF YOU ALTER THIS FILE, YOU NEED TO RECOMPILE THE BOT.
  *
- * $Id: eggdrop.h,v 1.61 2004/07/25 11:17:34 wcc Exp $
+ * $Id: eggdrop.h,v 1.65 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -304,7 +304,7 @@ struct dcc_table {
   void (*eof) (int);
   void (*activity) (int, char *, int);
   int *timeout_val;
-  void (*timeout) ();
+  void (*timeout) (int);
   void (*display) (int, char *);
   int (*expmem) (void *);
   void (*kill) (int, void *);
@@ -315,15 +315,15 @@ struct dcc_table {
 struct userrec;
 
 struct dcc_t {
-  long sock;                    /* This should be a long to keep 64-bit machines sane */
-  IP addr;                      /* IP address in host byte order */
+  long sock;                    /* This should be a long to keep 64-bit machines sane. */
+  IP addr;                      /* IP address in host network byte order. */
   unsigned int port;
   struct userrec *user;
   char nick[NICKLEN];
   char host[UHOSTLEN];
   struct dcc_table *type;
-  time_t timeval;               /* This is used for timeout checking  */
-  unsigned long status;         /* A LOT of dcc types have status things; makes it more avaliabe */
+  time_t timeval;               /* This is used for timeout checking.  */
+  unsigned long status;         /* A LOT of dcc types have status things; makes it more avaliabe. */
   union {
     struct chat_info *chat;
     struct file_info *file;

@@ -1,9 +1,9 @@
 /*
  * tcltransfer.c -- part of transfer.mod
  *
- * $Id: tcltransfer.c,v 1.4 2004/01/09 05:56:39 wcc Exp $
+ * $Id: tcltransfer.c,v 1.7 2006-03-28 02:35:51 wcc Exp $
  *
- * Copyright (C) 2003, 2004 Eggheads Development Team
+ * Copyright (C) 2003 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -101,7 +101,7 @@ static int tcl_getfilesendtime STDVAR
   char s[15];
 
   BADARGS(2, 2, " idx");
- 
+
   sock = atoi(argv[1]);
   for (i = 0; i < dcc_total; i++) {
     if (dcc[i].sock == sock) {

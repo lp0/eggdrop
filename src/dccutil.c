@@ -6,11 +6,11 @@
  *   memory management for dcc structures
  *   timeout checking for dcc connections
  *
- * $Id: dccutil.c,v 1.52 2004/06/11 06:06:24 wcc Exp $
+ * $Id: dccutil.c,v 1.56 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -39,7 +39,6 @@ extern int dcc_total, max_dcc, dcc_flood_thr, backgrd, copy_to_tmp, MAXSOCKS;
 extern char botnetnick[], version[];
 extern time_t now;
 extern sock_list *socklist;
-extern Tcl_Interp *interp;
 
 char motdfile[121] = "text/motd";       /* File where the motd is stored */
 int connect_timeout = 15;       /* How long to wait before a telnet
@@ -82,6 +81,25 @@ int expmem_dccutil()
   return tot;
 }
 
+int findidx(int z)
+{
+  int j;
+
+  for (j = 0; j < dcc_total; j++)
+    if ((dcc[j].sock == z) && (dcc[j].type->flags & DCT_VALIDIDX))
+      return j;
+  return -1;
+}
+
+int findanyidx(register int z)
+{
+  register int j;
+
+  for (j = 0; j < dcc_total; j++)
+    if (dcc[j].sock == z)
+      return j;
+  return -1;
+}
 
 /* Replace \n with \r\n */
 char *add_cr(char *buf)
@@ -432,7 +450,6 @@ void set_away(int idx, char *s)
 void *_get_data_ptr(int size, char *file, int line)
 {
   char *p;
-
 #ifdef DEBUG_MEM
   char x[1024];
 

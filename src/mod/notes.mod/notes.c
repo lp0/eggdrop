@@ -5,11 +5,11 @@
  *   note cmds
  *   note ignores
  *
- * $Id: notes.c,v 1.52 2004/07/02 21:02:02 wcc Exp $
+ * $Id: notes.c,v 1.55 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -404,8 +404,7 @@ static int tcl_erasenotes STDVAR
   read = 0;
   erased = 0;
   notes_parse(nl, (argv[2][0] == 0) ? "-" : argv[2]);
-  while (!feof(f)) {
-    fgets(s, 600, f);
+  while (!feof(f) && fgets(s, 600, f)) {
     if (s[strlen(s) - 1] == '\n')
       s[strlen(s) - 1] = 0;
     if (!feof(f)) {
@@ -492,8 +491,7 @@ static void notes_read(char *hand, char *nick, char *srd, int idx)
     return;
   }
   notes_parse(rd, srd);
-  while (!feof(f)) {
-    fgets(s, 600, f);
+  while (!feof(f) && fgets(s, 600, f)) {
     i = strlen(s);
     if (i > 0 && s[i - 1] == '\n')
       s[i - 1] = 0;
@@ -691,8 +689,7 @@ static int tcl_notes STDVAR
   count = 0;
   read = 0;
   notes_parse(nl, (argv[2][0] == 0) ? "-" : argv[2]);
-  while (!feof(f)) {
-    fgets(s, 600, f);
+  while (!feof(f) && fgets(s, 600, f)) {
     if (s[strlen(s) - 1] == '\n')
       s[strlen(s) - 1] = 0;
     if (!feof(f)) {

@@ -3,7 +3,7 @@
 #
 # Traduction par Fraggle, voir core.french.lang pour plus d'informations
 #
-# $Id: wire.french.lang,v 1.3 2000/11/06 04:06:45 guppy Exp $
+# $Id: wire.french.lang,v 1.3 2000-11-06 04:06:45 guppy Exp $
 
 0xa000,Vous n'êtes pas sur un wire.
 0xa001,Actuellement sur wire

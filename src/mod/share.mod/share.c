@@ -1,11 +1,11 @@
 /*
  * share.c -- part of share.mod
  *
- * $Id: share.c,v 1.84 2004/07/02 21:02:02 wcc Exp $
+ * $Id: share.c,v 1.87 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -615,8 +615,10 @@ static void share_change(int idx, char *par)
           makepass(pass);
           userlist = adduser(userlist, hand, "none", pass, USER_BOT);
           u = get_user_by_handle(userlist, hand);
-        } else if (!u)
+        } else if (!u) {
+          noshare = 0;
           return;
+        }
         if (uet->got_share) {
           if (!(e = find_user_entry(uet, u))) {
             e = user_malloc(sizeof(struct user_entry));

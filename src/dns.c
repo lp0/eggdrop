@@ -4,12 +4,12 @@
  *   provides the code used by the bot if the DNS module is not loaded
  *   DNS Tcl commands
  *
- * $Id: dns.c,v 1.30 2004/07/02 21:02:02 wcc Exp $
+ * $Id: dns.c,v 1.33 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -39,7 +39,7 @@ extern struct dcc_t *dcc;
 extern int dcc_total;
 extern int resolve_timeout;
 extern time_t now;
-extern jmp_buf alarmret;
+extern sigjmp_buf alarmret;
 extern Tcl_Interp *interp;
 
 devent_t *dns_events = NULL;
@@ -449,7 +449,7 @@ void block_dns_hostbyip(IP ip)
   unsigned long addr = htonl(ip);
   static char s[UHOSTLEN];
 
-  if (!setjmp(alarmret)) {
+  if (!sigsetjmp(alarmret, 1)) {
     alarm(resolve_timeout);
     hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
     alarm(0);
@@ -475,7 +475,7 @@ void block_dns_ipbyhost(char *host)
     call_ipbyhost(host, ntohl(inaddr.s_addr), 1);
     return;
   }
-  if (!setjmp(alarmret)) {
+  if (!sigsetjmp(alarmret, 1)) {
     struct hostent *hp;
     struct in_addr *in;
     IP ip = 0;

@@ -1,11 +1,11 @@
 /*
  * tclhash.h
  *
- * $Id: tclhash.h,v 1.14 2004/01/09 05:56:37 wcc Exp $
+ * $Id: tclhash.h,v 1.17 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,6 +33,7 @@ typedef struct tcl_cmd_b {
 
   struct flag_record flags;
   char *func_name;              /* Proc name. */
+  /* FIXME: 'hits' could overflow if a bind is triggered enough. */
   int hits;                     /* Number of times this proc was triggered. */
   u_8bit_t attributes;          /* Flags for this entry. TC_* */
 } tcl_cmd_t;
@@ -45,7 +46,7 @@ typedef struct tcl_bind_mask_b {
 
   tcl_cmd_t *first;             /* List of commands registered for this bind. */
   char *mask;
-  u_8bit_t flags;               /* Flags for this entry. TBM_*  */
+  u_8bit_t flags;               /* Flags for this entry. TBM_* */
 } tcl_bind_mask_t;
 
 
@@ -56,9 +57,8 @@ typedef struct tcl_bind_mask_b {
 typedef struct tcl_bind_list_b {
   struct tcl_bind_list_b *next;
 
-  tcl_bind_mask_t *first;       /* Pointer to registered binds
-                                 * for this list.               */
-  char name[5];                 /* Name of the bind.            */
+  tcl_bind_mask_t *first;       /* Pointer to registered binds for this list. */
+  char name[5];                 /* Name of the bind. */
   u_8bit_t flags;               /* Flags for this element. HT_* */
   Function func;                /* Function used as the Tcl calling interface
                                  * for procs actually representing C functions. */
@@ -116,15 +116,6 @@ extern p_tcl_bind_list H_chat, H_act, H_bcst, H_chon, H_chof;
 extern p_tcl_bind_list H_load, H_unld, H_dcc, H_bot, H_link;
 extern p_tcl_bind_list H_away, H_nkch, H_filt, H_disc, H_event;
 
-#endif
-
-
-#define CHECKVALIDITY(a)        do {                                    \
-        if (!check_validity(argv[0], (a))) {                            \
-                Tcl_AppendResult(irp, "bad builtin command call!",      \
-                                 NULL);                                 \
-                return TCL_ERROR;                                       \
-        }                                                               \
-} while (0)
+#endif /* MAKING_MODS */
 
 #endif /* _EGG_TCLHASH_H */

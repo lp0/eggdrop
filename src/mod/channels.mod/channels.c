@@ -2,11 +2,11 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  *
- * $Id: channels.c,v 1.89 2004/06/27 17:26:51 wcc Exp $
+ * $Id: channels.c,v 1.93 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -308,7 +308,7 @@ static void remove_channel(struct chanset_t *chan)
   user_del_chan(chan->dname);
   noshare = 0;
   nfree(chan->channel.key);
-  for (i = 0; i < 6 && chan->cmode[i].op; i++)
+  for (i = 0; i < MODES_PER_LINE_MAX && chan->cmode[i].op; i++)
     nfree(chan->cmode[i].op);
   if (chan->key)
     nfree(chan->key);
@@ -452,13 +452,14 @@ invite-time %d %cenforcebans %cdynamicbans %cuserbans %cautoop %cautohalfop \
             PLSMNS(channel_dynamicinvites(chan)),
             PLSMNS(!channel_nouserinvites(chan)),
             PLSMNS(channel_nodesynch(chan)));
+    fprintf(f, "%s\n", channel_static(chan) ? "" : "}");
     for (ul = udef; ul; ul = ul->next) {
       if (ul->defined && ul->name) {
         if (ul->type == UDEF_FLAG)
-          fprintf(f, "%c%s%s ", getudef(ul->values, chan->dname) ? '+' : '-',
+          fprintf(f, "channel set %s %c%s%s\n", name, getudef(ul->values, chan->dname) ? '+' : '-',
                   "udef-flag-", ul->name);
         else if (ul->type == UDEF_INT)
-          fprintf(f, "%s%s %d ", "udef-int-", ul->name, getudef(ul->values,
+          fprintf(f, "channel set %s %s%s %d\n", name, "udef-int-", ul->name, getudef(ul->values,
                   chan->dname));
         else if (ul->type == UDEF_STR) {
           char *p = (char *) getudef(ul->values, chan->dname);
@@ -466,12 +467,11 @@ invite-time %d %cenforcebans %cdynamicbans %cuserbans %cautoop %cautohalfop \
           if (!p)
             p = "{}";
 
-          fprintf(f, "udef-str-%s %s ", ul->name, p);
+          fprintf(f, "channel set %s udef-str-%s %s\n", name, ul->name, p);
         } else
           debug1("UDEF-ERROR: unknown type %d", ul->type);
       }
     }
-    fprintf(f, "%s\n", channel_static(chan) ? "" : "}");
     if (fflush(f)) {
       putlog(LOG_MISC, "*", "ERROR writing channel file.");
       fclose(f);
@@ -723,7 +723,7 @@ static int channels_expmem()
     tot += expmem_masklist(chan->channel.exempt);
     tot += expmem_masklist(chan->channel.invite);
 
-    for (i = 0; i < 6 && chan->cmode[i].op; i++)
+    for (i = 0; i < MODES_PER_LINE_MAX && chan->cmode[i].op; i++)
       tot += strlen(chan->cmode[i].op) + 1;
     if (chan->key)
       tot += strlen(chan->key) + 1;

@@ -7,11 +7,11 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  *
- * $Id: proto.h,v 1.63 2004/06/14 01:14:06 wcc Exp $
+ * $Id: proto.h,v 1.70 2006-07-09 22:00:18 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -34,9 +34,7 @@
 #include "lush.h"
 #include "misc_file.h"
 
-#ifdef HAVE_DPRINTF
-#  define dprintf dprintf_eggdrop
-#endif
+#define dprintf dprintf_eggdrop
 
 struct chanset_t;               /* keeps the compiler warnings down :) */
 struct userrec;
@@ -130,6 +128,9 @@ int check_ansi(char *);
 void dupwait_notify(char *);
 
 /* dccutil.c */
+int findidx(int);
+int findanyidx(int);
+char *add_cr(char *);
 void dprintf EGG_VARARGS(int, arg1);
 void chatout EGG_VARARGS(char *, arg1);
 extern void (*shareout) ();
@@ -145,13 +146,14 @@ void not_away(int);
 void set_away(int, char *);
 void *_get_data_ptr(int, char *, int);
 void dcc_remove_lost(void);
+void do_boot(int, char *, char *);
+int detect_dcc_flood(time_t *, struct chat_info *, int);
 
 #define get_data_ptr(x) _get_data_ptr(x,__FILE__,__LINE__)
 void flush_lines(int, struct chat_info *);
 struct dcc_t *find_idx(int);
 int new_dcc(struct dcc_table *, int);
 void del_dcc(int);
-char *add_cr(char *);
 void changeover_dcc(int, struct dcc_table *, int);
 
 /* dns.c */
@@ -163,11 +165,6 @@ void call_hostbyip(IP, char *, int);
 void call_ipbyhost(char *, IP, int);
 void dcc_dnshostbyip(IP);
 void dcc_dnsipbyhost(char *);
-
-/* gotdcc.c */
-void gotdcc(char *, char *, struct userrec *, char *);
-void do_boot(int, char *, char *);
-int detect_dcc_flood(time_t *, struct chat_info *, int);
 
 /* language.c */
 char *get_language(int);
@@ -206,7 +203,6 @@ int my_strcpy(char *, char *);
 void putlog EGG_VARARGS(int, arg1);
 void flushlogs();
 void check_logsize();
-char *stristr(char *, char *);
 void splitc(char *, char *, char);
 void splitcn(char *, char *, char, size_t);
 void remove_crlf(char **);
@@ -252,7 +248,6 @@ void neterror(char *);
 void setsock(int, int);
 int allocsock(int, int);
 int getsock(int);
-char *hostnamefromip(unsigned long);
 void killsock(int);
 int answer(int, char *, unsigned long *, unsigned short *, int);
 inline int open_listen(int *);
@@ -276,8 +271,6 @@ void protect_tcl();
 void unprotect_tcl();
 void do_tcl(char *, char *);
 int readtclprog(char *fname);
-int findidx(int);
-int findanyidx(int);
 
 /* userent.c */
 void list_type_kill(struct list_type *);

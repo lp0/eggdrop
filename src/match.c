@@ -2,7 +2,7 @@
  * match.c
  *   wildcard matching functions
  *
- * $Id: match.c,v 1.11 2004/04/06 06:56:38 wcc Exp $
+ * $Id: match.c,v 1.11 2004-04-06 06:56:38 wcc Exp $
  *
  * Once this code was working, I added support for % so that I could
  * use the same code both in Eggdrop and in my IrcII client.

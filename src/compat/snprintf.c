@@ -1,10 +1,10 @@
 /*
  * snprintf.c - a portable implementation of snprintf and vsnprintf
  *
- * $Id: snprintf.c,v 1.20 2004/01/13 10:21:00 wcc Exp $
+ * $Id: snprintf.c,v 1.23 2006-03-28 02:35:50 wcc Exp $
  */
 /*
- * Portions Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Portions Copyright (C) 2000 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -277,7 +277,7 @@ static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
       case 'd':
       case 'i':
         if (cflags == DP_C_SHORT)
-          value = va_arg(args, short int);
+          value = va_arg(args, int);
 
         else if (cflags == DP_C_LONG)
           value = va_arg(args, long int);
@@ -290,7 +290,7 @@ static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
       case 'o':
         flags |= DP_F_UNSIGNED;
         if (cflags == DP_C_SHORT)
-          value = va_arg(args, unsigned short int);
+          value = va_arg(args, unsigned int);
 
         else if (cflags == DP_C_LONG)
           value = va_arg(args, unsigned long int);
@@ -303,7 +303,7 @@ static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
       case 'u':
         flags |= DP_F_UNSIGNED;
         if (cflags == DP_C_SHORT)
-          value = va_arg(args, unsigned short int);
+          value = va_arg(args, unsigned int);
 
         else if (cflags == DP_C_LONG)
           value = va_arg(args, unsigned long int);
@@ -318,7 +318,7 @@ static void dopr(char *buffer, size_t maxlen, const char *format, va_list args)
       case 'x':
         flags |= DP_F_UNSIGNED;
         if (cflags == DP_C_SHORT)
-          value = va_arg(args, unsigned short int);
+          value = va_arg(args, unsigned int);
 
         else if (cflags == DP_C_LONG)
           value = va_arg(args, unsigned long int);

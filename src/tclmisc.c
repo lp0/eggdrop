@@ -2,11 +2,11 @@
  * tclmisc.c -- handles:
  *   Tcl stubs for everything else
  *
- * $Id: tclmisc.c,v 1.54 2004/08/02 18:50:47 wcc Exp $
+ * $Id: tclmisc.c,v 1.57 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -48,7 +48,7 @@
 extern p_tcl_bind_list bind_table_list;
 extern tcl_timer_t *timer, *utimer;
 extern struct dcc_t *dcc;
-extern char origbotname[], botnetnick[], quit_msg[];
+extern char botnetnick[], quit_msg[];
 extern struct userrec *userlist;
 extern time_t now;
 extern module_entry *module_list;

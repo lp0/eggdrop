@@ -3,6 +3,9 @@
 #ifndef _EGG_CONFIG_H
 #define _EGG_CONFIG_H
 
+/* Define if running on Mac OS X with dns.mod. */
+#undef BIND_8_COMPAT
+
 /* Define if running on NeXT Step. */
 #undef BORGCUBES
 
@@ -175,6 +178,9 @@
 /* Define to 1 if you have the <stdint.h> header file. */
 #undef HAVE_STDINT_H
 
+/* Define to 1 if you have the <stdio.h> header file. */
+#undef HAVE_STDIO_H
+
 /* Define to 1 if you have the <stdlib.h> header file. */
 #undef HAVE_STDLIB_H
 
@@ -296,6 +302,9 @@
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
+
+/* Define limit of random() function. */
+#undef RANDOM_MAX
 
 /* Define to the type of arg 1 for `select'. */
 #undef SELECT_TYPE_ARG1

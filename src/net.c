@@ -2,11 +2,29 @@
  * net.c -- handles:
  *   all raw network i/o
  *
- * $Id: net.c,v 1.71 2004/07/05 21:42:39 wcc Exp $
+ * $Id: net.c,v 1.78 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * This is hereby released into the public domain.
  * Robey Pointer, robey@netcom.com
+ *
+ * Changes after Feb 23, 1999 Copyright Eggheads Development Team
+ *
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include <fcntl.h>
@@ -49,7 +67,7 @@ int dcc_sanitycheck = 0;      /* Do some sanity checking on dcc connections.  */
 
 sock_list *socklist = NULL;   /* Enough to be safe.                           */
 int MAXSOCKS = 0;
-jmp_buf alarmret;             /* Env buffer for alarm() returns.              */
+sigjmp_buf alarmret;             /* Env buffer for alarm() returns.              */
 
 /* Types of proxies */
 #define PROXY_SOCKS   1
@@ -130,7 +148,7 @@ void neterror(char *s)
     strcpy(s, "Address already in use");
     break;
   case EADDRNOTAVAIL:
-    strcpy(s, "Address invalid on remote machine");
+    strcpy(s, "Cannot assign requested address");
     break;
   case EAFNOSUPPORT:
     strcpy(s, "Address family not supported");
@@ -145,7 +163,7 @@ void neterror(char *s)
     strcpy(s, "Connection refused");
     break;
   case EFAULT:
-    strcpy(s, "Namespace segment violation");
+    strcpy(s, "Bad address");
     break;
   case EINPROGRESS:
     strcpy(s, "Operation in progress");
@@ -154,7 +172,7 @@ void neterror(char *s)
     strcpy(s, "Timeout");
     break;
   case EINVAL:
-    strcpy(s, "Invalid namespace");
+    strcpy(s, "Invalid argument");
     break;
   case EISCONN:
     strcpy(s, "Socket already connected");
@@ -163,7 +181,7 @@ void neterror(char *s)
     strcpy(s, "Network unreachable");
     break;
   case ENOTSOCK:
-    strcpy(s, "File descriptor, not a socket");
+    strcpy(s, "Socket operation on non-socket");
     break;
   case ETIMEDOUT:
     strcpy(s, "Connection timed out");
@@ -172,7 +190,7 @@ void neterror(char *s)
     strcpy(s, "Socket is not connected");
     break;
   case EHOSTUNREACH:
-    strcpy(s, "Host is unreachable");
+    strcpy(s, "No route to host");
     break;
   case EPIPE:
     strcpy(s, "Broken pipe");
@@ -323,7 +341,7 @@ static int proxy_connect(int sock, char *host, int port, int proxy)
       egg_memcpy(x, &ip, 4);
     } else {
       /* no, must be host.domain */
-      if (!setjmp(alarmret)) {
+      if (!sigsetjmp(alarmret, 1)) {
         alarm(resolve_timeout);
         hp = gethostbyname(host);
         alarm(0);
@@ -385,8 +403,10 @@ int open_telnet_raw(int sock, char *server, int sport)
 
   name.sin_family = AF_INET;
   name.sin_addr.s_addr = (myip[0] ? getmyip() : INADDR_ANY);
-  if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0)
+  if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0) {
+    killsock(sock);
     return -1;
+  }
   egg_bzero((char *) &name, sizeof(struct sockaddr_in));
 
   name.sin_family = AF_INET;
@@ -397,7 +417,7 @@ int open_telnet_raw(int sock, char *server, int sport)
   else {
     /* No, must be host.domain */
     debug0("WARNING: open_telnet_raw() is about to block in gethostbyname()!");
-    if (!setjmp(alarmret)) {
+    if (!sigsetjmp(alarmret, 1)) {
       alarm(resolve_timeout);
       hp = gethostbyname(host);
       alarm(0);
@@ -489,35 +509,6 @@ inline int open_listen(int *port)
   return open_address_listen(myip[0] ? getmyip() : INADDR_ANY, port);
 }
 
-/* Given a network-style IP address, returns the hostname. The hostname
- * will be in the "##.##.##.##" format if there was an error.
- *
- * NOTE: This function is depreciated. Try using the async dns approach
- *       instead.
- */
-char *hostnamefromip(unsigned long ip)
-{
-  struct hostent *hp;
-  unsigned long addr = ip;
-  unsigned char *p;
-  static char s[UHOSTLEN];
-
-  if (!setjmp(alarmret)) {
-    alarm(resolve_timeout);
-    hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-    alarm(0);
-  } else {
-    hp = NULL;
-  }
-  if (hp == NULL) {
-    p = (unsigned char *) &addr;
-    sprintf(s, "%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
-    return s;
-  }
-  strncpyz(s, hp->h_name, sizeof s);
-  return s;
-}
-
 /* Returns the given network byte order IP address in the
  * dotted format - "##.##.##.##"
  */
@@ -547,10 +538,7 @@ int answer(int sock, char *caller, unsigned long *ip, unsigned short *port,
     return -1;
   if (ip != NULL) {
     *ip = from.sin_addr.s_addr;
-    /* This is now done asynchronously. We now only provide the IP address.
-     *
-     * strncpy(caller, hostnamefromip(*ip), 120);
-     */
+    /* DNS is now done asynchronously. We now only provide the IP address. */
     strncpyz(caller, iptostr(*ip), 121);
     *ip = ntohl(*ip);
   }

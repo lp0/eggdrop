@@ -1,11 +1,11 @@
 /*
  * tclchan.c -- part of channels.mod
  *
- * $Id: tclchan.c,v 1.89 2004/06/11 05:53:03 wcc Exp $
+ * $Id: tclchan.c,v 1.94 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -910,11 +910,11 @@ static int tcl_channel_info(Tcl_Interp *irp, struct chanset_t *chan)
       args[1] = b;
       x = Tcl_Merge(2, args);
       egg_snprintf(s, sizeof s, "%s", x);
-      Tcl_Free((char *) x); 
+      Tcl_Free((char *) x);
       Tcl_AppendElement(irp, s);
     } else if (ul->type == UDEF_STR) {
       char *p = (char *) getudef(ul->values, chan->dname), *buf;
-      
+
       if (!p)
         p = "{}";
 
@@ -955,7 +955,7 @@ static int tcl_channel_get(Tcl_Interp *irp, struct chanset_t *chan,
     s[120] = 0;
   } else if (!strcmp(setting, "idle-kick"))
     simple_sprintf(s, "%d", chan->idle_kick);
-  else if (!strcmp(setting, "stop-net-hack"))
+  else if (!strcmp(setting, "stopnethack-mode") || !strcmp(setting, "stop-net-hack"))
     simple_sprintf(s, "%d", chan->stopnethack_mode);
   else if (!strcmp(setting, "revenge-mode"))
     simple_sprintf(s, "%d", chan->revenge_mode);

@@ -1,10 +1,10 @@
-$Id: AUTHORS,v 1.26 2004/07/25 03:56:58 wcc Exp $
+$Id: AUTHORS,v 1.32 2006-04-14 22:18:27 wcc Exp $
 
-Eggdrop Developers and Contributers
-Last revised: March 9, 2002
+Eggdrop Developers and Contributors
+Last revised: April 14, 2006
     _____________________________________________________________________
 
-                     Eggdrop Developers and Contributers
+                     Eggdrop Developers and Contributors
 
 
   This file attempts to list the majority of the Eggdrop developers and
@@ -19,6 +19,7 @@ Last revised: March 9, 2002
     BarkerJr   Bryon Eldridge
     Beldin     Darrin Smith
     Ben        Ben Dover
+    bhab       Kelsey Hudson
     ButchBub   Scott Taylor
     Cybah      Jonathan Miles
     darko``    Darko Ilic
@@ -40,18 +41,22 @@ Last revised: March 9, 2002
     KingKurly  Gregory Kubaryk
     Kirben     Travis Howell
     Kirk       Ian Kaney
+    lordares   Bryan Drewery
     Lucas      Lucas Nussbaum
     nakee      Ely Levy
+    Paladin    Alan Cameron
     poptix     Matthew Hallacy
     Raistlin   Jason Slagle
     RebuM      Martin Matuska
+    robey      Robey Pointer
     rtc        Peter 'Rattacresh' Backes
     SegFault   Ryan Butler
+    SET        Sven Trenkel
     Shaun      Shaun Braun
     slennox    Shayne Lennox
     stdarg
     Sup        Teemu Hjelt
-    SuperS
+    SuperS     Kevin Lamothe
     TaKeDa     Dariusz Kulinski
     TheGhost   James Simmons
     TheUnknown
@@ -68,4 +73,4 @@ Last revised: March 9, 2002
   Development Team at eggdev@eggheads.org.
     _____________________________________________________________________
 
-  Copyright (C) 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+  Copyright (C) 1999 - 2006 Eggheads Development Team

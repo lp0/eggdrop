@@ -1,10 +1,10 @@
 /*
  * transfer.c -- part of transfer.mod
  *
- * $Id: transfer.c,v 1.69 2004/01/09 05:56:39 wcc Exp $
+ * $Id: transfer.c,v 1.72 2006-03-28 02:35:51 wcc Exp $
  *
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -168,7 +168,7 @@ static int builtin_sentrcvd STDVAR
   Function F = (Function) cd;
 
   BADARGS(4, 4, " hand nick path");
-  
+
   CHECKVALIDITY(builtin_sentrcvd);
   F(argv[1], argv[2], argv[3]);
   return TCL_OK;
@@ -179,7 +179,7 @@ static int builtin_toutlost STDVAR
   Function F = (Function) cd;
 
   BADARGS(6, 6, " hand nick path acked length");
-  
+
   CHECKVALIDITY(builtin_toutlost);
   F(argv[1], argv[2], argv[3], argv[4], argv[5]);
   return TCL_OK;
@@ -967,7 +967,7 @@ static void dcc_get_pending(int idx, char *buf, int len)
  * `filename' from `dir'.
  *
  * Use raw_dcc_resend() and raw_dcc_send() instead of this function.
- * 
+ *
  */
 static int raw_dcc_resend_send(char *filename, char *nick, char *from,
                                char *dir, int resend)

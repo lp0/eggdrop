@@ -1,11 +1,11 @@
 /*
  * irc.h -- part of irc.mod
  *
- * $Id: irc.h,v 1.25 2004/01/09 05:56:38 wcc Exp $
+ * $Id: irc.h,v 1.28 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -46,7 +46,7 @@ static void check_tcl_joinspltrejn(char *, char *, struct userrec *, char *,
 static void check_tcl_part(char *, char *, struct userrec *, char *, char *);
 static void check_tcl_signtopcnick(char *, char *, struct userrec *u, char *,
                                    char *, p_tcl_bind_list);
-static void check_tcl_pubm(char *, char *, char *, char *);
+static int check_tcl_pubm(char *, char *, char *, char *);
 static int check_tcl_pub(char *, char *, char *, char *);
 static int me_op(struct chanset_t *);
 static int me_halfop(struct chanset_t *);

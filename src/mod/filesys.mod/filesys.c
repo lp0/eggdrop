@@ -2,11 +2,11 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  *
- * $Id: filesys.c,v 1.66 2004/07/02 21:02:02 wcc Exp $
+ * $Id: filesys.c,v 1.71 2006-05-29 01:56:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -163,8 +163,11 @@ static int check_tcl_fil(char *cmd, int idx, char *args)
     dprintf(idx, "What?  You need 'help'\n");
     return 0;
   }
-  if (x == BIND_EXEC_BRK)
+
+  /* We return 1 to leave the filesys */
+  if (x == BIND_QUIT)           /* CMD_LEAVE, 'quit' */
     return 1;
+
   if (x == BIND_EXEC_LOG)
     putlog(LOG_FILES, "*", "#%s# files: %s %s", dcc[idx].nick, cmd, args);
   return 0;
@@ -506,16 +509,22 @@ static int builtin_fil STDVAR
 
   BADARGS(4, 4, " hand idx param");
 
+  CHECKVALIDITY(builtin_fil);
   idx = findanyidx(atoi(argv[2]));
   if (idx < 0 && dcc[idx].type != &DCC_FILES) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
     return TCL_ERROR;
   }
+
+  /* FIXME: This is an ugly hack. It is not documented as a
+   *        'feature' because it will eventually go away.
+   */
   if (F == CMD_LEAVE) {
     Tcl_AppendResult(irp, "break", NULL);
     return TCL_OK;
   }
-  (F) (idx, argv[3]);
+
+  F(idx, argv[3]);
   Tcl_ResetResult(irp);
   return TCL_OK;
 }
@@ -623,7 +632,20 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
                              char *text)
 {
   char *param, *ip, *prt, *buf = NULL, *msg;
-  int atr = u ? u->flags : 0, i;
+  int atr = u ? u->flags : 0, i, j = 0;
+
+  if (text[j] == '"') {
+    text[j] = ' ';
+
+    for (j = 1; text[j] != '"' && text[j] != '\0'; j++) {
+      if (text[j] == ' ')
+      {
+        text[j] = '_';
+      }
+    }
+
+    text[j] = ' ';
+  }
 
   buf = nmalloc(strlen(text) + 1);
   msg = buf;

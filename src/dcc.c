@@ -4,11 +4,11 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  *
- * $Id: dcc.c,v 1.81 2004/07/31 01:21:53 wcc Exp $
+ * $Id: dcc.c,v 1.85 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1152,7 +1152,7 @@ static void dcc_telnet_hostresolved(int i)
   if (dcc[idx].host[0] == '@') {
     /* Restrict by hostname */
     if (!wild_match(dcc[idx].host + 1, dcc[i].host)) {
-      putlog(LOG_BOTS, "*", DCC_BADHOST, s);
+      putlog(LOG_BOTS, "*", DCC_BADHOST, dcc[i].host);
       killsock(dcc[i].sock);
       lostdcc(i);
       return;
@@ -1322,7 +1322,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
   strip_telnet(dcc[idx].sock, buf, &atr);
   buf[HANDLEN] = 0;
   /* Toss out bad nicknames */
-  if ((dcc[idx].nick[0] != '@') && (!wild_match(dcc[idx].nick, buf))) {
+  if (dcc[idx].nick[0] != '@' && !wild_match(dcc[idx].nick, buf)) {
     dprintf(idx, "Sorry, that nickname format is invalid.\n");
     putlog(LOG_BOTS, "*", DCC_BADNICK, dcc[idx].host);
     killsock(dcc[idx].sock);
@@ -1347,8 +1347,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
     return;
   }
   dcc[idx].status &= ~(STAT_BOTONLY | STAT_USRONLY);
-  if ((!egg_strcasecmp(buf, "NEW")) && ((allow_new_telnets) ||
-      (make_userfile))) {
+  if (!egg_strcasecmp(buf, "NEW") && (allow_new_telnets || make_userfile)) {
     dcc[idx].type = &DCC_TELNET_NEW;
     dcc[idx].timeval = now;
     dprintf(idx, "\n");

@@ -2,11 +2,11 @@
  * tcluser.c -- handles:
  *   Tcl stubs for the user-record-oriented commands
  *
- * $Id: tcluser.c,v 1.38 2004/04/06 06:56:38 wcc Exp $
+ * $Id: tcluser.c,v 1.41 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,7 +33,7 @@ extern Tcl_Interp *interp;
 extern struct userrec *userlist;
 extern int default_flags, dcc_total, ignore_time;
 extern struct dcc_t *dcc;
-extern char origbotname[], botnetnick[];
+extern char botnetnick[];
 extern time_t now;
 
 

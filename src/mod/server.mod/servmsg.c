@@ -1,11 +1,11 @@
 /*
  * servmsg.c -- part of server.mod
  *
- * $Id: servmsg.c,v 1.83 2004/07/25 20:39:01 wcc Exp $
+ * $Id: servmsg.c,v 1.91 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -112,25 +112,11 @@ static int check_tcl_msg(char *cmd, char *nick, char *uhost,
   return ((x == BIND_MATCHED) || (x == BIND_EXECUTED) || (x == BIND_EXEC_LOG));
 }
 
-static void check_tcl_notc(char *nick, char *uhost, struct userrec *u,
-                           char *dest, char *arg)
-{
-  struct flag_record fr = { FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0 };
-
-  get_user_flagrec(u, &fr, NULL);
-  Tcl_SetVar(interp, "_notc1", nick, 0);
-  Tcl_SetVar(interp, "_notc2", uhost, 0);
-  Tcl_SetVar(interp, "_notc3", u ? u->handle : "*", 0);
-  Tcl_SetVar(interp, "_notc4", arg, 0);
-  Tcl_SetVar(interp, "_notc5", dest, 0);
-  check_tcl_bind(H_notc, arg, &fr, " $_notc1 $_notc2 $_notc3 $_notc4 $_notc5",
-                 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-}
-
-static void check_tcl_msgm(char *cmd, char *nick, char *uhost,
+static int check_tcl_msgm(char *cmd, char *nick, char *uhost,
                            struct userrec *u, char *arg)
 {
   struct flag_record fr = { FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0 };
+  int x;
   char args[1024];
 
   if (arg[0])
@@ -142,12 +128,50 @@ static void check_tcl_msgm(char *cmd, char *nick, char *uhost,
   Tcl_SetVar(interp, "_msgm2", uhost, 0);
   Tcl_SetVar(interp, "_msgm3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_msgm4", args, 0);
-  check_tcl_bind(H_msgm, args, &fr, " $_msgm1 $_msgm2 $_msgm3 $_msgm4",
-                 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
+  x = check_tcl_bind(H_msgm, args, &fr, " $_msgm1 $_msgm2 $_msgm3 $_msgm4",
+                     MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE | BIND_STACKRET);
+
+  /*
+   * 0 - no match
+   * 1 - match, log
+   * 2 - match, don't log
+   */
+  if (x == BIND_NOMATCH)
+    return 0;
+  if (x == BIND_EXEC_LOG)
+    return 2;
+
+  return 1;
 }
 
-/* Return 1 if processed.
- */
+static int check_tcl_notc(char *nick, char *uhost, struct userrec *u,
+                           char *dest, char *arg)
+{
+  struct flag_record fr = { FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0 };
+  int x;
+
+  get_user_flagrec(u, &fr, NULL);
+  Tcl_SetVar(interp, "_notc1", nick, 0);
+  Tcl_SetVar(interp, "_notc2", uhost, 0);
+  Tcl_SetVar(interp, "_notc3", u ? u->handle : "*", 0);
+  Tcl_SetVar(interp, "_notc4", arg, 0);
+  Tcl_SetVar(interp, "_notc5", dest, 0);
+  x = check_tcl_bind(H_notc, arg, &fr, " $_notc1 $_notc2 $_notc3 $_notc4 $_notc5",
+                     MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE | BIND_STACKRET);
+
+  /*
+   * 0 - no match
+   * 1 - match, log
+   * 2 - match, don't log
+   */
+  if (x == BIND_NOMATCH)
+    return 0;
+  if (x == BIND_EXEC_LOG)
+    return 2;
+
+  return 1;
+}
+
 static int check_tcl_raw(char *from, char *code, char *msg)
 {
   int x;
@@ -157,6 +181,8 @@ static int check_tcl_raw(char *from, char *code, char *msg)
   Tcl_SetVar(interp, "_raw3", msg, 0);
   x = check_tcl_bind(H_raw, code, 0, " $_raw1 $_raw2 $_raw3",
                      MATCH_EXACT | BIND_STACKABLE | BIND_WANTRET);
+
+  /* Return 1 if processed */
   return (x == BIND_EXEC_LOG);
 }
 
@@ -188,12 +214,19 @@ static int check_tcl_wall(char *from, char *msg)
   Tcl_SetVar(interp, "_wall1", from, 0);
   Tcl_SetVar(interp, "_wall2", msg, 0);
   x = check_tcl_bind(H_wall, msg, 0, " $_wall1 $_wall2",
-                     MATCH_MASK | BIND_STACKABLE);
-  if (x == BIND_EXEC_LOG) {
-    putlog(LOG_WALL, "*", "!%s! %s", from, msg);
-    return 1;
-  } else
+                     MATCH_MASK | BIND_STACKABLE | BIND_STACKRET);
+
+  /*
+   * 0 - no match
+   * 1 - match, log
+   * 2 - match, don't log
+   */
+  if (x == BIND_NOMATCH)
     return 0;
+  if (x == BIND_EXEC_LOG)
+    return 2;
+
+  return 1;
 }
 
 static int check_tcl_flud(char *nick, char *uhost, struct userrec *u,
@@ -327,6 +360,14 @@ static int detect_flood(char *floodnick, char *floodhost, char *from, int which)
   struct userrec *u;
   int thr = 0, lapse = 0, atr;
 
+  /* Okay, make sure i'm not flood-checking myself */
+  if (match_my_nick(floodnick))
+    return 0;
+
+  /* My user@host (?) */
+  if (!egg_strcasecmp(floodhost, botuserhost))
+    return 0;
+
   u = get_user_by_host(from);
   atr = u ? u->flags : 0;
   if (atr & (USER_BOT | USER_FRIEND))
@@ -348,11 +389,7 @@ static int detect_flood(char *floodnick, char *floodhost, char *from, int which)
   }
   if ((thr == 0) || (lapse == 0))
     return 0;                   /* No flood protection */
-  /* Okay, make sure i'm not flood-checking myself */
-  if (match_my_nick(floodnick))
-    return 0;
-  if (!egg_strcasecmp(floodhost, botuserhost))
-    return 0;                   /* My user@host (?) */
+
   p = strchr(floodhost, '@');
   if (p) {
     p++;
@@ -410,8 +447,8 @@ static int detect_avalanche(char *msg)
  */
 static int gotmsg(char *from, char *msg)
 {
-  char *to, buf[UHOSTLEN], *nick, ctcpbuf[512], *uhost = buf, *ctcp;
-  char *p, *p1, *code;
+  char *to, buf[UHOSTLEN], *nick, ctcpbuf[512], *uhost = buf, *ctcp,
+       *p, *p1, *code;
   struct userrec *u;
   int ctcp_count = 0;
   int ignoring;
@@ -460,9 +497,10 @@ static int gotmsg(char *from, char *msg)
         ctcp_count++;
         if (ctcp[0] != ' ') {
           code = newsplit(&ctcp);
+
+          /* CTCP from oper, don't interpret */
           if ((to[0] == '$') || strchr(to, '.')) {
             if (!ignoring)
-              /* Don't interpret */
               putlog(LOG_PUBLIC, to, "CTCP %s: %s from %s (%s) to %s",
                      code, ctcp, nick, uhost, to);
           } else {
@@ -517,28 +555,33 @@ static int gotmsg(char *from, char *msg)
     }
   }
   if (msg[0]) {
+    int result = 0;
+
+    /* Msg from oper, don't interpret */
     if ((to[0] == '$') || (strchr(to, '.') != NULL)) {
-      /* Msg from oper */
       if (!ignoring) {
         detect_flood(nick, uhost, from, FLOOD_PRIVMSG);
-        /* Do not interpret as command */
         putlog(LOG_MSGS | LOG_SERV, "*", "[%s!%s to %s] %s",
                nick, uhost, to, msg);
       }
-    } else {
-      char *code;
-      struct userrec *u;
-
-      detect_flood(nick, uhost, from, FLOOD_PRIVMSG);
-      u = get_user_by_host(from);
-      code = newsplit(&msg);
-      rmspace(msg);
-      if (!ignoring || trigger_on_ignore)
-        check_tcl_msgm(code, nick, uhost, u, msg);
-      if (!ignoring)
-        if (!check_tcl_msg(code, nick, uhost, u, msg))
-          putlog(LOG_MSGS, "*", "[%s] %s %s", from, code, msg);
+      return 0;
     }
+
+    detect_flood(nick, uhost, from, FLOOD_PRIVMSG);
+    u = get_user_by_host(from);
+    code = newsplit(&msg);
+    rmspace(msg);
+
+    if (!ignoring || trigger_on_ignore) {
+      result = check_tcl_msgm(code, nick, uhost, u, msg);
+
+      if (!result || !exclusive_binds)
+        if (check_tcl_msg(code, nick, uhost, u, msg))
+          return 0;
+    }
+
+    if (!ignoring && result != 2)
+      putlog(LOG_MSGS, "*", "[%s] %s %s", from, code, msg);
   }
   return 0;
 }
@@ -583,6 +626,7 @@ static int gotnotice(char *from, char *msg)
       if (ctcp[0] != ' ') {
         char *code = newsplit(&ctcp);
 
+        /* CTCP reply from oper, don't interpret */
         if ((to[0] == '$') || strchr(to, '.')) {
           if (!ignoring)
             putlog(LOG_PUBLIC, "*",
@@ -603,25 +647,36 @@ static int gotnotice(char *from, char *msg)
     }
   }
   if (msg[0]) {
-    if (((to[0] == '$') || strchr(to, '.')) && !ignoring) {
-      detect_flood(nick, uhost, from, FLOOD_NOTICE);
-      putlog(LOG_MSGS | LOG_SERV, "*", "-%s (%s) to %s- %s",
-             nick, uhost, to, msg);
-    } else {
-      /* Server notice? */
-      if ((nick[0] == 0) || (uhost[0] == 0)) {
-        /* Hidden `250' connection count message from server */
-        if (strncmp(msg, "Highest connection count:", 25))
-          putlog(LOG_SERV, "*", "-NOTICE- %s", msg);
-      } else {
+
+    /* Notice from oper, don't interpret */
+    if ((to[0] == '$') || (strchr(to, '.') != NULL)) {
+      if (!ignoring) {
         detect_flood(nick, uhost, from, FLOOD_NOTICE);
-        u = get_user_by_host(from);
-        if (!ignoring || trigger_on_ignore)
-          check_tcl_notc(nick, uhost, u, botname, msg);
-        if (!ignoring)
-          putlog(LOG_MSGS, "*", "-%s (%s)- %s", nick, uhost, msg);
+        putlog(LOG_MSGS | LOG_SERV, "*", "-%s (%s) to %s- %s",
+               nick, uhost, to, msg);
       }
+      return 0;
     }
+
+    /* Server notice? */
+    if ((nick[0] == 0) || (uhost[0] == 0)) {
+
+      /* Hidden `250' connection count message from server */
+      if (strncmp(msg, "Highest connection count:", 25))
+        putlog(LOG_SERV, "*", "-NOTICE- %s", msg);
+
+      return 0;
+    }
+
+    detect_flood(nick, uhost, from, FLOOD_NOTICE);
+    u = get_user_by_host(from);
+
+    if (!ignoring || trigger_on_ignore)
+      if (check_tcl_notc(nick, uhost, u, botname, msg) == 2)
+        return 0;
+
+    if (!ignoring)
+      putlog(LOG_MSGS, "*", "-%s (%s)- %s", nick, uhost, msg);
   }
   return 0;
 }
@@ -659,15 +714,10 @@ static int got251(char *from, char *msg)
 static int gotwall(char *from, char *msg)
 {
   char *nick;
-  int r;
 
   fixcolon(msg);
-  r = check_tcl_wall(from, msg);
 
-  if (r == 0) {
-    /* Following is not needed at all, but we'll keep it for compatibility sake,
-     * so not to confuse possible scripts that are parsing log files.
-     */
+  if (check_tcl_wall(from, msg) != 2) {
     if (strchr(from, '!')) {
       nick = splitnick(&from);
       putlog(LOG_WALL, "*", "!%s(%s)! %s", nick, from, msg);
@@ -695,7 +745,7 @@ static void minutely_checks()
      * check that it's not just a truncation of the full nick.
      */
     if (strncmp(botname, origbotname, strlen(botname))) {
-      /* See if my nickname is in use and if if my nick is right.  */
+      /* See if my nickname is in use and if if my nick is right. */
       alt = get_altbotnick();
       if (alt[0] && egg_strcasecmp(botname, alt))
         dprintf(DP_SERVER, "ISON :%s %s %s\n", botname, origbotname, alt);
@@ -1249,7 +1299,12 @@ static void server_resolve_success(int servidx)
     if (pass[0])
       dprintf(DP_MODE, "PASS %s\n", pass);
     dprintf(DP_MODE, "NICK %s\n", botname);
+
+    rmspace(botrealname);
+    if (botrealname[0] == 0)
+      strcpy(botrealname, "/msg LamestBot hello");
     dprintf(DP_MODE, "USER %s . . :%s\n", botuser, botrealname);
-    /* Wait for async result now */
+
+    /* Wait for async result now. */
   }
 }

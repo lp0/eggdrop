@@ -2,11 +2,11 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.100 2004/06/27 17:26:51 wcc Exp $
+ * $Id: irc.c,v 1.104 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -436,6 +436,7 @@ static void reset_chan_info(struct chanset_t *chan)
     else
       dprintf(DP_MODE, "WHO %s\n", chan->name);
     /* clear_channel nuked the data...so */
+    dprintf(DP_MODE, "TOPIC %s\r\n", chan->name);
   }
 }
 
@@ -832,9 +833,10 @@ static int check_tcl_pub(char *nick, char *from, char *chname, char *msg)
   return 1;
 }
 
-static void check_tcl_pubm(char *nick, char *from, char *chname, char *msg)
+static int check_tcl_pubm(char *nick, char *from, char *chname, char *msg)
 {
   struct flag_record fr = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
+  int x;
   char buf[1024], host[161];
   struct userrec *u;
 
@@ -847,8 +849,20 @@ static void check_tcl_pubm(char *nick, char *from, char *chname, char *msg)
   Tcl_SetVar(interp, "_pubm3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_pubm4", chname, 0);
   Tcl_SetVar(interp, "_pubm5", msg, 0);
-  check_tcl_bind(H_pubm, buf, &fr, " $_pubm1 $_pubm2 $_pubm3 $_pubm4 $_pubm5",
-                 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
+  x = check_tcl_bind(H_pubm, buf, &fr, " $_pubm1 $_pubm2 $_pubm3 $_pubm4 $_pubm5",
+                     MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE | BIND_STACKRET);
+
+  /*
+   * 0 - no match
+   * 1 - match, log
+   * 2 - match, don't log
+   */
+  if (x == BIND_NOMATCH)
+    return 0;
+  if (x == BIND_EXEC_LOG)
+    return 2;
+
+  return 1;
 }
 
 static void check_tcl_need(char *chname, char *type)

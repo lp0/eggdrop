@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: mod-server.html,v 1.31 2004/01/09 05:56:36 wcc Exp $ -->
+<!-- $Id: mod-server.html,v 1.36 2006-03-27 06:48:58 wcc Exp $ -->
 
 <html>
   <head>
@@ -230,8 +230,8 @@
         <dt><strong>set strict-host 0</strong></dt>
 
         <dd>
-          <p>Set this to 1 if you don&#39;t want your the bot to strip a
-          leading &#39;~&#39;on user@hosts.</p>
+          <p>Set this to 0 if you want the bot to strip &#39;~&#39; characters
+          from user@hosts before matching them.</p>
         </dd>
 
         <dt><strong>set quiet-reject 1</strong></dt>
@@ -281,6 +281,15 @@
           this to 1.</p>
         </dd>
 
+        <dt><strong>set exclusive-binds 0</strong></dt>
+        <dd>
+          <p>This setting configures PUBM and MSGM binds to be exclusive
+          of PUB and MSG binds. This means if a MSGM bind with the mask
+          &quot;*help*&quot; exists and is triggered, any MSG bindings
+          with &quot;help&quot; in their mask will not be triggered.
+          Don&#39;t enable this unless you know what you are doing!</p>
+        </dd>
+
         <dt><strong>set double-mode 0</strong></dt>
 
         <dd>
@@ -307,8 +316,8 @@
           <p>This enables Eggdrop&#39;s penalty calculation. Every command
           Eggdrop sends to the IRC server raises it&#39;s penalty points.
           If Eggdrop reaches a server limit, it gets disconnected with
-          "excess flood" message. Eggdrop is able to count internal those
-          penalty points, too and take measures against excess flooding.
+          &quot;excess flood&quot; message. Eggdrop is able to count internal
+          those penalty points, too and take measures against excess flooding.
           Note: it&#39;s highly advised to turn this on!</p>
         </dd>
 
@@ -360,7 +369,7 @@
     <hr>
 
     <p><em>Copyright &copy; 1997 Robey Pointer<br>
-    Copyright &copy; 1999, 2000, 2001, 2002, 2003, 2004
+    Copyright &copy; 1999 - 2006 Eggheads Development Team
     <a href="http://www.eggheads.org/"> Eggheads Development Team</a></em></p>
   </body>
 </html>

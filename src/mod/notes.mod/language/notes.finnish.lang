@@ -1,7 +1,7 @@
 # notes.finnish.lang
 #   kieli tiedostot viesti moduuliin
 #
-# $Id: notes.finnish.lang,v 1.1 2004/07/05 04:37:33 wcc Exp $
+# $Id: notes.finnish.lang,v 1.1 2004-07-05 04:37:33 wcc Exp $
 
 0xc000,  Siirrettu viestit: %.70s\n
 0xc001,Vaihdettu %d note%s %s %s.

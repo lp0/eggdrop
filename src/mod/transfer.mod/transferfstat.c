@@ -1,9 +1,9 @@
 /*
  * transferfstat.c -- part of transfer.mod
  *
- * $Id: transferfstat.c,v 1.6 2004/01/09 05:56:39 wcc Exp $
+ * $Id: transferfstat.c,v 1.8 2006-03-28 02:35:51 wcc Exp $
  *
- * Copyright (C) 2003, 2004 Eggheads Development Team
+ * Copyright (C) 2003 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

@@ -1,7 +1,7 @@
 # notes.french.lang
 #   language messages for the notes module
 #
-# $Id: notes.french.lang,v 1.4 2004/04/09 18:00:31 wcc Exp $
+# $Id: notes.french.lang,v 1.4 2004-04-09 18:00:31 wcc Exp $
 
 0xc000,  Fait suivre les notes à : %.70s\n
 0xc001,%d note%s transférées de %s à %s.

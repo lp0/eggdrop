@@ -5,11 +5,11 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.111 2004/07/02 21:21:08 wcc Exp $
+ * $Id: main.c,v 1.118 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -80,7 +80,7 @@ extern struct chanset_t *chanset;
 extern log_t *logs;
 extern Tcl_Interp *interp;
 extern tcl_timer_t *timer, *utimer;
-extern jmp_buf alarmret;
+extern sigjmp_buf alarmret;
 time_t now;
 
 /*
@@ -90,8 +90,8 @@ time_t now;
  * modified versions of this bot.
  */
 
-char egg_version[1024] = "1.6.17";
-int egg_numver = 1061700;
+char egg_version[1024] = "1.6.18";
+int egg_numver = 1061800;
 
 char notify_new[121] = "";      /* Person to send a note to for new users */
 int default_flags = 0;          /* Default user flags                     */
@@ -390,7 +390,7 @@ static void got_hup(int z)
  */
 static void got_alarm(int z)
 {
-  longjmp(alarmret, 1);
+  siglongjmp(alarmret, 1);
 
   /* -Never reached- */
 }
@@ -460,7 +460,7 @@ void eggAssert(const char *file, int line, const char *module)
 
 static void do_arg(char *s)
 {
-  char x[1024], *z = x;
+  char x[512], *z = x;
   int i;
 
   if (s[0] == '-')
@@ -734,7 +734,7 @@ int main(int argc, char **argv)
   /* Version info! */
   egg_snprintf(ver, sizeof ver, "eggdrop v%s", egg_version);
   egg_snprintf(version, sizeof version,
-               "Eggdrop v%s (C) 1997 Robey Pointer (C) 2004 Eggheads",
+               "Eggdrop v%s (C) 1997 Robey Pointer (C) 2006 Eggheads",
                egg_version);
   /* Now add on the patchlevel (for Tcl) */
   sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);
@@ -1043,8 +1043,8 @@ int main(int argc, char **argv)
         /* Unload as many modules as possible */
         int f = 1;
         module_entry *p;
-        Function x;
-        char xx[256];
+        Function startfunc;
+        char name[256];
 
         /* oops, I guess we should call this event before tcl is restarted */
         check_tcl_event("prerestart");
@@ -1061,8 +1061,8 @@ int main(int argc, char **argv)
               d = d->next;
             }
             if (ok) {
-              strcpy(xx, p->name);
-              if (module_unload(xx, botnetnick) == NULL) {
+              strcpy(name, p->name);
+              if (module_unload(name, botnetnick) == NULL) {
                 f = 1;
                 break;
               }
@@ -1070,16 +1070,18 @@ int main(int argc, char **argv)
           }
         }
 
+        /* Make sure we don't have any modules left hanging around other than
+         * "eggdrop" and the two that are supposed to be.
+         */
         for (f = 0, p = module_list; p; p = p->next) {
-          if (!strcmp(p->name, "eggdrop") || !strcmp(p->name, "encryption") ||
-              !strcmp(p->name, "uptime"))
-            f = 0;
-          else
-            f = 1;
+          if (strcmp(p->name, "eggdrop") && strcmp(p->name, "encryption") &&
+              strcmp(p->name, "uptime")) {
+            f++;
+          }
         }
-        if (f)
-          /* Should be only 3 modules now - eggdrop, encryption, and uptime */
+        if (f != 0) {
           putlog(LOG_MISC, "*", MOD_STAGNANT);
+        }
 
         flushlogs();
         kill_tcl();
@@ -1089,8 +1091,8 @@ int main(int argc, char **argv)
         /* this resets our modules which we didn't unload (encryption and uptime) */
         for (p = module_list; p; p = p->next) {
           if (p->funcs) {
-            x = p->funcs[MODCALL_START];
-            x(NULL);
+            startfunc = p->funcs[MODCALL_START];
+            startfunc(NULL);
           }
         }
 
@@ -1098,6 +1100,7 @@ int main(int argc, char **argv)
         restart_chons();
         call_hook(HOOK_LOADED);
       }
+
       do_restart = 0;
     }
   }

@@ -2,11 +2,11 @@
  * main.h
  *   include file to include most other include files
  *
- * $Id: main.h,v 1.29 2004/07/25 11:17:34 wcc Exp $
+ * $Id: main.h,v 1.34 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -71,10 +71,12 @@
 #  define EGG_VARARGS_DEF(type, name) (type name, ...)
 #  define EGG_VARARGS_START(type, name, list) (va_start(list, name), name)
 #else
-#  include <varargs.h>
-#  define EGG_VARARGS(type, name) ()
-#  define EGG_VARARGS_DEF(type, name) (va_alist) va_dcl
-#  define EGG_VARARGS_START(type, name, list) (va_start(list), va_arg(list,type))
+#  ifndef MAKING_DEPEND /* Allows 'make depend' to work on newer GCC versions. */
+#    include <varargs.h>
+#    define EGG_VARARGS(type, name) ()
+#    define EGG_VARARGS_DEF(type, name) (va_alist) va_dcl
+#    define EGG_VARARGS_START(type, name, list) (va_start(list), va_arg(list,type))
+#  endif
 #endif
 
 #include <stdio.h>
@@ -138,12 +140,12 @@ extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,
 
 #ifdef BORGCUBES
 #  define O_NONBLOCK 00000004 /* POSIX non-blocking I/O */
-#endif /* BORGUBES */
+#endif /* BORGCUBES */
 
 /* Use high-order bits for getting the random integer. With random()
  * modulo would probably be sufficient but on systems lacking random(),
  * the function will be just renamed rand().
  */
-#define randint(n) (unsigned long) (random() / (RAND_MAX + 1.0) * ((n) < 0 ? (-(n)) : (n)))
+#define randint(n) (unsigned long) (random() / (RANDOM_MAX + 1.0) * ((n) < 0 ? (-(n)) : (n)))
 
 #endif /* _EGG_MAIN_H */

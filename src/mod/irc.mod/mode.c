@@ -4,11 +4,11 @@
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  *
- * $Id: mode.c,v 1.77 2004/06/27 17:26:51 wcc Exp $
+ * $Id: mode.c,v 1.80 2006-03-28 02:35:51 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1122,7 +1122,6 @@ static int gotmode(char *from, char *origmsg)
           if (op == '\0') {
             break;
           }
-          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           if (ms2[0] == '+') {
             set_key(chan, op);
             if (channel_active(chan))
@@ -1137,6 +1136,7 @@ static int gotmode(char *from, char *origmsg)
             }
             set_key(chan, NULL);
           }
+          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           break;
         case 'o':
           op = newsplit(&msg);
@@ -1199,29 +1199,29 @@ static int gotmode(char *from, char *origmsg)
         case 'b':
           op = newsplit(&msg);
           fixcolon(op);
-          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           if (ms2[0] == '+')
             got_ban(chan, nick, from, op);
           else
             got_unban(chan, nick, from, op, u);
+          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           break;
         case 'e':
           op = newsplit(&msg);
           fixcolon(op);
-          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           if (ms2[0] == '+')
             got_exempt(chan, nick, from, op);
           else
             got_unexempt(chan, nick, from, op, u);
+          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           break;
         case 'I':
           op = newsplit(&msg);
           fixcolon(op);
-          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           if (ms2[0] == '+')
             got_invite(chan, nick, from, op);
           else
             got_uninvite(chan, nick, from, op, u);
+          check_tcl_mode(nick, from, u, chan->dname, ms2, op);
           break;
         }
         if (todo) {

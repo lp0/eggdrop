@@ -3,11 +3,11 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.111 2004/08/04 19:57:13 wcc Exp $
+ * $Id: cmds.c,v 1.114 2006-03-28 02:35:49 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -2837,7 +2837,7 @@ cmd_t C_dcc[] = {
   {"handle",    "",     (Function) cmd_handle,     NULL},
   {"nick",      "",     (Function) cmd_handle,     NULL},
   {"page",      "",     (Function) cmd_page,       NULL},
-  {"quit",      "",     (Function) NULL,           NULL},
+  {"quit",      "",     (Function) CMD_LEAVE,      NULL},
   {"rehash",    "m",    (Function) cmd_rehash,     NULL},
   {"rehelp",    "n",    (Function) cmd_rehelp,     NULL},
   {"relay",     "o",    (Function) cmd_relay,      NULL},

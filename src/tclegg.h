@@ -2,11 +2,11 @@
  * tclegg.h
  *   stuff used by tcl.c and tclhash.c
  *
- * $Id: tclegg.h,v 1.24 2004/01/09 05:56:37 wcc Exp $
+ * $Id: tclegg.h,v 1.30 2006-03-28 02:35:50 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004 Eggheads Development Team
+ * Copyright (C) 1999 - 2006 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,38 +26,76 @@
 #ifndef _EGG_TCLEGG_H
 #define _EGG_TCLEGG_H
 
-#include "lush.h"    /* Include this here, since it's needed in this file */
+#include "lush.h"
 
 #ifndef MAKING_MODS
-#  include "proto.h" /* This file needs this */
+#  include "proto.h"
 #endif
 
-/* Match types for check_tcl_bind
- */
-#define MATCH_PARTIAL       0
-#define MATCH_EXACT         1
-#define MATCH_MASK          2
-#define MATCH_CASE          3
 
-/* Bitwise 'or' these:
+/*
+ * Wow, this is old...CMD_LEAVE goes back to before version 0.9.
+ * This is for partyline and filesys 'quit'.
  */
+#define CMD_LEAVE (Function)(-1)
+
+
+/* Match types for check_tcl_bind(). */
+#define MATCH_PARTIAL   0
+#define MATCH_EXACT     1
+#define MATCH_MASK      2
+#define MATCH_CASE      3
+
+/*
+ * Bitwise 'or' these:
+ */
+
+/* Check flags; make sure the user has the flags required. */
 #define BIND_USE_ATTR       0x04
+
+/* Bind is stackable; more than one bind can have the same name. */
 #define BIND_STACKABLE      0x08
+
+/* Additional flag checking; check for +d, +k, etc.
+ * Currently used for dcc, fil, msg, and pub bind types.
+ * Note that this just causes the flag checking to use flagrec_ok()
+ * instead of flagrec_eq().
+ */
+/* FIXME: Should this really be used for the dcc and fil types since
+ *        they are only available to the partyline/filesys (+p/+x)?
+ *        Eggdrop's revenge code does not add default flags when
+ *        adding a user record for +d or +k flags.
+ */
+/* FIXME: This type actually seems to be obsolete. This was originally
+ *        used to check built-in types in Eggdrop version 1.0.
+ */
 #define BIND_HAS_BUILTINS   0x10
+
+/* Want return; we want to know if the proc returns 1.
+ * Side effect: immediate return; don't do any further
+ * processing of stacked binds.
+ */
 #define BIND_WANTRET        0x20
+
+/* Alternate args; replace args with the return result from the Tcl proc. */
 #define BIND_ALTER_ARGS     0x40
 
-/* Return values
+/* Stacked return; we want to know if any proc returns 1,
+ * and also want to process all stacked binds.
  */
+#define BIND_STACKRET       0x80
+
+
+/* Return values. */
 #define BIND_NOMATCH    0
 #define BIND_AMBIGUOUS  1
 #define BIND_MATCHED    2       /* But the proc couldn't be found */
 #define BIND_EXECUTED   3
 #define BIND_EXEC_LOG   4       /* Proc returned 1 -> wants to be logged */
-#define BIND_EXEC_BRK   5       /* Proc returned BREAK (quit) */
+#define BIND_QUIT       5       /* CMD_LEAVE 'quit' from partyline or filesys */
 
 /* Extra commands are stored in Tcl hash tables (one hash table for each type
- * of command: msg, dcc, etc)
+ * of command: msg, dcc, etc).
  */
 typedef struct timer_str {
   struct timer_str *next;
@@ -67,18 +105,25 @@ typedef struct timer_str {
 } tcl_timer_t;
 
 
-/* Used for stub functions:
- */
-
+/* Used for Tcl stub functions */
 #define STDVAR (cd, irp, argc, argv)                                    \
         ClientData cd;                                                  \
         Tcl_Interp *irp;                                                \
         int argc;                                                       \
         char *argv[];
+
 #define BADARGS(nl, nh, example) do {                                   \
         if ((argc < (nl)) || (argc > (nh))) {                           \
                 Tcl_AppendResult(irp, "wrong # args: should be \"",     \
                                  argv[0], (example), "\"", NULL);       \
+                return TCL_ERROR;                                       \
+        }                                                               \
+} while (0)
+
+#define CHECKVALIDITY(a)        do {                                    \
+        if (!check_validity(argv[0], (a))) {                            \
+                Tcl_AppendResult(irp, "bad builtin command call!",      \
+                                 NULL);                                 \
                 return TCL_ERROR;                                       \
         }                                                               \
 } while (0)
