@@ -2,11 +2,11 @@
  * users.h
  *   structures and definitions used by users.c and userrec.c
  *
- * $Id: users.h,v 1.10 2002/03/29 05:53:55 guppy Exp $
+ * $Id: users.h,v 1.13 2003/01/29 05:48:41 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,9 +32,9 @@ struct list_type {
   char *extra;
 };
 
-#define list_insert(a,b) {						\
-    	(b)->next = *(a);						\
-	*(a) = (b);							\
+#define list_insert(a,b) {                                              \
+        (b)->next = *(a);                                               \
+        *(a) = (b);                                                     \
 }
 int list_append(struct list_type **, struct list_type *);
 int list_delete(struct list_type **, struct list_type *);
@@ -48,8 +48,7 @@ struct user_entry;
 struct user_entry_type {
   struct user_entry_type *next;
   int (*got_share) (struct userrec *, struct user_entry *, char *, int);
-  int (*dup_user) (struct userrec *, struct userrec *,
-		   struct user_entry *);
+  int (*dup_user) (struct userrec *, struct userrec *, struct user_entry *);
   int (*unpack) (struct userrec *, struct user_entry *);
   int (*pack) (struct userrec *, struct user_entry *);
   int (*write_userfile) (FILE *, struct userrec *, struct user_entry *);
@@ -57,9 +56,9 @@ struct user_entry_type {
   void *(*get) (struct userrec *, struct user_entry *);
   int (*set) (struct userrec *, struct user_entry *, void *);
   int (*tcl_get) (Tcl_Interp *, struct userrec *, struct user_entry *,
-		  int, char **);
+                  int, char **);
   int (*tcl_set) (Tcl_Interp *, struct userrec *, struct user_entry *,
-		  int, char **);
+                  int, char **);
   int (*expmem) (struct user_entry *);
   void (*display) (int idx, struct user_entry *);
   char *name;
@@ -68,8 +67,8 @@ struct user_entry_type {
 
 #ifndef MAKING_MODS
 extern struct user_entry_type USERENTRY_COMMENT, USERENTRY_LASTON,
- USERENTRY_XTRA, USERENTRY_INFO, USERENTRY_BOTADDR, USERENTRY_HOSTS,
- USERENTRY_PASS, USERENTRY_BOTFL;
+  USERENTRY_XTRA, USERENTRY_INFO, USERENTRY_BOTADDR, USERENTRY_HOSTS,
+  USERENTRY_PASS, USERENTRY_BOTFL;
 #endif
 
 
@@ -113,8 +112,8 @@ void *_user_malloc(int size, const char *file, int line);
 void *_user_realloc(void *ptr, int size, const char *file, int line);
 
 #ifndef MAKING_MODS
-#  define user_malloc(x)	_user_malloc(x, __FILE__, __LINE__)
-#  define user_realloc(x, y)	_user_realloc(x, y, __FILE__, __LINE__)
+#  define user_malloc(x)     _user_malloc(x, __FILE__, __LINE__)
+#  define user_realloc(x, y) _user_realloc(x, y, __FILE__, __LINE__)
 #endif
 
 int add_entry_type(struct user_entry_type *);
@@ -124,9 +123,9 @@ struct user_entry *find_user_entry(struct user_entry_type *, struct userrec *);
 void *get_user(struct user_entry_type *, struct userrec *);
 int set_user(struct user_entry_type *, struct userrec *, void *);
 
-#define bot_flags(u)	((long)get_user(&USERENTRY_BOTFL, (u)))
-#define is_bot(u)	((u) && ((u)->flags & USER_BOT))
-#define is_owner(u)	((u) && ((u)->flags & USER_OWNER))
+#define bot_flags(u) ((long)get_user(&USERENTRY_BOTFL, (u)))
+#define is_bot(u)    ((u) && ((u)->flags & USER_BOT))
+#define is_owner(u)  ((u) && ((u)->flags & USER_OWNER))
 
 /* Fake users used to store ignores and bans
  */
@@ -189,15 +188,13 @@ int def_kill(struct user_entry *e);
 int def_write_userfile(FILE *f, struct userrec *u, struct user_entry *e);
 void *def_get(struct userrec *u, struct user_entry *e);
 int def_set(struct userrec *u, struct user_entry *e, void *buf);
-int def_gotshare(struct userrec *u, struct user_entry *e,
-		 char *data, int idx);
+int def_gotshare(struct userrec *u, struct user_entry *e, char *data, int idx);
 int def_tcl_get(Tcl_Interp *interp, struct userrec *u,
-		struct user_entry *e, int argc, char **argv);
+                struct user_entry *e, int argc, char **argv);
 int def_tcl_set(Tcl_Interp *irp, struct userrec *u,
-		struct user_entry *e, int argc, char **argv);
+                struct user_entry *e, int argc, char **argv);
 int def_expmem(struct user_entry *e);
 void def_display(int idx, struct user_entry *e);
-int def_dupuser(struct userrec *new, struct userrec *old,
-		struct user_entry *e);
+int def_dupuser(struct userrec *new, struct userrec *old, struct user_entry *e);
 
-#endif				/* _EGG_USERS_H */
+#endif /* _EGG_USERS_H */

@@ -1,7 +1,7 @@
 dnl aclocal.m4
 dnl   macros autoconf uses when building configure from configure.in
 dnl
-dnl $Id: aclocal.m4,v 1.59 2002/08/24 17:29:46 wcc Exp $
+dnl $Id: aclocal.m4,v 1.66 2003/04/01 05:33:40 wcc Exp $
 dnl
 
 
@@ -25,13 +25,6 @@ AC_MSG_RESULT()
 AC_MSG_RESULT([Type 'make config' to configure the modules, or type 'make iconfig'])
 AC_MSG_RESULT(to interactively choose which modules to compile.)
 AC_MSG_RESULT()
-if test -f "./$EGGEXEC"
-then
-  AC_MSG_RESULT([After that, type 'make clean' and then 'make' to create the bot.])
-else
-  AC_MSG_RESULT([After that, type 'make' to create the bot.])
-fi
-AC_MSG_RESULT()
 ])dnl
 
 
@@ -53,6 +46,61 @@ EOF
 fi
 ])dnl
 
+dnl  EGG_IPV6_SUPPORTED()
+dnl
+AC_DEFUN(EGG_IPV6_SUPPORTED, [dnl
+AC_MSG_CHECKING(for kernel IPv6 support)
+AC_CACHE_VAL(egg_cv_ipv6_supported,[
+ AC_TRY_RUN([
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdio.h>
+
+int main()
+{
+  struct sockaddr_in6 sin6;
+  int s = socket(AF_INET6, SOCK_STREAM, 0);
+
+  if (s != -1)
+    close(s);
+  return (s == -1);
+}
+], egg_cv_ipv6_supported=yes, egg_cv_ipv6_supported=no,
+egg_cv_ipv6_supported=no)])
+if test "$egg_cv_ipv6_supported" = "yes"
+then
+  AC_MSG_RESULT(yes)
+else
+  AC_MSG_RESULT(no)
+fi
+])dnl
+
+dnl  EGG_IPV6_OPTIONS()
+dnl
+AC_DEFUN(EGG_IPV6_OPTIONS, [dnl
+AC_MSG_CHECKING(whether or not you enabled IPv6 support)
+AC_ARG_ENABLE(ipv6, [  --enable-ipv6           enable IPv6 support],
+[ ac_cv_ipv6="yes"
+  if test "$egg_cv_ipv6_supported" = "no"
+  then
+    ac_cv_ipv6="no"
+  fi
+  AC_MSG_RESULT($ac_cv_ipv6)
+],
+[ ac_cv_ipv6="no"
+  AC_MSG_RESULT(no)
+])
+if test "$ac_cv_ipv6" = "yes"
+then
+  AC_DEFINE(HAVE_IPV6)
+  ENABLEIPV6="--enable-ipv6"
+fi
+AC_SUBST(ENABLEIPV6)
+])dnl
 
 dnl  EGG_CHECK_CCPIPE()
 dnl
@@ -133,7 +181,7 @@ dnl check if user requested to remove -O2 cflag
 dnl would be usefull on some weird *nix
 AC_DEFUN(EGG_DISABLE_CC_OPTIMIZATION, [dnl
  AC_ARG_ENABLE(cc-optimization,
-   [  --disable-cc-optimization   disable -O2 cflag],  
+   [  --disable-cc-optimization  disable -O2 cflag],  
    CFLAGS=`echo $CFLAGS | sed 's/\-O2//'`)
 ])dnl
 
@@ -312,6 +360,7 @@ case "$egg_cv_var_system_type" in
       ;;
     esac
     AC_DEFINE(STOP_UAC)dnl
+    AC_DEFINE(BROKEN_SNPRINTF)dnl
   ;;
   SunOS)
     if test "`echo $egg_cv_var_system_release | cut -d . -f 1`" = "5"
@@ -467,6 +516,7 @@ int main()
   char *src = "0x001,guppyism\n";
   char dst[10];
   int idx;
+
   if (sscanf(src, "0x%x,%10c", &idx, dst) == 1)
     exit(1);
   return 0;
@@ -947,18 +997,6 @@ fi
 ])dnl
 
 
-dnl  EGG_TCL_CHECK_PRE75()
-dnl
-AC_DEFUN(EGG_TCL_CHECK_PRE75, [dnl
-# Are we using a pre 7.5 Tcl version ?
-TCL_VER_PRE75=`echo $egg_cv_var_tcl_version | $AWK '{split([$]1, i, "."); if (((i[[1]] == 7) && (i[[2]] < 5)) || (i[[1]] < 7)) print "yes"; else print "no"}'`
-if test "$TCL_VER_PRE75" = "yes"
-then
-  AC_DEFINE(HAVE_PRE7_5_TCL)dnl
-fi
-])dnl
-
-
 dnl  EGG_TCL_TESTLIBS()
 dnl
 AC_DEFUN(EGG_TCL_TESTLIBS, [dnl
@@ -995,8 +1033,7 @@ dnl  EGG_TCL_ENABLE_THREADS()
 dnl
 AC_DEFUN(EGG_TCL_ENABLE_THREADS, [dnl
 AC_ARG_ENABLE(tcl-threads,
-[  --disable-tcl-threads   Disable threaded Tcl support if detected. (Ignore this
-                          option unless you know what you are doing)],
+[  --disable-tcl-threads   disable threaded Tcl support if detected ],
 enable_tcl_threads="$enableval",
 enable_tcl_threads=yes)
 ])dnl

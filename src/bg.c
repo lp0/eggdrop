@@ -3,11 +3,11 @@
  *   moving the process to the background, i.e. forking, while keeping threads
  *   happy.
  *
- * $Id: bg.c,v 1.5 2002/01/02 03:46:35 guppy Exp $
+ * $Id: bg.c,v 1.8 2003/01/30 07:15:13 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,7 +32,7 @@
 #  define SUPPORT_THREADS
 #endif
 
-extern char	pid_file[];
+extern char pid_file[];
 
 #ifdef SUPPORT_THREADS
 
@@ -70,39 +70,35 @@ extern char	pid_file[];
  */
 
 /* Format of messages sent from the newly forked process to the
-   original process, connected to the terminal. */
+ * original process, connected to the terminal.
+ */
 typedef struct {
-	enum {
-		BG_COMM_QUIT,		/* Quit original process. Write
-					   PID file, etc. i.e. detach.	 */
-		BG_COMM_ABORT,		/* Quit original process.	 */
-		BG_COMM_TRANSFERPF	/* Sending pid_file.		 */
-	} comm_type;
-	union {
-		struct {		/* Data for BG_COMM_TRANSFERPF.	 */
-			int	len;	/* Length of the file name.	 */
-		} transferpf;
-	} comm_data;
+  enum {
+    BG_COMM_QUIT,      /* Quit original process. Write PID file, detach. */
+    BG_COMM_ABORT,     /* Quit original process.                         */
+    BG_COMM_TRANSFERPF /* Sending pid_file.                              */
+  } comm_type;
+  union {
+    struct {           /* Data for BG_COMM_TRANSFERPF.                   */
+      int len;         /* Length of the file name.                       */
+    } transferpf;
+  } comm_data;
 } bg_comm_t;
 
 typedef enum {
-	BG_NONE = 0,			/* No forking has taken place
-					   yet.				 */
-	BG_SPLIT,			/* I'm the newly forked process. */
-	BG_PARENT			/* I'm the original process.	 */
+  BG_NONE = 0,         /* No forking has taken place yet.                */
+  BG_SPLIT,            /* I'm the newly forked process.                  */
+  BG_PARENT            /* I'm the original process.                      */
 } bg_state_t;
 
 typedef struct {
-	int		comm_recv;	/* Receives messages from the
-					   child process.		 */
-	int		comm_send;	/* Sends messages to the parent
-					   process.			 */
-	bg_state_t	state;		/* Current state, see above
-					   enum descriptions.		 */
-	pid_t		child_pid;	/* PID of split process.	 */
+  int comm_recv;        /* Receives messages from the child process.     */
+  int comm_send;        /* Sends messages to the parent process.         */
+  bg_state_t state;     /* Current state, see above enum descriptions.   */
+  pid_t child_pid;      /* PID of split process.                         */
 } bg_t;
 
-static bg_t	bg = { 0 };
+static bg_t bg = { 0 };
 
 #endif /* SUPPORT_THREADS */
 
@@ -113,7 +109,7 @@ static bg_t	bg = { 0 };
  */
 static void bg_do_detach(pid_t p)
 {
-  FILE	*fp;
+  FILE *fp;
 
   /* Need to attempt to write pid now, not later. */
   unlink(pid_file);
@@ -142,12 +138,12 @@ void bg_prepare_split(void)
 {
 #ifdef SUPPORT_THREADS
   /* Create a pipe between parent and split process, fork to create a
-     parent and a split process and wait for messages on the pipe. */
-  pid_t		p;
-  bg_comm_t	message;
+   * parent and a split process and wait for messages on the pipe. */
+  pid_t p;
+  bg_comm_t message;
 
   {
-    int		comm_pair[2];
+    int comm_pair[2];
 
     if (pipe(comm_pair) < 0)
       fatal("CANNOT OPEN PIPE.", 0);
@@ -179,10 +175,10 @@ void bg_prepare_split(void)
       /* Now transferring file from split process.
        */
       if (message.comm_data.transferpf.len >= 40)
-	message.comm_data.transferpf.len = 40 - 1;
+        message.comm_data.transferpf.len = 40 - 1;
       /* Next message contains data. */
       if (read(bg.comm_recv, pid_file, message.comm_data.transferpf.len) <= 0)
-	goto error;
+        goto error;
       pid_file[message.comm_data.transferpf.len] = 0;
       break;
     }
@@ -202,7 +198,7 @@ error:
  */
 static void bg_send_pidfile(void)
 {
-  bg_comm_t	message;
+  bg_comm_t message;
 
   message.comm_type = BG_COMM_TRANSFERPF;
   message.comm_data.transferpf.len = strlen(pid_file);
@@ -225,7 +221,7 @@ void bg_send_quit(bg_quit_t q)
   if (bg.state == BG_PARENT) {
     kill(bg.child_pid, SIGKILL);
   } else if (bg.state == BG_SPLIT) {
-    bg_comm_t	message;
+    bg_comm_t message;
 
     if (q == BG_QUIT) {
       bg_send_pidfile();
@@ -242,13 +238,11 @@ void bg_send_quit(bg_quit_t q)
 void bg_do_split(void)
 {
 #ifdef SUPPORT_THREADS
-  /* Tell our parent process to go away now, as we don't need it
-     anymore. */
+  /* Tell our parent process to go away now, as we don't need it anymore. */
   bg_send_quit(BG_QUIT);
 #else
-  /* Split off a new process.
-   */
-  int	xx = fork();
+  /* Split off a new process. */
+  int xx = fork();
 
   if (xx == -1)
     fatal("CANNOT FORK PROCESS.", 0);

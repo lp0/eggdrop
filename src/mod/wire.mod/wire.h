@@ -1,10 +1,10 @@
 /*
  * wire.h -- part of wire.mod
  *
- * $Id: wire.h,v 1.6 2002/01/02 03:46:41 guppy Exp $
+ * $Id: wire.h,v 1.9 2003/01/29 05:48:42 wcc Exp $
  */
 /*
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,17 +24,17 @@
 #ifndef _EGG_MOD_WIRE_WIRE_H
 #define _EGG_MOD_WIRE_WIRE_H
 
-#define WIRE_IDLE		MISC_IDLE
-#define WIRE_AWAY		MISC_AWAY
-#define WIRE_NOTONWIRE		get_language(0xa000)
-#define WIRE_CURRENTLYON	get_language(0xa001)
-#define WIRE_NOLONGERWIRED	get_language(0xa002)
-#define WIRE_CHANGINGKEY	get_language(0xa003)
-#define WIRE_INFO1		get_language(0xa004)
-#define WIRE_INFO2		get_language(0xa005)
-#define WIRE_INFO3		get_language(0xa006)
-#define WIRE_JOINED		get_language(0xa007)
-#define WIRE_LEFT		get_language(0xa008)
-#define WIRE_UNLOAD		get_language(0xa009)
+#define WIRE_IDLE               MISC_IDLE
+#define WIRE_AWAY               MISC_AWAY
+#define WIRE_NOTONWIRE          get_language(0xa000)
+#define WIRE_CURRENTLYON        get_language(0xa001)
+#define WIRE_NOLONGERWIRED      get_language(0xa002)
+#define WIRE_CHANGINGKEY        get_language(0xa003)
+#define WIRE_INFO1              get_language(0xa004)
+#define WIRE_INFO2              get_language(0xa005)
+#define WIRE_INFO3              get_language(0xa006)
+#define WIRE_JOINED             get_language(0xa007)
+#define WIRE_LEFT               get_language(0xa008)
+#define WIRE_UNLOAD             get_language(0xa009)
 
-#endif				/* _EGG_MOD_WIRE_WIRE_H */
+#endif /* _EGG_MOD_WIRE_WIRE_H */

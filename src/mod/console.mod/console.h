@@ -1,10 +1,10 @@
 /*
  * console.h -- part of console.mod
  *
- * $Id: console.h,v 1.3 2002/01/02 03:46:38 guppy Exp $
+ * $Id: console.h,v 1.6 2003/01/29 05:48:41 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -24,15 +24,15 @@
 #ifndef _EGG_MOD_CONSOLE_CONSOLE_H
 #define _EGG_MOD_CONSOLE_CONSOLE_H
 
-#define CONSOLE_SAVED_SETTINGS	get_language(0xb040)
-#define CONSOLE_SAVED_SETTINGS2	get_language(0xb041)
-#define CONSOLE_CHANNEL		get_language(0xb042)
-#define CONSOLE_FLAGS		get_language(0xb043)
-#define CONSOLE_STRIPFLAGS	get_language(0xb044)
-#define CONSOLE_ECHO		get_language(0xb045)
-#define CONSOLE_PAGE_SETTING	get_language(0xb046)
-#define CONSOLE_CHANNEL2	get_language(0xb047)
-#define CONSOLE_YES		get_language(0xb048)
-#define CONSOLE_NO		get_language(0xb049)
+#define CONSOLE_SAVED_SETTINGS  get_language(0xb040)
+#define CONSOLE_SAVED_SETTINGS2 get_language(0xb041)
+#define CONSOLE_CHANNEL         get_language(0xb042)
+#define CONSOLE_FLAGS           get_language(0xb043)
+#define CONSOLE_STRIPFLAGS      get_language(0xb044)
+#define CONSOLE_ECHO            get_language(0xb045)
+#define CONSOLE_PAGE_SETTING    get_language(0xb046)
+#define CONSOLE_CHANNEL2        get_language(0xb047)
+#define CONSOLE_YES             get_language(0xb048)
+#define CONSOLE_NO              get_language(0xb049)
 
-#endif				/* _EGG_MOD_CONSOLE_CONSOLE_H */
+#endif /* _EGG_MOD_CONSOLE_CONSOLE_H */

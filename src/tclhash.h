@@ -1,11 +1,11 @@
 /*
  * tclhash.h
  *
- * $Id: tclhash.h,v 1.9 2002/01/02 03:46:36 guppy Exp $
+ * $Id: tclhash.h,v 1.13 2003/03/04 08:51:45 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,47 +26,42 @@
 #define _EGG_TCLHASH_H
 
 
-#define TC_DELETED	0x0001	/* This command/trigger was deleted.	*/
+#define TC_DELETED   0x0001     /* This command/trigger was deleted. */
 
 typedef struct tcl_cmd_b {
-  struct tcl_cmd_b	*next;
+  struct tcl_cmd_b *next;
 
-  struct flag_record	 flags;
-  char			*func_name;	/* Proc name.			*/
-  int			 hits;		/* Number of times this proc
-					   was triggered.		*/
-  u_8bit_t		 attributes;	/* Flags for this entry. TC_*	*/
+  struct flag_record flags;
+  char *func_name;              /* Proc name. */
+  int hits;                     /* Number of times this proc was triggered. */
+  u_8bit_t attributes;          /* Flags for this entry. TC_* */
 } tcl_cmd_t;
 
 
-#define TBM_DELETED	0x0001	/* This mask was deleted.		*/
+#define TBM_DELETED  0x0001     /* This mask was deleted. */
 
 typedef struct tcl_bind_mask_b {
   struct tcl_bind_mask_b *next;
 
-  tcl_cmd_t		 *first;	/* List of commands registered
-					   for this bind.		*/
-  char			 *mask;
-  u_8bit_t		  flags;	/* Flags for this entry. TBM_*	*/
+  tcl_cmd_t *first;             /* List of commands registered for this bind. */
+  char *mask;
+  u_8bit_t flags;               /* Flags for this entry. TBM_*  */
 } tcl_bind_mask_t;
 
 
-#define HT_STACKABLE	0x0001	/* Triggers in this bind list may be
-				   stacked.				*/
-#define HT_DELETED	0x0002	/* This bind list was already deleted.
-				   Do not use it anymore.		*/
+#define HT_STACKABLE 0x0001     /* Triggers in this bind list may be stacked. */
+#define HT_DELETED   0x0002     /* This bind list was already deleted. Do not
+                                 * use it anymore. */
 
 typedef struct tcl_bind_list_b {
   struct tcl_bind_list_b *next;
 
-  tcl_bind_mask_t	 *first;	/* Pointer to registered binds
-					   for this list.		*/
-  char			  name[5];	/* Name of the bind.		*/
-  u_8bit_t		  flags;	/* Flags for this element. HT_*	*/
-  Function		  func;		/* Function used as the Tcl
-					   calling interface for procs
-					   actually representing C
-					   functions.			*/
+  tcl_bind_mask_t *first;       /* Pointer to registered binds
+                                 * for this list.               */
+  char name[5];                 /* Name of the bind.            */
+  u_8bit_t flags;               /* Flags for this element. HT_* */
+  Function func;                /* Function used as the Tcl calling interface
+                                 * for procs actually representing C functions. */
 } tcl_bind_list_t, *p_tcl_bind_list;
 
 
@@ -83,7 +78,8 @@ void del_bind_table(tcl_bind_list_t *tl_which);
 
 tcl_bind_list_t *find_bind_table(const char *nme);
 
-int check_tcl_bind(tcl_bind_list_t *, const char *, struct flag_record *, const char *, int);
+int check_tcl_bind(tcl_bind_list_t *, const char *, struct flag_record *,
+                   const char *, int);
 int check_tcl_dcc(const char *, int, const char *);
 void check_tcl_chjn(const char *, const char *, int, char, int, const char *);
 void check_tcl_chpt(const char *, const char *, int, int);
@@ -123,12 +119,12 @@ extern p_tcl_bind_list H_away, H_nkch, H_filt, H_disc, H_event;
 #endif
 
 
-#define CHECKVALIDITY(a)	do {					\
-	if (!check_validity(argv[0], (a))) {				\
-		Tcl_AppendResult(irp, "bad builtin command call!",	\
-				 NULL);					\
-		return TCL_ERROR;					\
-	}								\
+#define CHECKVALIDITY(a)        do {                                    \
+        if (!check_validity(argv[0], (a))) {                            \
+                Tcl_AppendResult(irp, "bad builtin command call!",      \
+                                 NULL);                                 \
+                return TCL_ERROR;                                       \
+        }                                                               \
 } while (0)
 
-#endif				/* _EGG_TCLHASH_H */
+#endif /* _EGG_TCLHASH_H */

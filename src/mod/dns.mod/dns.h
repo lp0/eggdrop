@@ -4,10 +4,10 @@
  *
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: dns.h,v 1.9 2002/01/02 03:46:38 guppy Exp $
+ * $Id: dns.h,v 1.12 2003/01/29 05:48:41 wcc Exp $
  */
 /*
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,44 +38,44 @@
 #define _EGG_MOD_DNS_DNS_H
 
 struct resolve {
-    struct resolve	*next;
-    struct resolve	*previous;
-    struct resolve	*nextid;
-    struct resolve	*previousid;
-    struct resolve	*nextip;
-    struct resolve	*previousip;
-    struct resolve	*nexthost;
-    struct resolve	*previoushost;
-    time_t		expiretime;
-    char		*hostn;
-    IP			ip;
-    u_16bit_t		id;
-    u_8bit_t		state;
-    u_8bit_t		sends;
+  struct resolve *next;
+  struct resolve *previous;
+  struct resolve *nextid;
+  struct resolve *previousid;
+  struct resolve *nextip;
+  struct resolve *previousip;
+  struct resolve *nexthost;
+  struct resolve *previoushost;
+  time_t expiretime;
+  char *hostn;
+  IP ip;
+  u_16bit_t id;
+  u_8bit_t state;
+  u_8bit_t sends;
 };
 
 enum resolve_states {
-    STATE_FINISHED,
-    STATE_FAILED,
-    STATE_PTRREQ,
-    STATE_AREQ
+  STATE_FINISHED,
+  STATE_FAILED,
+  STATE_PTRREQ,
+  STATE_AREQ
 };
 
 #define IS_PTR(x) (x->state == STATE_PTRREQ)
 #define IS_A(x)   (x->state == STATE_AREQ)
 
 #ifdef DEBUG_DNS
-# define ddebug0		debug0
-# define ddebug1		debug1
-# define ddebug2		debug2
-# define ddebug3		debug3
-# define ddebug4		debug4
-#else	/* !DEBUG_DNS */
+# define ddebug0                debug0
+# define ddebug1                debug1
+# define ddebug2                debug2
+# define ddebug3                debug3
+# define ddebug4                debug4
+#else /* !DEBUG_DNS */
 # define ddebug0(x)
 # define ddebug1(x, x1)
 # define ddebug2(x, x1, x2)
 # define ddebug3(x, x1, x2, x3)
 # define ddebug4(x, x1, x2, x3, x4)
-#endif	/* !DEBUG_DNS */
+#endif /* !DEBUG_DNS */
 
-#endif	/* _EGG_MOD_DNS_DNS_H */
+#endif /* _EGG_MOD_DNS_DNS_H */

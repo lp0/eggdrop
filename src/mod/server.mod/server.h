@@ -1,11 +1,11 @@
 /*
  * server.h -- part of server.mod
  *
- * $Id: server.h,v 1.13 2002/01/02 03:46:40 guppy Exp $
+ * $Id: server.h,v 1.18 2003/01/30 00:41:24 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,8 +30,9 @@
 
 #ifndef MAKING_SERVER
 /* 4 - 7 */
+/* Empty */
 #define botuserhost ((char *)(server_funcs[5]))
-#define quiet_reject (*(int *)(server_funcs[6]))
+/* Was quiet_reject (moved to core) <Wcc[01/21/03]>. */
 #define serv (*(int *)(server_funcs[7]))
 /* 8 - 11 */
 #define flud_thr (*(int*)(server_funcs[8]))
@@ -73,34 +74,34 @@
 #define nick_len (*(int *)(server_funcs[37]))
 #define check_tcl_notc ((int (*)(char *,char *,struct userrec *,char *,char *))server_funcs[38])
 
-#else		/* MAKING_SERVER */
+#else /* MAKING_SERVER */
 
 /* Macros for commonly used commands.
  */
 
-#define free_null(ptr)	do {				\
-	nfree(ptr);					\
-	ptr = NULL;					\
+#define free_null(ptr)  do {                            \
+        nfree(ptr);                                     \
+        ptr = NULL;                                     \
 } while (0)
 
-#endif		/* MAKING_SERVER */
+#endif /* MAKING_SERVER */
 
 struct server_list {
-  struct server_list	*next;
+  struct server_list *next;
 
-  char			*name;
-  int			 port;
-  char			*pass;
-  char			*realname;
+  char *name;
+  int port;
+  char *pass;
+  char *realname;
 };
 
 /* Available net types.  */
 enum {
-	NETT_EFNET		= 0,	/* EfNet except new +e/+I hybrid. */
-	NETT_IRCNET		= 1,	/* Ircnet.			  */
-	NETT_UNDERNET		= 2,	/* Undernet.			  */
-	NETT_DALNET		= 3,	/* Dalnet.			  */
-	NETT_HYBRID_EFNET	= 4	/* new +e/+I Efnet hybrid.	  */
+  NETT_EFNET = 0,               /* EFnet (non +e/+I Hybrid.) */
+  NETT_IRCNET = 1,              /* IRCnet.                   */
+  NETT_UNDERNET = 2,            /* UnderNet.                 */
+  NETT_DALNET = 3,              /* DALnet.                   */
+  NETT_HYBRID_EFNET = 4         /* +e/+I Hybrid.             */
 } nett_t;
 
-#endif		/* _EGG_MOD_SERVER_SERVER_H */
+#endif /* _EGG_MOD_SERVER_SERVER_H */

@@ -1,10 +1,10 @@
 /*
  * inet_aton.c -- provides inet_aton() if necessary.
  *
- * $Id: inet_aton.c,v 1.7 2002/01/02 03:46:36 guppy Exp $
+ * $Id: inet_aton.c,v 1.13 2003/04/01 05:33:40 wcc Exp $
  */
 /*
- * Portions Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Portions Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,7 +26,7 @@
 
 #ifndef HAVE_ISASCII
 /* Let all checks succeed if we don't have isascii(). */
-#  define isascii(x)	1
+#  define isascii(x) 1
 #endif
 
 #ifndef HAVE_INET_ATON
@@ -46,8 +46,8 @@
  *    documentation and/or other materials provided with the distribution.
  * 3. All advertising materials mentioning features or use of this software
  *    must display the following acknowledgement:
- * 	This product includes software developed by the University of
- * 	California, Berkeley and its contributors.
+ *      This product includes software developed by the University of
+ *      California, Berkeley and its contributors.
  * 4. Neither the name of the University nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
@@ -100,87 +100,85 @@ static char rcsid[] = "$-Id: inet_addr.c,v 1.11 1999/04/29 18:19:53 drepper Exp 
  * This replaces inet_addr, the return value from which
  * cannot distinguish between failure and a local broadcast address.
  */
-int
-egg_inet_aton(cp, addr)
-	const char *cp;
-	struct in_addr *addr;
+int egg_inet_aton(cp, addr)
+const char *cp;
+struct in_addr *addr;
 {
-	static const u_32bit_t max[4] = { 0xffffffff, 0xffffff, 0xffff, 0xff };
-	register u_32bit_t val;	/* changed from u_long --david */
-	register int base;
-	register int n;
-	register char c;
-	u_32bit_t parts[4];
-	register u_32bit_t *pp = parts;
+  static const u_32bit_t max[4] = { 0xffffffff, 0xffffff, 0xffff, 0xff };
+  register u_32bit_t val;       /* changed from u_long --david */
+  register int base;
+  register int n;
+  register char c;
+  u_32bit_t parts[4];
+  register u_32bit_t *pp = parts;
 
-	egg_bzero(parts, sizeof (parts));
+  egg_bzero(parts, sizeof(parts));
 
-	c = *cp;
-	for (;;) {
-		/*
-		 * Collect number up to ``.''.
-		 * Values are specified as for C:
-		 * 0x=hex, 0=octal, isdigit=decimal.
-		 */
-		if (!isdigit(c))
-			goto ret_0;
-		base = 10;
-		if (c == '0') {
-			c = *++cp;
-			if (c == 'x' || c == 'X')
-				base = 16, c = *++cp;
-			else
-				base = 8;
-		}
-		val = 0;
-		for (;;) {
-			if (isascii(c) && isdigit(c)) {
-				val = (val * base) + (c - '0');
-				c = *++cp;
-			} else if (base == 16 && isascii(c) && isxdigit(c)) {
-				val = (val << 4) |
-					(c + 10 - (islower(c) ? 'a' : 'A'));
-				c = *++cp;
-			} else
-				break;
-		}
-		if (c == '.') {
-			/*
-			 * Internet format:
-			 *	a.b.c.d
-			 *	a.b.c	(with c treated as 16 bits)
-			 *	a.b	(with b treated as 24 bits)
-			 */
-			if (pp >= parts + 3)
-				goto ret_0;
-			*pp++ = val;
-			c = *++cp;
-		} else
-			break;
-	}
-	/*
-	 * Check for trailing characters.
-	 */
-	if (c != '\0' && (!isascii(c) || !isspace(c)))
-		goto ret_0;
-	/*
-	 * Concoct the address according to
-	 * the number of parts specified.
-	 */
-	n = pp - parts + 1;
+  c = *cp;
+  for (;;) {
+    /*
+     * Collect number up to ``.''.
+     * Values are specified as for C:
+     * 0x=hex, 0=octal, isdigit=decimal.
+     */
+    if (!isdigit(c))
+      goto ret_0;
+    base = 10;
+    if (c == '0') {
+      c = *++cp;
+      if (c == 'x' || c == 'X')
+        base = 16, c = *++cp;
+      else
+        base = 8;
+    }
+    val = 0;
+    for (;;) {
+      if (isascii(c) && isdigit(c)) {
+        val = (val * base) + (c - '0');
+        c = *++cp;
+      } else if (base == 16 && isascii(c) && isxdigit(c)) {
+        val = (val << 4) | (c + 10 - (islower(c) ? 'a' : 'A'));
+        c = *++cp;
+      } else
+        break;
+    }
+    if (c == '.') {
+      /*
+       * Internet format:
+       *      a.b.c.d
+       *      a.b.c   (with c treated as 16 bits)
+       *      a.b     (with b treated as 24 bits)
+       */
+      if (pp >= parts + 3)
+        goto ret_0;
+      *pp++ = val;
+      c = *++cp;
+    } else
+      break;
+  }
+  /*
+   * Check for trailing characters.
+   */
+  if (c != '\0' && (!isascii(c) || !isspace(c)))
+    goto ret_0;
+  /*
+   * Concoct the address according to
+   * the number of parts specified.
+   */
+  n = pp - parts + 1;
 
-	if (n == 0	/* initial nondigit */
-	    || parts[0] > 0xff || parts[1] > 0xff || parts[2] > 0xff
-	    || val > max[n - 1])
-	  goto ret_0;
+  if (n == 0 ||                 /* initial nondigit */
+      parts[0] > 0xff || parts[1] > 0xff || parts[2] > 0xff ||
+      val > max[n - 1])
+    goto ret_0;
 
-	val |= (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8);
+  val |= (parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8);
 
-	if (addr)
-		addr->s_addr = htonl(val);
-	return (1);
+  if (addr)
+    addr->s_addr = htonl(val);
+  return 1;
 
 ret_0:
-	return (0);
+  return 0;
 }
-#endif /* HAVE_INET_ATON */
+#endif /* !HAVE_INET_ATON */

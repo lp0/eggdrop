@@ -43,7 +43,7 @@ AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
 AC_CHECK_HEADERS(sys/time.h)
 AC_HEADER_TIME
-AC_CHECK_HEADERS(sys/select.h sys/rusage.h unistd.h dlfcn.h stdarg.h std_args.h strings.h limits.h)
+AC_CHECK_HEADERS(sys/select.h sys/rusage.h unistd.h stdarg.h std_args.h strings.h limits.h)
 
 # Checks for typedefs, structures, and compiler characteristics
 AC_TYPE_PID_T
@@ -54,8 +54,13 @@ AC_C_INLINE
 AC_CHECK_SIZEOF(long, 0)
 AC_CHECK_SIZEOF(int, 0)
 
+# Check for IPv6 support
+EGG_IPV6_SUPPORTED
+EGG_IPV6_OPTIONS
+
 # Checks for library functions
-AC_CHECK_FUNCS(clock getrusage setpgid uname sigaction sigemptyset rename strcasecmp strncasecmp getdtablesize memset random srandom dlopen dprintf snprintf vsnprintf isascii inet_aton memcpy strftime fsync)
+AC_CHECK_FUNCS(clock getrusage setpgid uname sigaction sigemptyset rename strcasecmp strncasecmp getdtablesize memset random srandom)
+AC_CHECK_FUNCS(dlopen dprintf snprintf vsnprintf isascii inet_aton inet_ntop memcpy strftime fsync gethostbyname2 getipnodebyname)
 EGG_CHECK_FUNC_VSPRINTF
 
 # Make sure we have stdc headers, since we can't compile without them
@@ -72,10 +77,10 @@ EGG_EXEEXT
 # (well, what used to be robey's Tcl thingies...)
 
 # Latest tested Tcl version to recommend if Tcl isn't found
-tclrecommendver="8.3.3"
+tclrecommendver="8.3.4"
 
 # Site recommended to download Tcl from
-tclrecommendsite="ftp://ftp.eggheads.org/pub/tcl/tcl8_3/"
+tclrecommendsite="ftp://tcl.activestate.com/pub/tcl/tcl8_3/"
 
 # Tcl library filename prefixes (also used for Tcl header dir on FreeBSD)
 tcllibnames="tcl tcl8.4 tcl84 tcl8.3 tcl83 tcl8.2 tcl82 tcl8.1 tcl81 \
@@ -97,7 +102,7 @@ tclheadernames="tcl.h"
 # Tcl header search paths
 tclheaderpaths="/usr/local/include /usr/local/pkgs/tcl/include \
 	/usr/include /beos/system/include /beos/devel/include \
-       /sys/include $HOME/include $HOME/tcl/include $HOME"
+	/sys/include $HOME/include $HOME/tcl/include $HOME"
 
 EGG_TCL_ARG_WITH
 EGG_TCL_ENV
@@ -111,7 +116,6 @@ EGG_TCL_DETECT_CHANGE
 
 EGG_TCL_CHECK_VERSION
 EGG_TCL_CHECK_PRE70
-EGG_TCL_CHECK_PRE75
 EGG_TCL_TESTLIBS
 EGG_TCL_CHECK_FREE
 EGG_TCL_ENABLE_THREADS

@@ -1,11 +1,11 @@
 /*
  * tandem.h
  *
- * $Id: tandem.h,v 1.9 2002/01/02 03:46:36 guppy Exp $
+ * $Id: tandem.h,v 1.12 2003/01/29 05:48:41 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -44,7 +44,7 @@ typedef struct {
   char *from;
   char flag;
   char status;
-  time_t timer;			/* Track idle time */
+  time_t timer;                 /* Track idle time */
   char *away;
 } party_t;
 
@@ -96,12 +96,12 @@ void botnet_send_nkch(int, char *);
 int bots_in_subtree(tand_t *);
 int users_in_subtree(tand_t *);
 
-#endif				/* MAKING_MODS */
+#endif /* MAKING_MODS */
 
 
-#define b_status(a)	(dcc[a].status)
-#define b_version(a)	(dcc[a].u.bot->version)
-#define b_linker(a)	(dcc[a].u.bot->linker)
-#define b_numver(a)	(dcc[a].u.bot->numver)
+#define b_status(a)  (dcc[a].status)
+#define b_version(a) (dcc[a].u.bot->version)
+#define b_linker(a)  (dcc[a].u.bot->linker)
+#define b_numver(a)  (dcc[a].u.bot->numver)
 
-#endif				/* _EGG_TANDEM_H */
+#endif /* _EGG_TANDEM_H */

@@ -4,11 +4,11 @@
  *
  * by Darrin Smith (beldin@light.iinet.net.au)
  *
- * $Id: modules.h,v 1.10 2002/01/02 03:46:36 guppy Exp $
+ * $Id: modules.h,v 1.13 2003/01/29 05:48:40 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -39,8 +39,7 @@
 
 void do_module_report(int, int, char *);
 
-int module_register(char *name, Function * funcs,
-		    int major, int minor);
+int module_register(char *name, Function* funcs, int major, int minor);
 const char *module_load(char *module_name);
 char *module_unload(char *module_name, char *nick);
 module_entry *module_find(char *name, int, int);
@@ -48,7 +47,7 @@ Function *module_depend(char *, char *, int major, int minor);
 int module_undepend(char *);
 void *mod_malloc(int size, const char *modname, const char *filename, int line);
 void *mod_realloc(void *ptr, int size, const char *modname,
-		  const char *filename, int line);
+                  const char *filename, int line);
 void mod_free(void *ptr, const char *modname, const char *filename, int line);
 void add_hook(int hook_num, Function func);
 void del_hook(int hook_num, Function func);
@@ -58,13 +57,13 @@ extern struct hook_entry {
   int (*func) ();
 } *hook_list[REAL_HOOKS];
 
-#define call_hook(x) do {					\
-	register struct hook_entry *p, *pn;			\
-								\
-	for (p = hook_list[x]; p; p = pn) {			\
-		pn = p->next;					\
-		p->func();					\
-	}							\
+#define call_hook(x) do {                                       \
+        register struct hook_entry *p, *pn;                     \
+                                                                \
+        for (p = hook_list[x]; p; p = pn) {                     \
+                pn = p->next;                                   \
+                p->func();                                      \
+        }                                                       \
 } while (0)
 int call_hook_cccc(int, char *, char *, char *, char *);
 
@@ -79,4 +78,4 @@ typedef struct _dependancy {
 } dependancy;
 extern dependancy *dependancy_list;
 
-#endif				/* _EGG_MODULE_H */
+#endif /* _EGG_MODULE_H */

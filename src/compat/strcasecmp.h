@@ -2,10 +2,10 @@
  * strcasecmp.h
  *   prototypes for strcasecmp.c
  *
- * $Id: strcasecmp.h,v 1.4 2002/01/02 03:46:36 guppy Exp $
+ * $Id: strcasecmp.h,v 1.7 2003/01/29 05:48:41 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,14 +33,14 @@
 /* Use our own implementation. */
 int egg_strcasecmp(const char *, const char *);
 #else
-#  define egg_strcasecmp	strcasecmp
+#  define egg_strcasecmp strcasecmp
 #endif
 
 #ifndef HAVE_STRNCASECMP
 /* Use our own implementation. */
 int egg_strncasecmp(const char *, const char *, size_t);
 #else
-#  define egg_strncasecmp	strncasecmp
+#  define egg_strncasecmp strncasecmp
 #endif
 
-#endif	/* !__EGG_COMPAT_STRCASECMP_H */
+#endif /* !__EGG_COMPAT_STRCASECMP_H */

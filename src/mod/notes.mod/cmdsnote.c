@@ -2,11 +2,11 @@
  * cmdsnote.c -- part of notes.mod
  *   handles all notes interaction over the party line
  *
- * $Id: cmdsnote.c,v 1.14 2002/01/02 08:06:15 tothwolf Exp $
+ * $Id: cmdsnote.c,v 1.17 2003/01/30 07:15:15 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,24 +27,26 @@ static void cmd_pls_noteign(struct userrec *u, int idx, char *par)
 {
   struct userrec *u2;
   char *handle, *mask, *buf, *p;
+
   if (!par[0]) {
     dprintf(idx, "%s: +noteign [handle] <ignoremask>\n", NOTES_USAGE);
     return;
   }
   putlog(LOG_CMDS, "*", "#%s# +noteign %s", dcc[idx].nick, par);
 
-  p = buf = nmalloc(strlen(par)+1);
+  p = buf = nmalloc(strlen(par) + 1);
   strcpy(p, par);
   handle = newsplit(&p);
   mask = newsplit(&p);
   if (mask[0]) {
     u2 = get_user_by_handle(userlist, handle);
     if (u != u2) {
-      struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+      struct flag_record fr = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
+
       get_user_flagrec(u, &fr, dcc[idx].u.chat->con_chan);
       if (!(glob_master(fr) || glob_owner(fr))) {
-	dprintf(idx, NOTES_IGN_OTHERS, handle);
-	nfree(buf);
+        dprintf(idx, NOTES_IGN_OTHERS, handle);
+        nfree(buf);
         return;
       }
     }
@@ -69,23 +71,25 @@ static void cmd_mns_noteign(struct userrec *u, int idx, char *par)
 {
   struct userrec *u2;
   char *handle, *mask, *buf, *p;
+
   if (!par[0]) {
     dprintf(idx, "%s: -noteign [handle] <ignoremask>\n", NOTES_USAGE);
     return;
   }
   putlog(LOG_CMDS, "*", "#%s# -noteign %s", dcc[idx].nick, par);
-  p = buf = nmalloc(strlen(par)+1);
+  p = buf = nmalloc(strlen(par) + 1);
   strcpy(p, par);
   handle = newsplit(&p);
   mask = newsplit(&p);
   if (mask[0]) {
     u2 = get_user_by_handle(userlist, handle);
     if (u != u2) {
-      struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+      struct flag_record fr = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
+
       get_user_flagrec(u, &fr, dcc[idx].u.chat->con_chan);
       if (!(glob_master(fr) || glob_owner(fr))) {
-	dprintf(idx, NOTES_IGN_OTHERS, handle);
-	nfree(buf);
+        dprintf(idx, NOTES_IGN_OTHERS, handle);
+        nfree(buf);
         return;
       }
     }
@@ -116,10 +120,11 @@ static void cmd_noteigns(struct userrec *u, int idx, char *par)
   if (par[0]) {
     u2 = get_user_by_handle(userlist, par);
     if (u != u2) {
-      struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+      struct flag_record fr = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
+
       get_user_flagrec(u, &fr, dcc[idx].u.chat->con_chan);
       if (!(glob_master(fr) || glob_owner(fr))) {
-	dprintf(idx, NOTES_IGN_OTHERS, par);
+        dprintf(idx, NOTES_IGN_OTHERS, par);
         return;
       }
     }
@@ -140,8 +145,8 @@ static void cmd_noteigns(struct userrec *u, int idx, char *par)
   for (i = 0; i < ignoresn; i++)
     dprintf(idx, " %s", ignores[i]);
   dprintf(idx, "\n");
-  nfree(ignores[0]);		/* Free the string buffer	*/
-  nfree(ignores);		/* Free the ptr array		*/
+  nfree(ignores[0]);            /* Free the string buffer       */
+  nfree(ignores);               /* Free the ptr array           */
 }
 
 static void cmd_fwd(struct userrec *u, int idx, char *par)
@@ -222,8 +227,7 @@ static void cmd_note(struct userrec *u, int idx, char *par)
     return;
   }
   while ((*par == ' ') || (*par == '<') || (*par == '>'))
-    par++;			/* These are now illegal *starting* notes
-				 * characters */
+    par++; /* These are now illegal *starting* notes characters */
   echo = (dcc[idx].status & STAT_ECHO);
   splitc(handle, p, ',');
   while (handle[0]) {
@@ -235,13 +239,12 @@ static void cmd_note(struct userrec *u, int idx, char *par)
   add_note(p, dcc[idx].nick, par, idx, echo);
 }
 
-static cmd_t notes_cmds[] =
-{
-  {"fwd",	"m",	(Function) cmd_fwd,		NULL},
-  {"notes",	"",	(Function) cmd_notes,		NULL},
-  {"+noteign",	"",	(Function) cmd_pls_noteign,	NULL},
-  {"-noteign",	"",	(Function) cmd_mns_noteign,	NULL},
-  {"noteigns",	"",	(Function) cmd_noteigns,	NULL},
-  {"note",	"",	(Function) cmd_note,		NULL},
-  {NULL,	NULL,	NULL,				NULL}
+static cmd_t notes_cmds[] = {
+  {"fwd",      "m",  (Function) cmd_fwd,         NULL},
+  {"notes",    "",   (Function) cmd_notes,       NULL},
+  {"+noteign", "",   (Function) cmd_pls_noteign, NULL},
+  {"-noteign", "",   (Function) cmd_mns_noteign, NULL},
+  {"noteigns", "",   (Function) cmd_noteigns,    NULL},
+  {"note",     "",   (Function) cmd_note,        NULL},
+  {NULL,       NULL, NULL,                       NULL}
 };

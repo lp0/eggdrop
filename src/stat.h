@@ -2,10 +2,10 @@
  * stat.h
  *  file attributes
  *
- * $Id: stat.h,v 1.3 2002/01/02 03:46:36 guppy Exp $
+ * $Id: stat.h,v 1.6 2003/01/29 05:48:41 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -27,18 +27,18 @@
 
 #ifndef S_ISDIR
 #  ifndef S_IFMT
-#    define S_IFMT	0170000	    /* Bitmask for the file type bitfields */
+#    define S_IFMT   0170000 /* Bitmask for the file type bitfields */
 #  endif
 #  ifndef S_IFDIR
-#    define S_IFDIR	0040000	    /* Directory			   */
+#    define S_IFDIR  0040000 /* Directory                           */
 #  endif
-#  define S_ISDIR(m)	(((m)&(S_IFMT)) == (S_IFDIR))
+#  define S_ISDIR(m) (((m)&(S_IFMT)) == (S_IFDIR))
 #endif
 #ifndef S_IFREG
-#  define S_IFREG	0100000     /* Regular file			   */
+#  define S_IFREG    0100000 /* Regular file                        */
 #endif
 #ifndef S_IFLNK
-#  define S_IFLNK   	0120000     /* Symbolic link			   */
+#  define S_IFLNK    0120000 /* Symbolic link                       */
 #endif
 
-#endif			/* _EGG_STAT_H */
+#endif /* _EGG_STAT_H */

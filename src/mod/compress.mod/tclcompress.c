@@ -4,10 +4,10 @@
  *
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: tclcompress.c,v 1.5 2002/01/02 03:46:38 guppy Exp $
+ * $Id: tclcompress.c,v 1.9 2003/01/30 07:15:14 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,20 +25,21 @@
  */
 
 
-#define NEXT_ARG	{ curr_arg++; argc--; }
+#define NEXT_ARG { curr_arg++; argc--; }
 
 static int tcl_compress_file STDVAR
 {
-  int	 mode_num = compress_level, result, curr_arg = 1;
-  char	*fn_src = NULL, *fn_target = NULL;
+  int mode_num = compress_level, result, curr_arg = 1;
+  char *fn_src = NULL, *fn_target = NULL;
 
   BADARGS(2, 5, " ?options...? src-file ?target-file?");
+
   while ((argc > 1) && ((argv[curr_arg])[0] == '-')) {
     if (!strcmp(argv[curr_arg], "-level")) {
       argc--;
       if (argc <= 1) {
-	Tcl_AppendResult(irp, "option `-level' needs parameter", NULL);
-	return TCL_ERROR;
+        Tcl_AppendResult(irp, "option `-level' needs parameter", NULL);
+        return TCL_ERROR;
       }
       curr_arg++;
       mode_num = atoi(argv[curr_arg]);
@@ -77,9 +78,10 @@ static int tcl_compress_file STDVAR
 
 static int tcl_uncompress_file STDVAR
 {
-  int	 result;
+  int result;
 
   BADARGS(2, 3, " src-file ?target-file?");
+
   if (argc == 2)
     result = uncompress_file(argv[1]);
   else
@@ -94,24 +96,23 @@ static int tcl_uncompress_file STDVAR
 
 static int tcl_iscompressed STDVAR
 {
-  int	 result;
+  int result;
 
   BADARGS(2, 2, " compressed-file");
+  
   result = is_compressedfile(argv[1]);
   if (result == COMPF_UNCOMPRESSED)
-    Tcl_AppendResult(irp, "0", NULL);	/* Uncompressed.	*/
+    Tcl_AppendResult(irp, "0", NULL);  /* Uncompressed.        */
   else if (result == COMPF_COMPRESSED)
-    Tcl_AppendResult(irp, "1", NULL);	/* Compressed.		*/
+    Tcl_AppendResult(irp, "1", NULL);  /* Compressed.          */
   else
-    Tcl_AppendResult(irp, "2", NULL);	/* Failed to detect.	*/
+    Tcl_AppendResult(irp, "2", NULL);  /* Failed to detect.    */
   return TCL_OK;
 }
 
-
-static tcl_cmds my_tcl_cmds[] =
-{
-  {"compressfile",	tcl_compress_file},
-  {"uncompressfile",	tcl_uncompress_file},
-  {"iscompressed",	tcl_iscompressed},
-  {NULL,		NULL}
+static tcl_cmds my_tcl_cmds[] = {
+  {"compressfile",     tcl_compress_file},
+  {"uncompressfile", tcl_uncompress_file},
+  {"iscompressed",      tcl_iscompressed},
+  {NULL,                            NULL}
 };

@@ -2,11 +2,11 @@
  * language.c -- handles:
  *   language support code
  *
- * $Id: language.c,v 1.17 2002/01/16 03:24:17 guppy Exp $
+ * $Id: language.c,v 1.22 2003/03/04 08:51:44 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -65,7 +65,7 @@
 
 #include "main.h"
 
-extern struct dcc_t	*dcc;
+extern struct dcc_t *dcc;
 
 
 typedef struct lang_st {
@@ -85,9 +85,9 @@ typedef struct lang_t {
   struct lang_t *next;
 } lang_tab;
 
-static lang_tab	*langtab[64];
-static lang_sec	*langsection = NULL;
-static lang_pri	*langpriority = NULL;
+static lang_tab *langtab[64];
+static lang_sec *langsection = NULL;
+static lang_pri *langpriority = NULL;
 
 static int del_lang(char *);
 static int add_message(int, char *);
@@ -114,7 +114,7 @@ void add_lang(char *lang)
     if (!strcmp(lang, lp->lang)) {
       /* Already at the front? */
       if (!lpo)
-	return;
+        return;
       lpo->next = lp->next;
       lp->next = lpo;
       langpriority = lp;
@@ -147,7 +147,7 @@ static int del_lang(char *lang)
     /* Found the language? */
     if (!strcmp(lang, lp->lang)) {
       if (lpo)
-	lpo->next = lp->next;
+        lpo->next = lp->next;
       else
         langpriority = lp->next;
       if (lp->lang)
@@ -199,13 +199,13 @@ static void recheck_lang_sections(void)
   char *langfile;
 
   for (ls = langsection; ls && ls->section; ls = ls->next) {
-      langfile = get_langfile(ls);
-      /* Found a language with a more preferred language? */
-      if (langfile) {
-        read_lang(langfile);
-        nfree(langfile);
-      }
+    langfile = get_langfile(ls);
+    /* Found a language with a more preferred language? */
+    if (langfile) {
+      read_lang(langfile);
+      nfree(langfile);
     }
+  }
 }
 
 /* Parse a language file
@@ -225,7 +225,7 @@ static void read_lang(char *langfile)
   FLANG = fopen(langfile, "r");
   if (FLANG == NULL) {
     putlog(LOG_MISC, "*", "LANG: unexpected: reading from file %s failed.",
-	   langfile);
+           langfile);
     return;
   }
 
@@ -236,61 +236,61 @@ static void read_lang(char *langfile)
       ltext = nrealloc(ltext, 512);
       if (sscanf(lbuf, "%s", ltext) != EOF) {
 #ifdef LIBSAFE_HACKS
-	if (sscanf(lbuf, "0x%x,%500c", &lidx, ltext) != 1) {
+        if (sscanf(lbuf, "0x%x,%500c", &lidx, ltext) != 1) {
 #else
-	if (sscanf(lbuf, "0x%x,%500c", &lidx, ltext) != 2) {
+        if (sscanf(lbuf, "0x%x,%500c", &lidx, ltext) != 2) {
 #endif
-	  putlog(LOG_MISC, "*", "Malformed text line in %s at %d.",
-		 langfile, lline);
-	} else {
-	  ltexts++;
-	  ctmp = strchr(ltext, '\n');
-	  *ctmp = 0;
-	  while (ltext[strlen(ltext) - 1] == '\\') {
-	    ltext[strlen(ltext) - 1] = 0;
-	    if (fgets(lbuf, 511, FLANG)) {
-	      lline++;
-	      ctmp = strchr(lbuf, '\n');
-	      *ctmp = 0;
-	      ltext = nrealloc(ltext, strlen(lbuf) + strlen(ltext) + 1);
-	      strcpy(strchr(ltext, 0), lbuf);
-	    }
-	  }
-	}
-	/* We gotta fix \n's here as, being arguments to sprintf(),
-	 * they won't get translated.
-	 */
-	ctmp = ltext;
-	ctmp1 = ltext;
-	while (*ctmp1) {
-	  if ((*ctmp1 == '\\') && (*(ctmp1 + 1) == 'n')) {
-	    *ctmp = '\n';
-	    ctmp1++;
-	  } else if ((*ctmp1 == '\\') && (*(ctmp1 + 1) == 't')) {
-	    *ctmp = '\t';
-	    ctmp1++;
-	  } else
-	    *ctmp = *ctmp1;
-	  ctmp++;
-	  ctmp1++;
-	}
-	*ctmp = '\0';
-	if (add_message(lidx, ltext)) {
-	  lupdate++;
-	} else
-	  ladd++;
+          putlog(LOG_MISC, "*", "Malformed text line in %s at %d.",
+                 langfile, lline);
+        } else {
+          ltexts++;
+          ctmp = strchr(ltext, '\n');
+          *ctmp = 0;
+          while (ltext[strlen(ltext) - 1] == '\\') {
+            ltext[strlen(ltext) - 1] = 0;
+            if (fgets(lbuf, 511, FLANG)) {
+              lline++;
+              ctmp = strchr(lbuf, '\n');
+              *ctmp = 0;
+              ltext = nrealloc(ltext, strlen(lbuf) + strlen(ltext) + 1);
+              strcpy(strchr(ltext, 0), lbuf);
+            }
+          }
+        }
+        /* We gotta fix \n's here as, being arguments to sprintf(),
+         * they won't get translated.
+         */
+        ctmp = ltext;
+        ctmp1 = ltext;
+        while (*ctmp1) {
+          if ((*ctmp1 == '\\') && (*(ctmp1 + 1) == 'n')) {
+            *ctmp = '\n';
+            ctmp1++;
+          } else if ((*ctmp1 == '\\') && (*(ctmp1 + 1) == 't')) {
+            *ctmp = '\t';
+            ctmp1++;
+          } else
+            *ctmp = *ctmp1;
+          ctmp++;
+          ctmp1++;
+        }
+        *ctmp = '\0';
+        if (add_message(lidx, ltext)) {
+          lupdate++;
+        } else
+          ladd++;
       }
     } else {
       ctmp = strchr(lbuf, '\n');
       if (lskip && (strlen(lbuf) == 1 || *(ctmp - 1) != '\\'))
-	lskip = 0;
+        lskip = 0;
     }
   }
   nfree(ltext);
   fclose(FLANG);
 
   debug3("LANG: %d messages of %d lines loaded from %s", ltexts, lline,
-	 langfile);
+         langfile);
   debug2("LANG: %d adds, %d updates to message table", ladd, lupdate);
 }
 
@@ -311,9 +311,9 @@ int exist_lang_section(char *section)
  */
 void add_lang_section(char *section)
 {
-  char		*langfile = NULL;
-  lang_sec	*ls, *ols = NULL;
-  int		 ok = 0;
+  char *langfile = NULL;
+  lang_sec *ls, *ols = NULL;
+  int ok = 0;
 
   for (ls = langsection; ls; ols = ls, ls = ls->next)
     /* Already know of that section? */
@@ -346,7 +346,7 @@ void add_lang_section(char *section)
   if (!langfile) {
     if (!ok)
       putlog(LOG_MISC, "*", "LANG: No lang files found for section %s.",
-	     section);
+             section);
     return;
   }
   read_lang(langfile);
@@ -360,12 +360,12 @@ int del_lang_section(char *section)
   for (ls = langsection, ols = NULL; ls; ols = ls, ls = ls->next)
     if (ls->section && !strcmp(ls->section, section)) {
       if (ols)
-	ols->next = ls->next;
+        ols->next = ls->next;
       else
-	langsection = ls->next;
+        langsection = ls->next;
       nfree(ls->section);
       if (ls->lang)
-	nfree(ls->lang);
+        nfree(ls->lang);
       nfree(ls);
       debug1("LANG: Section unloaded: %s", section);
       return 1;
@@ -377,20 +377,20 @@ static char *get_specific_langfile(char *language, lang_sec *sec)
 {
   char *ldir = getenv("EGG_LANGDIR");
   char *langfile;
-  FILE *sfile = NULL;
 
   if (!ldir)
     ldir = LANGDIR;
-  langfile = nmalloc(strlen(ldir) + strlen(sec->section) + strlen(language)+8);
+  langfile = nmalloc(strlen(ldir) + strlen(sec->section) + strlen(language) +
+             8);
   sprintf(langfile, "%s/%s.%s.lang", ldir, sec->section, language);
-  sfile = fopen(langfile, "r");
-  if (sfile) {
-    fclose(sfile);
+
+  if (file_readable(langfile)) {
     /* Save language used for this section */
     sec->lang = nrealloc(sec->lang, strlen(language) + 1);
     strcpy(sec->lang, language);
     return langfile;
   }
+
   nfree(langfile);
   return NULL;
 }
@@ -457,7 +457,7 @@ int cmd_loadlanguage(struct userrec *u, int idx, char *par)
   }
   if (idx != DP_LOG)
     putlog(LOG_CMDS, "*", "#%s# language %s", dcc[idx].nick, par);
-  buf = nmalloc(strlen(par)+1);
+  buf = nmalloc(strlen(par) + 1);
   strcpy(buf, par);
   if (!split_lang(buf, &lang, &section)) {
     nfree(buf);
@@ -580,14 +580,14 @@ int expmem_language()
   for (ls = langsection; ls; ls = ls->next) {
     size += sizeof(lang_sec);
     if (ls->section)
-      size += strlen(ls->section)+1;
+      size += strlen(ls->section) + 1;
     if (ls->lang)
-      size += strlen(ls->lang)+1;
+      size += strlen(ls->lang) + 1;
   }
   for (lp = langpriority; lp; lp = lp->next) {
     size += sizeof(lang_pri);
     if (lp->lang)
-      size += strlen(lp->lang)+1;
+      size += strlen(lp->lang) + 1;
   }
   return size;
 }
@@ -619,12 +619,12 @@ static int cmd_languagestatus(struct userrec *u, int idx, char *par)
   dprintf(idx, "   Table size   : %d bytes\n", expmem_language());
   dprintf(idx, "   Text messages: %d\n", ltexts);
   dprintf(idx, "   %d used, %d unused, maxdepth %d, avg %f\n",
-	  used, empty, maxdepth, (float) ltexts / 64.0);
+          used, empty, maxdepth, (float) ltexts / 64.0);
   if (lp) {
     int c = 0;
 
     dprintf(idx, "   Supported languages:");
-    for (; lp; lp = lp->next) {  
+    for (; lp; lp = lp->next) {
       dprintf(idx, "%s %s", c ? "," : "", lp->lang);
       c = 1;
     }
@@ -635,7 +635,7 @@ static int cmd_languagestatus(struct userrec *u, int idx, char *par)
     dprintf(idx, "   ==============================\n");
     for (; ls; ls = ls->next)
       dprintf(idx, "   %-20s %s\n", ls->section,
-	      ls->lang ? ls->lang : "<none>");
+              ls->lang ? ls->lang : "<none>");
   }
   return 0;
 }
@@ -646,17 +646,20 @@ static int tcl_language STDVAR
 {
   char *lang, *section, *buf;
 
-  putlog(LOG_MISC, "*", "The Tcl command 'language' is obsolete. Use 'addlang' instead.");
+  putlog(LOG_MISC, "*", "The Tcl command 'language' is obsolete. Use "
+         "'addlang' instead.");
   BADARGS(2, 2, " language");
 
-  buf = nmalloc(strlen(argv[1])+1);
+  buf = nmalloc(strlen(argv[1]) + 1);
   strcpy(buf, argv[1]);
+  
   if (!split_lang(buf, &lang, &section)) {
     Tcl_AppendResult(irp, "Invalid parameter", NULL);
     nfree(buf);
     return TCL_ERROR;
   }
   add_lang(lang);
+
   add_lang_section(section);
   nfree(buf);
   recheck_lang_sections();
@@ -711,28 +714,26 @@ static int tcl_relang STDVAR
   return TCL_OK;
 }
 
-static cmd_t langdcc[] =
-{
-  {"language",	"n",	cmd_loadlanguage,	NULL},
-  {"+lang",	"n",	cmd_plslang,		NULL},
-  {"-lang",	"n",	cmd_mnslang,		NULL},
-  {"+lsec",	"n",	cmd_plslsec,		NULL},
-  {"-lsec",	"n",	cmd_mnslsec,		NULL},
-  {"ldump",	"n",	cmd_languagedump,	NULL},
-  {"lstat",	"n",	cmd_languagestatus,	NULL},
-  {"relang",	"n",	cmd_relang,		NULL},
-  {NULL,	NULL,	NULL,			NULL}
+static cmd_t langdcc[] = {
+  {"language", "n",  cmd_loadlanguage,   NULL},
+  {"+lang",    "n",  cmd_plslang,        NULL},
+  {"-lang",    "n",  cmd_mnslang,        NULL},
+  {"+lsec",    "n",  cmd_plslsec,        NULL},
+  {"-lsec",    "n",  cmd_mnslsec,        NULL},
+  {"ldump",    "n",  cmd_languagedump,   NULL},
+  {"lstat",    "n",  cmd_languagestatus, NULL},
+  {"relang",   "n",  cmd_relang,         NULL},
+  {NULL,       NULL, NULL,               NULL}
 };
 
-static tcl_cmds langtcls[] =
-{
-  {"language",		tcl_language},
-  {"addlang",		tcl_plslang},
-  {"dellang",		tcl_mnslang},
-  {"addlangsection",	tcl_addlangsection},
-  {"dellangsection",	tcl_dellangsection},
-  {"relang",		tcl_relang},
-  {NULL,		NULL}
+static tcl_cmds langtcls[] = {
+  {"language",             tcl_language},
+  {"addlang",               tcl_plslang},
+  {"dellang",               tcl_mnslang},
+  {"addlangsection", tcl_addlangsection},
+  {"dellangsection", tcl_dellangsection},
+  {"relang",                 tcl_relang},
+  {NULL,                           NULL}
 };
 
 void init_language(int flag)

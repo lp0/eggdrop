@@ -1,5 +1,5 @@
 Eggdrop Tcl Commands
-Last revised: June 04, 2002
+Last revised: March 01, 2002
      _________________________________________________________________
 
 This is an exhaustive list of all the Tcl commands added to Eggdrop. All
@@ -7,7 +7,7 @@ of the normal Tcl built-in commands are still there, of course, but you
 can also use these to manipulate features of the bot. They are listed
 according to category.
 
-This list is accurate for Eggdrop v1.6.11. Scripts written for v1.3/v1.4
+This list is accurate for Eggdrop v1.6.14. Scripts written for v1.3/v1.4
 series of Eggdrop should probably work with a few minor modifications
 depending on the script. Scripts which were written for  v0.9, v1.0, v1.1
 or v1.2 will probably not work without modification. Commands which have
@@ -255,8 +255,8 @@ marked with vertical bars (|) on the left.
     Description: adds a ban to the global ban list (which takes effect on
       all channels); creator is given credit for the ban in the ban list.
       lifetime is specified in minutes. If lifetime is not specified,
-      ban-time (usually 60) is used. Setting the lifetime to 0 makes it a
-      permanent ban.
+      global-ban-time (usually 60) is used. Setting the lifetime to 0 makes
+      it a permanent ban.
     Options:
       sticky: forces the ban to be always active on a channel, even
               with dynamicbans on
@@ -386,7 +386,7 @@ marked with vertical bars (|) on the left.
     Returns: 1 on success; 0 otherwise
     Module: channels
 
-  ischanjuped [channel]
+  ischanjuped <channel>
     Returns: 1 if the channel is juped, and the bot is unable to join; 0
       otherwise
     Module: channels
@@ -549,10 +549,10 @@ marked with vertical bars (|) on the left.
     Returns: a list of info about the specified channel's settings.
     Module: channels
 
-| channel get <name> <setting>
-|   Returns: The value of the setting you specify. For flags, a value of 0
-|     means it is disabled (-), and non-zero means enabled (+).
-|   Module: channels
+  channel get <name> <setting>
+    Returns: The value of the setting you specify. For flags, a value of 0
+      means it is disabled (-), and non-zero means enabled (+).
+    Module: channels
 
   channel remove <name>
     Description: removes a channel record from the bot and makes the bot no
@@ -604,10 +604,10 @@ marked with vertical bars (|) on the left.
       if no channel is specified); 0 otherwise
     Module: irc
 
-| botishalfop [channel]
-|   Returns: 1 if the bot has halfops on the specified channel (or any channel
-|     if no channel is specified); 0 otherwise
-|   Module: irc
+  botishalfop [channel]
+    Returns: 1 if the bot has halfops on the specified channel (or any channel
+      if no channel is specified); 0 otherwise
+    Module: irc
 
   botisvoice [channel]
     Returns: 1 if the bot has a voice on the specified channel (or any
@@ -624,20 +624,20 @@ marked with vertical bars (|) on the left.
       any channel if no channel name is specified) and has ops; 0 otherwise
     Module: irc
 
-| ishalfop <nickname> [channel]
-|   Returns: 1 if someone by the specified nickname is on the channel (or
-|     any channel if no channel name is specified) and has halfops; 0 otherwise
-|   Module: irc
+  ishalfop <nickname> [channel]
+    Returns: 1 if someone by the specified nickname is on the channel (or
+      any channel if no channel name is specified) and has halfops; 0 otherwise
+    Module: irc
 
   wasop <nickname> <channel>
     Returns: 1 if someone that just got opped/deopped in the chan had op
       before the modechange; 0 otherwise
     Module: irc
 
-| washalfop <nickname> <channel>
-|   Returns: 1 if someone that just got halfopped/dehalfopped in the chan
-|     had halfop before the modechange; 0 otherwise
-|   Module: irc
+  washalfop <nickname> <channel>
+    Returns: 1 if someone that just got halfopped/dehalfopped in the chan
+      had halfop before the modechange; 0 otherwise
+    Module: irc
 
   isvoice <nickname> [channel]
     Returns: 1 if someone by that nickname is on the channel (or any
@@ -806,22 +806,25 @@ marked with vertical bars (|) on the left.
     Returns: 1 if the channel is a dynamic channel; 0 otherwise
     Module: channels
 
-  setudef <flag/int> <name>
-    Description: initializes a user defined channel flag or integer setting.
-      You can use it like any other flag/setting. IMPORTANT: Don't forget to
-      reinitialize your flags/settings after a restart, or it'll be lost.
-    Returns: nothing
-    Module: channels
+|  setudef <flag/int/str> <name>
+|    Description: initializes a user defined channel flag, string or integer
+|      setting. You can use it like any other flag/setting. IMPORTANT: Don't
+|      forget to reinitialize your flags/settings after a restart, or it'll be
+|      lost.
+|    Returns: nothing
+|    Module: channels
 
-  renudef <flag/int> <oldname> <newname>
-    Description: renames a user defined channel flag or integer setting.
-    Returns: nothing
-    Module: channels
+|  renudef <flag/int/str> <oldname> <newname>
+|    Description: renames a user defined channel flag, string, or integer
+|      setting.
+|    Returns: nothing
+|    Module: channels
 
-  deludef <flag/int> <name>
-    Description: deletes a user defined channel flag or integer setting.
-    Returns: nothing
-    Module: channels
+|  deludef <flag/int/str> <name>
+|    Description: deletes a user defined channel flag, string, or integer
+|      setting.
+|    Returns: nothing
+|    Module: channels
 
 *** DCC COMMANDS ***
 
@@ -1273,6 +1276,23 @@ marked with vertical bars (|) on the left.
       logfiles will be returned. "*" indicates all channels. You can also
       change the modes and channel of an existing logfile with this command.
       Entering a blank mode and channel ("") makes the bot stop logging there.
+
+      Logfile flags:
+        b - information about bot linking and userfile sharing
+        c - commands
+        d - misc debug information
+        h - raw share traffic
+        j - joins, parts, quits, and netsplits on the channel
+        k - kicks, bans, and mode changes on the channel
+        m - private msgs, notices and ctcps to the bot
+        o - misc info, errors, etc (IMPORTANT STUFF)
+        p - public text on the channel
+        r - raw incoming server traffic
+        s - server connects, disconnects, and notices
+        t - raw botnet traffic
+        v - raw outgoing server traffic
+        w - wallops (make sure the bot sets +w in init-server)
+        x - file transfers and file-area commands
     Returns: filename of logfile created, or, if no logfile is specified, a
       list of logfiles such as: {mco * eggdrop.log} {jp #lame lame.log}
     Module: core
@@ -1499,10 +1519,18 @@ marked with vertical bars (|) on the left.
       "Valis!valis@crappy.com")
     Module: server
 
-  server
-    Value: the current server the bot is using (for example:
-      "irc.math.ufl.edu:6667")
-    Module: server
+| server
+|   Value: the current server's real name (what server calls itself)
+|     and port bot is connected to (for example: "irc.math.ufl.edu:6667")
+|     Note that this does not nececerilly match the servers internet address.
+|   Module: server
+
+| serveraddress
+|   Value: the current server's internet address (hostname or IP) and port bot
+|     is connected to. This will correspond to the entry in server list (for
+|     example: "eu.undernet.org:6667"). Note that this does not necessarily
+|     match the name server calls itself.
+|   Module: server
 
   version
     Value: current bot version "1.1.2+pl1 1010201 pl1";
@@ -1700,6 +1728,8 @@ marked with vertical bars (|) on the left.
 
          Description: triggered when someone changes nicknames. The mask
            is matched against '#channel newnick' and can contain wildcards.
+|          Channel is "*" if the user isn't on a channel (usually the bot not
+|          yet in a channel).
          Module: irc
 
     (14) MODE   (stackable)
@@ -1933,14 +1963,17 @@ marked with vertical bars (|) on the left.
            text of the action and can support wildcards.
          Module: core
 
-    (33) WALL (stackable)
-         bind wall <flags> <mask> <proc>
-         proc-name <handle> <msg>
-
-         Description: when the bot receives a wallops, it invokes this
-           binding. flags are ignored; the mask is matched against the text
-           of the wallops msg.
-         Module: server
+|   (33) WALL (stackable)
+|        bind wall <flags> <mask> <proc>
+|        proc-name <from> <msg>
+|
+|        Description: when the bot receives a wallops, it invokes this
+|          binding. flags are ignored; the mask is matched against the text
+|          of the wallops msg. Note that RFC shows the server name as a source
+|          of the message, whereas many IRCds send the nick!user@host of the
+|          actual sender, thus, Eggdrop will not parse it at all, but simply
+|          pass it to bind in its original form.
+|        Module: server
 
     (34) BCST (stackable)
          bind bcst <flags> <mask> <proc>
@@ -2208,4 +2241,4 @@ marked with vertical bars (|) on the left.
      words)
      _________________________________________________________________
 
-   Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+   Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team

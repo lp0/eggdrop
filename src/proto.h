@@ -7,11 +7,11 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  *
- * $Id: proto.h,v 1.48 2002/01/02 03:46:36 guppy Exp $
+ * $Id: proto.h,v 1.57 2003/04/17 01:55:57 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -38,7 +38,7 @@
 #define dprintf dprintf_eggdrop
 #endif
 
-struct chanset_t;		/* keeps the compiler warnings down :) */
+struct chanset_t;               /* keeps the compiler warnings down :) */
 struct userrec;
 struct maskrec;
 struct igrec;
@@ -69,7 +69,7 @@ int in_chain(char *);
 void tell_bots(int);
 void tell_bottree(int, int);
 int botlink(char *, int, char *);
-int botunlink(int, char *, char *);
+int botunlink(int, char *, char *, char *);
 void dump_links(int);
 void addbot(char *, char *, char *, char, int);
 void updatebot(int, char *, char, int);
@@ -135,6 +135,7 @@ extern void (*sharein) (int, char *);
 void chanout_but EGG_VARARGS(int, arg1);
 void dcc_chatter(int);
 void lostdcc(int);
+void killtransfer(int);
 void removedcc(int);
 void makepass(char *);
 void tell_dcc(int);
@@ -184,7 +185,10 @@ void backup_userfile(void);
 
 /* match.c */
 int _wild_match(register unsigned char *, register unsigned char *);
+int _wild_match_per(register unsigned char *, register unsigned char *);
+
 #define wild_match(a,b) _wild_match((unsigned char *)(a),(unsigned char *)(b))
+#define wild_match_per(a,b) _wild_match_per((unsigned char *)(a),(unsigned char *)(b))
 
 /* mem.c */
 void *n_malloc(int, const char *, int);
@@ -200,7 +204,11 @@ int my_strcpy(char *, char *);
 void putlog EGG_VARARGS(int, arg1);
 void flushlogs();
 void check_logsize();
-void maskhost(const char *, char *);
+void _maskhost(const char *, char *, int);
+
+#define maskhost(a,b) _maskhost((a),(b),1)
+#define maskban(a,b) _maskhost((a),(b),0)
+
 char *stristr(char *, char *);
 void splitc(char *, char *, char);
 void splitcn(char *, char *, char, size_t);
@@ -238,14 +246,26 @@ IP my_atoul(char *);
 unsigned long iptolong(IP);
 IP getmyip();
 void neterror(char *);
+#ifdef USE_IPV6
+void setsock(int, int, int);
+int allocsock(int, int, int);
+int getsock(int, int);
+#else
 void setsock(int, int);
 int allocsock(int, int);
 int getsock(int);
+#endif /* USE_IPV6 */
+int getprotocol(char *);
 char *hostnamefromip(unsigned long);
 void killsock(int);
 int answer(int, char *, unsigned long *, unsigned short *, int);
 inline int open_listen(int *);
-int open_address_listen(IP addr, int *port);
+inline int open_listen_by_af(int *, int);
+#ifdef USE_IPV6
+int open_address_listen(IP addr, int af_def, int *);
+#else
+int open_address_listen(IP addr, int *);
+#endif /* USE_IPV6 */
 int open_telnet(char *, int);
 int open_telnet_dcc(int, char *, char *);
 int open_telnet_raw(int, char *, int);
@@ -286,7 +306,8 @@ int deluser(char *);
 void freeuser(struct userrec *);
 int change_handle(struct userrec *, char *);
 void correct_handle(char *);
-int write_user(struct userrec *u, FILE * f, int shr);
+int write_user(struct userrec *, FILE *, int);
+int write_ignores(FILE *f, int);
 void write_userfile(int);
 struct userrec *check_dcclist_hand(char *);
 void touch_laston(struct userrec *, char *, time_t);
@@ -311,4 +332,4 @@ int _rfc_ncasecmp(const char *, const char *, int);
 int _rfc_toupper(int);
 int _rfc_tolower(int);
 
-#endif				/* _EGG_PROTO_H */
+#endif /* _EGG_PROTO_H */

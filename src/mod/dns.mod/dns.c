@@ -4,10 +4,10 @@
  *
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: dns.c,v 1.27 2002/07/07 22:35:25 guppy Exp $
+ * $Id: dns.c,v 1.33 2003/04/17 01:55:57 wcc Exp $
  */
 /*
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,6 +29,11 @@
 #include "src/mod/module.h"
 #include "dns.h"
 
+/* No async IPv6 dns in 1.6 */
+#ifdef USE_IPV6
+#  include "You cannot use the dns module with IPv6, re-run make iconfig and disable the dns module!"
+#endif /* USE_IPV6 */
+
 static void dns_event_success(struct resolve *rp, int type);
 static void dns_event_failure(struct resolve *rp, int type);
 
@@ -41,7 +46,6 @@ static Function *global = NULL;
 /*
  *    DNS event related code
  */
-
 static void dns_event_success(struct resolve *rp, int type)
 {
   if (!rp)
@@ -72,7 +76,7 @@ static void dns_event_failure(struct resolve *rp, int type)
     call_ipbyhost(rp->hostn, 0, 0);
   } else
     debug2("DNS resolve failed for unknown %s / %s", iptostr(rp->ip),
-	   nonull(rp->hostn));
+           nonull(rp->hostn));
   return;
 }
 
@@ -104,8 +108,7 @@ static void display_dns_socket(int idx, char *buf)
   strcpy(buf, "dns   (ready)");
 }
 
-static struct dcc_table DCC_DNS =
-{
+static struct dcc_table DCC_DNS = {
   "DNS",
   DCT_LISTEN,
   eof_dns_socket,
@@ -157,8 +160,11 @@ static int dns_expmem(void)
 static int dns_report(int idx, int details)
 {
   if (details) {
-    dprintf(idx, "    (cache uses %d bytes of memory)\n", dns_cache_expmem());
-    dprintf(idx, "    DNS resolver is active.\n");
+    int size = dns_expmem();
+
+    dprintf(idx, "    Async DNS resolver is active.\n");
+    dprintf(idx, "    Using %d byte%s of memory\n", size,
+            (size != 1) ? "s" : "");
   }
   return 0;
 }
@@ -172,8 +178,7 @@ static char *dns_close()
   del_hook(HOOK_SECONDLY, (Function) dns_check_expires);
 
   for (i = 0; i < dcc_total; i++) {
-    if (dcc[i].type == &DCC_DNS &&
-	dcc[i].sock == resfd) {
+    if (dcc[i].type == &DCC_DNS && dcc[i].sock == resfd) {
       killsock(dcc[i].sock);
       lostdcc(i);
       break;
@@ -187,8 +192,7 @@ static char *dns_close()
 
 EXPORT_SCOPE char *dns_start();
 
-static Function dns_table[] =
-{
+static Function dns_table[] = {
   /* 0 - 3 */
   (Function) dns_start,
   (Function) dns_close,
@@ -202,6 +206,7 @@ char *dns_start(Function *global_funcs)
   int idx;
 
   global = global_funcs;
+
   module_register(MODULE_NAME, dns_table, 1, 0);
   if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);

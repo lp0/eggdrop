@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: mod-channels.html,v 1.17 2002/07/21 02:39:03 wcc Exp $ -->
+<!-- $Id: mod-channels.html,v 1.21 2003/02/04 10:21:03 wcc Exp $ -->
 
 <html>
   <head>
@@ -42,39 +42,6 @@
         <dd>
           <p>Enter here the filename where dynamic channel settings are
           stored.</p>
-        </dd>
-
-        <dt><strong>set ban-time 120</strong></dt>
-
-        <dd>
-          <p>Set here how long temporary bans will last (in minutes). If you
-          set this setting to 0, the bot will never remove them.</p>
-        </dd>
-
-        <dt><strong>set exempt-time 60</strong></dt>
-
-        <dd>
-          <p>Set here how long temporary exempts will last (in minutes). If
-          you set this setting to 0, the bot will never remove them. The bot
-          will check the exempts every X minutes, but will not remove the
-          exempt if a ban is set on the channel that matches that exempt.
-          Once the ban is removed, then the exempt will be removed the next
-          time the bot checks.</p>
-
-          <p>Please note that this is an IRCnet feature.</p>
-        </dd>
-
-        <dt><strong>set invite-time 60</strong></dt>
-
-        <dd>
-          <p>Set here how long temporary invites will last (in minutes).
-          If you set this setting to 0, the bot will never remove them.
-          The bot will check the invites every X minutes, but will not
-          remove the invite if a channel is set to +i. Once the channel
-          is -i, then the invite will be removed the next time the bot
-          checks.</p>
-
-          <p>Please note that this is an IRCnet feature.</p>
         </dd>
 
         <dt><strong>set force-expire 0</strong></dt>
@@ -177,7 +144,7 @@
                 </table>
               </dd>
 
-              <dt><strong>revenge-mode 1</strong></dt>
+              <dt><strong>revenge-mode 0</strong></dt>
 
               <dd>
                 <p>This settings defines how the bot should punish bad users
@@ -211,6 +178,36 @@
                     kick, and ban them.</td>
                   </tr>
                 </table>
+              </dd>
+
+              <dt><strong>ban-time 120</strong></dt>
+              
+              <dd>
+                <p>Set here how long temporary bans will last (in minutes). If
+                you set this setting to 0, the bot will never remove them.</p>
+              </dd>
+
+              <dt><strong>exempt-time 60</strong></dt>
+              
+              <dd>
+                <p>Set here how long temporary exempts will last (in minutes).
+                If you set this setting to 0, the bot will never remove them.
+                The bot will check the exempts every X minutes, but will not
+                remove the exempt if a ban is set on the channel that matches
+                that exempt. Once the ban is removed, then the exempt will be
+                removed the next time the bot checks. Please note that this is
+                an IRCnet feature.</p>
+              </dd>
+
+              <dt><strong>invite-time 60</strong></dt>
+              
+              <dd>
+                <p>Set here how long temporary invites will last (in minutes).
+                If you set this setting to 0, the bot will never remove them.
+                The bot will check the invites every X minutes, but will not
+                remove the invite if a channel is set to +i. Once the channel
+                is -i then the invite will be removed the next time the bot
+                checks. Please note that this is an IRCnet feature.</p>
               </dd>
 
               <dt><strong>need-op { putserv &quot;PRIVMSG #lamest :op me
@@ -547,7 +544,10 @@
 
       <p><strong>set global-chanmode &quot;nt-likm&quot;</strong><br>
       <strong>set global-stopnethack-mode 0</strong><br>
-      <strong>set global-revenge-mode 1</strong></p>
+      <strong>set global-revenge-mode 0</strong><br>
+      <strong>set global-ban-time 120</strong><br>
+      <strong>set global-exempt-time 60</strong><br>
+      <strong>set global-invite-time 60</p>
 
       <p><strong>set global-chanset {</strong></p>
 <pre>
@@ -570,7 +570,7 @@
     <hr>
 
     <p><em>Copyright &copy; 1997 Robey Pointer<br>
-     Copyright &copy; 1999, 2000, 2001, 2002 <a href="http://www.eggheads.org/">
-     Eggheads Development Team</a></em></p>
+    Copyright &copy; 1999, 2000, 2001, 2002, 2003
+    <a href="http://www.eggheads.org/"> Eggheads Development Team</a></em></p>
   </body>
 </html>

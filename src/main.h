@@ -2,11 +2,11 @@
  * main.h
  *   include file to include most other include files
  *
- * $Id: main.h,v 1.19 2002/01/02 03:46:35 guppy Exp $
+ * $Id: main.h,v 1.25 2003/04/17 01:55:57 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,8 +30,36 @@
 #  include "config.h"
 #endif
 
+#include "lush.h" /* We seem to need this everywhere... */
+
+#if (((TCL_MAJOR_VERSION == 7) && (TCL_MINOR_VERSION >= 5)) || (TCL_MAJOR_VERSION > 7))
+#  define USE_TCL_EVENTS
+#  define USE_TCL_FINDEXEC
+#  define USE_TCL_PACKAGE
+#  define USE_TCL_VARARGS
+#endif
+
+#if (TCL_MAJOR_VERSION >= 8)
+#  define USE_TCL_OBJ
+#endif
+
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 1)) || (TCL_MAJOR_VERSION > 8))
+#  define USE_TCL_BYTE_ARRAYS
+#  define USE_TCL_ENCODING
+#endif
+
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+#  ifdef CONST
+#    define EGG_CONST CONST
+#  else
+#    define EGG_CONST
+#  endif
+#else
+#  define EGG_CONST
+#endif
+
 /* UGH! Why couldn't Tcl pick a standard? */
-#if !defined(HAVE_PRE7_5_TCL) && defined(__STDC__)
+#if defined(USE_TCL_VARARGS) && (defined(__STDC__) || defined(HAS_STDARG))
 #  ifdef HAVE_STDARG_H
 #    include <stdarg.h>
 #  else
@@ -82,35 +110,32 @@
 
 #ifndef MAKING_MODS
 extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,
- DCC_RELAY, DCC_RELAYING, DCC_FORK_RELAY, DCC_PRE_RELAY, DCC_CHAT_PASS,
- DCC_FORK_BOT, DCC_SOCKET, DCC_TELNET_ID, DCC_TELNET_NEW, DCC_TELNET_PW,
- DCC_TELNET, DCC_IDENT, DCC_IDENTWAIT, DCC_DNSWAIT;
+                        DCC_RELAY, DCC_RELAYING, DCC_FORK_RELAY, DCC_PRE_RELAY,
+                        DCC_CHAT_PASS, DCC_FORK_BOT, DCC_SOCKET, DCC_TELNET_ID,
+                        DCC_TELNET_NEW, DCC_TELNET_PW, DCC_TELNET, DCC_IDENT,
+                        DCC_IDENTWAIT, DCC_DNSWAIT;
 
 #endif
 
-#define iptolong(a)		(0xffffffff & 				\
-				 (long) (htonl((unsigned long) a)))
-#define fixcolon(x)		do {					\
-	if ((x)[0] == ':')			 			\
-		(x)++;							\
-	else								\
-		(x) = newsplit(&(x));					\
+#define iptolong(a) (0xffffffff & (long) (htonl((unsigned long) a)))
+#define fixcolon(x) do {                                                \
+        if ((x)[0] == ':')                                              \
+          (x)++;                                                        \
+        else                                                            \
+          (x) = newsplit(&(x));                                         \
 } while (0)
 
 /* This macro copies (_len - 1) bytes from _source to _target. The
  * target string is NULL-terminated.
  */
-#define strncpyz(_target, _source, _len)	do {			\
-	strncpy((_target), (_source), (_len) - 1);			\
-	(_target)[(_len) - 1] = 0;					\
+#define strncpyz(_target, _source, _len) do {                           \
+        strncpy((_target), (_source), (_len) - 1);                      \
+        (_target)[(_len) - 1] = 0;                                      \
 } while (0)
 
 #ifdef BORGCUBES
-
-/* For net.c */
-#  define O_NONBLOCK	00000004    /* POSIX non-blocking I/O		   */
-
-#endif				/* BORGUBES */
+#  define O_NONBLOCK 00000004 /* POSIX non-blocking I/O */
+#endif /* BORGUBES */
 
 
-#endif				/* _EGG_MAIN_H */
+#endif /* _EGG_MAIN_H */

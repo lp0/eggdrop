@@ -2,11 +2,11 @@
  * blowfish.c -- part of blowfish.mod
  *   encryption and decryption of passwords
  *
- * $Id: blowfish.c,v 1.23 2002/06/06 18:52:22 wcc Exp $
+ * $Id: blowfish.c,v 1.27 2003/03/08 04:29:43 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@
 
 #include "src/mod/module.h"
 #include "blowfish.h"
-#include "bf_tab.h"		/* P-box P-array, S-box */
+#include "bf_tab.h"             /* P-box P-array, S-box */
 #undef global
 static Function *global = NULL;
 
@@ -73,7 +73,7 @@ static int blowfish_expmem()
   return tot;
 }
 
-static void blowfish_encipher(u_32bit_t * xl, u_32bit_t * xr)
+static void blowfish_encipher(u_32bit_t *xl, u_32bit_t *xr)
 {
   union aword Xl;
   union aword Xr;
@@ -104,7 +104,7 @@ static void blowfish_encipher(u_32bit_t * xl, u_32bit_t * xr)
   *xl = Xr.word;
 }
 
-static void blowfish_decipher(u_32bit_t * xl, u_32bit_t * xr)
+static void blowfish_decipher(u_32bit_t *xl, u_32bit_t *xr)
 {
   union aword Xl;
   union aword Xr;
@@ -138,23 +138,26 @@ static void blowfish_decipher(u_32bit_t * xl, u_32bit_t * xr)
 
 static void blowfish_report(int idx, int details)
 {
-  int i, tot = 0;
-
   if (details) {
+    int i, tot = 0, size = blowfish_expmem();
+
     for (i = 0; i < BOXES; i++)
       if (box[i].P != NULL)
-	tot++;
+        tot++;
+
     dprintf(idx, "    Blowfish encryption module:\n");
-    dprintf(idx, "    %d of %d boxes in use: ", tot, BOXES);
+    dprintf(idx, "      %d of %d boxes in use: ", tot, BOXES);
     for (i = 0; i < BOXES; i++)
       if (box[i].P != NULL) {
-	dprintf(idx, "(age: %d) ", now - box[i].lastuse);
+        dprintf(idx, "(age: %d) ", now - box[i].lastuse);
       }
     dprintf(idx, "\n");
+    dprintf(idx, "      Using %d byte%s of memory\n", size,
+            (size != 1) ? "s" : "");
   }
 }
 
-static void blowfish_init(u_8bit_t * key, int keybytes)
+static void blowfish_init(u_8bit_t *key, int keybytes)
 {
   int i, j, bx;
   time_t lowest;
@@ -173,17 +176,17 @@ static void blowfish_init(u_8bit_t * key, int keybytes)
   for (i = 0; i < BOXES; i++)
     if (box[i].P != NULL) {
       if ((box[i].keybytes == keybytes) &&
-	  (!strncmp((char *) (box[i].key), (char *) key, keybytes))) {
-	/* Match! */
-	box[i].lastuse = now;
-	bf_P = box[i].P;
-	bf_S = box[i].S;
-	return;
+          (!strncmp((char *) (box[i].key), (char *) key, keybytes))) {
+        /* Match! */
+        box[i].lastuse = now;
+        bf_P = box[i].P;
+        bf_S = box[i].S;
+        return;
       }
     }
   /* No pre-allocated buffer: make new one */
   /* Set 'bx' to empty buffer */
-  bx = (-1);
+  bx = -1;
   for (i = 0; i < BOXES; i++) {
     if (box[i].P == NULL) {
       bx = i;
@@ -195,8 +198,8 @@ static void blowfish_init(u_8bit_t * key, int keybytes)
     lowest = now;
     for (i = 0; i < BOXES; i++)
       if (box[i].lastuse <= lowest) {
-	lowest = box[i].lastuse;
-	bx = i;
+        lowest = box[i].lastuse;
+        bx = i;
       }
     nfree(box[bx].P);
     for (i = 0; i < 4; i++)
@@ -226,7 +229,7 @@ static void blowfish_init(u_8bit_t * key, int keybytes)
       bf_S[i][j] = initbf_S[i][j];
 
   j = 0;
-  if (keybytes > 0) { /* drummer: fixes crash if key=="" */
+  if (keybytes > 0) {           /* drummer: fixes crash if key=="" */
     for (i = 0; i < bf_N + 2; ++i) {
       temp.word = 0;
       temp.w.byte0 = key[j];
@@ -261,7 +264,8 @@ static void blowfish_init(u_8bit_t * key, int keybytes)
 #define SALT2  0x23f6b095
 
 /* Convert 64-bit encrypted password to text for userfile */
-static char *base64 = "./0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+static char *base64 =
+            "./0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 static int base64dec(char c)
 {
@@ -284,7 +288,7 @@ static void blowfish_encrypt_pass(char *text, char *new)
   right = SALT2;
   blowfish_encipher(&left, &right);
   p = new;
-  *p++ = '+';			/* + means encrypted pass */
+  *p++ = '+';                   /* + means encrypted pass */
   n = 32;
   while (n > 0) {
     *p++ = base64[right & 0x3f];
@@ -392,6 +396,7 @@ static int tcl_encrypt STDVAR
   char *p;
 
   BADARGS(3, 3, " key string");
+  
   p = encrypt_string(argv[1], argv[2]);
   Tcl_AppendResult(irp, p, NULL);
   nfree(p);
@@ -403,6 +408,7 @@ static int tcl_decrypt STDVAR
   char *p;
 
   BADARGS(3, 3, " key string");
+  
   p = decrypt_string(argv[1], argv[2]);
   Tcl_AppendResult(irp, p, NULL);
   nfree(p);
@@ -412,8 +418,10 @@ static int tcl_decrypt STDVAR
 static int tcl_encpass STDVAR
 {
   BADARGS(2, 2, " string");
+  
   if (strlen(argv[1]) > 0) {
     char p[16];
+   
     blowfish_encrypt_pass(argv[1], p);
     Tcl_AppendResult(irp, p, NULL);
   } else
@@ -421,12 +429,11 @@ static int tcl_encpass STDVAR
   return TCL_OK;
 }
 
-static tcl_cmds mytcls[] =
-{
-  {"encrypt",	tcl_encrypt},
-  {"decrypt",	tcl_decrypt},
-  {"encpass",	tcl_encpass},
-  {NULL,	NULL}
+static tcl_cmds mytcls[] = {
+  {"encrypt", tcl_encrypt},
+  {"decrypt", tcl_decrypt},
+  {"encpass", tcl_encpass},
+  {NULL,             NULL}
 };
 
 static char *blowfish_close()
@@ -436,8 +443,7 @@ static char *blowfish_close()
 
 EXPORT_SCOPE char *blowfish_start(Function *);
 
-static Function blowfish_table[] =
-{
+static Function blowfish_table[] = {
   /* 0 - 3 */
   (Function) blowfish_start,
   (Function) blowfish_close,

@@ -1,4 +1,9 @@
-Contents of the doc/settings/ directory:
+Directory Contents - doc/settings/
+Last revised: April 16, 2003
+     _________________________________________________________________
+
+                     Directory Contents - doc/settings
+
 
 core.settings
   All module-independent Eggdrop settings are documented here.
@@ -53,3 +58,6 @@ mod.wire
 
 mod.woobie
   Documentation for the woobie module is provided in this file.
+    ________________________________________________________________________
+
+  Copyright (C) 2003 Eggheads Development Team

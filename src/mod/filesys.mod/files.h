@@ -1,11 +1,11 @@
 /*
  * files.h -- part of filesys.mod
  *
- * $Id: files.h,v 1.7 2002/01/02 03:46:38 guppy Exp $
+ * $Id: files.h,v 1.9 2003/01/28 06:37:26 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -80,4 +80,4 @@
 #define FILES_WELCOME    get_language(0x33a)
 #define FILES_WELCOME1   get_language(0x33b)
 
-#endif				/* _EGG_MOD_FILESYS_FILES_H */
+#endif /* _EGG_MOD_FILESYS_FILES_H */

@@ -2,10 +2,10 @@
  * memset.h
  *   prototypes for memset.c
  *
- * $Id: memset.h,v 1.4 2002/01/02 03:46:36 guppy Exp $
+ * $Id: memset.h,v 1.7 2003/01/29 05:48:41 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,11 +32,11 @@
 /* Use our own implementation. */
 void *egg_memset(void *dest, int c, size_t n);
 #else
-#  define egg_memset	memset
+#  define egg_memset memset
 #endif
 
 /* Use memset instead of bzero.
  */
-#define egg_bzero(dest, n)	egg_memset(dest, 0, n)
+#define egg_bzero(dest, n) egg_memset(dest, 0, n)
 
-#endif	/* !__EGG_COMPAT_MEMSET_H */
+#endif /* !__EGG_COMPAT_MEMSET_H */

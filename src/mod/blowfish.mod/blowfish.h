@@ -1,11 +1,11 @@
 /*
  * blowfish.h -- part of blowfish.mod
  *
- * $Id: blowfish.h,v 1.7 2002/01/02 03:46:37 guppy Exp $
+ * $Id: blowfish.h,v 1.10 2003/01/29 05:48:41 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,11 +25,11 @@
 #ifndef _EGG_MOD_BLOWFISH_BLOWFISH_H
 #define _EGG_MOD_BLOWFISH_BLOWFISH_H
 
-#define MAXKEYBYTES	56		/* 448 bits */
-#define bf_N		16
-#define noErr		 0
-#define DATAERROR	-1
-#define KEYBYTES	 8
+#define MAXKEYBYTES 56 /* 448 bits */
+#define bf_N        16
+#define noErr        0
+#define DATAERROR   -1
+#define KEYBYTES     8
 
 union aword {
   u_32bit_t word;
@@ -40,13 +40,13 @@ union aword {
     unsigned int byte1:8;
     unsigned int byte2:8;
     unsigned int byte3:8;
-#else				/* !WORDS_BIGENDIAN */
+#else /* !WORDS_BIGENDIAN */
     unsigned int byte3:8;
     unsigned int byte2:8;
     unsigned int byte1:8;
     unsigned int byte0:8;
-#endif				/* !WORDS_BIGENDIAN */
+#endif /* !WORDS_BIGENDIAN */
   } w;
 };
 
-#endif				/* _EGG_MOD_BLOWFISH_BLOWFISH_H */
+#endif /* _EGG_MOD_BLOWFISH_BLOWFISH_H */

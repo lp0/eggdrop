@@ -4,10 +4,10 @@
  *
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: filelist.c,v 1.10 2002/01/02 03:46:38 guppy Exp $
+ * $Id: filelist.c,v 1.13 2003/01/30 07:15:15 wcc Exp $
  */
 /*
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -68,7 +68,9 @@ static void filelist_add(filelist_t *flist, char *filename)
 static void filelist_addout(filelist_t *flist, char *desc)
 {
   if (FILELIST_LE(flist).output) {
-    FILELIST_LE(flist).output = nrealloc(FILELIST_LE(flist).output, strlen(FILELIST_LE(flist).output) + strlen(desc) + 1);
+    FILELIST_LE(flist).output = nrealloc(FILELIST_LE(flist).output,
+                                strlen(FILELIST_LE(flist).output) +
+                                strlen(desc) + 1);
     strcat(FILELIST_LE(flist).output, desc);
   } else {
     FILELIST_LE(flist).output = nmalloc(strlen(desc) + 1);
@@ -101,12 +103,12 @@ static void filelist_qsort(filelist_t *flist, int l, int r)
       j--;
     if (i <= j) {
       if (strcmp(el[j].fn, el[i].fn)) {
-	elt.fn = el[j].fn;
-	elt.output = el[j].output;
-	el[j].fn = el[i].fn;
-	el[j].output = el[i].output;
-	el[i].fn = elt.fn;
-	el[i].output = elt.output;
+        elt.fn = el[j].fn;
+        elt.output = el[j].output;
+        el[j].fn = el[i].fn;
+        el[j].output = el[i].output;
+        el[i].fn = elt.fn;
+        el[i].output = elt.output;
       }
       i++;
       j--;

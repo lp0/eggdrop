@@ -1,5 +1,5 @@
 Eggdrop Core Settings
-Last revised: May 24, 2002
+Last revised: April 17, 2003
      _________________________________________________________________
 
                            Eggdrop Core Settings
@@ -20,16 +20,16 @@ work as a shell script.
 
 Example:
 
-#! /path/to/eggdrop
+  #! /path/to/eggdrop
 
 
-##### BASIC STUFF #####
+##### BASIC SETTINGS #####
 
 You can change the basic Eggdrop appearance and behavior in this section.
 
 
   set username "lamest"
-    This setting defines the username the bot uses on IRC. This setting has 
+    This setting defines the username the bot uses on IRC. This setting has
     no effect if an ident daemon is running on your bot's machine.
 
 
@@ -52,9 +52,9 @@ You can change the basic Eggdrop appearance and behavior in this section.
 
 
   set offset "5"
-    The offset setting specifies the time value to be added to the local 
-    time to get Coordinated Universal Time (UTC aka GMT). The offset is 
-    positive if the local timezone is west of the Prime Meridian and 
+    The offset setting specifies the time value to be added to the local
+    time to get Coordinated Universal Time (UTC aka GMT). The offset is
+    positive if the local timezone is west of the Prime Meridian and
     negative if it is east. The value (in hours) must be between -23 and
     23. For example, if the timezone is UTC+1, the offset is -1.
 
@@ -70,6 +70,12 @@ You can change the basic Eggdrop appearance and behavior in this section.
     may want to specify the particular IP to bind to. You can specify either
     by hostname or by IP. You may also want to set the hostname here if
     Eggdrop has trouble detecting it when it starts up.
+
+
+  set my-hostname6 "virtual.host.com"
+  set my-ip6 "2001:1:1:1::1"
+    If you're using IPv6 support, set the IPv6 IP address and hostname to bind
+    to here. You still need to set my-ip.
 
 
   addlang "english"
@@ -90,7 +96,7 @@ the logfile of the next day.
 
 
   set max-logs 5
-    This is the maximum number of logfiles allowed. This setting can be 
+    This is the maximum number of logfiles allowed. This setting can be
     increased; however, don't decrease it.
 
 
@@ -108,27 +114,37 @@ the logfile of the next day.
     the CPU usage of your bot (on the other hand it will decrease your RAM
     usage).
 
+  set raw-log 0
+    This setting allows you the logging of raw incoming server traffic via
+    console/log flag 'r', raw outgoing server traffic via console/log mode 'v',
+    raw botnet traffic via console/log mode 't', and raw share traffic via
+    console/log mode 'h'. These flags can create a large security hole,
+    allowing people to see user passwords. This is now restricted to +n users
+    only. Please choose your owners with care.
 
 logfile <logflags> <channel> "logs/logfile"
     This setting tells the bot what should be logged, from where, and to
     which file.
 
-    The most common log file flags are:
-      m  private msgs/ctcps to the bot
-      k  kicks, bans, mode changes on the channel
-      j  joins, parts, netsplits on the channel
-      p  public chatter on the channel
-      s  server connects/disconnects/notices
-      b  information about bot linking and userfile sharing
-      c  commands people use (via msg or dcc)
-      x  file transfers and file-area commands
-      r  (if use-console-r enabled) EVERYTHING sent to the bot by the server
-      o  other: misc info, errors -- IMPORTANT STUFF
-      w  wallops: msgs between IRCops (be sure to set the bot +w in init-server)
+    Logfile flags:
+      b - information about bot linking and userfile sharing
+      c - commands
+      d - misc debug information
+      h - raw share traffic
+      j - joins, parts, quits, and netsplits on the channel
+      k - kicks, bans, and mode changes on the channel
+      m - private msgs, notices and ctcps to the bot
+      o - misc info, errors, etc (IMPORTANT STUFF)
+      p - public text on the channel
+      r - raw incoming server traffic
+      s - server connects, disconnects, and notices
+      t - raw botnet traffic
+      v - raw outgoing server traffic
+      w - wallops (make sure the bot sets +w in init-server)
+      x - file transfers and file-area commands
 
-    There are others, but you probably shouldn't log them, it'd be rather 
-    unethical ;). There are also eight user-defined levels (1-8) which are
-    used by Tcl scripts.
+    Note that modes d, h, r, t, and v can fill disk quotas quickly. There are
+    also eight user-defined levels (1-8) which can be used by Tcl scripts.
 
     Each logfile belongs to a certain channel. Events of type 'k', 'j', and 'p'
     are logged to whatever channel they happened on. Most other events are
@@ -152,9 +168,9 @@ logfile <logflags> <channel> "logs/logfile"
 
 
   set keep-all-logs 0
-    If you want to keep your logfiles forever, turn this setting on. All 
-    logfiles will get the suffix 
-    ".[day, 2 digits][month, 3 letters][year, 4 digits]". Note that your 
+    If you want to keep your logfiles forever, turn this setting on. All
+    logfiles will get the suffix
+    ".[day, 2 digits][month, 3 letters][year, 4 digits]". Note that your
     quota/hard-disk might be filled by this, so check your logfiles
     often and download them.
 
@@ -180,7 +196,7 @@ logfile <logflags> <channel> "logs/logfile"
 
 
 ##### CONSOLE #####
-  
+
   set console "mkcobxs"
     This is the default console mode. It uses the same event flags as the log
     files do. The console channel is automatically set to your "primary" channel,
@@ -253,10 +269,10 @@ logfile <logflags> <channel> "logs/logfile"
 
 
 
-##### BOTNET, DCC AND NETWORK #####
+##### BOTNET/DCC/TELNET #####
 
 Settings in this section should be unimportant for you until you deal with
-botnets (multiple Eggdrops connected together to maximize efficiency). You 
+botnets (multiple Eggdrops connected together to maximize efficiency). You
 should read doc/BOTNET before modifying these settings.
 
 
@@ -267,27 +283,28 @@ should read doc/BOTNET before modifying these settings.
 
 
   listen <port> <mode>
-    The listen command opens a telnet port by which you or other bots can
-    interact with the Eggdrop by telneting in.
+    This opens a telnet port by which you and other bots can interact with the
+    Eggdrop by telneting in.
 
-    Valid ports are typically anything between 1025 and 65535 assuming the 
+    There are more options for the listen command in doc/tcl-commands.doc. Note
+    that if you are running more than one bot on the same machine, you will want
+    to space the telnet ports at LEAST 5 apart, although 10 is even better.
+
+    Valid ports are typically anything between 1025 and 65535 assuming the
     port is not already in use.
 
-    Valid modes are 'all', 'bots', and 'users'. You can assign special ports
-    for users and bots, or one for all.
+    If you would like the bot to listen for users and bots in separate ports,
+    use the following format:
 
-    Examples:
+      listen 3333 bots
+      listen 4444 users
 
-    listen 3333 bots
-    listen 4444 users
+    If you wish to use only one port, use this format:
 
-    Or:
+      listen 3333 all
 
-    listen 3333 all
-
-    There are more options for the listen command in doc/tcl-commands.doc.
-    Note that if you are running more than one bot on the same machine, you 
-    will want to space the telnet ports at LEAST 5 apart. 10 is even better.
+    You need to un-comment this line and change the port number in order to open
+    the listen port. You should not keep this set to 3333.
 
 
   set remote-boots 2
@@ -313,7 +330,7 @@ should read doc/BOTNET before modifying these settings.
     have bogus information on the grounds that the user may have been trying
     to make the bot connect to somewhere that will get it into trouble, or
     that the user has a broken client (like mIRC tends to do), in which case
-    the connect wouldn't work anyway.  It's suggested that you turn this on.
+    the connect wouldn't work anyway. It's suggested that you turn this on.
 
 
   set ident-timeout 5
@@ -327,18 +344,18 @@ should read doc/BOTNET before modifying these settings.
 
   set open-telnets 0
     If you want people allow to telnet in and type 'NEW' to become a new user,
-    set this to 1. This is similar to the 'hello' msg command. The 
+    set this to 1. This is similar to the 'hello' msg command. The
     protect-telnet setting must be set to 0 to use this.
 
 
   set stealth-telnets 0
-    If you don't want Eggdrop to identify itself as an Eggdrop on a telnet 
-    connection, set this setting to 1. Eggdrop will display 'Nickname' 
+    If you don't want Eggdrop to identify itself as an Eggdrop on a telnet
+    connection, set this setting to 1. Eggdrop will display 'Nickname'
     instead.
 
 
   set use-telnet-banner 0
-    If you want Eggdrop to display a banner when telneting in, set this 
+    If you want Eggdrop to display a banner when telneting in, set this
     setting to 1. The telnet banner is set by 'set telnet-banner'.
 
 
@@ -349,7 +366,7 @@ should read doc/BOTNET before modifying these settings.
 
   set dcc-flood-thr 3
     Specify here the number of lines to accept from a user on the partyline
-    within 10 seconds before they are considered to be flooding and therefore
+    within 1 second before they are considered to be flooding and therefore
     get booted.
 
 
@@ -371,7 +388,7 @@ should read doc/BOTNET before modifying these settings.
 ##### MORE ADVANCED SETTINGS #####
 
   set firewall "!sun-barr.ebay:3666"
-    Set this to your socks host if your Eggdrop sits behind a firewall. If 
+    Set this to your socks host if your Eggdrop sits behind a firewall. If
     you use a Sun "telnet passthru" firewall, prefix the host with a "!".
 
 
@@ -381,7 +398,7 @@ should read doc/BOTNET before modifying these settings.
     10.0.0.0-10.255.255.255 and your firewall transparently changes your
     address to a unique address for your box) or you have IP masquerading
     between you and the rest of the world, and /dcc chat,/ctcp chat or
-    userfile sharing aren't working, enter your outside IP here. Do not 
+    userfile sharing aren't working, enter your outside IP here. Do not
     enter anything for my-ip or my-hostname if you use this setting.
 
 
@@ -445,7 +462,7 @@ should read doc/BOTNET before modifying these settings.
 
   set must-be-owner 1
     If you enable this setting, only permanent owners (owner setting) will be
-    able to use .tcl and .set. Moreover, if you want to only let permanent 
+    able to use .tcl and .set. Moreover, if you want to only let permanent
     owners use .dump, then set this to 2.
 
 
@@ -460,38 +477,34 @@ should read doc/BOTNET before modifying these settings.
     increase this later, but never decrease it.
 
 
-  set enable-simul 1
-    Enable this setting if you want to enable the 'dccsimul' Tcl command.
-
-
   set allow-dk-cmds 1
     Enable this setting if you want +d & +k users to use commands bound as -|-.
 
-  
+
   set dupwait-timeout 5
     If your Eggdrop rejects bots that actually have already disconnected from
     another hub, but the disconnect information has not yet spread over the
-    botnet due to lag, use this setting. The bot will wait dupwait-timeout 
+    botnet due to lag, use this setting. The bot will wait dupwait-timeout
     seconds before it checks again and then finally reject the bot.
 
 
 
 ##### MODULES #####
 
-After the core settings, you should start loading modules. Modules are 
+After the core settings, you should start loading modules. Modules are
 loaded by the command "loadmodule <module>". Eggdrop looks for modules in
-the directory you specified by the module-path setting in the files and 
+the directory you specified by the module-path setting in the files and
 directories section.
 
 Please note that for different configurations, different modules are needed.
 Four examples:
 
  Channel Security Bot:
-    This bot needs the channels, blowfish, console, dns, irc, and (if you 
+    This bot needs the channels, blowfish, console, dns, irc, and (if you
     like) ctcp modules loaded. More is not needed and makes the bot slower.
 
   Public IRC Bot:
-    A public bot should have all modules available loaded since they provide 
+    A public bot should have all modules available loaded since they provide
     all functions for everyday use.
 
   Secure Filesys Bot:
@@ -515,12 +528,12 @@ should be loaded and their variables should be set at this point.
     directory. All scripts should be put there, although you can place them where
     you like as long as you can supply a fully qualified path to them.
 
-    Some commonly loaded scripts are alltools.tcl and action.fix.tcl. 
-    
+    Some commonly loaded scripts are alltools.tcl and action.fix.tcl.
+
     The appropriate source lines are:
 
       source scripts/alltools.tcl
       source scripts/action.fix.tcl
      _________________________________________________________________
 
-   Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+   Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team

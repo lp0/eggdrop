@@ -2,10 +2,10 @@
  * strftime.c
  *   Portable strftime implementation. Uses GNU's strftime().
  *
- * $Id: strftime.c,v 1.3 2002/01/02 03:46:36 guppy Exp $
+ * $Id: strftime.c,v 1.6 2003/01/29 05:48:41 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  * Written by Fabian Knittel
  *
  * This program is free software; you can redistribute it and/or
@@ -29,7 +29,7 @@
 #ifndef HAVE_STRFTIME
 #  undef emacs
 #  undef _LIBC
-#  define strftime	egg_strftime
+#  define strftime egg_strftime
 
 #  include "gnu_strftime.c"
-#endif	/* !HAVE_STRFTIME */
+#endif /* !HAVE_STRFTIME */

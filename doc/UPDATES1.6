@@ -1,7 +1,108 @@
-$Id: UPDATES1.6,v 1.428 2002/11/18 05:38:19 wcc Exp $
+$Id: UPDATES1.6,v 1.497 2003/05/04 20:13:58 wcc Exp $
 
 Changes in Eggdrop: (since v1.6.0)
 ----------------------------------
+
+1.6.14 (04 May 2003)
+Found by  Fixed by  What...
+          poptix/   added support for the IPv6 protocol
+	  Wcc
+          guppy     fixed a couple of bugs in autobotchk and made the output
+	            cleaner
+          PPSlim    updated the logic of .fixcodes
+          KuNgFo0   added a missing cast in tcl_rand
+          PPSlim    fixed getops timer handling
+Paladin   Wcc       fixed access checking in -ban, -exempt, and -invite
+          TaKeDa    fixed a Tcl_Merge memleak
+          M. Koszik fixed a crash related to the cd command in filesys.mod
+          Eule      channel keys are now handled correctly in flush_mode()
+          Sven      locking a channel key/limit now enforces it from being
+                    changed as well as unset
+          Sven      don't bounce our own modes
+          Sven      q|q users can no longer obtain a channel voice, regardless
+                    of +autovoice
+          Eule      users with appropriate flags can now halfop and voice
+                    themselves
+          Sven      -ban <number> now works for channel bans
+          Sven      -ban <number> now removes the ban from the channel
+          Wcc       cleaned up the output of .status
+          Felix     added a german language file for the transfer module
+          Wcc       show a meaningful error message when adding an invalid
+                    channel with .+chan
+          Wcc       don't use memcpy() and memset() directly
+          Sven      fixed a crash that can happen when the serverlist contains
+                    null strings
+          Sven/     added NO_HALFOP_CHANMODES and NOHALFOPS_MODES defines to
+          Wcc       chan.h to allow halfop-related mode behavior to be changed
+                    on IRCd's that implement halfops differently
+Shane0    Wcc       fixed a compile error on Tru64 UNIX
+          Sven      the WASHALFOP flag now works correctly
+fbs       Wcc       kill a transfer connection after sending a
+                    TRANSFER_DCC_IGNORED notice to a user
+          PPSlim    flood-pub should be flood-chan when using 'channel get'
+          BarkerJr  '~' and '&' are now correctly recognized as a meaning a
+                    user has ops on a channel
+          winkey    fixed uhost buffer length
+winkey    Wcc       don't use help queue for dcc sends or gets
+          Wcc       case-changes should be traced when the 'nick' Tcl variable
+                    is modified
+          TheAvatar added a set of Danish language files
+          Wcc       fixed an out-of-bounds error in delignore()
+Tothwolf  Wcc       argument checking for cmd_comment() and cmd_botaddr() was
+                    incorrect
+          Wcc       GLOBAL_CHANS is now used where it should be to make
+                    changing the number of botnet channels easier
+          Wcc       fixed a logic problem when reversing in got_[op|halfop]()
+|SmAsH|   Wcc       user-punishing and tcl_maskhost nor use matching banmasks
+                    regardless of strict-host
+Wcc       stdarg    fixed a few memory leaks in the filesystem module
+guppy     Wcc       updated recomended Tcl version to 8.3.4 and changed Tcl's
+                    url to tcl.activestate.com (also updated autoconf to 2.57)
+Tothwolf  Wcc       merged use-console-r and debug-output into one new setting
+                    named raw-log
+Tothwolf  Wcc       backported user-defined channel strings from 1.7
+          Wcc       removed enable-simul
+          Wcc       fixed a cosmetic problem with cmd_pls_bot
+Cosmo     Wcc/      fixed a crash in u_delban (bug 267) caused by trying to
+          BarkerJr  strcpy to an initialized pointer char
+fbs       Wcc       use movefile() instead of copyfile() and unlink() when
+                    moving files in filesys.mod
+          Wcc       changed EFnet's max-bans/max-modes to 25
+Tothwolf  Wcc       moved debug-output and use-console-r to the logging section
+                    of the config file where they belong
+Tothwolf  Wcc       don't tell users to /msg the bot hello when they don't have
+                    access if learn-users is disabled
+          Tothwolf  fixed a few header problems with time.h
+          Wcc       cleaned up transfer.mod a bit
+          M. Koszik several misc code cleanups and bugfixes
+          Wcc       files copied to /tmp from file transfers are now deleted
+                    if the transfer connection is killed (makes resends and
+                    resumes function correctly)
+BarkerJr  Wcc       ignores are now saved if channels.mod is not loaded
+fbs       fbs/      open file descriptors are now closed when the killdcc Tcl
+          Wcc       command is used on a transfer socket
+never/    Wcc       unixtime was not increased when eggdrop was blocked during
+thommey             a series of in-line Tcl commands
+lee       Wcc       exported getchanmode()
+various   darko``   removed strict-servernames -- $server is now always the
+                    server's realname and $serveraddress is it's server list
+                    entry
+          BarkerJr  bind NICK now gets triggered even if the nickname isn't
+                    found in any channels (i.e. when the bot's nickname changes
+                    before it joins channels)
+          darko``   fixed parsing of userhosts in gotwall()
+reed      Wcc       updated UnderNet's max_bans to 45
+various   BarkerJr  config file updates
+various   Wcc/      removed quoting support from wild_match() which fixes several
+          zip       bugs with '\' characters
+          BarkerJr  show who unlinked a bot when unlinked remotely
+          poptix    fixed default setting for the help-path and text-path settings
+          The_Dawn  fixed a problem in cmd_kick()/cmd_kickban() where the
+                    victim's access is checked instead of the user's
+Paladin   Wcc       exported MD5 functions to modules
+          Wcc       exported me_voice() in irc_table
+          Wcc       .say and .act now allow you to send a message to a moderated
+                    channel when the bot has halfop status
 
 1.6.13 (22 November 2002)
 Found by  Fixed by  What...
@@ -82,7 +183,7 @@ dork      TaKeDa    fixed a crash while doing .kickban -nick
                     now)
 guppy     Wcc       msg_whois should require an argument.
           Wcc       added support for halfops (channel mode +h)
-MaSsKilla Wcc       don't allow channels containing commas to be added.. 
+MaSsKilla Wcc       don't allow channels containing commas to be added..
                     also made an error message more clear
           BarkerJr  updates to doc/MODULES
           Wcc       more doc updates
@@ -104,7 +205,7 @@ guppy     Wcc       added support for +r on Undernet's ircu 2.10.11
 Found by  Fixed by  What...
 (^Baron^) Eule      protect(ops|friends) works with +bitch now
           guppy     reverted the handlen friendly patches
-MaSsKilla dw	    fixed a crash when trying to add an invalid chan using .+chan
+MaSsKilla dw        fixed a crash when trying to add an invalid chan using .+chan
 various   guppy     nick2hand didn't return "" on a nick that wasn't in the channel
 slennox   Wcc       fixed a few config file problems
 Paladin   Wcc       chattr's description in tcl-commands.doc was unclear relating to
@@ -133,8 +234,8 @@ various   Eule      modes-per-line is limited to a max of 6 modes per line
                     friendly
           Amir      botlink() now safely copies the linker string
 various   Eule      fixed crashes relating to flushmodes
-Wanderer| dw	    tcl command modules missing in doc/tcl-commands.doc
-          guppy     users with only +x can now only login via dcc chat, they cannot use 
+Wanderer| dw        tcl command modules missing in doc/tcl-commands.doc
+          guppy     users with only +x can now only login via dcc chat, they cannot use
                     telnet
           Wcc       more documentation updates
           Eule/     changed how protectops and protectfriends works a bit:
@@ -175,8 +276,8 @@ Paladinz  guppy     ircu2.10.11 properly formats PART messages; however, eggdrop
           Wcc       fixed a couple of cosmetic problems in cmd_pls_user
           Wcc       do not eval init-server on rehash since this variable is used for
                     performing tcl commands on a succesful server connection
-MaSsKilla dw	    Couldn't introduce new users through telnet if a
-		      handle named "new" existed.
+MaSsKilla dw        Couldn't introduce new users through telnet if a
+                      handle named "new" existed.
 SiD3WiNDR Wcc       MISC_USERFCREATE1 should use origbotname instead of botnetnick
           Wcc       added a warning about allow-resync in the config file
           TaKeDa    prevent botnet flooding when adding ignores which already exist
@@ -188,9 +289,9 @@ SiD3WiNDR Wcc       MISC_USERFCREATE1 should use origbotname instead of botnetni
 blaster^  Eule      fixed a memleak when adding users
           ITE       more 64bit arch fixes
           BarkerJr  lets log remote botinfo calls
-          blaster^  
+          blaster^
           BarkerJr  update a bot's laston info when the bot links
-jedis     guppy     some more remote boot fixes 
+jedis     guppy     some more remote boot fixes
 |^Raven^| stdarg/   hand2nick, nick2hand, handonchan, and chanlist might not always return
           guppy     that a user is known even if we know they are -- this has been fixed
 
@@ -236,7 +337,7 @@ VYOinlove guppy     don't try to open a dcc chat when people do /ctcp <bot> chat
 various   guppy     tcl_botisvoice, tcl_botisop, tcl_botonchan, tcl_onchansplit, tcl_isop,
                     tcl_isvoice, and tcl_handonchan all take channel as an optional argument
                     now
-Abraham   guppy     tcl_onchan can now be used without a channel to check all the bot's 
+Abraham   guppy     tcl_onchan can now be used without a channel to check all the bot's
                     channels
 various   stdarg/   added tcl_traffic (a modified copy of stdarg's original patch)
           guppy/
@@ -252,7 +353,7 @@ various   guppy     tcl_pushmode now accepts any irc modes instead of the standa
           Eule      a bunch of small fixes to gotjoin, gotkick, got367, a
                     modes-per-line calcuation, and to include_lk
           Wcc       yet more documentation updates
-ziffie    BHAB      Documentation doesn't cover how to connect to servers with 
+ziffie    BHAB      Documentation doesn't cover how to connect to servers with
                     a password; documentation added to sample config files.
 |^Raven^| guppy     made tcl_hand2nick _a lot_ faster
           Eule      more membercheck fixes for nick bans, nick +k users, -user, and
@@ -298,7 +399,7 @@ TaKeDa    stdarg    fixed a small crash in notes.mod
           TaKeDa    fix 'setuser <hand> PASS' from crashing
 boro      bhab      stop_nethack_mode 4 oddity when a +a bot returns from a
                     split getting a -o+o (double negating mode)
-	  poptix    Testing some better socket code (++)++
+          poptix    Testing some better socket code (++)++
           Wcc       more typo fixing in the config files
           BarkerJr  more typo fixes
           Wcc       fixed several tons of spelling errors (really)
@@ -311,7 +412,7 @@ DarkReap1           is set +statuslog.
           Wcc       fixed up some spelling mistakes in tcl-commands.doc
           poptix    lots of argv[] fixes that caused crashes
 dfrank    stdarg    'chattr hand' no longer crashes (legacy bug)
-          poptix    finally fixed the banreason bug 
+          poptix    finally fixed the banreason bug
 zip       guppy     small fix for ircu servers that send ERROR: instead of ERROR :
           fuchs     don't get GO if the channel is -cycle
           guppy     couple of small uptime.mod backports from 1.7
@@ -346,7 +447,7 @@ proton    poptix    don't bother sending server in the uptime packets
 stdarg    poptix    we weren't looking the user record back up on iterations on channels
                     in the NICK bind, causing the chance of a bad pointer reference =P
                     (stdarg gave me the idea to look =)
-          poptix    Oh, look, SIGN and SPLT binds actually pass on the user record now, 
+          poptix    Oh, look, SIGN and SPLT binds actually pass on the user record now,
                     and allow flag bindings =P
 various   guppy     the documentation for the need bind was slightly screwy
           Kirben    don't check for static tcl under cygwin
@@ -355,14 +456,14 @@ various   guppy     the documentation for the need bind was slightly screwy
           Noyga     Fixes/Additions to command stacking
 |^Raven^| Noyga     PRIVMSGs with the same message to the same destination
                     are no longer stacked also USERHOST/USERIP are not stacked
-                    using a comma 
+                    using a comma
           Sup       Added HOOK_DIE to allow tcl_die to have a quit message.
           TaKeDa    small resync fix
           TaKaDa    fixed tcl_md5, it was broken on tcl8.1+
           Kirben    check whether cygwin requires -mwin32 to support
                     old versions of cygwin
           Kirben    check for bind in /usr/local/bind when using cygwin
-NeoN-	  dw	    a banreason wasn't used in some cases.
+NeoN-     dw        a banreason wasn't used in some cases.
 Noyga     Sup       Bot sent a useless TOPIC command to the server
                     when it joined a channel.
           SuperS    added QNX support

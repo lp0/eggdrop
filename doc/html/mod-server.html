@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: mod-server.html,v 1.20 2002/07/10 00:37:36 wcc Exp $ -->
+<!-- $Id: mod-server.html,v 1.27 2003/02/13 23:56:43 wcc Exp $ -->
 
 <html>
   <head>
@@ -44,11 +44,11 @@
         <dd>
           <p>What is your network?</p>
 
-          <p>0 = Efnet (non +e/+I hybrid)<br>
+          <p>0 = Efnet (non +e/+I Hybrid)<br>
            1 = IRCnet<br>
            2 = Undernet<br>
            3 = Dalnet<br>
-           4 = Efnet +e/+I hybrid<br>
+           4 = +e/+I Hybrid<br>
            5 = Others</p>
         </dd>
 
@@ -74,19 +74,53 @@
           if its primary nickname is already in use.</p>
         </dd>
 
-        <dt><strong>set realname &quot;/msg LamestBot
-        hello&quot;</strong></dt>
+        <dt><strong>set realname &quot;/msg LamestBot hello&quot;</strong></dt>
 
         <dd>
           <p>Set here what to display in the real-name field for the bot.</p>
+        </dd>
+
+        <dt>
+          <p>
+            <strong>bind evnt - init-server evnt:init_server</strong><br>
+            <strong>proc evnt:init_server {type} {</strong><br>
+            <strong>&nbsp;&nbsp;&nbsp;global botnick</strong><br>
+            <strong>&nbsp;&nbsp;&nbsp;putquick &quot;MODE $botnick +i-ws&quot;</strong><br>
+            <strong>}</strong>
+          </p>
+        </dt>
+
+        <dd>
+          <p>This is a Tcl script to be run immediately after connecting to a
+          server.</p>
         </dd>
 
         <dt><strong>set init-server { putserv &quot;MODE $botnick +i-ws&quot;
         }</strong></dt>
 
         <dd>
-          <p>Set here a script to run (if any) when first connecting to a
-          server.</p>
+          <p>This is a Tcl script to be run immediately after connecting to a
+          server. It is limited to 120 characters, and is depriciated due to
+          the EVNT bind (see <a href="tcl-commands.html">Tcl Commands</a>).</p>
+        </dd>
+
+        <dt><strong>set connect-server { putlog &quot;Connecting to
+        server.&quot; }</strong></dt>
+
+        <dd>
+          <p>This is a Tcl script to be run immediately before connecting to a
+          server. It is limited to 120 characters, and is depriciated due to
+          the EVNT bind (see <a href="tcl-commands.html">Tcl Commands</a>).</p>
+        </dd>
+
+        <dt><strong>set disconnect-server { putlog &quot;Disconnected from
+        server.&quot; }</strong></dt>
+
+        <dd>
+          <p>This is a Tcl script to be run immediately after disconnecting
+          from a server. It is limited to 120 characters, and is depriciated
+          due to the EVNT bind (see <a href="tcl-commands.html">Tcl
+          Commands</a>).</p>
         </dd>
 
         <dt><strong>set servers { irc.change.this:6667 irc.example.com:7000 }
@@ -116,16 +150,6 @@
         <dd>
           <p>Set the default port which should be used if none is specified
           with &#39;.jump&#39; or in &#39;set servers&#39;.</p>
-        </dd>
-
-        <dt><strong>set strict-servernames 0</strong></dt>
-
-        <dd>
-          <p>Often, IRC servers call themselves a name other than their
-          actual hostname. If you want Eggdrop to replace your entry in the
-          config file with this name, set this to 1. If you set this setting
-          to 0, Eggdrop will keep a separate list of what IRC servers call
-          themselves.</p>
         </dd>
 
         <dt><strong>set server-cycle-wait 60</strong></dt>
@@ -186,24 +210,16 @@
           though.</p>
         </dd>
 
-        <dt><strong>set use-console-r 0</strong></dt>
+        <dt><strong>set raw-log 0</strong></dt>
 
         <dd>
-          <p>This setting allows you the logging of all information received
-          from the server via console mode &#39;r&#39;. <strong>NOTE:</strong>
-          This is a large security hole, allowing people to see user passwords.
-          This is now restricted to +n users only. Please choose your owners
-          with care.</p>
-        </dd>
-
-        <dt><strong>set debug-output 0</strong></dt>
-
-        <dd>
-          <p>This setting allows you the logging of all information sent to the
-          server via console/log mode &#39;v&#39;. It also allows logging of
-          botnet traffic via  console/log mode &#39;t&#39;. NOTE: This is a
-          large security hole, allowing people to see passwords. This is now
-          restricted to +n users only. Please choose your owners with care.</p>
+          <p>This setting allows you the logging of raw incoming server
+          traffic via console/log flag &#39;r&#39;, raw outgoing server
+          traffic via console/log mode &#39;v&#39;, raw botnet traffic via
+          console/log mode &#39;t&#39;, and raw share traffic via console/log
+          mode &#39;h&#39;. These flags can create a large security hole,
+          allowing people to see user passwords. This is now restricted to +n
+          users only. Please choose your owners with care.</p>
         </dd>
 
         <dt><strong>set strict-host 0</strong></dt>
@@ -217,10 +233,10 @@
 
         <dd>
           <p>This setting makes the bot squelch the error message when
-          rejecting a DCC CHAT or SEND. Normally it tells the DCC user that
-          the CHAT or SEND has been rejected because they don&#39;t have
-          access. Please note, sometimes IRC server operators detect bots
-          that  way.</p>
+          rejecting a DCC CHAT, SEND or message command. Normally,
+          Eggdrop notifies the user that the command has been rejected
+          because they don&#39;t have access. Note that sometimes IRC
+          server operators detect bots that way.</p>
         </dd>
 
         <dt><strong>set flood-msg 5:60</strong></dt>
@@ -339,7 +355,7 @@
     <hr>
 
     <p><em>Copyright &copy; 1997 Robey Pointer<br>
-     Copyright &copy; 1999, 2000, 2001, 2002 <a href="http://www.eggheads.org/">
-     Eggheads Development Team</a></em></p>
+    Copyright &copy; 1999, 2000, 2001, 2002, 2003
+    <a href="http://www.eggheads.org/"> Eggheads Development Team</a></em></p>
   </body>
 </html>

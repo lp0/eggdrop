@@ -1,11 +1,11 @@
 /*
- * misc.c -- handles:
- *   copyfile() movefile()
+ * misc_file.c -- handles:
+ *   copyfile() movefile() file_readable()
  *
- * $Id: misc_file.c,v 1.6 2002/01/02 03:46:36 guppy Exp $
+ * $Id: misc_file.c,v 1.11 2003/02/11 09:19:17 wcc Exp $
  */
 /*
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,10 +32,10 @@
 /* Copy a file from one place to another (possibly erasing old copy).
  *
  * returns:  0 if OK
- *	     1 if can't open original file
- *	     2 if can't open new file
- *	     3 if original file isn't normal
- *	     4 if ran out of disk space
+ *           1 if can't open original file
+ *           2 if can't open new file
+ *           3 if original file isn't normal
+ *           4 if ran out of disk space
  */
 int copyfile(char *oldpath, char *newpath)
 {
@@ -61,11 +61,11 @@ int copyfile(char *oldpath, char *newpath)
   for (x = 1; x > 0;) {
     x = read(fi, buf, 512);
     if (x > 0) {
-      if (write(fo, buf, x) < x) {	/* Couldn't write */
-	close(fo);
-	close(fi);
-	unlink(newpath);
-	return 4;
+      if (write(fo, buf, x) < x) {      /* Couldn't write */
+        close(fo);
+        close(fi);
+        unlink(newpath);
+        return 4;
       }
     }
   }
@@ -94,4 +94,15 @@ int movefile(char *oldpath, char *newpath)
   if (!ret)
     unlink(oldpath);
   return ret;
+}
+
+int file_readable(char *file)
+{
+  FILE *fp;
+
+  if (!(fp = fopen(file, "r")))
+    return 0;
+
+  fclose(fp);
+  return 1;
 }

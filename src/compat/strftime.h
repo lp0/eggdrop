@@ -2,10 +2,10 @@
  * strftime.h
  *   header file for strftime.c
  *
- * $Id: strftime.h,v 1.3 2002/01/02 03:46:36 guppy Exp $
+ * $Id: strftime.h,v 1.6 2003/01/29 05:48:41 wcc Exp $
  */
 /* 
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  * Written by Fabian Knittel
  * 
  * This program is free software; you can redistribute it and/or
@@ -34,9 +34,9 @@
  */
 #ifndef HAVE_STRFTIME
 size_t egg_strftime(char *s, size_t maxsize, const char *format,
-		    const struct tm *tp);
+                    const struct tm *tp);
 #else
-#  define egg_strftime	strftime
+#  define egg_strftime strftime
 #endif
 
-#endif	/* !_EGG_COMPAT_STRFTIME_H_ */
+#endif /* !_EGG_COMPAT_STRFTIME_H_ */

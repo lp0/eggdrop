@@ -1,11 +1,11 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.59 2002/09/27 22:55:20 wcc Exp $
+ * $Id: module.h,v 1.75 2003/04/17 01:55:57 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -31,7 +31,7 @@
 #include "src/tandem.h"
 
 /*
- * This file contains all the orrible stuff required to do the lookup
+ * This file contains all the horrible stuff required to do the lookup
  * table for symbols, rather than getting the OS to do it, since most
  * OS's require all symbols resolved, this can cause a problem with
  * some modules.
@@ -51,6 +51,9 @@
 #undef dprintf
 #undef get_data_ptr
 #undef wild_match
+#undef wild_match_per
+#undef maskhost
+#undef maskban
 #undef user_realloc
 #undef Context
 #undef ContextNote
@@ -59,6 +62,9 @@
 /* Compability functions. */
 #ifdef egg_inet_aton
 #  undef egg_inet_aton
+#endif
+#ifdef egg_inet_ntop
+#  undef egg_inet_ntop
 #endif
 #ifdef egg_vsnprintf
 #  undef egg_vsnprintf
@@ -77,19 +83,19 @@
 #endif
 
 #if defined (__CYGWIN__) && !defined(STATIC)
-#  define EXPORT_SCOPE	__declspec(dllexport)
+#  define EXPORT_SCOPE  __declspec(dllexport)
 #else
 #  define EXPORT_SCOPE
 #endif
 
 /* Version checks for modules. */
-#define EGG_IS_MIN_VER(ver) 		((ver) <= EGG_VERSION)
-#define EGG_IS_MAX_VER(ver)		((ver) >= EGG_VERSION)
+#define EGG_IS_MIN_VER(ver)             ((ver) <= EGG_VERSION)
+#define EGG_IS_MAX_VER(ver)             ((ver) >= EGG_VERSION)
 
 /* Redefine for module-relevance */
 
 /* 0 - 3 */
-#define nmalloc(x) ((void *)(global[0]((x),MODULE_NAME,__FILE__,__LINE__)))
+#define nmalloc(x) (((void *(*)())global[0])((x),MODULE_NAME,__FILE__,__LINE__))
 #define nfree(x) (global[1]((x),MODULE_NAME,__FILE__,__LINE__))
 #ifdef DEBUG_CONTEXT
 #  define Context (global[2](__FILE__, __LINE__, MODULE_NAME))
@@ -195,7 +201,11 @@
 /* 80 - 83 */
 #define new_dcc ((int (*) (struct dcc_table *, int))global[80])
 #define lostdcc ((void (*) (int))global[81])
-#define getsock ((int (*) (int))global[82])
+#ifdef USE_IPV6
+#  define getsock ((int (*) (int,int))global[82])
+#else
+#  define getsock ((int (*) (int))global[82])
+#endif /* USE_IPV6 */
 #define killsock ((void (*) (int))global[83])
 /* 84 - 87 */
 #define open_listen ((int (*) (int *))global[84])
@@ -221,11 +231,11 @@
 #define max_dcc (*(int *)global[100])
 #define require_p (*(int *)global[101])
 #define ignore_time (*(int *)(global[102]))
-#define use_console_r (*(int *)(global[103]))
+/* was use_console_r <Wcc[02/02/03]> */
 /* 104 - 107 */
 #define reserved_port_min (*(int *)(global[104]))
 #define reserved_port_max (*(int *)(global[105]))
-#define debug_output (*(int *)(global[106]))
+#define raw_log (*(int *)(global[106]))
 #define noshare (*(int *)(global[107]))
 /* 108 - 111 */
 /* 108: gban_total -- UNUSED (Eule) */
@@ -285,7 +295,7 @@
 /* 152 - 155 */
 #define makepass ((void (*) (char *))global[152])
 #define wild_match ((int (*)(const char *, const char *))global[153])
-#define maskhost ((void (*)(const char *, char *))global[154])
+#define _maskhost ((void (*)(const char *, char *, int))global[154])
 #define show_motd ((void(*)(int))global[155])
 /* 156 - 159 */
 #define tellhelp ((void(*)(int, char *, struct flag_record *, int))global[156])
@@ -374,27 +384,27 @@
 /* 223: gexempt_total -- UNUSED (Eule) */
 /* 224 - 227 */
 #define H_event (*(p_tcl_bind_list *)(global[224]))
-#define use_exempts (*(int *)(global[225]))	/* drummer/Jason */
-#define use_invites (*(int *)(global[226]))	/* drummer/Jason */
-#define force_expire (*(int *)(global[227]))	/* Rufus */
+#define use_exempts (*(int *)(global[225]))     /* drummer/Jason */
+#define use_invites (*(int *)(global[226]))     /* drummer/Jason */
+#define force_expire (*(int *)(global[227]))    /* Rufus */
 /* 228 - 231 */
 #define add_lang_section ((void(*)(char *))global[228])
 #define user_realloc(x,y) ((void *(*)(void *,int,char *,int))global[229])((x),(y),__FILE__,__LINE__)
-#define nrealloc(x,y) ((void *)(global[230]((x),(y),MODULE_NAME,__FILE__,__LINE__)))
+#define nrealloc(x,y) (((void *(*)())global[230])((x),(y),MODULE_NAME,__FILE__,__LINE__))
 #define xtra_set ((int(*)(struct userrec *,struct user_entry *, void *))global[231])
 /* 232 - 235 */
 #ifdef DEBUG_CONTEXT
 #  define ContextNote(note) (global[232](__FILE__, __LINE__, MODULE_NAME, note))
 #else
-#  define ContextNote(note)	do {	} while (0)
+#  define ContextNote(note)     do {    } while (0)
 #endif
 #ifdef DEBUG_ASSERT
-#  define Assert(expr)		do {					\
-	if (!(expr))							\
-		(global[233](__FILE__, __LINE__, MODULE_NAME));		\
+#  define Assert(expr)          do {                                    \
+        if (!(expr))                                                    \
+                (global[233](__FILE__, __LINE__, MODULE_NAME));         \
 } while (0)
 #else
-#  define Assert(expr)	do {	} while (0)
+#  define Assert(expr)  do {    } while (0)
 #endif
 #define allocsock ((int(*)(int sock,int options))global[234])
 #define call_hostbyip ((void(*)(IP, char *, int))global[235])
@@ -452,18 +462,37 @@
 #define module_load ((char *(*)(char *))global[273])
 #define module_unload ((char *(*)(char *, char *))global[274])
 #define parties (*(int *)global[275])
-/* 276 */
+/* 276 - 279 */
 #define tell_bottree ((void (*)(int, int))global[276])
+#define MD5_Init ((void (*)(MD5_CTX))global[277])
+#define MD5_Update ((void (*)(MD5_CTX *, void *, unsigned long))global[278])
+#define MD5_Final ((void (*)(unsigned char *, MD5_CTX *))global[279])
+/* 280 - 283 */
+#define wild_match_per ((int (*)(const char *, const char *))global[280])
+#define killtransfer ((void(*)(int))global[281])
+#define write_ignores ((int (*)(FILE *, int))global[282])
+#define copy_to_tmp (*(int *)(global[283]))
+/* 284 - 287 */
+#define quiet_reject (*(int *)(global[284]))
+#define file_readable ((int (*) (char *))global[285])
+#define getprotocol ((int (*)(char *))global[286])
+#define open_listen_by_af ((int (*) (int *, int))global[287])
+/* 288 - 291 */
+#define egg_inet_ntop ((int (*)(int af, const void *src, char *dst, socklen_t size))global[288])
+
+/* hostmasking */
+#define maskhost(a,b) _maskhost((a),(b),1)
+#define maskban(a,b) _maskhost((a),(b),0)
 
 /* This is for blowfish module, couldnt be bothered making a whole new .h
  * file for it ;)
  */
 #ifndef MAKING_ENCRYPTION
 
-#  define encrypt_string(a, b)						\
-	(((char *(*)(char *,char*))encryption_funcs[4])(a,b))
-#  define decrypt_string(a, b)						\
-	(((char *(*)(char *,char*))encryption_funcs[5])(a,b))
+#  define encrypt_string(a, b)                                          \
+        (((char *(*)(char *,char*))encryption_funcs[4])(a,b))
+#  define decrypt_string(a, b)                                          \
+        (((char *(*)(char *,char*))encryption_funcs[5])(a,b))
 #endif
 
-#endif				/* _EGG_MOD_MODULE_H */
+#endif /* _EGG_MOD_MODULE_H */

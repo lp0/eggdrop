@@ -2,11 +2,11 @@
  * tclegg.h
  *   stuff used by tcl.c and tclhash.c
  *
- * $Id: tclegg.h,v 1.16 2002/01/02 03:46:36 guppy Exp $
+ * $Id: tclegg.h,v 1.23 2003/03/04 08:51:45 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -26,10 +26,10 @@
 #ifndef _EGG_TCLEGG_H
 #define _EGG_TCLEGG_H
 
-#include "lush.h"		/* Include this here, since it's needed
-				   in this file */
+#include "lush.h"    /* Include this here, since it's needed in this file */
+
 #ifndef MAKING_MODS
-#  include "proto.h"		/* This file needs this */
+#  include "proto.h" /* This file needs this */
 #endif
 
 /* Match types for check_tcl_bind
@@ -51,38 +51,37 @@
  */
 #define BIND_NOMATCH    0
 #define BIND_AMBIGUOUS  1
-#define BIND_MATCHED    2	/* But the proc couldn't be found */
+#define BIND_MATCHED    2       /* But the proc couldn't be found */
 #define BIND_EXECUTED   3
-#define BIND_EXEC_LOG   4	/* Proc returned 1 -> wants to be logged */
-#define BIND_EXEC_BRK   5	/* Proc returned BREAK (quit) */
+#define BIND_EXEC_LOG   4       /* Proc returned 1 -> wants to be logged */
+#define BIND_EXEC_BRK   5       /* Proc returned BREAK (quit) */
 
 /* Extra commands are stored in Tcl hash tables (one hash table for each type
  * of command: msg, dcc, etc)
  */
 typedef struct timer_str {
-  struct timer_str	*next;
-  unsigned int		 mins;	/* Time to elapse			*/
-  char			*cmd;	/* Command linked to			*/
-  unsigned long		 id;	/* Used to remove timers		*/
+  struct timer_str *next;
+  unsigned int mins;            /* Time to elapse                       */
+  char *cmd;                    /* Command linked to                    */
+  unsigned long id;             /* Used to remove timers                */
 } tcl_timer_t;
 
 
 /* Used for stub functions:
  */
 
-#define STDVAR		(cd, irp, argc, argv)				\
-	ClientData cd;							\
-	Tcl_Interp *irp;						\
-	int argc;							\
-	char *argv[];
-#define BADARGS(nl, nh, example)	do {				\
-	if ((argc < (nl)) || (argc > (nh))) {				\
-		Tcl_AppendResult(irp, "wrong # args: should be \"",	\
-				 argv[0], (example), "\"", NULL);	\
-		return TCL_ERROR;					\
-	}								\
+#define STDVAR (cd, irp, argc, argv)                                    \
+        ClientData cd;                                                  \
+        Tcl_Interp *irp;                                                \
+        int argc;                                                       \
+        char *argv[];
+#define BADARGS(nl, nh, example) do {                                   \
+        if ((argc < (nl)) || (argc > (nh))) {                           \
+                Tcl_AppendResult(irp, "wrong # args: should be \"",     \
+                                 argv[0], (example), "\"", NULL);       \
+                return TCL_ERROR;                                       \
+        }                                                               \
 } while (0)
-
 
 unsigned long add_timer(tcl_timer_t **, int, char *, unsigned long);
 int remove_timer(tcl_timer_t **, unsigned long);
@@ -141,41 +140,41 @@ typedef struct LocaleTable {
 } LocaleTable;
 
 static const LocaleTable localeTable[] = {
-  {"ja_JP.SJIS",	"shiftjis"},
-  {"ja_JP.EUC",		"euc-jp"},
-  {"ja_JP.JIS",		"iso2022-jp"},
-  {"ja_JP.mscode",	"shiftjis"},
-  {"ja_JP.ujis",	"euc-jp"},
-  {"ja_JP",		"euc-jp"},
-  {"Ja_JP",		"shiftjis"},
-  {"Jp_JP",		"shiftjis"},
-  {"japan",		"euc-jp"},
+  {"ja_JP.SJIS",    "shiftjis"},
+  {"ja_JP.EUC",       "euc-jp"},
+  {"ja_JP.JIS",   "iso2022-jp"},
+  {"ja_JP.mscode",  "shiftjis"},
+  {"ja_JP.ujis",      "euc-jp"},
+  {"ja_JP",           "euc-jp"},
+  {"Ja_JP",         "shiftjis"},
+  {"Jp_JP",         "shiftjis"},
+  {"japan",           "euc-jp"},
 #ifdef hpux
-  {"japanese",		"shiftjis"},
-  {"ja",		"shiftjis"},
+  {"japanese",      "shiftjis"},
+  {"ja",            "shiftjis"},
 #else
-  {"japanese",		"euc-jp"},
-  {"ja",		"euc-jp"},
+  {"japanese",        "euc-jp"},
+  {"ja",              "euc-jp"},
 #endif
-  {"japanese.sjis",	"shiftjis"},
-  {"japanese.euc",	"euc-jp"},
-  {"japanese-sjis",	"shiftjis"},
-  {"japanese-ujis",	"euc-jp"},
+  {"japanese.sjis", "shiftjis"},
+  {"japanese.euc",    "euc-jp"},
+  {"japanese-sjis", "shiftjis"},
+  {"japanese-ujis",   "euc-jp"},
 
-  {"ko",		"euc-kr"},
-  {"ko_KR",		"euc-kr"},
-  {"ko_KR.EUC",		"euc-kr"},
-  {"ko_KR.euc",		"euc-kr"},
-  {"ko_KR.eucKR",	"euc-kr"},
-  {"korean",		"euc-kr"},
+  {"ko",              "euc-kr"},
+  {"ko_KR",           "euc-kr"},
+  {"ko_KR.EUC",       "euc-kr"},
+  {"ko_KR.euc",       "euc-kr"},
+  {"ko_KR.eucKR",     "euc-kr"},
+  {"korean",          "euc-kr"},
 
-  {"ru",		"iso8859-5"},
-  {"ru_RU",		"iso8859-5"},
-  {"ru_SU",		"iso8859-5"},
+  {"ru",           "iso8859-5"},
+  {"ru_RU",        "iso8859-5"},
+  {"ru_SU",        "iso8859-5"},
 
-  {"zh",		"cp936"},
+  {"zh",               "cp936"},
 
-  {NULL,		NULL}
+  {NULL,                  NULL}
 };
 
-#endif				/* _EGG_TCLEGG_H */
+#endif /* _EGG_TCLEGG_H */

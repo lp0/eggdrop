@@ -1,7 +1,7 @@
 # transfer.english.lang
 #   langauge messages for transfer module
 #
-# $Id
+# $Id: transfer.english.lang,v 1.8 2003/03/08 04:29:44 wcc Exp $
 
 0xf00,Refused dcc get %s: copy to %s FAILED!
 0xf01,NOTICE %s :File system is broken; aborting queued files.\n
@@ -36,7 +36,7 @@
 # 0xf1e, < this one is now empty
 0xf1f,Disconnected %s (aborted userfile transfer)
 0xf20,Lost dcc send %s from %s!%s (%lu/%lu)
-0xf21,(!) reget packet from %s for %s is invalid!	
+0xf21,(!) reget packet from %s for %s is invalid!
 0xf22,!! Resuming file transfer behind file end for %s to %s
 0xf23,!!! Trying to skip ahead on userfile transfer
 0xf24,Resuming file transfer at %dk for %s to %s
@@ -61,5 +61,5 @@
 0xf38,re
 0xf39,NOTICE %s :Ignoring resume of `%s': no data requested.\n
 0xf40,Unloading transfer module, killing all transfer connections...
-0xf41,    DCC block is %d%s, max concurrent d/ls is %d\n
-0xf42,    Using %d bytes of memory\n
+0xf41,    DCC block size: %d%s\n
+0xf42,    Max simultaneous downloads per user: %d\n

@@ -2,12 +2,12 @@
  * dns.h
  *   stuff used by dns.c
  *
- * $Id: dns.h,v 1.7 2002/01/02 03:46:35 guppy Exp $
+ * $Id: dns.h,v 1.9 2003/01/28 06:37:24 wcc Exp $
  */
 /*
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
- * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,24 +29,24 @@
 
 typedef struct {
   char *name;
-  int  (*expmem)(void *);
-  void (*event)(IP, char *, int, void *);
+  int (*expmem) (void *);
+  void (*event) (IP, char *, int, void *);
 } devent_type;
 
 typedef struct {
-  char *proc;			/* Tcl proc			  */
-  char *paras;			/* Additional parameters	  */
+  char *proc;                   /* Tcl proc                       */
+  char *paras;                  /* Additional parameters          */
 } devent_tclinfo_t;
 
 typedef struct devent_str {
-  struct devent_str *next;	/* Pointer to next dns_event	  */
-  devent_type	*type;
-  u_8bit_t	lookup;		/* RES_IPBYHOST or RES_HOSTBYIP	  */
+  struct devent_str *next;      /* Pointer to next dns_event      */
+  devent_type *type;
+  u_8bit_t lookup;              /* RES_IPBYHOST or RES_HOSTBYIP   */
   union {
-    IP		ip_addr;	/* IP address			  */
-    char	*hostname; 	/* Hostname			  */
+    IP ip_addr;                 /* IP address                     */
+    char *hostname;             /* Hostname                       */
   } res_data;
-  void		*other;		/* Data specific to the event type */
+  void *other;                  /* Data specific to the event type */
 } devent_t;
 
-#endif	/* _EGG_DNS_H */
+#endif /* _EGG_DNS_H */

@@ -1,11 +1,11 @@
 /*
  * uptime.h - part of the uptime module
  *
- * $Id: uptime.h,v 1.8 2002/05/03 18:08:06 guppy Exp $
+ * $Id: uptime.h,v 1.10 2003/01/21 00:53:27 wcc Exp $
  */
 /*
  * Copyright (C) 2001 proton
- * Copyright (C) 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,8 +25,8 @@
 #ifndef _EGG_MOD_UPTIME_UPTIME_H
 #define _EGG_MOD_UPTIME_UPTIME_H
 
-const static int uptime_type = 2;
-const static int uptime_port = 9969;
-const static char *uptime_host = "uptime.eggheads.org";
+static const int uptime_type = 2;
+static const int uptime_port = 9969;
+static const char *uptime_host = "uptime.eggheads.org";
 
 #endif /* _EGG_MOD_UPTIME_UPTIME_H */

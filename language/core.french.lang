@@ -1,7 +1,7 @@
 # core.french.lang
 #   core language messages for eggdrop
 #
-# $Id: core.french.lang,v 1.25 2002/03/22 04:06:25 guppy Exp $
+# $Id: core.french.lang,v 1.28 2003/03/11 01:22:25 wcc Exp $
 
 
 # General stuff
@@ -110,7 +110,7 @@ consultez le ficher de configuration initiale pour plus de renseignements.\n
 0x521,Utilisez:
 0x522,<addresse>:<numéro de port>[/<numéro de port-relais>]
 0x526,en suspens
-0x527,je ne suis pas op!
+0x527,je ne suis pas op
 0x528,caché
 0x529,arrière plan
 0x52a,mode terminal
@@ -212,7 +212,8 @@ Faites un Telnet sur le bot et entrez 'NEW' comme surnom.
 0x647,La file d'attente des modes est à
 0x648,La file d'attente des serveurs est à
 0x649,La file d'attente d'aide est à
-0x64b,Non actif sur le canal
+# 0x64a - unused
+# 0x64b - unused
 0x64c,Traitement du canal
 0x64d,Canal
 0x64e,Je désire le canal
@@ -243,7 +244,7 @@ Faites un Telnet sur le bot et entrez 'NEW' comme surnom.
 0x667,Maintenant vous devez trouver un nick à utiliser sur le bot,\net un mot de passe, ainsi personne ne peut prétendre être vous.\nRetenez les!
 0x668,Dorénavant, vous n'avez plus besoin d'utiliser l'option -m pour démarrer le bot.\nAmusez-vous bien !!
 0x669,Flood de connexions telnet de %s!  On ignore!
-0x66a,banni: 
+0x66a,banni:
 0x66b,avalanche de surnom
 0x66c,touches pas à mon pote
 0x66d,...pas la peine de revenir.

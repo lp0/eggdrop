@@ -1,10 +1,10 @@
 /*
  * uf_features.c -- part of share.mod
  *
- * $Id: uf_features.c,v 1.9 2002/03/07 21:18:52 guppy Exp $
+ * $Id: uf_features.c,v 1.13 2003/01/30 07:15:15 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  * Written by Fabian Knittel <fknittel@gmx.de>
  *
  * This program is free software; you can redistribute it and/or
@@ -25,55 +25,55 @@
  * Userfile feature protocol description:
  *
  *
- *		 LEAF				       HUB
+ *               LEAF                                  HUB
  *
  *   uf_features_dump():
- *	Finds out which features
- *	it supports / wants to use
- *	and then dumps those. The
- *	list is appended to the
- *	user file send ack.
+ *      Finds out which features
+ *      it supports / wants to use
+ *      and then dumps those. The
+ *      list is appended to the
+ *      user file send ack.
  *
- *	"s uy <features>"   --+
- *			      |
- *			      +-->   uf_features_parse():
- *					Parses the given list of features,
- *					given in a string, seperated with
- *					spaces. Decides which features to
- *					accept/use. Those features are then
- *					locally set:
+ *      "s uy <features>"   --+
+ *                            |
+ *                            +-->   uf_features_parse():
+ *                                      Parses the given list of features,
+ *                                      given in a string, seperated with
+ *                                      spaces. Decides which features to
+ *                                      accept/use. Those features are then
+ *                                      locally set:
  *
- *					dcc[idx].u.bot->uff_flags |= <feature_flag>
+ *                                      dcc[idx].u.bot->uff_flags |= <feature_flag>
  *
- *					and sent back to the LEAF:
+ *                                      and sent back to the LEAF:
  *
- *				+---	"s feats <accepted_features>"
- *				|
+ *                              +---    "s feats <accepted_features>"
+ *                              |
  *   uf_features_check():    <--+
- *	Checks wether the responded
- *	features are still accepted
- *	by us. If they are, we set
- *	the flags locally:
+ *      Checks wether the responded
+ *      features are still accepted
+ *      by us. If they are, we set
+ *      the flags locally:
  *
- *	dcc[idx].u.bot->uff_flags |= <feature_flag>
+ *      dcc[idx].u.bot->uff_flags |= <feature_flag>
  */
 
 
 typedef struct uff_list_struct {
-  struct uff_list_struct *next;	/* Pointer to next entry		*/
-  struct uff_list_struct *prev;	/* Pointer to previous entry		*/
-  uff_table_t *entry;		/* Pointer to entry in table. This is
-				   not copied or anything, we just refer
-				   to the original table entry.		*/
+  struct uff_list_struct *next; /* Pointer to next entry                */
+  struct uff_list_struct *prev; /* Pointer to previous entry            */
+  uff_table_t *entry;           /* Pointer to entry in table. This is
+                                 * not copied or anything, we just refer
+                                 * to the original table entry.         */
 } uff_list_t;
 
 typedef struct {
-  uff_list_t		*start;
-  uff_list_t		*end;
+  uff_list_t *start;
+  uff_list_t *end;
 } uff_head_t;
 
-static uff_head_t	uff_list;
-static char		uff_sbuf[512];
+static uff_head_t uff_list;
+static char uff_sbuf[512];
 
 
 /*
@@ -128,7 +128,7 @@ static uff_list_t *uff_findentry_byname(char *feature)
  */
 static void uff_insert_entry(uff_list_t *nul)
 {
-  uff_list_t	*ul, *lul = NULL;
+  uff_list_t *ul, *lul = NULL;
 
   ul = uff_list.start;
   while (ul && ul->entry->priority < nul->entry->priority) {
@@ -172,17 +172,17 @@ static void uff_remove_entry(uff_list_t *ul)
  */
 static void uff_addfeature(uff_table_t *ut)
 {
-  uff_list_t	*ul;
+  uff_list_t *ul;
 
   if (uff_findentry_byname(ut->feature)) {
     putlog(LOG_MISC, "*", "(!) share: same feature name used twice: %s",
-	   ut->feature);
+           ut->feature);
     return;
   }
   ul = uff_findentry_byflag(ut->flag);
   if (ul) {
     putlog(LOG_MISC, "*", "(!) share: feature flag %d used twice by %s and %s",
-	   ut->flag, ut->feature, ul->entry->feature);
+           ut->flag, ut->feature, ul->entry->feature);
     return;
   }
   ul = nmalloc(sizeof(uff_list_t));
@@ -238,8 +238,8 @@ static void uf_features_parse(int idx, char *par)
   char *buf, *s, *p;
   uff_list_t *ul;
 
-  uff_sbuf[0] = 0;				/* Reset static buffer	*/
-  p = s = buf = nmalloc(strlen(par) + 1);	/* Allocate temp buffer	*/
+  uff_sbuf[0] = 0; /* Reset static buffer  */
+  p = s = buf = nmalloc(strlen(par) + 1); /* Allocate temp buffer */
   strcpy(buf, par);
 
   /* Clear all currently set features. */
@@ -252,15 +252,15 @@ static void uf_features_parse(int idx, char *par)
     /* Is the feature available and active? */
     ul = uff_findentry_byname(p);
     if (ul && (ul->entry->ask_func == NULL || ul->entry->ask_func(idx))) {
-      dcc[idx].u.bot->uff_flags |= ul->entry->flag; /* Set flag	*/
-      strcat(uff_sbuf, ul->entry->feature);	 /* Add feature to list	*/
+      dcc[idx].u.bot->uff_flags |= ul->entry->flag; /* Set flag */
+      strcat(uff_sbuf, ul->entry->feature); /* Add feature to list */
       strcat(uff_sbuf, " ");
     }
     p = ++s;
   }
   nfree(buf);
 
-  /* Send response string						*/
+  /* Send response string                                               */
   if (uff_sbuf[0])
     dprintf(idx, "s feats %s\n", uff_sbuf);
 }
@@ -274,7 +274,7 @@ static char *uf_features_dump(int idx)
   uff_sbuf[0] = 0;
   for (ul = uff_list.start; ul; ul = ul->next)
     if (ul->entry->ask_func == NULL || ul->entry->ask_func(idx)) {
-      strcat(uff_sbuf, ul->entry->feature);	/* Add feature to list	*/
+      strcat(uff_sbuf, ul->entry->feature); /* Add feature to list  */
       strcat(uff_sbuf, " ");
     }
   return uff_sbuf;
@@ -285,8 +285,8 @@ static int uf_features_check(int idx, char *par)
   char *buf, *s, *p;
   uff_list_t *ul;
 
-  uff_sbuf[0] = 0;				/* Reset static buffer	*/
-  p = s = buf = nmalloc(strlen(par) + 1);	/* Allocate temp buffer	*/
+  uff_sbuf[0] = 0; /* Reset static buffer  */
+  p = s = buf = nmalloc(strlen(par) + 1); /* Allocate temp buffer */
   strcpy(buf, par);
 
   /* Clear all currently set features. */
@@ -299,7 +299,7 @@ static int uf_features_check(int idx, char *par)
     /* Is the feature available and active? */
     ul = uff_findentry_byname(p);
     if (ul && (ul->entry->ask_func == NULL || ul->entry->ask_func(idx)))
-      dcc[idx].u.bot->uff_flags |= ul->entry->flag; /* Set flag	*/
+      dcc[idx].u.bot->uff_flags |= ul->entry->flag; /* Set flag */
     else {
       /* It isn't, and our hub wants to use it! This either happens
        * because the hub doesn't look at the features we suggested to
@@ -330,9 +330,9 @@ static int uff_call_sending(int idx, char *user_file)
 
   for (ul = uff_list.start; ul; ul = ul->next)
     if (ul->entry && ul->entry->snd &&
-	(dcc[idx].u.bot->uff_flags & ul->entry->flag))
+        (dcc[idx].u.bot->uff_flags & ul->entry->flag))
       if (!(ul->entry->snd(idx, user_file)))
-	return 0;	/* Failed! */
+        return 0; /* Failed! */
   return 1;
 }
 
@@ -346,9 +346,9 @@ static int uff_call_receiving(int idx, char *user_file)
 
   for (ul = uff_list.end; ul; ul = ul->prev)
     if (ul->entry && ul->entry->rcv &&
-	(dcc[idx].u.bot->uff_flags & ul->entry->flag))
+        (dcc[idx].u.bot->uff_flags & ul->entry->flag))
       if (!(ul->entry->rcv(idx, user_file)))
-	return 0;	/* Failed! */
+        return 0; /* Failed! */
   return 1;
 }
 
@@ -375,8 +375,8 @@ static int uff_ask_override_bots(int idx)
  */
 
 static uff_table_t internal_uff_table[] = {
-  {"overbots",	UFF_OVERRIDE,	uff_ask_override_bots,	0, NULL, NULL},
-  {"invites",	UFF_INVITE,	NULL,			0, NULL, NULL},
-  {"exempts",	UFF_EXEMPT,	NULL,			0, NULL, NULL},
-  {NULL,	0,		NULL,			0, NULL, NULL}
+  {"overbots", UFF_OVERRIDE, uff_ask_override_bots, 0, NULL, NULL},
+  {"invites",  UFF_INVITE,   NULL,                  0, NULL, NULL},
+  {"exempts",  UFF_EXEMPT,   NULL,                  0, NULL, NULL},
+  {NULL,       0,            NULL,                  0, NULL, NULL}
 };

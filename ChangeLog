@@ -1,3 +1,1610 @@
+2003-04-17 08:29  stdarg <stdarg@techmonkeys.org>
+
+	* src/misc.c:
+
+	
+	* Fixed logfile suffix stray message bug.  
+
+2003-04-17 05:09  Will Buckner <wcc@techmonkeys.org>
+
+	* misc/addpatch, src/patch.h:
+
+	* Addpatch compatability.  
+
+2003-04-17 04:52  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: cmds.c, patch.h:
+
+	* Another IPv6 ifdef fix.  
+
+2003-04-17 04:38  Will Buckner <wcc@techmonkeys.org>
+
+	* CONTENTS, NEWS, eggdrop.conf, doc/CONTENTS, doc/IPV6,
+	doc/KNOWN-PROBLEMS, doc/MODULES, doc/compiling.FAQ,
+	doc/patch.howto, doc/html/egg-core.html, doc/html/ipv6.html,
+	doc/html/news.html, doc/html/tcl-commands.html,
+	doc/settings/CONTENTS, doc/settings/core.settings, src/cmds.c,
+	src/net.c, src/patch.h, src/tcl.c, text/CONTENTS:
+
+	* IPv6 doc updates.  
+	* More IPv6 fixes.  
+	* Misc. doc updates.  
+
+2003-04-17 01:55  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: botnet.c, cmds.c, dcc.c, eggdrop.h, main.c, main.h,
+	modules.c, net.c, patch.h, proto.h, tcl.c, tcldcc.c, tclmisc.c,
+	mod/module.h, mod/dns.mod/dns.c, mod/filesys.mod/filesys.c,
+	mod/server.mod/server.c, mod/server.mod/servmsg.c,
+	mod/share.mod/share.c, mod/transfer.mod/transfer.c:
+
+	* IPv6 indenting.  
+	* Misc IPv6 fixes.  
+
+2003-04-16 21:53  Will Buckner <wcc@techmonkeys.org>
+
+	* misc/addpatch, src/patch.h:
+
+	* Updates to addpatch.  
+
+2003-04-16 21:25  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/server.mod/server.c:
+
+	* Fixed uninitialized x->port. Patch by Matyas Koszik.  
+
+2003-04-16 01:03  Jeff Fisher <guppy@techmonkeys.org>
+
+	* scripts/cmd_resolve.tcl:
+
+	couple of small things in cmd_resolve.tcl 
+
+2003-04-15 17:41  Jeff Fisher <guppy@techmonkeys.org>
+
+	* scripts/autobotchk:
+
+	oops, apparently -20 never did anything 
+
+2003-04-15 17:37  Jeff Fisher <guppy@techmonkeys.org>
+
+	* doc/UPDATES1.6, scripts/autobotchk:
+
+	fixed a few autobotchk things 
+
+2003-04-02 21:16  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, compat/inet_ntop.c:
+
+	* Fixed an IPv6 typo.  
+
+2003-04-01 22:58  Will Buckner <wcc@techmonkeys.org>
+
+	* src/patch.h:
+
+	* patch.h 
+
+2003-04-01 22:58  Will Buckner <wcc@techmonkeys.org>
+
+	* src/compat/: inet_ntop.c, inet_ntop.h:
+
+	* Forgot cvs add last night.  
+
+2003-04-01 05:33  Will Buckner <wcc@techmonkeys.org>
+
+	* acconfig.h, aclocal.m4, config.h.in, configure, configure.in,
+	src/Makefile.in, src/botnet.c, src/cmds.c, src/dcc.c,
+	src/eggdrop.h, src/main.c, src/modules.c, src/net.c, src/proto.h,
+	src/tcl.c, src/tcldcc.c, src/tclmisc.c, src/compat/Makefile.in,
+	src/compat/compat.h, src/compat/inet_aton.c, src/md5/Makefile.in,
+	src/mod/Makefile.in, src/mod/eggautoconf, src/mod/module.h,
+	src/mod/assoc.mod/Makefile, src/mod/blowfish.mod/Makefile,
+	src/mod/channels.mod/Makefile, src/mod/compress.mod/Makefile.in,
+	src/mod/console.mod/Makefile, src/mod/ctcp.mod/Makefile,
+	src/mod/dns.mod/Makefile.in, src/mod/dns.mod/configure,
+	src/mod/dns.mod/configure.in, src/mod/dns.mod/dns.c,
+	src/mod/filesys.mod/Makefile, src/mod/filesys.mod/filesys.c,
+	src/mod/irc.mod/Makefile, src/mod/notes.mod/Makefile,
+	src/mod/seen.mod/Makefile, src/mod/server.mod/Makefile,
+	src/mod/server.mod/server.c, src/mod/server.mod/servmsg.c,
+	src/mod/share.mod/Makefile, src/mod/share.mod/share.c,
+	src/mod/transfer.mod/Makefile, src/mod/transfer.mod/transfer.c,
+	src/mod/uptime.mod/Makefile, src/mod/wire.mod/Makefile,
+	src/mod/woobie.mod/Makefile:
+
+	* Added the IPv6 patch to CVS. This is not 100% complete yet. Please
+	  test and improve! :P 
+
+2003-03-31 12:03  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/cmds.c, src/patch.h:
+
+	* Fixed the logic of .fixcodes. Patch by PPSlim.  
+
+2003-03-31 12:01  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/tclmisc.c:
+
+	* Added a missing cast in tcl_rand. Patch by KuNgFo0.  
+
+2003-03-26 00:19  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, scripts/getops.tcl, src/patch.h:
+
+	* Fixed getops timer handling. Patch by PPSlim.  
+
+2003-03-24 07:29  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/: compiling.FAQ, html/compiling.html:
+
+	* Documented a problem I came accross on AIX...  
+
+2003-03-24 05:47  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/channels.mod/cmdschan.c:
+
+	* Fixed access checking in -ban, -exempt, and -invite.  
+
+2003-03-24 02:48  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/tclchan.c:
+
+	* 8.4 fixes.  
+
+2003-03-24 02:46  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/tclchan.c:
+
+	* Tcl 8.4 fixes from stdarg's patch.  
+
+2003-03-24 02:18  Will Buckner <wcc@techmonkeys.org>
+
+	* src/mod/channels.mod/tclchan.c:
+
+	* GRRRRR....  
+
+2003-03-24 01:52  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/tclchan.c:
+
+	* Indenting and patch.h from last commit.  
+
+2003-03-24 01:36  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/channels.mod/tclchan.c:
+
+	
+	* Added string support to "channel get" -- it was left out of the
+	back-port.  
+
+2003-03-24 00:00  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/channels.mod/tclchan.c:
+
+	* Fixed a Tcl_Merge memleak. Patch by TaKeDa.  
+
+2003-03-21 22:56  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/transfer.mod/language/transfer.danish.lang:
+
+	* One more danish language fix.  
+
+2003-03-20 00:10  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/assoc.mod/language/assoc.danish.lang,
+	mod/console.mod/language/console.danish.lang:
+
+	* Previous patch screwed up Id tags.  
+
+2003-03-20 00:04  Will Buckner <wcc@techmonkeys.org>
+
+	* language/core.danish.lang, src/patch.h,
+	src/mod/assoc.mod/language/assoc.danish.lang,
+	src/mod/console.mod/language/console.danish.lang,
+	src/mod/filesys.mod/language/filesys.danish.lang,
+	src/mod/notes.mod/language/notes.danish.lang,
+	src/mod/transfer.mod/language/transfer.danish.lang,
+	src/mod/wire.mod/language/wire.danish.lang:
+
+	* A couple of Danish language fixes. Patch by TheAvatar.  
+
+2003-03-19 23:44  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/channels.c,
+	mod/channels.mod/userchan.c:
+
+	* Fixed a memleak in the channels module. Patch by Eule.  
+
+2003-03-19 23:04  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, eggdrop.conf:
+
+	* Removing and adding eggdrop.conf (doesn't show up in cvsweb).  
+
+2003-03-19 00:13  Will Buckner <wcc@techmonkeys.org>
+
+	* src/mod/irc.mod/cmdsirc.c:
+
+	* Removed an unused variable from last commit.  
+
+2003-03-18 21:23  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/irc.mod/cmdsirc.c:
+
+	* Logic fixes to the has_flags-get_channel changes. Found by Eule.  
+
+2003-03-16 21:41  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, doc/patch.howto, src/patch.h,
+	src/mod/filesys.mod/files.c:
+
+	* Fixed a crash related to the cd command in filesys.mod. Patch by
+	  Matyas Koszik.  
+
+2003-03-16 05:04  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/mode.c:
+
+	* Channel keys are now handled correctly in flush_mode(). Patch by
+	Eule.  
+
+2003-03-16 05:01  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/mode.c:
+
+	* Patch by Sven Trenkel: 
+	  * Locking a channel key/limit now enforces it from being changed
+	    as well as unset.  
+	  * Don't bounce our own modes.  
+	  * q|q users can no longer obtain a channel voice, regardless of 
+	    +autovoice.  
+
+2003-03-16 04:49  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/server.mod/cmdsserv.c:
+
+	* Only show real-name of current server. Found by Paladin.  
+
+2003-03-13 01:05  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/dcc.c, src/patch.h:
+
+	* Reverted identd-safety.  
+
+2003-03-13 00:55  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/dcc.c, src/patch.h:
+
+	* Added a few safety checks to dcc_ident().  
+
+2003-03-12 08:42  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/filesys.mod/filedb3.c,
+	mod/filesys.mod/files.c:
+
+	* Fixed two more AlphaLinux warnings.  
+
+2003-03-11 06:12  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/irc.mod/cmdsirc.c:
+
+	* Small indenting fixes from last commit.  
+
+2003-03-11 01:41  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, tcl.c:
+
+	* enable-simul compat var should be set to 1.  
+
+2003-03-11 01:22  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, language/core.danish.lang,
+	language/core.english.lang, language/core.french.lang,
+	language/core.german.lang, src/lang.h, src/patch.h,
+	src/mod/channels.mod/userchan.c, src/mod/irc.mod/cmdsirc.c:
+
+	* Users with appropriate flags can now halfop and voice themselves.
+	  Patch by Eule, however I changed a few small things.  
+	* For some odd reason, userchan.c did not get updated from
+	mns_ban-fix.  
+
+2003-03-10 06:06  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, tcl.c:
+
+	* Script compatability for recently removed config file variables.  
+
+2003-03-10 05:57  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/channels.mod/channels.c,
+	src/mod/channels.mod/cmdschan.c:
+
+	Patch by Sven Trenkel: 
+	  * -ban <number> now works for channel bans.  
+	  * -ban <number> now removes the ban from the channel.  
+
+2003-03-10 05:33  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/userchan.c:
+
+	* Fixed another off-by-one error in u_del[ban/exempt/invite]. Found
+	  by BarkerJr.  
+
+2003-03-10 05:26  Will Buckner <wcc@techmonkeys.org>
+
+	* NEWS, doc/AUTHORS, doc/BANS, doc/PARTYLINE, doc/USERS,
+	doc/WEIRD-MESSAGES, doc/compiling.FAQ, doc/html/app-weird.html,
+	doc/html/compiling.html, doc/html/news.html, src/botcmd.c,
+	src/patch.h:
+
+	* Doc updates.  
+	* Fixed indenting from handshakefix.  
+
+2003-03-08 07:47  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: botcmd.c, patch.h:
+
+	* Fixed the order of the bot command table. *HIDES IN CORNER* 
+
+2003-03-08 04:29  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, language/core.danish.lang,
+	language/core.english.lang, language/core.french.lang,
+	language/core.german.lang, src/chanprog.c, src/modules.c,
+	src/patch.h, src/mod/assoc.mod/assoc.c,
+	src/mod/blowfish.mod/blowfish.c, src/mod/channels.mod/channels.c,
+	src/mod/compress.mod/compress.c, src/mod/dns.mod/dns.c,
+	src/mod/filesys.mod/filesys.c, src/mod/irc.mod/irc.c,
+	src/mod/notes.mod/notes.c, src/mod/seen.mod/seen.c,
+	src/mod/server.mod/server.c, src/mod/share.mod/share.c,
+	src/mod/transfer.mod/transfer.c, src/mod/transfer.mod/transfer.h,
+	src/mod/transfer.mod/language/transfer.danish.lang,
+	src/mod/transfer.mod/language/transfer.english.lang,
+	src/mod/transfer.mod/language/transfer.french.lang,
+	src/mod/transfer.mod/language/transfer.german.lang,
+	src/mod/uptime.mod/uptime.c, src/mod/wire.mod/wire.c,
+	src/mod/woobie.mod/woobie.c:
+
+	* Cleaned up the output of .status (mainly .status all).  
+
+2003-03-07 21:32  Will Buckner <wcc@techmonkeys.org>
+
+	* language/core.danish.lang, language/core.english.lang,
+	language/core.french.lang, language/core.german.lang, src/patch.h,
+	src/mod/assoc.mod/language/assoc.danish.lang,
+	src/mod/console.mod/language/console.danish.lang,
+	src/mod/filesys.mod/language/filesys.danish.lang,
+	src/mod/notes.mod/language/notes.danish.lang,
+	src/mod/transfer.mod/language/transfer.danish.lang,
+	src/mod/transfer.mod/language/transfer.german.lang,
+	src/mod/wire.mod/language/wire.danish.lang:
+
+	* Danish language files were in PC format.  
+	* Fixed other small file formatting/Id tag issues.  
+
+2003-03-07 12:38  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/transfer.mod/transfer.h,
+	src/mod/transfer.mod/language/transfer.danish.lang,
+	src/mod/transfer.mod/language/transfer.english.lang,
+	src/mod/transfer.mod/language/transfer.german.lang:
+
+	* Added a german language file for the transfer module. Translation
+	by Felix.  
+	* Fixed a typo in transfer.h.  
+	* Fixed CVS Id: tags in transfer language files.  
+
+2003-03-07 07:02  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/channels.mod/cmdschan.c,
+	src/mod/channels.mod/tclchan.c:
+
+	* Show a meaningful error message when an invalid channel is added
+	  with cmd_pls_chan().  
+
+2003-03-07 06:42  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/transfer.mod/language/transfer.french.lang:
+
+	* A french entry was missing in transfer.mod's language files.
+	  Translation by caesar.  
+
+2003-03-07 04:40  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/server.mod/server.c:
+
+	* Woops, realservername's memory should be calculated outside of the 
+	  serverlist loop.  
+
+2003-03-07 03:36  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/server.mod/server.c, mod/server.mod/servmsg.c:
+
+	* Memory calculation for realservername should be done in
+	  server_expmem() instead of msgq_expmem().  
+
+2003-03-07 03:27  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/server.mod/: server.c, servmsg.c:
+
+	
+	* minor realservername fixes 
+
+2003-03-06 05:19  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, md5/md5c.c:
+
+	* compat.h needs to be included in md5c.c.  
+
+2003-03-06 03:49  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/tcl.c, src/md5/md5c.c,
+	src/mod/transfer.mod/transferfstat.c, src/mod/uptime.mod/uptime.c:
+
+	* We weren't using the compat functions for memcpy() and memset() in
+	  some places.  
+
+2003-03-06 03:35  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, md5/md5.h, md5/md5c.c:
+
+	* src/md5/ should not have been indented.  
+
+2003-03-05 04:32  Will Buckner <wcc@techmonkeys.org>
+
+	* acconfig.h, aclocal.m4, config.h.in, configure, configure.in,
+	doc/BUG-REPORT, src/patch.h, src/compat/snprintf.c,
+	src/compat/snprintf.h:
+
+	* Reverted C99 snprintf() stuff for now. This patch needed further
+	  testing before commit. It is creating many header conflicts, etc.  
+
+2003-03-05 03:24  stdarg <stdarg@techmonkeys.org>
+
+	* src/compat/snprintf.c:
+
+	
+	* Get rid of HAVE_CTYPE_H check since we don't check for it in
+	configure 
+
+2003-03-05 03:15  stdarg <stdarg@techmonkeys.org>
+
+	* src/compat/snprintf.c:
+
+	
+	* compat code should not include main.h, since that pulls in nmalloc
+	"enforcement" 
+
+2003-03-05 02:39  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/server.mod/cmdsserv.c,
+	src/mod/server.mod/server.c, src/mod/server.mod/servmsg.c:
+
+	* Fixed an issue causing the server variable to be empty after a
+	  rehash.  Fixed by Sven Trenkel. Sound by |SmAsH|.  
+	* Fixed a crash that can happen when the serverlist contains null
+	  strings.  Fixed by Sven Trenkel.  
+
+2003-03-05 02:09  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/MODULES, misc/addpatch, src/patch.h:
+
+	* Updates to doc/MODULES.  
+	* Cosmetic updates to misc/addpatch.  
+
+2003-03-04 22:14  Will Buckner <wcc@techmonkeys.org>
+
+	* acconfig.h, aclocal.m4, config.h.in, configure, configure.in,
+	src/patch.h, src/compat/snprintf.c, src/compat/snprintf.h:
+
+	* Backported C99 snprintf() checking. Patch by Tothwolf.  
+
+2003-03-04 14:11  Tothwolf <tothwolf@techmonkeys.org>
+
+	* src/: patch.h, mod/module.h:
+
+	Added casts for nmalloc and nrealloc in the module symbol lookup
+	table.  
+
+2003-03-04 10:33  Tothwolf <tothwolf@techmonkeys.org>
+
+	* acconfig.h, aclocal.m4, config.h.in, configure,
+	src/compat/snprintf.c, src/compat/snprintf.h:
+
+	Simplify checking for broken snprintf/vsnprintf functions.  
+
+2003-03-04 09:02  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/patch.howto:
+
+	* Patch howto updates.  
+
+2003-03-04 08:51  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/botnet.c, src/chan.h, src/cmds.c, src/dcc.c,
+	src/language.c, src/modules.c, src/net.c, src/patch.h, src/tcl.c,
+	src/tcldcc.c, src/tclegg.h, src/tclhash.c, src/tclhash.h,
+	src/compat/inet_aton.c, src/mod/channels.mod/cmdschan.c,
+	src/mod/channels.mod/tclchan.c, src/mod/compress.mod/compress.c,
+	src/mod/dns.mod/coredns.c, src/mod/filesys.mod/dbcompat.c,
+	src/mod/filesys.mod/filedb3.c, src/mod/filesys.mod/filesys.c,
+	src/mod/irc.mod/chan.c, src/mod/irc.mod/cmdsirc.c,
+	src/mod/irc.mod/irc.c, src/mod/irc.mod/mode.c,
+	src/mod/irc.mod/msgcmds.c, src/mod/seen.mod/seen.c,
+	src/mod/server.mod/server.c:
+
+	* WASHALFOP flag works now (fixed by Sven Trenkel).  
+	* Added NO_HALFOP_CHANMODES define to chan.h. When defined, only +b,
+	  +e, and +I modes can be set when the bot is a halfop.  
+	* Added NOHALFOPS_MODES define to define the modes the bot is not
+	  allowed to set as halfop. To prevent bans, exempts, and invites from
+	  being set as halfop, add these modes to NOHALFOPS_MODES.  
+	* Cleaned up a few things I noticed along the way, including more
+	  fixes from the indenting patch.  
+
+2003-03-04 07:01  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/compat/snprintf.c,
+	src/compat/snprintf.h:
+
+	* More OSF/1 fixes.  
+
+2003-03-01 23:31  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/html/tcl-commands.html:
+
+	* Small doc fix.  
+
+2003-03-01 08:31  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/chan.h, src/patch.h:
+
+	* The WASHALFOP flag now works correctly. Patch by Sven Trenkel.  
+
+2003-03-01 08:27  Will Buckner <wcc@techmonkeys.org>
+
+	* CONTENTS, doc/tcl-commands.doc, doc/html/tcl-commands.html,
+	src/patch.h:
+
+	* Documentation updates.  
+
+2003-02-28 23:07  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/transfer.mod/transfer.c:
+
+	* Kill a transfer connection after sending a TRANSFER_DCC_IGNORED
+	  notice to a user. Found by fbs.  
+
+2003-02-28 12:45  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/channels.mod/tclchan.c:
+
+	* flood-pub should be flood-chan when using 'channel get'. Patch by
+	ppslim.  
+
+2003-02-28 09:21  Tothwolf <tothwolf@techmonkeys.org>
+
+	* src/: patch.h, tcl.c, tclmisc.c:
+
+	Reverted Function cast changes and fixed a couple CONST typos.  
+
+2003-02-28 08:17  Tothwolf <tothwolf@techmonkeys.org>
+
+	* src/: main.h, patch.h, tclegg.h:
+
+	Moved new Tcl checks to main.h.  
+
+2003-02-28 07:20  Tothwolf <tothwolf@techmonkeys.org>
+
+	* src/tcl.c:
+
+	utf_converter needed a Function cast.  
+
+2003-02-28 04:01  Will Buckner <wcc@techmonkeys.org>
+
+	* acconfig.h, aclocal.m4, config.h.in, configure, doc/UPDATES1.6,
+	src/patch.h, src/compat/snprintf.c, src/compat/snprintf.h:
+
+	* We should compile on Tru64 UNIX now. The problem was due to
+	  snprintf() and vsnprintf() apparently being in a shared
+	  'compatability' library on hese systems (from what I could get out
+	of their horrible documentation).  
+	
+	  We will now use Eggdrop's snprintf() and vsnprintf() compatablity 
+	  functions for OSF1/Tru64/Digital UNIX. Could anyone with access to
+	  a Tru64 system please verify that Eggdrop compiles fine on it now? 
+	
+	  Reported by Shane.  
+
+2003-02-27 12:15  Will Buckner <wcc@techmonkeys.org>
+
+	* config.h.in, configure, src/patch.h:
+
+	* Ran autoheader and autoconf for last commit.  
+
+2003-02-27 10:18  Tothwolf <tothwolf@techmonkeys.org>
+
+	* acconfig.h, aclocal.m4, configure.in, src/chanprog.c,
+	src/flags.c, src/main.c, src/main.h, src/modules.c, src/tcl.c,
+	src/tcldcc.c, src/tclegg.h, src/tclhash.c, src/tclmisc.c,
+	src/tcluser.c, src/userent.c, src/mod/channels.mod/channels.c,
+	src/mod/channels.mod/tclchan.c, src/mod/console.mod/console.c,
+	src/mod/filesys.mod/tclfiles.c, src/mod/irc.mod/irc.c,
+	src/mod/irc.mod/tclirc.c, src/mod/notes.mod/notes.c,
+	src/mod/server.mod/server.c, src/mod/server.mod/tclserv.c,
+	src/mod/transfer.mod/transferfstat.c:
+
+	Simplify TCL_MAJOR_VERSION/TCL_MINOR_VERSION checks.  
+
+2003-02-27 02:36  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/chan.c:
+
+	* '~' and '&' are now correctly recognized as a meaning a user has
+	  ops on a channel. Patch by BarkerJr.  
+
+2003-02-26 06:16  Tothwolf <tothwolf@techmonkeys.org>
+
+	* src/: tcl.c, tclmisc.c:
+
+	Group some TCL_MAJOR_VERSION/TCL_MINOR_VERSION checks with
+	parenthesis.  
+
+2003-02-21 05:01  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/eggdrop.h, src/patch.h:
+
+	* Fixed uhost buffer length. Fixed by winkey.  
+
+2003-02-21 02:15  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/transfer.mod/transfer.c:
+
+	* Don't use the help queue for dcc sends or gets. Found by winkey.  
+
+2003-02-18 00:47  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/server.mod/server.c:
+
+	* Case-changes should be traced when the 'nick' Tcl variable is
+	modified.  
+
+2003-02-16 09:03  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6:
+
+	* Grr, UPDATES1.6 conflict.  
+
+2003-02-16 08:59  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, language/core.danish.lang, src/patch.h,
+	src/mod/assoc.mod/language/assoc.danish.lang,
+	src/mod/console.mod/language/console.danish.lang,
+	src/mod/filesys.mod/language/filesys.danish.lang,
+	src/mod/notes.mod/language/notes.danish.lang,
+	src/mod/transfer.mod/language/transfer.danish.lang,
+	src/mod/wire.mod/language/wire.danish.lang:
+
+	* Added a set of Danish language files by TheAvatar.  
+
+2003-02-16 06:36  Will Buckner <wcc@techmonkeys.org>
+
+	* configure, src/patch.h:
+
+	* Reverted to autoconf 2.54 due to problems on *BSD.  
+
+2003-02-15 19:42  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, users.c:
+
+	* Sigh, the igrec structure is different than the maskrec structure
+	:/.  
+
+2003-02-15 08:59  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/users.c:
+
+	* Fixed an out-of-bounds error in delignore().  
+
+2003-02-13 23:56  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/html/mod-irc.html, doc/html/mod-server.html,
+	doc/settings/mod.channels, doc/settings/mod.ctcp,
+	doc/settings/mod.dns, doc/settings/mod.filesys,
+	doc/settings/mod.irc, doc/settings/mod.notes,
+	doc/settings/mod.server, src/patch.h,
+	src/mod/assoc.mod/help/assoc.help,
+	src/mod/console.mod/help/console.help,
+	src/mod/console.mod/help/set/console.help,
+	src/mod/ctcp.mod/help/set/ctcp.help:
+
+	* More help/doc updates.  
+
+2003-02-13 23:39  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/cmds.c, src/patch.h:
+
+	Argument checking for cmd_comment() and cmd_botaddr() was incorrect.  
+	Found by Tothwolf.  
+
+2003-02-11 09:19  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/html/egg-core.html, doc/settings/core.settings,
+	src/misc_file.c, src/patch.h:
+
+	* Commented the default listen command as suggested by Paladin at
+	  #eggdrop at UnderNet. This is due to the large ammount of users who
+	  do not change the default port, and then can't figure out what the
+	port number is, etc.  
+	* Fixed a typo in a header-comment in misc_file.c.  
+
+2003-02-10 00:25  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/userchan.c:
+
+	* Fixed an off-by-one error in u_delban(), u_delexempt(), and
+	  u_delinvite().  Found by |SmAsH|.  
+
+2003-02-06 20:15  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/botnet.c, src/cmds.c, src/patch.h,
+	src/mod/assoc.mod/assoc.c:
+
+	* GLOBAL_CHANS wasn't used everywhere it should be.  
+
+2003-02-05 04:17  Will Buckner <wcc@techmonkeys.org>
+
+	* src/dccutil.c:
+
+	* It's copy_to_tmp, not copy_to_temp.  
+
+2003-02-05 03:05  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: dccutil.c, patch.h:
+
+	* Fixed a bug in killtransfer causing it to delete the original file
+	  if copy_to_temp is disabled. Found by fbs.  
+
+2003-02-04 11:15  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/mode.c:
+
+	Fixed a me_op() logic problem when reversing in got_[op|halfop]().  
+
+2003-02-04 11:11  Will Buckner <wcc@techmonkeys.org>
+
+	* src/patch.h:
+
+	* Forgot patch.h.  
+
+2003-02-04 11:10  Will Buckner <wcc@techmonkeys.org>
+
+	* src/mod/server.mod/servmsg.c:
+
+	* x(serverlist entry)->realname in got001() should be set before
+	  anything that could utilize x->realname is called. Test this! 
+
+2003-02-04 11:07  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/misc.c, src/modules.c, src/patch.h,
+	src/proto.h, src/mod/module.h, src/mod/irc.mod/chan.c,
+	src/mod/irc.mod/irc.c, src/mod/irc.mod/tclirc.c:
+
+	If revengebot/revenge is enabled for a channel, and a ban is placed
+	on a user not running ident, if strict-host is 0 a non-matching
+	banmask will be placed on the channel (because strict-host is
+	incorrectly used on bans in maskhost()). strict-host is for user
+	records, not bans. Patch by |SmAsH|.  
+
+2003-02-04 10:21  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/html/mod-channels.html, doc/settings/CONTENTS,
+	doc/settings/core.settings, doc/settings/mod.channels,
+	doc/settings/mod.server, help/cmds1.help, help/core.help,
+	scripts/compat.tcl, src/cmds.c, src/patch.h,
+	src/mod/assoc.mod/help/assoc.help,
+	src/mod/channels.mod/help/channels.help:
+
+	* More help file/documentation cleanups/updates.  
+	* Removed 'nick'and 'chnick' bindings from compat.tcl because they
+	  were never removed from the internal bind table.  
+
+2003-02-04 08:23  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/filesys.mod/files.c:
+
+	* Patch.h and indenting from stdarg's last commit :P.  
+
+2003-02-04 08:11  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/filesys.mod/files.c:
+
+	
+	* cd / and . work in filesys.mod 
+
+2003-02-04 07:51  Will Buckner <wcc@techmonkeys.org>
+
+	* src/patch.h:
+
+	* Added patch.h for filesys crash.  
+
+2003-02-04 07:10  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/filesys.mod/files.c:
+
+	
+	* malloc_strcpy to the rescue! 
+
+2003-02-04 06:47  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/filesys.mod/files.c:
+
+	Uninitialized var in files.c 
+
+2003-02-03 09:48  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, src/patch.h,
+	src/mod/filesys.mod/files.c:
+
+	* Cleaned up stdarg's debugging stuff from last commit and changed
+	  patch.h and UPDATES1.6.  
+	* Fixed a bind in the config file (found by stdarg).  
+
+2003-02-03 09:18  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/filesys.mod/files.c:
+
+	
+	* Fixed filesys leak, be sure to test a lot! 
+
+2003-02-03 08:37  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/filesys.mod/files.c:
+
+	
+	* Trying something else 
+
+2003-02-03 08:15  stdarg <stdarg@techmonkeys.org>
+
+	* src/mod/filesys.mod/files.c:
+
+	
+	* Testing to see if this is a memory leak 
+
+2003-02-03 07:59  Matthew Hallacy <poptix@techmonkeys.org>
+
+	* README:
+
+	testing 
+
+2003-02-02 22:14  Will Buckner <wcc@techmonkeys.org>
+
+	* README, configure, configure.in, doc/UPDATES1.6,
+	doc/compiling.FAQ, doc/html/compiling.html, doc/html/readme.html,
+	help/core.help, src/patch.h:
+
+	* Changed recomended Tcl version to 8.3.4.  
+	* Changed URL for Tcl to http://tcl.activestate.com/.  
+	* Updated autoconf to 2.57.  
+
+2003-02-02 21:13  Will Buckner <wcc@techmonkeys.org>
+
+	* help/core.help:
+
+	* More help file fixes (I'm not exactly sure how this happened..).  
+
+2003-02-02 21:08  Will Buckner <wcc@techmonkeys.org>
+
+	* help/core.help, src/patch.h:
+
+	* More help file fixes.  
+
+2003-02-02 18:36  Will Buckner <wcc@techmonkeys.org>
+
+	* src/mod/module.h:
+
+	* Fixed an unbalenced comment.  
+
+2003-02-02 18:24  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/help/channels.help,
+	mod/server.mod/servmsg.c:
+
+	* Sorry, should compile now.  
+
+2003-02-02 10:19  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, doc/html/mod-server.html,
+	doc/settings/mod.server, src/cmds.c, src/dcc.c, src/flags.c,
+	src/misc.c, src/modules.c, src/patch.h, src/tcl.c,
+	src/mod/module.h, src/mod/server.mod/server.c,
+	src/mod/server.mod/servmsg.c:
+
+	* Merged use-console-r and debug-output into one new setting named
+	raw-log.  
+	* Small indenting fix from a pls_bot_cosmetic.  
+
+2003-02-02 09:22  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, doc/tcl-commands.doc, doc/html/tcl-commands.html,
+	src/patch.h, src/mod/channels.mod/channels.c,
+	src/mod/channels.mod/channels.h, src/mod/channels.mod/cmdschan.c,
+	src/mod/channels.mod/tclchan.c, src/mod/channels.mod/udefchan.c:
+
+	Backported user-defined channel strings from 1.7.  
+
+2003-02-02 04:20  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/tcl-commands.doc, doc/html/mod-channels.html,
+	doc/html/tcl-commands.html, doc/settings/mod.channels,
+	help/set/cmds2.help, src/patch.h,
+	src/mod/channels.mod/help/chaninfo.help,
+	src/mod/channels.mod/help/set/channels.help:
+
+	* Start of help file cleanups.  
+
+2003-01-31 11:50  Tothwolf <tothwolf@techmonkeys.org>
+
+	* src/: patch.h, tcldcc.c:
+
+	Sanity check tcl_dccsimul args before checking idx.  
+
+2003-01-31 08:02  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, doc/html/egg-core.html,
+	doc/settings/core.settings, src/patch.h, src/tcl.c, src/tcldcc.c:
+
+	Removed the enable-simul config file setting.  
+
+2003-01-31 07:26  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/html/egg-core.html, doc/settings/core.settings,
+	help/core.help, help/set/cmds1.help, src/patch.h,
+	src/mod/irc.mod/help/msg/irc.help:
+
+	* Core help set cleanups.  
+
+2003-01-31 07:13  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/irc.mod/help/irc.help:
+
+	Fixed a small halfop-related helpfile error. Fixed by Tothwolf.  
+
+2003-01-31 02:53  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, help/cmds1.help, src/cmds.c, src/patch.h:
+
+	* Fixed a cosmetic problem with cmd_pls_bot().  
+
+2003-01-30 22:39  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/channels.mod/userchan.c:
+
+	Fixed a crash in u_delban (bug 267) caused by trying to strcpy to an 
+	initialized pointer char. Found by Cosmo.  
+
+2003-01-30 10:38  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/filesys.mod/files.c,
+	src/mod/filesys.mod/tclfiles.c:
+
+	* Use movefile() instead of copyfile() and unlink() when moving
+	  files in filesys.mod. Found by fbs. Note that the memory leak
+	  reported as bug 305 exists BEFORE this patch.  
+
+2003-01-30 07:15  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: bg.c, botcmd.c, botmsg.c, botnet.c, chanprog.c, cmds.c,
+	dcc.c, dccutil.c, dns.c, flags.c, language.c, main.c, mem.c,
+	misc.c, modules.c, net.c, patch.h, tcl.c, tcldcc.c, tclhash.c,
+	tclmisc.c, tcluser.c, userent.c, userrec.c, users.c,
+	compat/inet_aton.c, compat/snprintf.c, mod/assoc.mod/assoc.c,
+	mod/blowfish.mod/blowfish.c, mod/channels.mod/channels.c,
+	mod/channels.mod/cmdschan.c, mod/channels.mod/tclchan.c,
+	mod/channels.mod/userchan.c, mod/compress.mod/compress.c,
+	mod/compress.mod/tclcompress.c, mod/console.mod/console.c,
+	mod/ctcp.mod/ctcp.c, mod/dns.mod/coredns.c, mod/dns.mod/dns.c,
+	mod/filesys.mod/dbcompat.c, mod/filesys.mod/filedb3.c,
+	mod/filesys.mod/filelist.c, mod/filesys.mod/files.c,
+	mod/filesys.mod/filesys.c, mod/filesys.mod/tclfiles.c,
+	mod/irc.mod/chan.c, mod/irc.mod/cmdsirc.c, mod/irc.mod/irc.c,
+	mod/irc.mod/mode.c, mod/irc.mod/msgcmds.c, mod/irc.mod/tclirc.c,
+	mod/notes.mod/cmdsnote.c, mod/notes.mod/notes.c,
+	mod/seen.mod/seen.c, mod/server.mod/cmdsserv.c,
+	mod/server.mod/server.c, mod/server.mod/servmsg.c,
+	mod/server.mod/tclserv.c, mod/share.mod/share.c,
+	mod/share.mod/uf_features.c, mod/transfer.mod/tcltransfer.c,
+	mod/transfer.mod/transfer.c, mod/transfer.mod/transferfstat.c,
+	mod/transfer.mod/transferqueue.c, mod/wire.mod/wire.c:
+
+	* We should have been using indent -ce (fixed).  
+
+2003-01-30 06:26  Will Buckner <wcc@techmonkeys.org>
+
+	* src/compat/gnu_strftime.c:
+
+	Reverted indenting changes to gnu_strftime.c.  
+
+2003-01-30 02:49  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/filesys.mod/filesys.c:
+
+	* Fixed a segfault in do_dcc_send() in filesys.mod (found by Eule).  
+
+2003-01-30 01:00  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, src/patch.h:
+
+	* More config cleanups.  
+
+2003-01-30 00:41  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, doc/html/mod-irc.html,
+	doc/html/mod-server.html, doc/settings/mod.irc,
+	doc/settings/mod.server, src/mod/irc.mod/irc.c,
+	src/mod/server.mod/server.h:
+
+	* Config file/doc updates.  
+	* Changed EFnet's max-bans/max-modes to 25.  
+
+2003-01-29 07:24  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, userrec.c, mod/share.mod/share.c:
+
+	* Fixed a check variable from being reset to 1 incorrectly when
+	  writing userfiles.  
+
+2003-01-29 06:13  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, mod/channels.mod/tclchan.c:
+
+	[no log message] 
+
+2003-01-29 06:12  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, tclegg.h, mod/channels.mod/tclchan.c:
+
+	More indenting fixes.  
+
+2003-01-29 05:48  Will Buckner <wcc@techmonkeys.org>
+
+	* help/cmds1.help, help/cmds2.help, help/core.help, src/chanprog.c,
+	src/cmds.c, src/eggdrop.h, src/flags.h, src/lang.h, src/main.h,
+	src/misc.c, src/misc_file.c, src/modules.h, src/net.c, src/patch.h,
+	src/rfc1459.c, src/stat.h, src/tandem.h, src/tcl.c, src/tcldcc.c,
+	src/tclegg.h, src/tclhash.c, src/tclhash.h, src/users.h,
+	src/compat/gnu_strftime.c, src/compat/inet_aton.c,
+	src/compat/inet_aton.h, src/compat/memcpy.h, src/compat/memset.h,
+	src/compat/snprintf.c, src/compat/snprintf.h,
+	src/compat/strcasecmp.h, src/compat/strftime.c,
+	src/compat/strftime.h, src/md5/md5c.c, src/mod/module.h,
+	src/mod/modvals.h, src/mod/assoc.mod/assoc.c,
+	src/mod/assoc.mod/assoc.h, src/mod/assoc.mod/help/assoc.help,
+	src/mod/blowfish.mod/blowfish.h, src/mod/channels.mod/channels.c,
+	src/mod/channels.mod/channels.h, src/mod/channels.mod/cmdschan.c,
+	src/mod/channels.mod/tclchan.c, src/mod/channels.mod/userchan.c,
+	src/mod/channels.mod/help/chaninfo.help,
+	src/mod/channels.mod/help/channels.help,
+	src/mod/channels.mod/help/set/channels.help,
+	src/mod/compress.mod/compress.c, src/mod/compress.mod/compress.h,
+	src/mod/compress.mod/tclcompress.c, src/mod/console.mod/console.h,
+	src/mod/console.mod/help/console.help, src/mod/dns.mod/coredns.c,
+	src/mod/dns.mod/dns.h, src/mod/filesys.mod/filedb3.c,
+	src/mod/filesys.mod/filedb3.h, src/mod/filesys.mod/filesys.c,
+	src/mod/filesys.mod/help/filesys.help,
+	src/mod/filesys.mod/language/filesys.french.lang,
+	src/mod/irc.mod/chan.c, src/mod/irc.mod/irc.h,
+	src/mod/irc.mod/msgcmds.c, src/mod/irc.mod/help/irc.help,
+	src/mod/irc.mod/help/set/irc.help, src/mod/notes.mod/notes.h,
+	src/mod/notes.mod/help/notes.help,
+	src/mod/notes.mod/help/set/notes.help,
+	src/mod/notes.mod/language/notes.french.lang,
+	src/mod/seen.mod/help/seen.help,
+	src/mod/seen.mod/help/msg/seen.help, src/mod/server.mod/server.c,
+	src/mod/server.mod/server.h, src/mod/server.mod/help/server.help,
+	src/mod/server.mod/help/set/server.help, src/mod/share.mod/share.c,
+	src/mod/share.mod/share.h, src/mod/share.mod/uf_features.c,
+	src/mod/share.mod/help/share.help, src/mod/transfer.mod/transfer.c,
+	src/mod/transfer.mod/transfer.h,
+	src/mod/transfer.mod/language/transfer.english.lang,
+	src/mod/transfer.mod/language/transfer.french.lang,
+	src/mod/uptime.mod/uptime.c, src/mod/wire.mod/wire.h,
+	src/mod/woobie.mod/woobie.c:
+
+	* Removed unused define ASSOC_NOSUCHCMD.  
+	* More indenting.  
+	* Help file cleanups.  
+	* Fixed a warning from last commit.  
+
+2003-01-28 23:14  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/tcl-commands.doc, doc/html/egg-core.html,
+	doc/html/mod-blowfish.html, doc/settings/core.settings,
+	doc/settings/mod.blowfish, src/patch.h:
+
+	More config-file documentation updates (logfile related).  
+
+2003-01-28 07:52  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, src/patch.h:
+
+	Moved debug-output and use-console-r to the logging section of the
+	config file and updated config documentation. Found by Tothwolf.  
+
+2003-01-28 06:54  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6:
+
+	* Fixed credit for an UPDATES1.6 entry as requested.  
+
+2003-01-28 06:37  Will Buckner <wcc@techmonkeys.org>
+
+	* README, eggdrop.conf, doc/html/mod-server.html,
+	doc/man1/eggdrop.1, doc/settings/mod.server, src/bg.c, src/bg.h,
+	src/botcmd.c, src/botmsg.c, src/botnet.c, src/chan.h,
+	src/chanprog.c, src/cmds.c, src/cmdt.h, src/dcc.c, src/dccutil.c,
+	src/dns.c, src/dns.h, src/eggdrop.h, src/flags.c, src/flags.h,
+	src/lang.h, src/language.c, src/main.c, src/main.h, src/match.c,
+	src/mem.c, src/misc.c, src/misc_file.c, src/misc_file.h,
+	src/modules.c, src/modules.h, src/net.c, src/patch.h, src/proto.h,
+	src/rfc1459.c, src/stat.h, src/tandem.h, src/tcl.c, src/tcldcc.c,
+	src/tclegg.h, src/tclhash.c, src/tclhash.h, src/tclmisc.c,
+	src/tcluser.c, src/userent.c, src/userrec.c, src/users.c,
+	src/users.h, src/compat/compat.h, src/compat/gnu_strftime.c,
+	src/compat/inet_aton.c, src/compat/inet_aton.h,
+	src/compat/memcpy.h, src/compat/memset.h, src/compat/snprintf.c,
+	src/compat/snprintf.h, src/compat/strcasecmp.h,
+	src/compat/strftime.c, src/compat/strftime.h, src/md5/md5.h,
+	src/md5/md5c.c, src/mod/module.h, src/mod/modvals.h,
+	src/mod/assoc.mod/assoc.c, src/mod/assoc.mod/assoc.h,
+	src/mod/blowfish.mod/bf_tab.h, src/mod/blowfish.mod/blowfish.c,
+	src/mod/blowfish.mod/blowfish.h, src/mod/channels.mod/channels.c,
+	src/mod/channels.mod/channels.h, src/mod/channels.mod/cmdschan.c,
+	src/mod/channels.mod/tclchan.c, src/mod/channels.mod/userchan.c,
+	src/mod/channels.mod/help/set/channels.help,
+	src/mod/compress.mod/compress.c, src/mod/compress.mod/compress.h,
+	src/mod/compress.mod/tclcompress.c, src/mod/console.mod/console.c,
+	src/mod/console.mod/console.h, src/mod/ctcp.mod/ctcp.c,
+	src/mod/ctcp.mod/ctcp.h, src/mod/dns.mod/coredns.c,
+	src/mod/dns.mod/dns.c, src/mod/dns.mod/dns.h,
+	src/mod/filesys.mod/dbcompat.c, src/mod/filesys.mod/dbcompat.h,
+	src/mod/filesys.mod/filedb3.c, src/mod/filesys.mod/filedb3.h,
+	src/mod/filesys.mod/filelist.c, src/mod/filesys.mod/filelist.h,
+	src/mod/filesys.mod/files.c, src/mod/filesys.mod/files.h,
+	src/mod/filesys.mod/filesys.c, src/mod/filesys.mod/filesys.h,
+	src/mod/filesys.mod/tclfiles.c, src/mod/irc.mod/chan.c,
+	src/mod/irc.mod/cmdsirc.c, src/mod/irc.mod/irc.c,
+	src/mod/irc.mod/irc.h, src/mod/irc.mod/mode.c,
+	src/mod/irc.mod/msgcmds.c, src/mod/irc.mod/tclirc.c,
+	src/mod/irc.mod/help/set/irc.help, src/mod/notes.mod/cmdsnote.c,
+	src/mod/notes.mod/notes.c, src/mod/notes.mod/notes.h,
+	src/mod/seen.mod/seen.c, src/mod/server.mod/cmdsserv.c,
+	src/mod/server.mod/server.c, src/mod/server.mod/server.h,
+	src/mod/server.mod/servmsg.c, src/mod/server.mod/tclserv.c,
+	src/mod/server.mod/help/set/server.help, src/mod/share.mod/share.c,
+	src/mod/share.mod/share.h, src/mod/share.mod/uf_features.c,
+	src/mod/transfer.mod/tcltransfer.c,
+	src/mod/transfer.mod/transfer.c, src/mod/transfer.mod/transfer.h,
+	src/mod/transfer.mod/transferfstat.c,
+	src/mod/transfer.mod/transferqueue.c, src/mod/uptime.mod/uptime.c,
+	src/mod/wire.mod/wire.c, src/mod/wire.mod/wire.h,
+	src/mod/woobie.mod/woobie.c:
+
+	* Ran indent on the tree (with hand editing of course) to fix our
+	  horrible indenting variations/problems. This is the same format we
+	  generally follow throughout most of the tree.  
+
+2003-01-23 03:32  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/msgcmds.c:
+
+	* Don't tell users to /msg the bot hello when they don't have 
+	  access if learn-users is disabled. Found by Tothwolf.  
+
+2003-01-23 02:41  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/eggdrop.h, src/main.c, src/patch.h,
+	src/tclmisc.c, src/mod/filesys.mod/filedb3.h,
+	src/mod/seen.mod/seen.c, src/mod/wire.mod/wire.c:
+
+	* Fixed a few header problems related to time.h. Patch by Tothwolf.  
+
+2003-01-23 02:13  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, doc/html/mod-server.html,
+	doc/settings/mod.server, src/chanprog.c, src/language.c,
+	src/match.c, src/misc_file.c, src/misc_file.h, src/modules.c,
+	src/patch.h, src/tcl.c, src/mod/module.h,
+	src/mod/filesys.mod/filesys.c, src/mod/irc.mod/msgcmds.c,
+	src/mod/server.mod/server.c, src/mod/server.mod/server.h,
+	src/mod/server.mod/servmsg.c, src/mod/transfer.mod/Makefile,
+	src/mod/transfer.mod/tcltransfer.c,
+	src/mod/transfer.mod/transfer.c, src/mod/transfer.mod/transfer.h,
+	src/mod/transfer.mod/transferfstat.c,
+	src/mod/transfer.mod/transferqueue.c,
+	src/mod/transfer.mod/help/set/transfer.help,
+	src/mod/transfer.mod/language/transfer.english.lang:
+
+	* Cleaned up transfer.mod a bit.  
+	* Fixed some quiet_reject related problems (found by Tothwolf).  
+	* More match cleanups.  
+	* Moved copy_to_tmp to the core to fix a bug causing tmp files to
+	  not be removed when a transfer connection is killed.  
+	* Moved quiet_reject to the core so it could be used by transfer.mod 
+	  without depending on server.mod.  
+	* Exported DCC_SEND and DCC_GET_PENDING in transfer.mod.  
+	* Added a file_readable() function for use in transfer.mod and a few 
+	  places in other modules and the core.  
+
+2003-01-21 00:53  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/main.c, src/misc.c, src/patch.h, src/tcl.c,
+	src/tclhash.c, src/mod/channels.mod/channels.c,
+	src/mod/filesys.mod/dbcompat.c, src/mod/irc.mod/chan.c,
+	src/mod/irc.mod/msgcmds.c, src/mod/server.mod/server.c,
+	src/mod/server.mod/servmsg.c, src/mod/uptime.mod/uptime.h,
+	src/mod/wire.mod/wire.c:
+
+	* Misc bugfixes and code cleanups. Patch by Matyas Koszik.  
+
+2003-01-21 00:11  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/dccutil.c, src/modules.c, src/tcl.c,
+	src/mod/module.h, src/mod/transfer.mod/transfer.c,
+	src/mod/transfer.mod/transfer.h:
+
+	Files copied to /tmp if copy-to-tmp is enabled were not erased when
+	a tcl_killdcc was preformed on a transfer idx. Fixing this required
+	that copy-to-tmp be moved to the core and then exported to modules.
+	I also cleaned up a few things I noticed along the way.  
+
+2003-01-20 08:54  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: dccutil.c, patch.h:
+
+	Fixed a segfault in killtransfer() with non-transfer connections.  
+
+2003-01-20 08:51  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/modules.c, src/patch.h, src/proto.h,
+	src/userrec.c, src/mod/module.h, src/mod/channels.mod/userchan.c,
+	src/mod/share.mod/share.c:
+
+	Ignores are now saved if channels.mod is not loaded. Fixes bug 285.  
+	Found by BarkerJr.  
+
+2003-01-18 04:34  Will Buckner <wcc@techmonkeys.org>
+
+	* src/misc.c:
+
+	stamp's array size in flushlogs() should be 33, not 32.  
+
+2003-01-18 04:30  Will Buckner <wcc@techmonkeys.org>
+
+	* src/patch.h:
+
+	Whoops, forgot part of the log message on the last commit: 
+	
+	  Fixed timestamp issue with putlog caused when eggdrop was blocked
+	  during a series of in-line Tcl commands (due to 'now' not being
+	  increased when blocked).  
+
+2003-01-18 04:24  Will Buckner <wcc@techmonkeys.org>
+
+	* help/cmds1.help, src/misc.c, src/patch.h:
+
+	Fixed incorrect help information for +host. Non-+m/+t users cannot
+	add hosts to their own accounts. Found by Nilsy.  
+
+2003-01-18 01:58  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/dccutil.c, src/modules.c, src/patch.h,
+	src/proto.h, src/tcldcc.c, src/mod/module.h:
+
+	Open file descriptors are now closed when the killdcc Tcl command is
+	used on a transfer socket. Found by fbs. Patch by fbs and Wcc.  
+
+2003-01-18 00:40  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/tclmisc.c:
+
+	[unixtime] was not increased when eggdrop was blocked during a
+	series of in-line Tcl commands (due to 'now' not being increased
+	when blocked).  
+	
+	Example (before): 
+	  .tcl set foo1 [unixtime];after 1000; set foo2 [unixtime]; after 
+	  1000; set foo3 [unixtime];list $foo1 $foo2 $foo3 
+	
+	  Tcl: 1042850776 1042850776 1042850776 
+	
+	Example (after): 
+	  .tcl set foo1 [unixtime];after 1000; set foo2 [unixtime]; after 
+	  1000; set foo3 [unixtime];list $foo1 $foo2 $foo3 
+	
+	  Tcl: 1042850429 1042850430 1042850431 
+	
+	Found by never.  
+
+2003-01-15 01:42  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/irc.c,
+	src/mod/irc.mod/irc.h:
+
+	Exported getchanmode(). Found by lee.  
+
+2003-01-15 01:03  Will Buckner <wcc@techmonkeys.org>
+
+	* NEWS, eggdrop.conf, doc/UPDATES1.6, doc/tcl-commands.doc,
+	doc/html/mod-server.html, doc/html/news.html,
+	doc/html/tcl-commands.html, doc/settings/mod.server,
+	scripts/compat.tcl, src/patch.h, src/mod/server.mod/server.c,
+	src/mod/server.mod/servmsg.c,
+	src/mod/server.mod/help/set/server.help:
+
+	Removed strict-servernames. $server is now always the server's
+	realname and $serveraddress is it's server list entry.  
+
+2003-01-15 00:35  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, doc/tcl-commands.doc, doc/html/tcl-commands.html,
+	src/patch.h, src/mod/irc.mod/chan.c:
+
+	The NICK bind type now gets triggered even if the nickname isn't 
+	found in any channels (i.e. when the bot's nickname changes before
+	it joins channels). Patch by BarkerJr.  
+
+2003-01-02 02:42  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/tcl-commands.doc, doc/html/tcl-commands.html, src/patch.h:
+
+	Doc updates from past commit.  
+
+2003-01-02 00:07  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, doc/tcl-commands.doc, src/patch.h,
+	src/mod/server.mod/servmsg.c:
+
+	Fixed parsing of userhosts in gotwall(). Patch by darko``.  
+
+2002-12-27 22:48  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf:
+
+	Forgot config updates from last commit.  
+
+2002-12-27 22:39  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/irc.c:
+
+	~Updated UnderNet's max_bans to 45. Found by reed.  
+
+2002-12-27 20:27  Will Buckner <wcc@techmonkeys.org>
+
+	* eggdrop.conf, doc/UPDATES1.6, doc/html/mod-channels.html,
+	doc/settings/mod.channels, doc/settings/mod.transfer, src/patch.h,
+	src/mod/channels.mod/channels.c, src/mod/transfer.mod/transfer.c:
+
+	* Reworded the comment above the addhost/ident unbinds (found by
+	persaukko).  
+	* Changed global-revenge-mode to 0 by default.  
+	* Added a short description of what a comment is and does for people
+	  that don't know Tcl but still want to run Eggdrop.  
+
+2002-12-26 02:21  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/Makefile.in, src/match.c, src/modules.c,
+	src/patch.h, src/proto.h, src/tclhash.c, src/tclmisc.c,
+	src/mod/module.h:
+
+	Removed quoting support from wild_match() which fixes several bugs
+	with '\' characters.  
+
+2002-12-24 03:33  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/botcmd.c, src/botnet.c, src/cmds.c,
+	src/patch.h, src/proto.h, src/tcldcc.c:
+
+	Show who unlinked a bot when unlinked remotely. Patch by BarkerJr.  
+	
+	Note: modified to show botnetnick instead of "script" when a bot is 
+	      unlinked via the 'unlink' Tcl command.  
+
+2002-12-24 03:10  Will Buckner <wcc@techmonkeys.org>
+
+	* aclocal.m4, configure, src/patch.h:
+
+	Small cosmetic fix to configure.  
+
+2002-12-24 02:30  Will Buckner <wcc@techmonkeys.org>
+
+	* CONTENTS, FEATURES, INSTALL, NEWS, README, doc/ABOUT,
+	doc/AUTHORS, doc/BANS, doc/BOTNET, doc/MODULES, doc/PARTYLINE,
+	doc/USERS, doc/compiling.FAQ, doc/patch.howto,
+	doc/tcl-commands.doc, doc/text-substitutions.doc, doc/tricks,
+	doc/html/about.html, doc/html/app-problems.html,
+	doc/html/app-textsub.html, doc/html/app-tricks.html,
+	doc/html/app-weird.html, doc/html/authors.html, doc/html/bans.html,
+	doc/html/botnet.html, doc/html/compiling.html,
+	doc/html/egg-core.html, doc/html/faqs.html, doc/html/features.html,
+	doc/html/index.html, doc/html/install.html,
+	doc/html/mod-assoc.html, doc/html/mod-blowfish.html,
+	doc/html/mod-channels.html, doc/html/mod-compress.html,
+	doc/html/mod-console.html, doc/html/mod-ctcp.html,
+	doc/html/mod-dns.html, doc/html/mod-filesys.html,
+	doc/html/mod-irc.html, doc/html/mod-notes.html,
+	doc/html/mod-seen.html, doc/html/mod-server.html,
+	doc/html/mod-share.html, doc/html/mod-uptime.html,
+	doc/html/mod-wire.html, doc/html/mod-woobie.html,
+	doc/html/news.html, doc/html/party.html, doc/html/patch-howto.html,
+	doc/html/readme.html, doc/html/starting.html,
+	doc/html/tcl-commands.html, doc/html/users.html,
+	doc/man1/eggdrop.1, doc/settings/CONTENTS,
+	doc/settings/core.settings, doc/settings/mod.assoc,
+	doc/settings/mod.blowfish, doc/settings/mod.channels,
+	doc/settings/mod.compress, doc/settings/mod.console,
+	doc/settings/mod.ctcp, doc/settings/mod.dns,
+	doc/settings/mod.filesys, doc/settings/mod.irc,
+	doc/settings/mod.notes, doc/settings/mod.seen,
+	doc/settings/mod.server, doc/settings/mod.share,
+	doc/settings/mod.transfer, doc/settings/mod.uptime,
+	doc/settings/mod.wire, doc/settings/mod.woobie, misc/addpatch,
+	misc/modconfig, scripts/action.fix.tcl, scripts/alltools.tcl,
+	scripts/compat.tcl, scripts/ques5.tcl, src/bg.c, src/bg.h,
+	src/botcmd.c, src/botmsg.c, src/botnet.c, src/chan.h,
+	src/chanprog.c, src/cmds.c, src/cmdt.h, src/dcc.c, src/dccutil.c,
+	src/dns.c, src/dns.h, src/eggdrop.h, src/flags.c, src/flags.h,
+	src/lang.h, src/language.c, src/main.c, src/main.h, src/mem.c,
+	src/misc.c, src/misc_file.c, src/misc_file.h, src/modules.c,
+	src/modules.h, src/patch.h, src/proto.h, src/rfc1459.c, src/stat.h,
+	src/tandem.h, src/tcl.c, src/tcldcc.c, src/tclegg.h, src/tclhash.c,
+	src/tclhash.h, src/tclmisc.c, src/tcluser.c, src/userent.c,
+	src/userrec.c, src/users.c, src/users.h, src/compat/compat.h,
+	src/compat/inet_aton.c, src/compat/inet_aton.h,
+	src/compat/memcpy.c, src/compat/memcpy.h, src/compat/memset.c,
+	src/compat/memset.h, src/compat/snprintf.c, src/compat/snprintf.h,
+	src/compat/strcasecmp.c, src/compat/strcasecmp.h,
+	src/compat/strftime.c, src/compat/strftime.h, src/mod/eggautoconf,
+	src/mod/module.h, src/mod/modvals.h, src/mod/assoc.mod/assoc.c,
+	src/mod/assoc.mod/assoc.h, src/mod/blowfish.mod/bf_tab.h,
+	src/mod/blowfish.mod/blowfish.c, src/mod/blowfish.mod/blowfish.h,
+	src/mod/channels.mod/channels.c, src/mod/channels.mod/channels.h,
+	src/mod/channels.mod/cmdschan.c, src/mod/channels.mod/tclchan.c,
+	src/mod/channels.mod/udefchan.c, src/mod/channels.mod/userchan.c,
+	src/mod/compress.mod/compress.c, src/mod/compress.mod/compress.h,
+	src/mod/compress.mod/tclcompress.c, src/mod/console.mod/console.c,
+	src/mod/console.mod/console.h, src/mod/ctcp.mod/ctcp.c,
+	src/mod/ctcp.mod/ctcp.h, src/mod/dns.mod/coredns.c,
+	src/mod/dns.mod/dns.c, src/mod/dns.mod/dns.h,
+	src/mod/filesys.mod/dbcompat.c, src/mod/filesys.mod/dbcompat.h,
+	src/mod/filesys.mod/filedb3.c, src/mod/filesys.mod/filedb3.h,
+	src/mod/filesys.mod/filelist.c, src/mod/filesys.mod/filelist.h,
+	src/mod/filesys.mod/files.c, src/mod/filesys.mod/files.h,
+	src/mod/filesys.mod/filesys.c, src/mod/filesys.mod/filesys.h,
+	src/mod/filesys.mod/tclfiles.c, src/mod/irc.mod/chan.c,
+	src/mod/irc.mod/cmdsirc.c, src/mod/irc.mod/irc.c,
+	src/mod/irc.mod/irc.h, src/mod/irc.mod/mode.c,
+	src/mod/irc.mod/msgcmds.c, src/mod/irc.mod/tclirc.c,
+	src/mod/notes.mod/cmdsnote.c, src/mod/notes.mod/notes.c,
+	src/mod/notes.mod/notes.h, src/mod/seen.mod/seen.c,
+	src/mod/server.mod/cmdsserv.c, src/mod/server.mod/server.c,
+	src/mod/server.mod/server.h, src/mod/server.mod/servmsg.c,
+	src/mod/server.mod/tclserv.c, src/mod/share.mod/share.c,
+	src/mod/share.mod/share.h, src/mod/share.mod/uf_features.c,
+	src/mod/transfer.mod/transfer.c, src/mod/transfer.mod/transfer.h,
+	src/mod/uptime.mod/uptime.c, src/mod/uptime.mod/uptime.h,
+	src/mod/wire.mod/wire.c, src/mod/wire.mod/wire.h,
+	src/mod/woobie.mod/woobie.c, text/CONTENTS, text/banner:
+
+	Updated copyright info for 2003.  
+
+2002-12-14 23:13  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/tcl-commands.doc, doc/html/tcl-commands.html, src/patch.h:
+
+	* Updates to tcl-commands.doc.  
+
+2002-12-12 03:42  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/main.c, src/patch.h:
+
+	Fixed default setting for the help-path and text-path settings.
+	Patch by poptix.  
+
+2002-12-02 00:27  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/: tcl-commands.doc, text-substitutions.doc,
+	html/app-textsub.html, html/tcl-commands.html:
+
+	* A few small doc updates...  
+
+2002-11-29 22:29  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: modules.c, patch.h, mod/module.h:
+
+	Fixes from export-md5. Found by BarkerJr.  
+
+2002-11-29 06:14  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/cmdsirc.c:
+
+	Fixed a problem in cmd_kick()/cmd_kickban() where the victim's
+	access is checked instead of the user's. Patch by The_Dawn.  
+
+2002-11-29 05:52  Will Buckner <wcc@techmonkeys.org>
+
+	* misc/addpatch, src/patch.h:
+
+	Small fix to addpatch.  
+
+2002-11-29 05:43  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/modules.c, src/patch.h, src/mod/module.h:
+
+	Exported MD5 functions to modules.  
+
+2002-11-27 21:31  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/irc.c,
+	src/mod/irc.mod/irc.h:
+
+	Exported me_voice() in irc_table.  
+
+2002-11-23 19:40  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: chan.h, patch.h, mod/channels.mod/channels.c,
+	mod/irc.mod/chan.c, mod/irc.mod/mode.c:
+
+	Renamed CHANMODR (+M) to CHANMODREG. This is more descriptive and
+	will stop confusion with CHANMODER (+m).  
+
+2002-11-23 19:34  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/patch.h, src/mod/irc.mod/cmdsirc.c:
+
+	.say and .act now allow you to send a message to a moderated channel
+	when the bot has halfop status.  
+
+2002-11-23 03:16  Will Buckner <wcc@techmonkeys.org>
+
+	* doc/UPDATES1.6, src/main.c, src/patch.h:
+
+	Here comes 1.6.14..  
+
+2002-11-22 23:36  Will Buckner <wcc@techmonkeys.org>
+
+	* configure:
+
+	Updated autoconf to 2.54.  
+
+2002-11-22 23:29  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: dcc.c, net.c, patch.h:
+
+	Finished reverting sockfix :P.  
+
+2002-11-22 21:34  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, net.c:
+
+	Reverted the sockfix patch for now.  
+
+2002-11-21 23:53  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: chanprog.c, patch.h, tcl.c, tcldcc.c, tclmisc.c, tcluser.c,
+	userent.c, mod/channels.mod/channels.c, mod/channels.mod/tclchan.c,
+	mod/irc.mod/irc.c, mod/irc.mod/tclirc.c, mod/notes.mod/notes.c,
+	mod/server.mod/server.c:
+
+	More Tcl 8.4 warning fixes.  
+
+2002-11-21 07:59  Will Buckner <wcc@techmonkeys.org>
+
+	* src/: patch.h, tcl.c, mod/channels.mod/channels.c,
+	mod/channels.mod/tclchan.c, mod/irc.mod/irc.c,
+	mod/server.mod/server.c:
+
+	Fixed the remaining Tcl 8.4 warnings.  
+
 2002-11-19 05:21  Will Buckner <wcc@techmonkeys.org>
 
 	* src/: patch.h, mod/channels.mod/tclchan.c:
@@ -6044,7 +7651,7 @@
 
 	* doc/html/faq1.html:
 
-	Missing $Id: ChangeLog,v 1.5457 2002/11/21 04:30:10 changelog Exp $ tag and newline at end of file 
+	Missing $Id$ tag and newline at end of file 
 
 2000-07-11 17:03  Tothwolf <tothwolf@techmonkeys.org>
 

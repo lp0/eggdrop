@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: news.html,v 1.22 2002/09/27 22:16:24 wcc Exp $ -->
+<!-- $Id: news.html,v 1.26 2003/04/17 04:38:33 wcc Exp $ -->
 
 <html>
   <head>
@@ -12,7 +12,7 @@
     </div>
     <hr>
 
-    <p><strong>News - Last revised: June 09, 2002</strong></p>
+    <p><strong>News - Last revised: April 16, 2003</strong></p>
 
     <p>What&#39;s new? First, read the following documents:</p>
 
@@ -43,11 +43,13 @@
 
     <blockquote>
       <ol>
-        <li>Before you start the bot for the first time, <strong>BACKUP
-        </strong> your userfile.</li>
+        <li>
+          Before you start the bot for the first time, <strong>BACKUP</strong>
+          your userfile.</li>
 
-        <li><strong>DON&#39;T USE YOUR OLD CONFIG FILE. MAKE A NEW ONE!
-        </strong></li>
+        <li>
+          <strong>DON&#39;T USE YOUR OLD CONFIG FILE. MAKE A NEW ONE!</strong>
+        </li>
       </ol>
     </blockquote>
 
@@ -86,6 +88,14 @@
       gzip support to Eggdrop via Tcl commands and enables compressed
       userfile transfer. See <a href="mod-compress.html">Compress Module</a>
       for more information.</p>
+    </blockquote>
+
+    <p><strong>IPv6 Support</strong></p>
+
+    <blockquote>
+      <p>Eggdrop now supports version 6 of the IP protocol. See
+      <a href="ipv6.html">IPv6</a> for information about how to enable
+      Eggdrop&#39;s support for IPv6.</p>
     </blockquote>
 
     <p><strong>Share Module</strong></p>
@@ -152,6 +162,10 @@
         </li>
 
         <li>
+          <p>&quot;.modules&quot; now works locally as well as remotely.</p>
+        </li>
+
+        <li>
           <p>Eggdrop now counts all of the traffic which it generates and
           receives through IRC, botnet, scripts, and dcc. You can access
           these statistics via the dcc command &quot;.traffic&quot;. Please
@@ -185,6 +199,10 @@
          <li>
            <p>A new &#39;pidfile&#39; setting was added to allow you to
            specify the name of Eggdrop&#39;s pid file.</p>
+         </li>
+
+         <li>
+           <p>The &#39;strict-servernames&#39; setting was removed.</p>
          </li>
        </ul>
      </blockquote>
@@ -298,6 +316,24 @@
           &#39;nicklen&#39; (the old variable will remain until version
           1.8.</p>
         </li>
+
+        <li>
+          <p>The &#39;server&#39; variable now contains the server&#39;s
+          realname instead of its serverlist entry regardless of the
+          &#39;strict-servernames&#39; setting.</p>
+        </li>
+
+        <li>
+          <p>The &#39;serveraddress&#39; variable was added, which contains the
+          server&#39;s serverlist address and port.</p>
+        </li>
+
+        <li>
+          <p>The &#39;onchan&#39;, &#39;botonchan&#39;, &#39;botisvoice&#39;,
+          &#39;botisop&#39;, &#39;onchansplit&#39;, &#39;isop&#39;,
+          &#39;isvoice&#39;, and &#39;handonchan&#39; commands no longer
+          require an argument.</p>
+        </li>
       </ul>
       <p>For more information about changed or added Tcl commands, see
       <a href="tcl-commands.html">Eggdrop Tcl Commands</a>.</p>
@@ -314,7 +350,7 @@
     <hr>
 
     <p><em>Copyright &copy; 1997 Robey Pointer<br>
-     Copyright &copy; 1999, 2000, 2001, 2002 <a href="http://www.eggheads.org/">
-     Eggheads Development Team</a></em></p>
+    Copyright &copy; 1999, 2000, 2001, 2002, 2003
+    <a href="http://www.eggheads.org/"> Eggheads Development Team</a></em></p>
   </body>
 </html>

@@ -1,10 +1,10 @@
 /*
  * bg.h
  *
- * $Id: bg.h,v 1.3 2002/01/02 03:46:35 guppy Exp $
+ * $Id: bg.h,v 1.5 2003/01/28 06:37:24 wcc Exp $
  */
 /*
- * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002, 2003 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -25,12 +25,12 @@
 #define _EGG_BG_H
 
 typedef enum {
-	BG_QUIT = 1,
-	BG_ABORT
+  BG_QUIT = 1,
+  BG_ABORT
 } bg_quit_t;
 
 void bg_prepare_split(void);
 void bg_send_quit(bg_quit_t q);
 void bg_do_split(void);
 
-#endif			/* _EGG_BG_H */
+#endif /* _EGG_BG_H */
