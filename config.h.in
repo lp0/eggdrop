@@ -53,8 +53,6 @@
 /* Defines extension of eggdrop modules  */
 #undef EGG_MOD_EXT
 
-/* Define if you want the easter egg */
-#undef EASTER_EGG
 
 /* Define if you have the `clock' function. */
 #undef HAVE_CLOCK

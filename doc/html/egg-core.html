@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: egg-core.html,v 1.18 2002/03/09 21:14:15 wcc Exp $ -->
+<!-- $Id: egg-core.html,v 1.25 2002/06/06 03:11:00 wcc Exp $ -->
 
 <html>
   <head>
@@ -66,7 +66,7 @@
     <p><a name="sect1b"></a>1b. <strong>Basic settings</strong></p>
 
     <blockquote>
-      <p>You can change the basic eggdrop appearance and behavior in this
+      <p>You can change the basic Eggdrop appearance and behavior in this
       section.</p>
     </blockquote>
 
@@ -250,9 +250,8 @@
 
         <dd>
           <p>You can specify when Eggdrop should switch logfiles and start
-          fresh. You must use military time for this setting. 300 is default
-          and describes 00:00. Note that a leading 0 will make Tcl think this
-          is an octal value, something you probably don&#39;t want.</p>
+          fresh. You must use military time for this setting. 300 is the
+          default, and describes 03:00 (AM).</p>
         </dd>
 
         <dt><strong>set quiet-save 0</strong></dt>
@@ -305,7 +304,7 @@
         <dt><strong>set pidfile &quot;pid.LamestBot&quot;</strong></dt>
 
         <dd>
-          <p>Specify here the filename eggdrop will save its pid to. If no
+          <p>Specify here the filename Eggdrop will save its pid to. If no
           pidfile is specified, pid.(botnet-nick) will be used.</p>
         </dd>
 
@@ -342,14 +341,15 @@
 
         <dd>
           <p>The MOTD (Message Of The day) is displayed when people dcc chat
-          or telnet to the bot. Look at doc/settings.motd or type &#39;.help
-          set motd&#39; in DCC CHAT or telnet connection for options.</p>
+          or telnet to the bot. Look at doc/text-substitutions.doc for
+          options.</p>
         </dd>
 
         <dt><strong>set telnet-banner &quot;text/banner&quot;</strong></dt>
 
         <dd>
-          <p>This banner will be displayed on telnet connections.</p>
+          <p>This banner will be displayed on telnet connections. Look at
+          doc/text-substitutions.doc for options.</p>
         </dd>
 
         <dt><strong>set userfile-perm 0600</strong></dt>
@@ -387,9 +387,9 @@
     <p><a name="sect1f"></a>1f. <strong>Botnet, DCC and network</strong></p>
 
     <p>Settings in this section should be unimportant for you until you
-    deal with botnets (multiple eggdrops connected together to maximize
-    efficiency). You should read doc/BOTNET before modifying these
-    settings.</p>
+    deal with botnets (multiple Eggdrops connected together to maximize
+    efficiency). You should read <a href="botnet.html">Botnet Sharing and
+    Linking</a> before modifying these settings.</p>
 
     <blockquote>
       <dl>
@@ -425,12 +425,10 @@
           <p><strong>listen 3333 all</strong></p>
 
           <p>There are more options for the listen command in
-          doc/tcl-commands.doc</p>
-
-          <p>There are more options for the listen command in
-          doc/tcl-commands.doc. Note that if you are running more than one
-          bot on the same machine, you will want to space the telnet ports
-          at LEAST 5 apart. 10 is even better.</p>
+          <a href="tcl-commands.html">Eggdrop Tcl Commands</a>. Note that
+          if you are running more than one bot on the same machine, you will
+          want to space the telnet ports at LEAST 5 apart. 10 is even
+          better.</p>
         </dd>
 
         <dt><strong>set remote-boots 2</strong></dt>
@@ -455,8 +453,8 @@
 
         <dd>
           <p>This setting will drop telnet connections not matching a known
-          host. It greatly improves protection from IRCOps, but makes it
-          impossible for limbo bots to add hosts or have NEW as a valid
+          host. It greatly improves protection from IRCops, but makes it
+          impossible to add hosts on limbo (NOIRC) bots or have NEW as a valid
           login.</p>
         </dd>
 
@@ -557,7 +555,7 @@
         <dt><strong>set firewall &quot;!sun-barr.ebay:3666&quot;</strong></dt>
 
         <dd>
-          <p>Set this to your socks host if your eggdrop sits behind a
+          <p>Set this to your socks host if your Eggdrop sits behind a
           firewall. If you use a Sun &quot;telnet passthru&quot; firewall,
           prefix the host with a &quot;!&quot;.</p>
         </dd>
@@ -593,7 +591,7 @@
 
         <dd>
           <p>Define here what Eggdrop considers &#39;hourly&#39;. All calls
-          to it, including such things as note notifying or userfile saving
+          to it, including such things as note notifying or userfile saving,
           are affected by this.</p>
 
           <p>Example:</p>

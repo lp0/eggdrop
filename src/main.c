@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.81 2002/03/11 05:17:01 guppy Exp $
+ * $Id: main.c,v 1.85 2002/05/06 22:35:58 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -81,8 +81,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.6.10";
-int	egg_numver = 1061000;
+char	egg_version[1024] = "1.6.11";
+int	egg_numver = 1061100;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -714,13 +714,8 @@ int main(int argc, char **argv)
 #include "patch.h"
   /* Version info! */
   egg_snprintf(ver, sizeof ver, "eggdrop v%s", egg_version);
-#ifdef EASTER_EGG
-  egg_snprintf(version, sizeof version, "Easterdrop v%s (C) 1997 Robey Pointer (C) 2002 Eggheads",
-	       egg_version);
-#else
   egg_snprintf(version, sizeof version, "Eggdrop v%s (C) 1997 Robey Pointer (C) 2002 Eggheads",
-               egg_version);
-#endif
+	       egg_version);
   /* Now add on the patchlevel (for Tcl) */
   sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);
   strcat(egg_version, egg_xtra);
@@ -1053,23 +1048,31 @@ int main(int argc, char **argv)
 	    }
 	  }
 	}
-	p = module_list;
-	if (p && p->next && p->next->next)
-	  /* Should be only 2 modules now - blowfish (or some other
-	     encryption module) and eggdrop. */
+
+	for (f = 0, p = module_list; p; p = p->next) {
+	  if (!strcmp(p->name, "eggdrop") || !strcmp(p->name, "encryption") ||
+	      !strcmp(p->name, "uptime"))
+	    f = 0;
+	  else 
+	    f = 1;
+	}
+	if (f)
+	  /* Should be only 3 modules now - eggdrop, encryption, and uptime */
 	  putlog(LOG_MISC, "*", MOD_STAGNANT);
+
 	flushlogs();
 	kill_tcl();
 	init_tcl(argc, argv);
 	init_language(0);
-	/* We expect the encryption module as the current module pointed
-	 * to by `module_list'.
-	 */
-	x = p->funcs[MODCALL_START];
-	/* `NULL' indicates that we just recently restarted. The module
-	 * is expected to re-initialise as needed.
-	 */
-	x(NULL);
+
+	/* this resets our modules which we didn't unload (encryption and uptime) */
+	for (p = module_list; p; p = p->next) {
+	  if (p->funcs) {
+	    x = p->funcs[MODCALL_START];
+	    x(NULL);
+	  }
+	}
+
 	rehash();
 	restart_chons();
 	call_hook(HOOK_LOADED);

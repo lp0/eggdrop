@@ -1,5 +1,5 @@
 Eggdrop Core Settings
-Last revised: February 5, 2002
+Last revised: May 24, 2002
      _________________________________________________________________
 
                            Eggdrop Core Settings
@@ -160,10 +160,9 @@ logfile <logflags> <channel> "logs/logfile"
 
 
   set switch-logfiles-at 300
-    You can specifiy when Eggdrop should switch logfiles and start fresh. 
-    You must use military time for this setting. 300 is default and 
-    describes 00:00. Note that a leading 0 will make Tcl think this is an
-    octal value, something you probably don't want.
+    You can specifiy when Eggdrop should switch logfiles and start fresh.
+    use military time for this setting. 300 is the default, and describes
+    03:00 (AM).
 
 
   set quiet-save 0
@@ -197,7 +196,8 @@ logfile <logflags> <channel> "logs/logfile"
 
 
   set pidfile "pid.LamestBot"
-    Specify here the filename Eggdrop will save its pid to.
+    Specify here the filename Eggdrop will save its pid to. If no pidfile is
+    specified, pid.(botnet-nick) will be used.
 
 
   set sort-users 0
@@ -206,13 +206,13 @@ logfile <logflags> <channel> "logs/logfile"
 
 
   set help-path "help/"
-    Specify here where Eggdrop should look for help files.
-    Don't modify this setting unless you know what you're doing!
+    Specify here where Eggdrop should look for help files. Don't modify this
+    setting unless you know what you're doing!
 
 
   set text-path "text/"
-     Specify here where Eggdrop should look for text files. This is
-     used for certain Tcl and DCC commands.
+    Specify here where Eggdrop should look for text files. This is used for
+    certain Tcl and DCC commands.
 
 
   set temp-path "/tmp"
@@ -225,7 +225,8 @@ logfile <logflags> <channel> "logs/logfile"
 
 
   set telnet-banner "text/banner"
-    This banner will be displayed on telnet connections.
+    This banner will be displayed on telnet connections. Look at
+    doc/text-substitutions.doc for options.
 
 
   set userfile-perm 0600
@@ -255,7 +256,7 @@ logfile <logflags> <channel> "logs/logfile"
 ##### BOTNET, DCC AND NETWORK #####
 
 Settings in this section should be unimportant for you until you deal with
-botnets (multiple eggdrops connected together to maximize efficiency). You 
+botnets (multiple Eggdrops connected together to maximize efficiency). You 
 should read doc/BOTNET before modifying these settings.
 
 
@@ -304,8 +305,8 @@ should read doc/BOTNET before modifying these settings.
 
   set protect-telnet 0
     This setting will drop telnet connections not matching a known host. It
-    greatly improves protection from IRCOps, but makes it impossible for 
-    limbo bots to add hosts or have NEW as a valid login.
+    greatly improves protection from IRCops, but makes it impossible to add
+    hosts on limbo (NOIRC) bots or have NEW as a valid login.
 
   set dcc-sanitycheck 0
     This setting will make the bot ignore DCC chat requests which appear to
@@ -370,7 +371,7 @@ should read doc/BOTNET before modifying these settings.
 ##### MORE ADVANCED SETTINGS #####
 
   set firewall "!sun-barr.ebay:3666"
-    Set this to your socks host if your eggdrop sits behind a firewall. If 
+    Set this to your socks host if your Eggdrop sits behind a firewall. If 
     you use a Sun "telnet passthru" firewall, prefix the host with a "!".
 
 
@@ -396,7 +397,7 @@ should read doc/BOTNET before modifying these settings.
 
   set hourly-updates 00
     Define here what Eggdrop considers 'hourly'. All calls to it, including such
-    things as note notifying or userfile saving are affected by this.
+    things as note notifying or userfile saving, are affected by this.
 
     Example:
 
@@ -415,9 +416,8 @@ should read doc/BOTNET before modifying these settings.
 
 
   set default-flags "hp"
-    Enter the flags that all new users should get by default.
-    See '.help whois' on the partyline for a list of flags and
-    their descriptions.
+    Enter the flags that all new users should get by default. See '.help
+    whois' on the partyline for a list of flags and their descriptions.
 
 
   set whois-fields "url birthday"

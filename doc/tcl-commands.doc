@@ -1,5 +1,5 @@
 Eggdrop Tcl Commands
-Last revised: March 23, 2002
+Last revised: June 04, 2002
      _________________________________________________________________
 
 This is an exhaustive list of all the Tcl commands added to Eggdrop. All
@@ -7,11 +7,11 @@ of the normal Tcl built-in commands are still there, of course, but you
 can also use these to manipulate features of the bot. They are listed
 according to category.
 
-This list is accurate for Eggdrop v1.6.9. Scripts written for v1.3/v1.4
+This list is accurate for Eggdrop v1.6.11. Scripts written for v1.3/v1.4
 series of Eggdrop should probably work with a few minor modifications
 depending on the script. Scripts which were written for  v0.9, v1.0, v1.1
 or v1.2 will probably not work without modification. Commands which have
-been changed in this version of eggdrop (or are just new commands) are
+been changed in this version of Eggdrop (or are just new commands) are
 marked with vertical bars (|) on the left.
 
 
@@ -549,6 +549,11 @@ marked with vertical bars (|) on the left.
     Returns: a list of info about the specified channel's settings.
     Module: channels
 
+| channel get <name> <setting>
+|   Returns: The value of the setting you specify. For flags, a value of 0
+|     means it is disabled (-), and non-zero means enabled (+).
+|   Module: channels
+
   channel remove <name>
     Description: removes a channel record from the bot and makes the bot no
       longer monitor the channel
@@ -599,6 +604,11 @@ marked with vertical bars (|) on the left.
       if no channel is specified); 0 otherwise
     Module: irc
 
+| botishalfop [channel]
+|   Returns: 1 if the bot has halfops on the specified channel (or any channel
+|     if no channel is specified); 0 otherwise
+|   Module: irc
+
   botisvoice [channel]
     Returns: 1 if the bot has a voice on the specified channel (or any
       channel if no channel is specified); 0 otherwise
@@ -614,10 +624,20 @@ marked with vertical bars (|) on the left.
       any channel if no channel name is specified) and has ops; 0 otherwise
     Module: irc
 
+| ishalfop <nickname> [channel]
+|   Returns: 1 if someone by the specified nickname is on the channel (or
+|     any channel if no channel name is specified) and has halfops; 0 otherwise
+|   Module: irc
+
   wasop <nickname> <channel>
     Returns: 1 if someone that just got opped/deopped in the chan had op
       before the modechange; 0 otherwise
     Module: irc
+
+| washalfop <nickname> <channel>
+|   Returns: 1 if someone that just got halfopped/dehalfopped in the chan
+|     had halfop before the modechange; 0 otherwise
+|   Module: irc
 
   isvoice <nickname> [channel]
     Returns: 1 if someone by that nickname is on the channel (or any
@@ -829,17 +849,6 @@ marked with vertical bars (|) on the left.
      Returns: nothing
      Module: core
 
-  restart
-    Description: rehashes the bot, kills all timers, reloads all modules,
-      and reconnects the bot to the next server in its list.
-    Returns: nothing
-    Module: core
-
-  rehash
-    Description: rehashes the bot
-    Returns: nothing
-    Module: core
-
   dccsimul <idx> <text>
     Description: simulates text typed in by the dcc user specified. Note
       that in v0.9, this only simulated commands; now a command must be
@@ -889,6 +898,12 @@ marked with vertical bars (|) on the left.
     Description: turns a user's echo on or off; the status has to be a 1 or 0
     Returns: new value of echo for that user (or the current value, if status
       was omitted)
+    Module: core
+
+  strip <idx> [+/-strip-flags]
+    Description: modifies the strip-flags for a user
+    Returns: new strip-flags for the specified user (or the current
+      flags, if strip-flags was omitted)
     Module: core
 
   putbot <bot-nick> <message>
@@ -1171,8 +1186,8 @@ marked with vertical bars (|) on the left.
     Module: transfer
 
   getfilesendtime <idx>
-    Returns: the unix time when a file transfer started, or a negative
-      number:
+    Returns: the unixtime value from when a file transfer started, or a
+      negative number:
         -1 no matching transfer with the specified idx was found
         -2 the idx matches an entry which is not a file transfer
     Module: transfer
@@ -1300,7 +1315,8 @@ marked with vertical bars (|) on the left.
     Module: core
 
   unixtime
-    Returns: a long integer which is the current time according to unix
+    Returns: a long integer which represents the number of seconds that have
+      passed since 00:00 Jan 1, 1970 (GMT).
     Module: core
 
   duration <seconds>
@@ -1455,6 +1471,17 @@ marked with vertical bars (|) on the left.
     Returns: nothing
     Module: core
 
+  restart
+    Description: rehashes the bot, kills all timers, reloads all modules,
+      and reconnects the bot to the next server in its list.
+    Returns: nothing
+    Module: core
+
+  rehash
+    Description: rehashes the bot
+    Returns: nothing
+    Module: core
+
 
 *** GLOBAL VARIABLES ***
 
@@ -1513,7 +1540,7 @@ marked with vertical bars (|) on the left.
     Module: core
 
   config
-    Value: the filename of the config file eggdrop is currently using
+    Value: the filename of the config file Eggdrop is currently using
     Module: core
 
 *** BIND ***
@@ -1600,7 +1627,8 @@ marked with vertical bars (|) on the left.
            obviously) or a channel name. mask is matched against the entire
            notice and can contain wildcards. It is considered a breach of
            protocol to respond to a /notice on IRC, so this is intended for
-           internal use (logging, etc.) only.
+           internal use (logging, etc.) only. Note that server notices do not
+           trigger the NOTC bind.
 
            New Tcl procs should be declared as
              proc notcproc {nick uhost hand text {dest ""}} {
@@ -2059,7 +2087,7 @@ marked with vertical bars (|) on the left.
               (possibly an error message if it doesn't know how to deal with
               it).
 
-    (6) FILT  Return 1 to indicate the text has been processed, and the bot
+    (6) FILT  Return "" to indicate the text has been processed, and the bot
               should just ignore it. Otherwise, it will treat the text like
               any other.
 

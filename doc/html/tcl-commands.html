@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: tcl-commands.html,v 1.9 2002/03/23 17:27:52 wcc Exp $ -->
+<!-- $Id: tcl-commands.html,v 1.17 2002/07/17 19:18:29 wcc Exp $ -->
 
 <html>
   <head>
@@ -17,11 +17,11 @@
     you can also use these to manipulate features of the bot. They are listed
     according to category.</p>
 
-    <p>This list is accurate for Eggdrop v1.6.9. Scripts written for
+    <p>This list is accurate for Eggdrop v1.6.11. Scripts written for
     v1.3/v1.4 series of Eggdrop should probably work with a few minor
     modifications depending on the script. Scripts which were written for
     v0.9, v1.0, v1.1 or v1.2 will probably not work without modification.
-    Commands which have been changed in this version of eggdrop (or are
+    Commands which have been changed in this version of Eggdrop (or are
     just new commands) are marked with an asterisk (*).</p>
 
     <blockquote>
@@ -1204,6 +1204,25 @@
           <p><strong>Module:</strong> channels</p>
         </dd>
 
+        <dt><strong>channel info &lt;name&gt;</strong></dt>
+
+        <dd>
+          <p><strong>Returns:</strong> a list of info about the specified
+          channel&#39;s settings.</p>
+
+          <p><strong>Module:</strong> channels</p>
+        </dd>
+
+        <dt><strong>* channel get &lt;name&gt; &lt;setting&gt;</strong></dt>
+
+        <dd>
+          <p><strong>Returns:</strong> The value of the setting you specify.
+          For flags, a value of 0 means it is disabled (-), and non-zero means
+          enabled (+).</p>
+
+          <p><strong>Module:</strong> channels</p>
+        </dd>
+
         <dt><strong>channel remove &lt;name&gt;</strong></dt>
 
         <dd>
@@ -1291,6 +1310,16 @@
           <p><strong>Module:</strong> irc</p>
         </dd>
 
+        <dt><strong>* botishalfop [channel]</strong></dt>
+
+        <dd>
+          <p><strong>Returns:</strong> 1 if the bot has halfops on the
+          specified channel (or any channel if no channel is specified); 0
+          otherwise</p>
+
+          <p><strong>Module:</strong> irc</p>
+        </dd>
+
         <dt><strong>botisvoice [channel]</strong></dt>
 
         <dd>
@@ -1321,11 +1350,31 @@
           <p><strong>Module:</strong> irc</p>
         </dd>
 
+        <dt><strong>* ishalfop &lt;nickname&gt; [channel]</strong></dt>
+
+        <dd>
+          <p><strong>Returns:</strong> 1 if someone by the specified
+          nickname is on the channel (or any channel if no channel name is
+          specified) and has halfops; 0 otherwise</p>
+
+          <p><strong>Module:</strong> irc</p>
+        </dd>
+
         <dt><strong>wasop &lt;nickname&gt; &lt;channel&gt;</strong></dt>
 
         <dd>
           <p><strong>Returns:</strong> 1 if someone that just got
           opped/deopped in the chan had op before the modechange; 0
+          otherwise</p>
+
+          <p><strong>Module:</strong> irc</p>
+        </dd>
+
+        <dt><strong>* washalfop &lt;nickname&gt; &lt;channel&gt;</strong></dt>
+
+        <dd>
+          <p><strong>Returns:</strong> 1 if someone that just got
+          halfopped/dehalopped in the chan had halfop before the modechange; 0
           otherwise</p>
 
           <p><strong>Module:</strong> irc</p>
@@ -1748,28 +1797,6 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>restart</strong></dt>
-
-        <dd>
-          <p><strong>Description:</strong> rehashes the bot, kills all
-          timers, reloads all modules, and reconnects the bot to the next
-          server in its list.</p>
-
-          <p><strong>Returns:</strong> nothing</p>
-
-          <p><strong>Module:</strong> core</p>
-        </dd>
-
-        <dt><strong>rehash</strong></dt>
-
-        <dd>
-          <p><strong>Description:</strong> rehashes the bot</p>
-
-          <p><strong>Returns:</strong> nothing</p>
-
-          <p><strong>Module:</strong> core</p>
-        </dd>
-
         <dt><strong>dccsimul &lt;idx&gt; &lt;text&gt;</strong></dt>
 
         <dd>
@@ -1862,6 +1889,18 @@
 
           <p><strong>Returns:</strong> new value of echo for that user (or
           the current value, if status was omitted)</p>
+
+          <p><strong>Module:</strong> core</p>
+        </dd>
+
+        <dt><strong>strip &lt;idx&gt; [+/-strip-flags]</strong></dt>
+
+        <dd>
+          <p><strong>Description:</strong> modifies the strip-flags for a
+          user</p>
+
+          <p><strong>Returns:</strong> new strip-flags for the specified user
+          (or the current flags, if strip-flags was omitted)</p>
 
           <p><strong>Module:</strong> core</p>
         </dd>
@@ -2492,8 +2531,8 @@
         <dt><strong>getfilesendtime &lt;idx&gt;</strong></dt>
 
         <dd>
-          <p><strong>Returns:</strong> the unix time when a file transfer
-          started, or a negative number:</p>
+          <p><strong>Returns:</strong> the unixtime value for when a file
+          transfer started, or a negative number:</p>
 
           <blockquote>
             <table>
@@ -2862,8 +2901,8 @@
         <dt><strong>unixtime</strong></dt>
 
         <dd>
-          <p><strong>Returns:</strong> a long integer which is the current
-          time according to unix</p>
+          <p><strong>Returns:</strong> a long integer which represents the
+          number of seconds that have passed since 00:00 Jan 1, 1970 (GMT).</p>
 
           <p><strong>Module:</strong> core</p>
         </dd>
@@ -3208,6 +3247,28 @@
 
           <p><strong>Module:</strong> core</p>
         </dd>
+
+        <dt><strong>restart</strong></dt>
+
+        <dd>
+          <p><strong>Description:</strong> rehashes the bot, kills all
+          timers, reloads all modules, and reconnects the bot to the next
+          server in its list.</p>
+
+          <p><strong>Returns:</strong> nothing</p>
+
+          <p><strong>Module:</strong> core</p>
+        </dd>
+
+        <dt><strong>rehash</strong></dt>
+
+        <dd>
+          <p><strong>Description:</strong> rehashes the bot</p>
+
+          <p><strong>Returns:</strong> nothing</p>
+
+          <p><strong>Module:</strong> core</p>
+        </dd>
       </dl>
     </blockquote>
 
@@ -3358,7 +3419,7 @@
         <dt><strong>config</strong></dt>
 
         <dd>
-          <p><strong>Value:</strong> the filename of the config file eggdrop
+          <p><strong>Value:</strong> the filename of the config file Eggdrop
           is currently using</p>
 
           <p><strong>Module:</strong> core</p>
@@ -3500,7 +3561,7 @@
               matched against the entire notice and can contain wildcards.
               It is considered a breach of protocol to respond to a /notice
               on IRC, so this is intended for internal use (logging, etc.)
-              only.</p>
+              only.Note that server notices do not trigger the NOTC bind.</p>
 
               <p>New Tcl procs should be declared as</p>
 
@@ -4343,7 +4404,7 @@
             <li>
               <p><strong>FILT</strong>
 
-              <p>Return 1 to indicate the text has been processed, and the
+              <p>Return "" to indicate the text has been processed, and the
               bot should just ignore it. Otherwise, it will treat the text
               like any other.</p>
             </li>

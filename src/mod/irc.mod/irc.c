@@ -2,7 +2,7 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.67 2002/03/10 17:34:32 guppy Exp $
+ * $Id: irc.c,v 1.75 2002/07/26 02:18:28 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -225,7 +225,7 @@ static void punish_badguy(struct chanset_t *chan, char *whobad,
     maskhost(whobad, s1);
     simple_sprintf(s, "(%s) %s", ct, reason);
     u_addban(chan, s1, botnetnick, s, now + (60 * ban_time), 0);
-    if (!mevictim && me_op(chan)) {
+    if (!mevictim && (me_op(chan) || me_halfop(chan))) {
       add_mode(chan, '+', 'b', s1);
       flush_mode(chan, QUICK);
     }
@@ -238,7 +238,7 @@ static void punish_badguy(struct chanset_t *chan, char *whobad,
       /* ... or have we sent the kick already? */
       !chan_sentkick(m) &&
       /* ... and can I actually do anything about it? */
-      me_op(chan) && !mevictim) {
+      (me_op(chan) || (me_halfop(chan) && !chan_hasop(m))) && !mevictim) {
     dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, badnick, kick_msg);
     m->flags |= SENTKICK;
   }
@@ -377,6 +377,21 @@ static int me_op(struct chanset_t *chan)
     return 0;
 }
 
+/* Check if I am a halfop. Returns boolean 1 or 0.
+ */
+static int me_halfop(struct chanset_t *chan)
+{
+  memberlist *mx = NULL;
+
+  mx = ismember(chan, botname);
+  if (!mx)
+    return 0;
+  if (chan_hashalfop(mx))
+    return 1;
+  else
+    return 0;
+}
+
 /* Check if there are any ops on the channel. Returns boolean 1 or 0.
  */
 static int any_ops(struct chanset_t *chan)
@@ -470,7 +485,7 @@ static void status_log()
   memberlist *m;
   struct chanset_t *chan;
   char s[20], s2[20];
-  int chops, voice, nonops, bans, invites, exempts;
+  int chops, halfops, voice, nonops, bans, invites, exempts;
 
   if (!server_online)
     return;
@@ -480,13 +495,16 @@ static void status_log()
         !channel_inactive(chan)) {
       chops = 0;
       voice = 0;
+      halfops = 0;
       for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
 	if (chan_hasop(m))
 	  chops++;
+        else if (chan_hashalfop(m))
+          halfops++;
 	else if (chan_hasvoice(m))
 	  voice++;
       }
-      nonops = (chan->channel.members - (chops + voice));
+      nonops = (chan->channel.members - (chops + voice + halfops));
 
       for (bans = 0, b = chan->channel.ban; b->mask[0]; b = b->next)
 	bans++;
@@ -499,10 +517,11 @@ static void status_log()
       sprintf(s2, "%d", invites);
 
       putlog(LOG_MISC, chan->dname,
-	     "%s%-10s (%s) : [m/%d o/%d v/%d n/%d b/%d e/%s I/%s]",
-             me_op(chan) ? "@" : me_voice(chan) ? "+" : "", chan->dname,
-             getchanmode(chan), chan->channel.members, chops, voice, nonops,
-	     bans, use_exempts ? s : "-", use_invites ? s2 : "-");
+             "%s%s (%s) : [m/%d o/%d h/%d v/%d n/%d b/%d e/%s I/%s]",
+             me_op(chan) ? "@" : me_voice(chan) ? "+" :
+             me_halfop(chan) ? "%" : "", chan->dname, getchanmode(chan),
+             chan->channel.members, chops, halfops, voice, nonops, bans,
+             use_exempts ? s : "-", use_invites ? s2 : "-");
     }
   }
 }
@@ -588,7 +607,7 @@ static void check_expired_chanstuff()
     return;
   for (chan = chanset; chan; chan = chan->next) {
     if (channel_active(chan)) {
-      if (me_op(chan)) {
+      if (me_op(chan) || me_halfop(chan)) {
 	if (channel_dynamicbans(chan) && ban_time)
 	  for (b = chan->channel.ban; b->mask[0]; b = b->next)
 	    if (now - b->timer > 60 * ban_time &&
@@ -654,9 +673,9 @@ static void check_expired_chanstuff()
 	      sprintf(s, "%s!%s", m->nick, m->userhost);
 	      get_user_flagrec(m->user ? m->user : get_user_by_host(s),
 			       &fr, chan->dname);
-	      if (!(glob_bot(fr) || glob_friend(fr) ||
-		    (glob_op(fr) && !chan_deop(fr)) ||
-		    chan_friend(fr) || chan_op(fr))) {
+	      if ((!(glob_bot(fr) || glob_friend(fr) || (glob_op(fr) &&
+		  !chan_deop(fr)) || chan_friend(fr) || chan_op(fr))) &&
+		  (me_op(chan) || (me_halfop(chan) && !chan_hasop(m)))) {
 		dprintf(DP_SERVER, "KICK %s %s :idle %d min\n", chan->name,
 			m->nick, chan->idle_kick);
 		m->flags |= SENTKICK;
@@ -1026,15 +1045,25 @@ static void do_nettype()
   add_hook(HOOK_RFC_CASECMP, (Function) rfc_compliant);
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    char *name2, int flags)
+			    CONST char *name2, int flags)
+#else
+static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
+                            char *name2, int flags)
+#endif
 {
   do_nettype();
   return NULL;
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *traced_rfccompliant(ClientData cdata, Tcl_Interp *irp,
-				 char *name1, char *name2, int flags)
+				 char *name1, CONST char *name2, int flags)
+#else
+static char *traced_rfccompliant(ClientData cdata, Tcl_Interp *irp,
+                                 char *name1, char *name2, int flags)
+#endif
 {
   /* This hook forces eggdrop core to change the rfc_ match function
    * links to point to the rfc compliant versions if rfc_compliant
@@ -1120,6 +1149,7 @@ static Function irc_table[] =
   /* 20 - 23 */
   (Function) check_this_ban,
   (Function) check_this_user,
+  (Function) me_halfop,
 };
 
 char *irc_start(Function * global_funcs)
@@ -1131,15 +1161,15 @@ char *irc_start(Function * global_funcs)
   module_register(MODULE_NAME, irc_table, 1, 3);
   if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);
-    return "This module needs eggdrop1.6.0 or later";
+    return "This module requires Eggdrop 1.6.0 or later.";
   }
   if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0))) {
     module_undepend(MODULE_NAME);
-    return "You need the server module to use the irc module.";
+    return "This module requires server module 1.0 or later.";
   }
   if (!(channels_funcs = module_depend(MODULE_NAME, "channels", 1, 0))) {
     module_undepend(MODULE_NAME);
-    return "You need the channels module to use the irc module.";
+    return "This module requires channels module 1.0 or later.";
   }
   for (chan = chanset; chan; chan = chan->next) {
     if (!channel_inactive(chan))

@@ -1,7 +1,47 @@
-$Id: UPDATES1.6,v 1.351 2002/03/29 05:53:54 guppy Exp $
+$Id: UPDATES1.6,v 1.380 2002/07/25 17:40:18 guppy Exp $
 
 Changes in Eggdrop: (since v1.6.0)
 ----------------------------------
+
+1.6.11 (26 July 2002)
+Found by  Fixed by  What...
+various   Wcc       need-[limit/invite/unban/key] work now
+          [sL]      fixed a problem with 'connect' and 'control' where the script would abort
+                    prematurely
+          Wcc       improved the logic in cmd_mnsban when specifying what happen to remove and
+                    where to remove it from
+          Eule      fixed cmd_kickban so it works
+          Wcc/      fixed a bug causing "[HH:MM] !!! OVER MAXIMUM <queue> QUEUE" to be
+          [sL]      logged to LOG_SVROUT
+          Wcc       log PINGs/PONGs sent to the server in LOG_SVROUT
+          guppy     some small changes to make eggdrop work with tcl8.4b1 (it won't work with
+                    tcl8.4a1 or a2 anymore though)
+dork      TaKeDa    fixed a crash while doing .kickban -nick
+          Zart      the return values of uname() are now properly checked
+          Zart      added handlen friendly code to various commands (this is a new patch to
+                    replace the handlen friendly patch reverted in 1.6.10
+          BarkerJr  don't show +inactive channels in a remote .who
+          guppy     changed the .status output a bit (includes the name of the config file
+                    now)
+guppy     Wcc       msg_whois should require an argument.
+          Wcc       added support for halfops (channel mode +h)
+MaSsKilla Wcc       don't allow channels containing commas to be added.. 
+                    also made an error message more clear
+          BarkerJr  updates to doc/MODULES
+          Wcc       more doc updates
+          TaKeDa    fix for !channels when people quit or change nicks
+          aXs/      made all the commands use CHANMETA instead of hardcoding channel types
+          Eule
+various   stdarg/   added 'channel get <chan> <setting>' (backported from 1.7)
+          Mo-Ize
+          guppy     uptime.mod will not unload now once loaded (this prevents you from
+                    losing your stats on a .restart .. to remove, you have to .die)
+          guppy     uptime.mod now sends the proper pid and also won't send garbage if
+                    the bot currently isn't on a server
+          Wcc       updated slennox's sentinel.tcl to the latest version
+guppy     Wcc       added support for +r on Undernet's ircu 2.10.11
+          upstream  fixed a crash in seen.mod with long channel names
+          slug      added support for the +C channel mode (noctcp) on QuakeNet's ircu
 
 1.6.10 (29 March 2002)
 Found by  Fixed by  What...

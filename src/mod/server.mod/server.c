@@ -2,7 +2,7 @@
  * server.c -- part of server.mod
  *   basic irc server support
  *
- * $Id: server.c,v 1.77 2002/02/22 04:04:57 guppy Exp $
+ * $Id: server.c,v 1.81 2002/07/19 05:25:33 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -802,6 +802,11 @@ static void queue_server(int which, char *buf, int len)
     if (buf[1] == 'I' || buf[1] == 'i')
       lastpingtime = now;	/* lagmeter */
     tputs(serv, buf, len);
+    if (debug_output) {
+      if (buf[len - 1] == '\n')
+        buf[len - 1] = 0;
+      putlog(LOG_SRVOUT, "*", "[m->] %s", buf);
+    }
     return;
   }
 
@@ -901,7 +906,7 @@ static void queue_server(int which, char *buf, int len)
     h->warned = 1;
   }
 
-  if (debug_output) {
+  if (debug_output && !h->warned) {
     if (buf[len - 1] == '\n')
       buf[len - 1] = 0;
     switch (which) {
@@ -1116,8 +1121,14 @@ static int server_raw STDVAR
 
 /* Read/write normal string variable.
  */
+
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *nick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
-			 char *name2, int flags)
+			 CONST char *name2, int flags)
+#else
+static char *nick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
+                         char *name2, int flags)
+#endif
 {
   char *new;
 
@@ -1169,16 +1180,26 @@ static char *get_altbotnick(void)
     return altnick;
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *altnick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    char *name2, int flags)
+			    CONST char *name2, int flags)
+#else
+static char *altnick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
+                            char *name2, int flags)
+#endif
 {
   /* Always unset raltnick. Will be regenerated when needed. */
   raltnick[0] = 0;
   return NULL;
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
-			   char *name2, int flags)
+			   CONST char *name2, int flags)
+#else
+static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
+                           char *name2, int flags)
+#endif
 {
   char s[1024];
 
@@ -1195,8 +1216,13 @@ static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
   return NULL;
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *traced_botname(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    char *name2, int flags)
+			    CONST char *name2, int flags)
+#else
+static char *traced_botname(ClientData cdata, Tcl_Interp *irp, char *name1,
+                            char *name2, int flags)
+#endif
 {
   char s[1024];
 
@@ -1245,15 +1271,26 @@ static void do_nettype(void)
   }
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    char *name2, int flags)
+			    CONST char *name2, int flags)
+#else
+static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
+                            char *name2, int flags)
+#endif
 {
   do_nettype();
   return NULL;
 }
 
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    char *name2, int flags)
+			    CONST char *name2, int flags)
+#else
+static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp, char *name1,
+                            char *name2, int flags)
+#endif
+
 {
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
     char s[40];
@@ -1335,13 +1372,24 @@ static tcl_ints my_tcl_ints[] =
 
 /* Read or write the server list.
  */
+
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
 static char *tcl_eggserver(ClientData cdata, Tcl_Interp *irp, char *name1,
-			   char *name2, int flags)
+			   CONST char *name2, int flags)
+#else
+static char *tcl_eggserver(ClientData cdata, Tcl_Interp *irp, char *name1,
+                           char *name2, int flags)
+#endif
 {
   Tcl_DString ds;
-  char *slist, **list, x[1024];
+  char *slist, x[1024];
   struct server_list *q;
   int lc, code, i;
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+  CONST char **list;
+#else
+  char **list;
+#endif
 
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
     /* Create server list */
@@ -1366,7 +1414,7 @@ static char *tcl_eggserver(ClientData cdata, Tcl_Interp *irp, char *name1,
       if (code == TCL_ERROR)
 	return interp->result;
       for (i = 0; i < lc && i < 50; i++)
-	add_server(list[i]);
+	add_server((char *)list[i]);
 
       /* Tricky way to make the bot reset its server pointers
        * perform part of a '.jump <current-server>':
@@ -1845,7 +1893,7 @@ char *server_start(Function *global_funcs)
   module_register(MODULE_NAME, server_table, 1, 2);
   if (!module_depend(MODULE_NAME, "eggdrop", 106, 7)) {
     module_undepend(MODULE_NAME);
-    return "This module requires eggdrop1.6.7 or later";
+    return "This module requires Eggdrop 1.6.7 or later.";
   }
 
   /* Fool bot in reading the values. */

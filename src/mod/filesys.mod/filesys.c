@@ -2,7 +2,7 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  *
- * $Id: filesys.c,v 1.49 2002/03/22 03:53:57 guppy Exp $
+ * $Id: filesys.c,v 1.51 2002/07/07 22:35:25 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -909,20 +909,22 @@ static int filesys_expmem()
 
 static void filesys_report(int idx, int details)
 {
-  if (dccdir[0]) {
-    dprintf(idx, "    DCC file path: %s", dccdir);
-    if (upload_to_cd)
-      dprintf(idx, "\n        incoming: (go to the current dir)\n");
-    else if (dccin[0])
-      dprintf(idx, "\n        incoming: %s\n", dccin);
-    else
-      dprintf(idx, "    (no uploads)\n");
-    if (dcc_users)
-      dprintf(idx, "        max users is %d\n", dcc_users);
-    if ((upload_to_cd) || (dccin[0]))
-      dprintf(idx, "    DCC max file size: %dk\n", dcc_maxsize);
-  } else
-    dprintf(idx, "  (Filesystem module loaded, but no active dcc path.)\n");
+  if (details) {
+    if (dccdir[0]) {
+      dprintf(idx, "    DCC file path: %s", dccdir);
+      if (upload_to_cd)
+	dprintf(idx, "\n        incoming: (go to the current dir)\n");
+      else if (dccin[0])
+	dprintf(idx, "\n        incoming: %s\n", dccin);
+      else
+	dprintf(idx, "    (no uploads)\n");
+      if (dcc_users)
+	dprintf(idx, "        max users is %d\n", dcc_users);
+      if ((upload_to_cd) || (dccin[0]))
+	dprintf(idx, "    DCC max file size: %dk\n", dcc_maxsize);
+    } else
+      dprintf(idx, "  (Filesystem module loaded, but no active dcc path.)\n");
+  }
 }
 
 static char *filesys_close()
@@ -983,11 +985,11 @@ char *filesys_start(Function * global_funcs)
   module_register(MODULE_NAME, filesys_table, 2, 0);
   if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);
-    return "You need at least eggdrop1.6.0 to use the filesystem module.";
+    return "This module requires Eggdrop 1.6.0 or later.";
   }
   if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0))) {
     module_undepend(MODULE_NAME);
-    return "You need the transfer module to use the filesystem module.";
+    return "This module requires transfer module 2.0 or later.";
   }
   add_tcl_commands(mytcls);
   add_tcl_strings(mystrings);

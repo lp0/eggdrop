@@ -7,7 +7,7 @@
  *   telling the current programmed settings
  *   initializing a lot of stuff and loading the tcl scripts
  *
- * $Id: chanprog.c,v 1.29 2002/02/04 05:03:35 wcc Exp $
+ * $Id: chanprog.c,v 1.32 2002/07/18 20:28:32 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -287,9 +287,7 @@ void tell_verbose_status(int idx)
   dprintf(idx, "I am %s, running %s:  %d user%s (mem: %uk)\n",
 	  botnetnick, ver, i, i == 1 ? "" : "s",
           (int) (expected_memory() / 1024));
-  dprintf(idx, "Running on %s %s\n", uni_t, vers_t);
-  if (admin[0])
-    dprintf(idx, "Admin: %s\n", admin);
+
   now2 = now - online_since;
   s[0] = 0;
   if (now2 > 86400) {
@@ -333,6 +331,12 @@ void tell_verbose_status(int idx)
   dprintf(idx, "%s %s  (%s)  %s  %s %4.1f%%\n", MISC_ONLINEFOR,
 	  s, s1, s2, MISC_CACHEHIT,
 	  100.0 * ((float) cache_hit) / ((float) (cache_hit + cache_miss)));
+
+  if (admin[0])
+    dprintf(idx, "Admin: %s\n", admin);
+
+  dprintf(idx, "Config file: %s\n", configfile);
+  dprintf(idx, "OS: %s %s\n", uni_t, vers_t);
 
   /* info library */
   dprintf(idx, "%s %s\n", MISC_TCLLIBRARY,
@@ -625,8 +629,12 @@ void wipe_timers(Tcl_Interp *irp, tcl_timer_t **stack)
 void list_timers(Tcl_Interp *irp, tcl_timer_t *stack)
 {
   tcl_timer_t *mark;
-  char mins[10], id[16], *argv[3], *x;
-
+  char mins[10], id[16], *x;
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+  CONST char *argv[3];
+#else
+  char *argv[3];
+#endif
   for (mark = stack; mark; mark = mark->next) {
     egg_snprintf(mins, sizeof mins, "%u", mark->mins);
     egg_snprintf(id, sizeof id, "timer%lu", mark->id);
