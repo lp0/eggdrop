@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  * 
- * $Id: main.c,v 1.49 2000/12/10 15:10:27 guppy Exp $
+ * $Id: main.c,v 1.53 2001/02/24 20:08:51 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -81,8 +81,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.6.2";
-int	egg_numver = 1060200;
+char	egg_version[1024] = "1.6.3";
+int	egg_numver = 1060300;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -117,7 +117,7 @@ char	egg_xtra[2048];		/* Patch info */
 int	use_stderr = 1;		/* Send stuff to stderr instead of logfiles? */
 int	do_restart = 0;		/* .restart has been called, restart asap */
 int	die_on_sighup = 0;	/* die if bot receives SIGHUP */
-int	die_on_sigterm = 0;	/* die if bot receives SIGTERM */
+int	die_on_sigterm = 1;	/* die if bot receives SIGTERM */
 int	resolve_timeout = 15;	/* hostname/address lookup timeout */
 time_t	now;			/* duh, now :) */
 
@@ -258,12 +258,33 @@ void write_debug()
 #ifdef STATIC
     dprintf(-x, "STATICALLY LINKED\n");
 #endif
-    if (interp && (Tcl_Eval(interp, "info library") == TCL_OK))
-      dprintf(-x, "Using tcl library: %s (header version %s)\n",
-	      interp->result, TCL_VERSION);
+
+    /* info library */
+    dprintf(-x, "Tcl library: %s\n",
+	    ((interp) && (Tcl_Eval(interp, "info library") == TCL_OK)) ?
+	    interp->result : "*unknown*");
+
+    /* info tclversion */
+    dprintf(-x, "Tcl version: %s (header version %s)\n",
+	    ((interp) && (Tcl_Eval(interp, "info tclversion") == TCL_OK)) ?
+	    interp->result : "*unknown*", TCL_VERSION);
+
+    /* info patchlevel */
+    dprintf(-x, "Tcl patchlevel: %s (header patchlevel %s)\n",
+	    ((interp) && (Tcl_Eval(interp, "info patchlevel") == TCL_OK)) ?
+	    interp->result : "*unknown*",
+	    TCL_PATCH_LEVEL ? TCL_PATCH_LEVEL : "*unknown*");
+
+#ifdef CCFLAGS
     dprintf(-x, "Compile flags: %s\n", CCFLAGS);
+#endif
+#ifdef LDFLAGS
     dprintf(-x, "Link flags   : %s\n", LDFLAGS);
+#endif
+#ifdef STRIPFLAGS
     dprintf(-x, "Strip flags  : %s\n", STRIPFLAGS);
+#endif
+
     dprintf(-x, "Context: ");
     cx_ptr = cx_ptr & 15;
     for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15))
@@ -742,6 +763,11 @@ int main(int argc, char **argv)
     for (i = 1; i < argc; i++)
       do_arg(argv[i]);
   printf("\n%s\n", version);
+
+  /* Don't allow eggdrop to run as root */
+  if (((int) getuid() == 0) || ((int) geteuid() == 0))
+    fatal("ERROR: Eggdrop will not run as root!", 0);
+
   init_dcc_max();
   init_userent();
   init_misc();

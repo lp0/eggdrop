@@ -4,7 +4,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.43 2000/12/10 15:10:27 guppy Exp $
+ * $Id: modules.c,v 1.45 2001/02/27 03:18:23 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -70,14 +70,14 @@ extern char		 tempdir[], botnetnick[], botname[], natip[],
 			 hostname[], origbotname[], botuser[], admin[],
 			 userfile[], ver[], notify_new[], helpdir[],
 			 version[];
-extern int		 reserved_port, noshare, dcc_total, egg_numver,
+extern int	 noshare, dcc_total, egg_numver, userfile_perm,
 			 use_console_r, ignore_time, must_be_owner,
 			 debug_output, gban_total, make_userfile,
 			 gexempt_total, ginvite_total, default_flags,
 			 require_p, max_dcc, share_greet, password_timeout,
 			 min_dcc_port, max_dcc_port, use_invites, use_exempts,
 			 force_expire, do_restart, protect_readonly,
-			 userfile_perm;
+			 reserved_port_min, reserved_port_max;
 extern time_t now, online_since;
 extern struct chanset_t *chanset;
 extern tand_t *tandbot;
@@ -158,6 +158,8 @@ static void null_share(int idx, char *x)
 }
 
 void (*encrypt_pass) (char *, char *) = 0;
+char *(*encrypt_string) (char *, char *) = 0;
+char *(*decrypt_string) (char *, char *) = 0;
 void (*shareout) () = null_func;
 void (*sharein) (int, char *) = null_share;
 void (*qserver) (int, char *, int) = (void (*)(int, char *, int)) null_func;
@@ -312,11 +314,11 @@ Function global_table[] =
   /* 100 - 103 */
   (Function) & max_dcc,		 /* int					*/
   (Function) & require_p,	 /* int					*/
-  (Function) 0,                  /* this was use_silence		*/
+  (Function) & ignore_time,	 /* int					*/
   (Function) & use_console_r,	 /* int					*/
   /* 104 - 107 */
-  (Function) & ignore_time,	 /* int					*/
-  (Function) & reserved_port,	 /* int					*/
+  (Function) & reserved_port_min,
+  (Function) & reserved_port_max,
   (Function) & debug_output,	 /* int					*/
   (Function) & noshare,		 /* int					*/
   /* 108 - 111 */
@@ -916,6 +918,12 @@ void add_hook(int hook_num, Function func)
     case HOOK_ENCRYPT_PASS:
       encrypt_pass = (void (*)(char *, char *)) func;
       break;
+    case HOOK_ENCRYPT_STRING:
+      encrypt_string = (char *(*)(char *, char *)) func;
+      break;
+    case HOOK_DECRYPT_STRING:
+      decrypt_string = (char *(*)(char *, char *)) func;
+      break; 
     case HOOK_SHAREOUT:
       shareout = (void (*)()) func;
       break;
@@ -981,6 +989,14 @@ void del_hook(int hook_num, Function func)
     case HOOK_ENCRYPT_PASS:
       if (encrypt_pass == (void (*)(char *, char *)) func)
 	encrypt_pass = (void (*)(char *, char *)) null_func;
+      break;
+    case HOOK_ENCRYPT_STRING:
+      if (encrypt_string == (char *(*)(char *, char *)) func)
+        encrypt_string = (char *(*)(char *, char *)) null_func;
+      break;
+    case HOOK_DECRYPT_STRING:
+      if (decrypt_string == (char *(*)(char *, char *)) func)
+        decrypt_string = (char *(*)(char *, char *)) null_func;
       break;
     case HOOK_SHAREOUT:
       if (shareout == (void (*)()) func)

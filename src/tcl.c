@@ -4,7 +4,7 @@
  *   Tcl initialization
  *   getting and setting Tcl/eggdrop variables
  * 
- * $Id: tcl.c,v 1.26 2000/12/17 21:48:42 guppy Exp $
+ * $Id: tcl.c,v 1.30 2001/01/26 21:18:22 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -25,6 +25,8 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
+#include <stdlib.h>		/* getenv()				*/
+#include <locale.h>		/* setlocale()				*/
 #include "main.h"
 
 /* Used for read/write to internal strings */
@@ -46,8 +48,8 @@ extern int	backgrd, flood_telnet_thr, flood_telnet_time;
 extern int	shtime, share_greet, require_p, keep_all_logs;
 extern int	allow_new_telnets, stealth_telnets, use_telnet_banner;
 extern int	default_flags, conmask, switch_logfiles_at, connect_timeout;
-extern int	firewallport, reserved_port, notify_users_at;
-extern int	flood_thr, ignore_time;
+extern int	firewallport, notify_users_at, flood_thr, ignore_time;
+extern int	reserved_port_min, reserved_port_max;
 extern char	origbotname[], botuser[], motdfile[], admin[], userfile[],
 		firewall[], helpdir[], notify_new[], hostname[], myip[],
 		moddir[], tempdir[], owner[], network[], botnetnick[],
@@ -418,7 +420,7 @@ static tcl_ints def_tcl_ints[] =
   {"hourly-updates",		&notify_users_at,	0},
   {"switch-logfiles-at",	&switch_logfiles_at,	0},
   {"connect-timeout",		&connect_timeout,	0},
-  {"reserved-port",		&reserved_port,		0},
+  {"reserved-port",		&reserved_port_min,		0},
   /* booleans (really just ints) */
   {"require-p",			&require_p,		0},
   {"keep-all-logs",		&keep_all_logs,		0},
@@ -464,6 +466,7 @@ static tcl_coups def_tcl_coups[] =
 {
   {"telnet-flood",	&flood_telnet_thr,	&flood_telnet_time},
   {"dcc-portrange",	&min_dcc_port,		&max_dcc_port},	/* dw */
+  {"reserved-portrange", &reserved_port_min, &reserved_port_max},
   {NULL,		NULL,			NULL}
 };
 
@@ -493,12 +496,20 @@ extern tcl_cmds tcluser_cmds[], tcldcc_cmds[], tclmisc_cmds[], tcldns_cmds[];
  */
 void init_tcl(int argc, char **argv)
 {
-#ifndef HAVE_PRE7_5_TCL
+#if TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1
+  const char *encoding;
   int i;
+  char *langEnv;
+#endif
+#ifndef HAVE_PRE7_5_TCL
+  int j;
   char pver[1024] = "";
 #endif
 
-#ifndef HAVE_PRE7_5_TCL
+/* This must be done *BEFORE* Tcl_SetSystemEncoding(),
+ * or Tcl_SetSystemEncoding() will cause a segfault.
+ */
+#ifndef HAVE_PRE7_5_TCL	
   /* This is used for 'info nameofexecutable'.
    * The filename in argv[0] must exist in a directory listed in
    * the environment variable PATH for it to register anything.
@@ -508,21 +519,100 @@ void init_tcl(int argc, char **argv)
 
   /* Initialize the interpreter */
   interp = Tcl_CreateInterp();
-  Tcl_Init(interp);
 
 #ifdef DEBUG_MEM
-  /* Initialize Tcl's memory debugging if we have it */
+  /* Initialize Tcl's memory debugging if we want it */
   Tcl_InitMemory(interp);
-#endif
-
-#if TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1
-  /* Set default encoding to default system encoding, i.e. binary.
-     Unicode support present since Tcl library version 8.1. */
-  Tcl_SetSystemEncoding(interp, NULL);
 #endif
 
   /* Set Tcl variable tcl_interactive to 0 */
   Tcl_SetVar(interp, "tcl_interactive", "0", TCL_GLOBAL_ONLY);
+
+  /* Setup script library facility */
+  Tcl_Init(interp);
+
+/* Code based on Tcl's TclpSetInitialEncodings() */
+#if TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1
+  /* Determine the current encoding from the LC_* or LANG environment
+   * variables.
+   */
+  langEnv = getenv("LC_ALL");
+  if (langEnv == NULL || langEnv[0] == '\0') {
+    langEnv = getenv("LC_CTYPE");
+  }
+  if (langEnv == NULL || langEnv[0] == '\0') {
+    langEnv = getenv("LANG");
+  }
+  if (langEnv == NULL || langEnv[0] == '\0') {
+    langEnv = NULL;
+  }
+
+  encoding = NULL;
+  if (langEnv != NULL) {
+    for (i = 0; localeTable[i].lang != NULL; i++)
+      if (strcmp(localeTable[i].lang, langEnv) == 0) {
+	encoding = localeTable[i].encoding;
+	break;
+      }
+
+    /* There was no mapping in the locale table.  If there is an
+     * encoding subfield, we can try to guess from that.
+     */
+    if (encoding == NULL) {
+      char *p;
+
+      for (p = langEnv; *p != '\0'; p++) {
+        if (*p == '.') {
+          p++;
+          break;
+        }
+      }
+      if (*p != '\0') {
+        Tcl_DString ds;
+        Tcl_DStringInit(&ds);
+        Tcl_DStringAppend(&ds, p, -1);
+
+        encoding = Tcl_DStringValue(&ds);
+        Tcl_UtfToLower(Tcl_DStringValue(&ds));
+        if (Tcl_SetSystemEncoding(NULL, encoding) == TCL_OK) {
+          Tcl_DStringFree(&ds);
+          goto resetPath;
+        }
+        Tcl_DStringFree(&ds);
+        encoding = NULL;
+      }
+    }
+  }
+
+  if (encoding == NULL) {
+    encoding = "iso8859-1";
+  }
+
+  Tcl_SetSystemEncoding(NULL, encoding);
+
+resetPath:
+
+  /* Initialize the C library's locale subsystem. */
+  setlocale(LC_CTYPE, "");
+
+  /* In case the initial locale is not "C", ensure that the numeric
+   * processing is done in "C" locale regardless. */
+  setlocale(LC_NUMERIC, "C");
+
+  /* Keep the iso8859-1 encoding preloaded.  The IO package uses it for
+   * gets on a binary channel. */
+  Tcl_GetEncoding(NULL, "iso8859-1");
+#endif
+
+#ifndef HAVE_PRE7_5_TCL
+  /* Add eggdrop to Tcl's package list */
+  for (j = 0; j <= strlen(egg_version); j++) {
+    if ((egg_version[j] == ' ') || (egg_version[j] == '+'))
+      break;
+    pver[strlen(pver)] = egg_version[j];
+  }
+  Tcl_PkgProvide(interp, "eggdrop", pver);
+#endif
 
   /* Initialize binds and traces */
   init_bind();
@@ -534,16 +624,6 @@ void init_tcl(int argc, char **argv)
   add_tcl_commands(tcldcc_cmds);
   add_tcl_commands(tclmisc_cmds);
   add_tcl_commands(tcldns_cmds);
-
-#ifndef HAVE_PRE7_5_TCL
-  /* Add eggdrop to Tcl's package list */
-  for (i = 0; i <= strlen(egg_version); i++) {
-    if ((egg_version[i] == ' ') || (egg_version[i] == '+'))
-      break;
-    pver[strlen(pver)] = egg_version[i];
-  }
-  Tcl_PkgProvide(interp, "eggdrop", pver);
-#endif
 }
 
 void do_tcl(char *whatzit, char *script)

@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  * 
- * $Id: dcc.c,v 1.41 2000/12/10 15:10:27 guppy Exp $
+ * $Id: dcc.c,v 1.43 2001/02/27 17:06:28 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
