@@ -19,11 +19,9 @@
  */
 
 #include "main.h"
-#include "rfc1459.h"
 #include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <varargs.h>
 #include "chan.h"
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
@@ -41,7 +39,6 @@ extern int term_z;
 extern int use_stderr;
 extern char motdfile[];
 extern char ver[];
-extern char textdir[];
 extern int keep_all_logs;
 extern char botnetnick[];
 extern struct chanset_t *chanset;
@@ -402,18 +399,16 @@ void daysdur (time_t now, time_t then, char * out)
 
 /* log something */
 /* putlog(level,channel_name,format,...);  */
-void putlog(va_alist)
-va_dcl
+void putlog VARARGS_DEF(int, arg1)
 {
-   va_list va;
    int i, type;
    char *format, *chname, s[MAX_LOG_LINE+1], s1[256], *out;
    time_t tt;
    char ct[81];
    struct tm    *T = localtime(&now);
-      
-   va_start(va);
-   type = va_arg(va, int);
+
+   va_list va;
+   type = VARARGS_START(int, arg1, va);
    chname = va_arg(va, char *);
    format = va_arg(va, char *);
    /* format log entry at offset 8, then i can prepend the timestamp */
@@ -452,7 +447,7 @@ va_dcl
       for (i = 0; i < max_logs; i++) {
 	 if ((logs[i].filename != NULL) && (logs[i].mask & type) &&
 	     ((chname[0] == '*') || (logs[i].chname[0] == '*') ||
-	      (rfc_casecmp(chname, logs[i].chname) == 0))) {
+              (!rfc_casecmp(chname, logs[i].chname)))) {
 	    if (logs[i].f == NULL) {
 	       /* open this logfile */
 	       if (keep_all_logs) {
@@ -502,7 +497,7 @@ va_dcl
    for (i = 0; i < dcc_total; i++)
       if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->con_flags & type)) {
 	 if ((chname[0] == '*') || (dcc[i].u.chat->con_chan[0] == '*') ||
-	     (rfc_casecmp(chname, dcc[i].u.chat->con_chan) == 0))
+             (!rfc_casecmp(chname, dcc[i].u.chat->con_chan)))
 	    dprintf(i, "%s", out);
       }
    if ((type & LOG_MISC) && use_stderr) {
@@ -538,8 +533,8 @@ void check_logsize()
 				}
 				context;
 				
-				buf[0]='\0';
-				snprintf(buf,1024,"%s.yesterday",logs[i].filename);
+				simple_sprintf(buf,"%s.yesterday",logs[i].filename);
+		                buf[1023] = 0;
 				unlink(buf);
 				
 /*				x++; 
@@ -549,10 +544,10 @@ void check_logsize()
    feel free to ask me, if you have questions on this.. 
 
 				while (x > 0) {
-					buf[0]='\0';
 					x++;
 					* only YOU can prevent buffer overflows! *
-					snprintf(buf,1024,"%s.%d",logs[i].filename,x);
+					simple_sprintf(buf,"%s.%d",logs[i].filename,x);
+					buf[1023] = 0;
 					if (stat(buf,&ss) == -1) { 
 					* file doesnt exist, lets use it *
 */
@@ -843,7 +838,7 @@ void help_subst (char * s, char * nick, struct flag_record * flags,
 		    blind &= ~1;
 	       } else if (q[0] == '-') {
 		  blind &= ~1;
-	       } else if (strcasecmp(q, "end") == 0) {
+               } else if (!strcasecmp(q, "end")) {
 		  blind &= ~1;
 		  subwidth = 70;
 		  if (cols) {

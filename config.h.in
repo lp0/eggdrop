@@ -89,6 +89,9 @@
 /* Define if you have the <unistd.h> header file.  */
 #undef HAVE_UNISTD_H
 
+/* Define if you have the <stdarg.h> header file.  */
+#undef HAVE_STDARG_H
+
 /* Define if running on OSF/1 platform. */
 #undef STOP_UAC
 
@@ -137,4 +140,3 @@
 
 /* running on NeXT Step */
 #undef BORGCUBES
-

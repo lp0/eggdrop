@@ -183,7 +183,7 @@ static int msg_ident (char * nick, char * host, struct userrec * u, char * par)
       if (u && !quiet_reject) {
 	 dprintf(DP_SERVER, IRC_MISIDENT, IRC_MISIDENT_ARGS);
       }
-   } else if (strcasecmp(who, origbotname) && !(u2->flags & USER_BOT)) {
+   } else if (rfc_casecmp(who, origbotname) && !(u2->flags & USER_BOT)) {
       /* This could be used as detection... */
       if (u_pass_match(u2,"-")) {
 	 if (!quiet_reject) 
@@ -243,7 +243,7 @@ static int msg_addhost (char * nick, char * host, struct userrec * u, char * par
    if (!par[0]) {
       if (!quiet_reject)
 	dprintf(DP_SERVER, "NOTICE %s :You must supply a hostmask\n", nick);
-   } else if (strcasecmp(u->handle, origbotname)) {
+   } else if (rfc_casecmp(u->handle, origbotname)) {
       /* This could be used as detection... */
       if (u_pass_match(u,"-")) {
 	 if (!quiet_reject) 
@@ -305,7 +305,7 @@ static int msg_info (char * nick, char * host, struct userrec * u, char * par)
 	 dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, IRC_INFOLOCKED);
 	 return 1;
       }
-      if (strcasecmp(par, "none") == 0) {
+      if (!strcasecmp(par, "none")) {
 	 par[0] = 0;
 	 if (chname) {
 	    set_handle_chaninfo(userlist, u->handle, chname, par);

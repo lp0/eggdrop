@@ -297,12 +297,11 @@
 #define check_tcl_chjn ((void (*) (char *,char *,int,char,int,char *))global[213])
 #define sanitycheck_dcc ((int (*)(char *, char *, char *, char *))global[214])
 #define isowner ((int (*)(char *))global[215])
-/* dcc-portrange dw/guppy */
+/* 216 - 219 */ /* dcc-portrange dw/guppy */
 #define min_dcc_port (*(int *)(global[216]))
 #define max_dcc_port (*(int *)(global[217]))
-/* global-flood-ctcp arthur2 */
-#define global_flood_ctcp_thr (*(int *)(global[218]))
-#define global_flood_ctcp_time (*(int *)(global[219]))
+#define rfc_casecmp ((int(*)(char *, char *))global[218])
+#define rfc_ncasecmp ((int(*)(char *, char *, int *))global[219])
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */
 #ifndef MAKING_BLOWFISH

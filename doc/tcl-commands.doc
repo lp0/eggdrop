@@ -122,23 +122,18 @@ specific commands, see later.
     changes the attributes for a user record, if you include any -- changes
       are of the form "+f", "-o", "+dk", "-o+d", etc; if a channel is
       specified, the channel-specific flags for that channel are altered
-|     you can now use the +o|-o #channel format here too.
+      you can now use the +o|-o #channel format here too.
     returns: new flags for the user (if you made no changes, returns current
       flags); if a channel was specified, the channel-specific flags for that
       channel are returned -- returns "*" if that user does not exist
 
-| botattr <handle> [changes [channel]]
-|   similar to chattr except for bot attributes rather than normal user
-|   attributes, this includes the channel-specific +s share flag
+  botattr <handle> [changes [channel]]
+    similar to chattr except for bot attributes rather than normal user
+    attributes, this includes the channel-specific +s share flag
 
   matchattr <handle> <flags> [channel]
-|   returns: "1" if the specified user has the matching flags.
-|     (using the new matching system)
-
-  matchchanattr <handle> <flags> <channel>
-|   returns: identical to previous command with a channel argument,
-|            heck they're the same command now :) dont rely on this
-|            command in new scripts it will go eventually :)
+    returns: "1" if the specified user has the matching flags.
+     (using the new matching system)
 
   adduser <handle> <hostmask>
     creates a new user entry with the handle and hostmask given (with no pass-
@@ -324,17 +319,20 @@ specific commands, see later.
     returns: "1" if someone by that nickname is on the bot's channel; "0"
       otherwise
 
-  nick2hand <nickname> <channel>
-    returns: handle of the person on the channel with that nickname, if
-      someone by that nickname is on the channel; "" otherwise
+  nick2hand <nickname> [channel]
+    returns: handle of <nickname> on <channel>
+    if <channel> is not specified, bot will check all of its channels
+    if <nickname> not found, returns ""
+    if <nickname> found but unknown, returns "*"
 
   handonchan <handle> <channel>
     returns: "1" if the the user@host for someone on the channel matches
       for the handle given; "0" otherwise
 
-  hand2nick <handle> <channel>
-    returns: nickname of the first person on the channel whose user@host
+  hand2nick <handle> [channel]
+    returns: nickname of the first person on the <channel> whose user@host
       matches that handle, if there is one; "" otherwise
+    if <channel> is not specified, bot will check all of its channels
 
   ischanban <ban> <channel>
     returns: "1" if that is a ban on the bot's channel
@@ -376,8 +374,10 @@ specific commands, see later.
     rereads in the channel info from the server
     returns: nothing
 
-  getchanhost <nickname> <channel>
-    returns: user@host of that person if they are on the channel; {} otherwise
+  getchanhost <nickname> [channel]
+    returns: user@host of <nickname>
+    if <channel> is not specified, bot will check all of its channels
+    if <nickname> is not on the channel(s), returns ""
 
   getchanjoin <nickname> <channel>
     returns: timestamp of when that person joined the channel
@@ -721,6 +721,9 @@ specific commands, see later.
   decrypt <key> <encrypted-base64-string>
     returns: decrypted string (using blowfish)
 
+  encpass <password>
+    returns: encrypted string (using blowfish)
+
   die [reason]
     causes the bot to log a fatal error and exit completely; if no reason
     is given, "EXIT" is used
@@ -904,7 +907,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        are called; the <mask> will have the channel prefixed (ie, "#turtle +m")
 
   (15) CTCP
-       bind ctcp <flags> <keyword-mask> <proc>
+       bind ctcp <flags> <keyword> <proc>
        proc-name <nick> <user@host> <handle> <dest> <keyword> <args...>
 
        destination will be a nickname (the bot's nickname, obviously) or

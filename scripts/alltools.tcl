@@ -99,6 +99,7 @@ set toolkit_loaded 1
 
 # Procs.............
 proc number_to_number {domaintocount} {
+  set numeral ""
   if {$domaintocount == "0"} {set numeral "Zero"}
   if {$domaintocount == "1"} {set numeral "One"}
   if {$domaintocount == "2"} {set numeral "Two"}

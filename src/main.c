@@ -28,7 +28,7 @@
  *
  * The author (Robey Pointer) can be reached at:  robey@netcom.com
  * NOTE: Robey is no long working on this code, there is a discussion
- * list avaliable at eggdrop@sodre.net.
+ * list available at eggheads@eggheads.org.
  */
 
 #include "main.h"
@@ -56,18 +56,14 @@
 extern char origbotname[];
 extern int dcc_total;
 extern struct dcc_t * dcc;
-extern char admin[];
-extern int lastsock;
 extern int conmask;
 extern struct userrec *userlist;
 extern int cache_hit, cache_miss;
 extern char userfile[];
 extern struct chanset_t *chanset;
-extern int ignore_time;
 extern char botnetnick[];
 extern log_t * logs;
 extern Tcl_Interp *interp;
-extern char hostname[];
 extern int max_logs;
 extern tcl_timer_t *timer, *utimer;
 extern jmp_buf alarmret;
@@ -80,8 +76,8 @@ extern int quick_logs; /* dw */
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.26";
-int egg_numver = 1032600;
+char egg_version[1024] = "1.3.27";
+int egg_numver = 1032700;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -309,34 +305,6 @@ static void got_alarm (int z)
    /* a call to resolver (gethostbyname, etc) timed out */
    longjmp(alarmret, 1);
    /*return;*/ /* STUPID STUPID STUPID */
-}
-
-static void got_usr1 (int z)
-{
-   int i;
-   putlog(LOG_MISC, "*", "* USER1 SIGNAL: Debugging sockets");
-   write_debug();
-   for (i = 0; i < dcc_total; i++) {
-	 if ((fcntl(dcc[i].sock, F_GETFD, 0) == -1) && (errno = EBADF)) {
-	    if (dcc[i].type == &DCC_LOST) 
-	      dcc[i].type = (struct dcc_table *)(dcc[i].sock);
-	    putlog(LOG_MISC, "*",
-		   "* DCC socket %d (type %d, nick '%s') expired -- pfft",
-		   dcc[i].sock);
-	    killsock(dcc[i].sock);
-	    lostdcc(i);
-	    i--;
-	 }
-   }
-   nested_debug = 0;
-   putlog(LOG_MISC, "*", "* Finished test.");
-}
-
-/* got USR2 signal -- crash */
-static void got_usr2 (int z)
-{
-   write_debug();
-   fatal("USR2 SIGNAL -- CRASHING!", 0);
 }
 
 /* got ILL signal -- log context and continue */
@@ -569,18 +537,12 @@ int main (int argc, char ** argv)
    sigaction(SIGHUP, &sv, NULL);
    sv.sa_handler = got_quit;
    sigaction(SIGQUIT, &sv, NULL);
-/*  sv.sa_handler=got_pipe; sigaction(SIGPIPE,&sv,NULL); */
    sv.sa_handler = SIG_IGN;
    sigaction(SIGPIPE, &sv, NULL);
-   sv.sa_handler = got_usr1;
-   sigaction(SIGUSR1, &sv, NULL);
-   sv.sa_handler = got_usr2;
-   sigaction(SIGUSR2, &sv, NULL);
    sv.sa_handler = got_ill;
    sigaction(SIGILL, &sv, NULL);
    sv.sa_handler = got_alarm;
    sigaction(SIGALRM, &sv, NULL);
-/*  sv.sa_handler=got_child; sigaction(SIGCHLD,&sv,NULL);  */
 
    /* initialize variables and stuff */
    now = time(NULL);
@@ -611,7 +573,6 @@ int main (int argc, char ** argv)
    strcpy(s, ctime(&now));
    s[strlen(s) - 1] = 0;
    strcpy(&s[11], &s[20]);
-/* putlog(LOG_ALL, "*", ""); */
    putlog(LOG_ALL, "*", "--- Loading %s (%s)", ver, s);
    chanprog();
    context;
@@ -779,7 +740,7 @@ int main (int argc, char ** argv)
 		putlog(LOG_MISC, "*", 
 		       "!!! untrapped dcc activity: type %s, sock %d",
 		       dcc[idx].type->name, dcc[idx].sock);
-	      idx = dcc_total;
+                 break;
 	   }
       } else if ( xx == -1) {	/* EOF from someone */
 	 int idx;

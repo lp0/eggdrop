@@ -18,7 +18,6 @@
 
 #include "main.h"
 #include <sys/stat.h>
-#include <varargs.h>
 #include <errno.h>
 #include "chan.h"
 #include "modules.h"
@@ -27,11 +26,9 @@
 extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char botnetnick[];
-extern char ver[], spaces[];
+extern char spaces[];
 extern char version[];
-extern struct chanset_t *chanset;
 extern time_t now;
-extern struct userrec * userlist;
 extern int max_dcc;
 extern int dcc_flood_thr;
 extern int backgrd;
@@ -90,15 +87,13 @@ static char WBUF[1024];
 }
 
 extern void (*qserver)(int, char *, int);
-void dprintf(va_alist)
-va_dcl
+void dprintf VARARGS_DEF(int, arg1)
 {
    char *format;
    int idx, len;
    
    va_list va;
-   va_start(va);
-   idx = va_arg(va, int);
+   idx = VARARGS_START(int, arg1, va);
    format = va_arg(va, char *);
 #ifdef HAVE_VSNPRINTF
    if ((len = vsnprintf(SBUF, 1023, format, va)) < 0)
@@ -143,15 +138,14 @@ va_dcl
    }
 }
 
-void chatout(va_alist)
-va_dcl
+void chatout VARARGS_DEF(char *, arg1)
 {
    int i;
-   va_list va;
    char *format;
    char s[601];
-   va_start(va);
-   format = va_arg(va, char *);
+
+   va_list va;
+   format = VARARGS_START(char *, arg1, va);
 #ifdef HAVE_VSNPRINTF
    if (vsnprintf(s, 511, format, va) < 0)
      s[511] = 0;
@@ -166,15 +160,14 @@ va_dcl
 }
 
 /* print to all on this channel but one */
-void chanout_but(va_alist)
-va_dcl
+void chanout_but VARARGS_DEF(int, arg1)
 {
    int i, x, chan;
-   va_list va;
    char *format;
    char s[601];
-   va_start(va);
-   x = va_arg(va, int);
+
+   va_list va;
+   x = VARARGS_START(int, arg1, va);
    chan = va_arg(va, int);
    format = va_arg(va, char *);
 #ifdef HAVE_VSNPRINTF
@@ -248,7 +241,7 @@ void lostdcc (int n)
      nfree(dcc[n].u.other);
    dcc_total--;
    if (n < dcc_total) 
-     memcpy(&dcc[n],&dcc[dcc_total],sizeof(struct dcc_t));
+    my_memcpy((char *)&dcc[n], (char *)&dcc[dcc_total], sizeof(struct dcc_t));
 }
 
 /* show list of current dcc's to a dcc-chatter */

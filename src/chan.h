@@ -136,29 +136,28 @@ struct chanset_t {
 
 /* behavior modes for the channel */
 #define CHAN_CLEARBANS      0x0001    /* clear bans on join */
-#define CHAN_ENFORCEBANS    0x0002    /* kick people who match channel bans */
-#define CHAN_DYNAMICBANS    0x0004    /* only activate bans when needed */
-#define CHAN_NOUSERBANS     0x0008    /* don't let non-bots place bans */
-#define CHAN_OPONJOIN       0x0010    /* op +o people as soon as they join */
-#define CHAN_BITCH          0x0020    /* be a tightwad with ops */
-#define CHAN_GREET          0x0040    /* greet people with their info line */
-#define CHAN_PROTECTOPS     0x0080    /* re-op any +o people who get deop'd */
-#define CHAN_LOGSTATUS      0x0100    /* log channel status every 5 mins */
-#define CHAN_STOPNETHACK    0x0200    /* deop netsplit hackers */
-#define CHAN_REVENGE        0x0400    /* get revenge on bad people */
-#define CHAN_SECRET         0x0800    /* don't advertise channel on botnet */
-#define CHAN_AUTOVOICE      0x1000    /* dish out voice stuff automatically */
-#define CHAN_CYCLE	    0x2000    /* cycle the channel if possible */
-#define CHAN_DONTKICKOPS    0x4000    /* never kick +o flag people - arthur2 */
-#define CHAN_ACTIVE          0x1000000    /* like i'm actually on the channel and
-                                       * stuff */
-#define CHAN_PEND            0x2000000    /* just joined; waiting for end of 
-                                       * WHO list */
-#define CHAN_FLAGGED         0x4000000    /* flagged during rehash for delete */
-#define CHAN_STATIC          0x8000000    /* channels that are NOT dynamic */
-#define CHAN_SHARED        0x10000000    /* channel is being shared */
-#define CHAN_ASKEDBANS     0x20000000
-#define CHAN_SEEN          0x40000000
+#define CHAN_ENFORCEBANS    0x0002     /* kick people who match channel bans */
+#define CHAN_DYNAMICBANS    0x0004     /* only activate bans when needed */
+#define CHAN_NOUSERBANS     0x0008     /* don't let non-bots place bans */
+#define CHAN_OPONJOIN       0x0010     /* op +o people as soon as they join */
+#define CHAN_BITCH          0x0020     /* be a tightwad with ops */
+#define CHAN_GREET          0x0040     /* greet people with their info line */
+#define CHAN_PROTECTOPS     0x0080     /* re-op any +o people who get deop'd */
+#define CHAN_LOGSTATUS      0x0100     /* log channel status every 5 mins */
+#define CHAN_STOPNETHACK    0x0200     /* deop netsplit hackers */
+#define CHAN_REVENGE        0x0400     /* get revenge on bad people */
+#define CHAN_SECRET         0x0800     /* don't advertise channel on botnet */
+#define CHAN_AUTOVOICE      0x1000     /* dish out voice stuff automatically */
+#define CHAN_CYCLE          0x2000     /* cycle the channel if possible */
+#define CHAN_DONTKICKOPS    0x4000     /* never kick +o flag people - arthur2 */
+#define CHAN_WASOPTEST      0x8000     /* wasop test for all +o user when +stopnethack */ 
+#define CHAN_ACTIVE         0x1000000  /* like i'm actually on the channel and * stuff */
+#define CHAN_PEND           0x2000000  /* just joined; waiting for end of * WHO list */
+#define CHAN_FLAGGED        0x4000000  /* flagged during rehash for delete */
+#define CHAN_STATIC         0x8000000  /* channels that are NOT dynamic */
+#define CHAN_SHARED         0x10000000 /* channel is being shared */
+#define CHAN_ASKEDBANS      0x20000000
+#define CHAN_SEEN           0x40000000
 
 #define CHAN_ASKED_EXEMPTS 0x0001
 #define CHAN_ASKED_INVITED 0x0002
@@ -175,6 +174,7 @@ struct chanset_t *findchan();
 #define channel_pending(chan)  (chan->status & CHAN_PEND)
 #define channel_bitch(chan) (chan->status & CHAN_BITCH)
 #define channel_autoop(chan) (chan->status & CHAN_OPONJOIN)
+#define channel_wasoptest(chan) (chan->status & CHAN_WASOPTEST)
 #define channel_autovoice(chan) (chan->status & CHAN_AUTOVOICE)
 #define channel_greet(chan) (chan->status & CHAN_GREET)
 #define channel_logstatus(chan) (chan->status & CHAN_LOGSTATUS)

@@ -20,7 +20,6 @@
 /* config file format changed 27jan1994 (Tcl outdates that) */
 
 #include "main.h"
-#include "rfc1459.h"
 #if HAVE_GETRUSAGE
 #include <sys/resource.h>
 #if HAVE_SYS_RUSAGE_H
@@ -88,7 +87,7 @@ struct chanset_t *findchan (char * name)
 {
    struct chanset_t *chan = chanset;
    while (chan != NULL) {
-      if (rfc_casecmp(chan->name, name) == 0)
+      if (!rfc_casecmp(chan->name, name))
 	 return chan;
       chan = chan->next;
    }
@@ -113,7 +112,7 @@ struct userrec *check_chanlist (char * host)
       m = chan->channel.member;
       while (m->nick[0]) {
 	 if (!rfc_casecmp(nick, m->nick) && 
-	     !rfc_casecmp(uhost, m->userhost))
+             !strcasecmp(uhost, m->userhost))
 	   return m->user;
 	 m = m->next;
       }
@@ -131,7 +130,7 @@ struct userrec *check_chanlist_hand (char * hand)
       m = chan->channel.member;
       while (m->nick[0]) {
 	 if (m->user)
-	    if (rfc_casecmp(m->user->handle, hand) == 0)
+            if (!strcasecmp(m->user->handle, hand))
 	       return m->user;
 	 m = m->next;
       }
@@ -172,7 +171,7 @@ void set_chanlist (char * host, struct userrec * rec)
       m = chan->channel.member;
       while (m->nick[0]) {
 	 if (!rfc_casecmp(nick, m->nick) &&
-	     !rfc_casecmp(uhost, m->userhost))
+	     !strcasecmp(uhost, m->userhost))
 	   m->user = rec;
 	 m = m->next;
       }
@@ -602,7 +601,7 @@ int isowner(char *name)
                         pb++;
                 }
                 pl = (unsigned int)pb - (unsigned int)pa;
-                if ((pl == nl) && (!rfc_ncasecmp(pa,name,nl))) return(1);
+                if ((pl == nl) && (!strncasecmp(pa,name,nl))) return(1);
                 while(1)
                 {
                         if ((*pb == 0) || ((*pb != ',') && (*pb != ' '))) break;

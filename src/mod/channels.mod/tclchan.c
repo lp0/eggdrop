@@ -190,8 +190,8 @@ static int tcl_newchanban STDVAR
       return TCL_ERROR;
    }
    if (argc == 7) {
-      if (strcasecmp(argv[6], "none") == 0);
-      else if (strcasecmp(argv[6], "sticky") == 0)
+      if (!strcasecmp(argv[6], "none"));
+      else if (!strcasecmp(argv[6], "sticky"))
      sticky = 1;
       else {
      Tcl_AppendResult(irp, "invalid option ", argv[6], " (must be one of: ",
@@ -227,7 +227,7 @@ static int tcl_newban STDVAR
 
    BADARGS(4, 6, " ban creator comment ?lifetime? ?options?");
    if (argc == 6) {
-      if (strcasecmp(argv[5], "none") == 0);
+      if (!strcasecmp(argv[5], "none"));
       else if (strcasecmp(argv[5], "sticky") == 0)
      sticky = 1;
       else {
@@ -316,6 +316,10 @@ static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan) {
       Tcl_AppendElement(irp, "+dontkickops");
    else
       Tcl_AppendElement(irp, "-dontkickops");
+   if (chan->status& CHAN_WASOPTEST)
+      Tcl_AppendElement(irp, "+wasoptest");
+   else
+      Tcl_AppendElement(irp, "-wasoptest");
    if (chan->status& CHAN_LOGSTATUS)
       Tcl_AppendElement(irp, "+statuslog");
    else
@@ -355,13 +359,13 @@ static int tcl_channel STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 999, " command ?options?");
-   if (strcmp(argv[1], "add") == 0) {
+   if (!strcmp(argv[1], "add")) {
       BADARGS(3, 4, " add channel-name ?options-list?");
       if (argc == 3)
      return tcl_channel_add(irp, argv[2], "");
       return tcl_channel_add(irp, argv[2], argv[3]);
    }
-   if (strcmp(argv[1], "set") == 0) {
+   if (!strcmp(argv[1], "set")) {
       BADARGS(3, 999, " set channel-name ?options?");
       chan = findchan(argv[2]);
       if (chan == NULL) {
@@ -373,7 +377,7 @@ static int tcl_channel STDVAR
       }
       return tcl_channel_modify(irp, chan, argc - 3, &argv[3]);
    }
-   if (strcmp(argv[1], "info") == 0) {
+   if (!strcmp(argv[1], "info")) {
       BADARGS(3, 3, " info channel-name");
       chan = findchan(argv[2]);
       if (chan == NULL) {
@@ -382,7 +386,7 @@ static int tcl_channel STDVAR
       }
       return tcl_channel_info(irp, chan);
    }
-   if (strcmp(argv[1], "remove") == 0) {
+   if (!strcmp(argv[1], "remove")) {
       BADARGS(3, 3, " remove channel-name");
       chan = findchan(argv[2]);
       if (chan == NULL) {
@@ -407,7 +411,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
 {
    int i;
    for (i = 0; i < items; i++) {
-      if (strcmp(item[i], "need-op") == 0) {
+      if (!strcmp(item[i], "need-op")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -416,7 +420,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
      }
      strncpy(chan->need_op, item[i], 120);
      chan->need_op[120] = 0;
-      } else if (strcmp(item[i], "need-invite") == 0) {
+      } else if (!strcmp(item[i], "need-invite")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -425,7 +429,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
      }
      strncpy(chan->need_invite, item[i], 120);
      chan->need_invite[120] = 0;
-      } else if (strcmp(item[i], "need-key") == 0) {
+      } else if (!strcmp(item[i], "need-key")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -434,7 +438,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
      }
      strncpy(chan->need_key, item[i], 120);
      chan->need_key[120] = 0;
-      } else if (strcmp(item[i], "need-limit") == 0) {
+      } else if (!strcmp(item[i], "need-limit")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -443,7 +447,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
      }
      strncpy(chan->need_limit, item[i], 120);
      chan->need_limit[120] = 0;
-      } else if (strcmp(item[i], "need-unban") == 0) {
+      } else if (!strcmp(item[i], "need-unban")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -452,7 +456,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
      }
      strncpy(chan->need_unban, item[i], 120);
      chan->need_unban[120] = 0;
-      } else if (strcmp(item[i], "chanmode") == 0) {
+      } else if (!strcmp(item[i], "chanmode")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -462,7 +466,7 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
      if (strlen(item[i]) > 120)
         item[i][120] = 0;
      set_mode_protect(chan, item[i]);
-      } else if (strcmp(item[i], "idle-kick") == 0) {
+      } else if (!strcmp(item[i], "idle-kick")) {
      i++;
      if (i >= items) {
         if (irp)
@@ -470,77 +474,81 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
         return TCL_ERROR;
      }
      chan->idle_kick = atoi(item[i]);
-      } else if (strcmp(item[i], "dont-idle-kick") == 0)
+      } else if (!strcmp(item[i], "dont-idle-kick"))
      chan->idle_kick = 0;
-      else if (strcmp(item[i], "+clearbans") == 0)
+      else if (!strcmp(item[i], "+clearbans"))
      chan->status|= CHAN_CLEARBANS;
-      else if (strcmp(item[i], "-clearbans") == 0)
+      else if (!strcmp(item[i], "-clearbans"))
      chan->status&= ~CHAN_CLEARBANS;
-      else if (strcmp(item[i], "+enforcebans") == 0)
+      else if (!strcmp(item[i], "+enforcebans"))
      chan->status|= CHAN_ENFORCEBANS;
-      else if (strcmp(item[i], "-enforcebans") == 0)
+      else if (!strcmp(item[i], "-enforcebans"))
      chan->status&= ~CHAN_ENFORCEBANS;
-      else if (strcmp(item[i], "+dynamicbans") == 0)
+      else if (!strcmp(item[i], "+dynamicbans"))
      chan->status|= CHAN_DYNAMICBANS;
-      else if (strcmp(item[i], "-dynamicbans") == 0)
+      else if (!strcmp(item[i], "-dynamicbans"))
      chan->status&= ~CHAN_DYNAMICBANS;
-      else if (strcmp(item[i], "-userbans") == 0)
+      else if (!strcmp(item[i], "-userbans"))
      chan->status|= CHAN_NOUSERBANS;
-      else if (strcmp(item[i], "+userbans") == 0)
+      else if (!strcmp(item[i], "+userbans"))
      chan->status&= ~CHAN_NOUSERBANS;
-      else if (strcmp(item[i], "+autoop") == 0)
+      else if (!strcmp(item[i], "+autoop"))
      chan->status|= CHAN_OPONJOIN;
-      else if (strcmp(item[i], "-autoop") == 0)
+      else if (!strcmp(item[i], "-autoop"))
      chan->status&= ~CHAN_OPONJOIN;
-      else if (strcmp(item[i], "+bitch") == 0)
+      else if (!strcmp(item[i], "+bitch"))
      chan->status|= CHAN_BITCH;
-      else if (strcmp(item[i], "-bitch") == 0)
+      else if (!strcmp(item[i], "-bitch"))
      chan->status&= ~CHAN_BITCH;
-      else if (strcmp(item[i], "+greet") == 0)
+      else if (!strcmp(item[i], "+greet"))
      chan->status|= CHAN_GREET;
-      else if (strcmp(item[i], "-greet") == 0)
+      else if (!strcmp(item[i], "-greet"))
      chan->status&= ~CHAN_GREET;
-      else if (strcmp(item[i], "+protectops") == 0)
+      else if (!strcmp(item[i], "+protectops"))
      chan->status|= CHAN_PROTECTOPS;
-      else if (strcmp(item[i], "-protectops") == 0)
+      else if (!strcmp(item[i], "-protectops"))
      chan->status&= ~CHAN_PROTECTOPS;
-      else if (strcmp(item[i], "+dontkickops") == 0)
-         chan->status|= CHAN_DONTKICKOPS;
-      else if (strcmp(item[i], "-dontkickops") == 0)
-         chan->status&= ~CHAN_DONTKICKOPS;
-      else if (strcmp(item[i], "+statuslog") == 0)
+      else if (!strcmp(item[i], "+dontkickops"))
+     chan->status|= CHAN_DONTKICKOPS;
+      else if (!strcmp(item[i], "-dontkickops"))
+     chan->status&= ~CHAN_DONTKICKOPS;
+      else if (!strcmp(item[i], "+wasoptest"))
+     chan->status|= CHAN_WASOPTEST;
+      else if (!strcmp(item[i], "-wasoptest"))
+     chan->status&= ~CHAN_WASOPTEST;
+      else if (!strcmp(item[i], "+statuslog"))
      chan->status|= CHAN_LOGSTATUS;
-      else if (strcmp(item[i], "-statuslog") == 0)
+      else if (!strcmp(item[i], "-statuslog"))
      chan->status&= ~CHAN_LOGSTATUS;
-      else if (strcmp(item[i], "+stopnethack") == 0)
+      else if (!strcmp(item[i], "+stopnethack"))
      chan->status|= CHAN_STOPNETHACK;
-      else if (strcmp(item[i], "-stopnethack") == 0)
+      else if (!strcmp(item[i], "-stopnethack"))
      chan->status&= ~CHAN_STOPNETHACK;
-      else if (strcmp(item[i], "+revenge") == 0)
+      else if (!strcmp(item[i], "+revenge"))
      chan->status|= CHAN_REVENGE;
-      else if (strcmp(item[i], "-revenge") == 0)
+      else if (!strcmp(item[i], "-revenge"))
      chan->status&= ~CHAN_REVENGE;
-      else if (strcmp(item[i], "+secret") == 0)
+      else if (!strcmp(item[i], "+secret"))
      chan->status|= CHAN_SECRET;
-      else if (strcmp(item[i], "-secret") == 0)
+      else if (!strcmp(item[i], "-secret"))
      chan->status&= ~CHAN_SECRET;
-      else if (strcmp(item[i], "+shared") == 0)
+      else if (!strcmp(item[i], "+shared"))
      chan->status|= CHAN_SHARED;
-      else if (strcmp(item[i], "-shared") == 0)
+      else if (!strcmp(item[i], "-shared"))
      chan->status&= ~CHAN_SHARED;
-      else if (strcmp(item[i], "+autovoice") == 0)
+      else if (!strcmp(item[i], "+autovoice"))
      chan->status|= CHAN_AUTOVOICE;
-      else if (strcmp(item[i], "-autovoice") == 0)
+      else if (!strcmp(item[i], "-autovoice"))
      chan->status&= ~CHAN_AUTOVOICE;
-      else if (strcmp(item[i], "+cycle") == 0)
+      else if (!strcmp(item[i], "+cycle"))
      chan->status|= CHAN_CYCLE;
-      else if (strcmp(item[i], "-cycle") == 0)
+      else if (!strcmp(item[i], "-cycle"))
      chan->status&= ~CHAN_CYCLE;
-      else if (strcmp(item[i], "+seen") == 0)
+      else if (!strcmp(item[i], "+seen"))
      chan->status|= CHAN_SEEN;
-      else if (strcmp(item[i], "-seen") == 0)
+      else if (!strcmp(item[i], "-seen"))
      chan->status&= ~CHAN_SEEN;
-      else if (strncmp(item[i], "flood-", 6) == 0) {
+      else if (!strncmp(item[i], "flood-", 6)) {
      int * pthr = 0, * ptime;
      char * p;
 
@@ -813,6 +821,8 @@ static void clear_channel (struct chanset_t * chan, int reset)
 {
    memberlist *m, *m1;
    banlist *b, *b1;
+   exemptlist *e, *e1;
+   invitelist *inv, *inv1;
    nfree(chan->channel.key);
    if (chan->channel.topic)
      nfree(chan->channel.topic);
@@ -826,10 +836,28 @@ static void clear_channel (struct chanset_t * chan, int reset)
    while (b != NULL) {
       b1 = b->next;
       if (b->ban[0])
-     nfree(b->who);
+     	nfree(b->who);
       nfree(b->ban);
       nfree(b);
       b = b1;
+   }
+   e = chan->channel.exempt;
+   while (e != NULL) {
+      e1 = e->next;
+      if (e->exempt[0])
+         nfree(e->who);
+      nfree(e->exempt);
+      nfree(e);
+      e = e1;  
+   }
+   inv = chan->channel.invite;
+   while (inv != NULL) {   
+      inv1 = inv->next;
+      if (inv->invite[0])
+         nfree(inv->who);
+      nfree(inv->invite);
+      nfree(inv);
+      inv = inv1;  
    }
    if (reset)
       init_channel(chan);
@@ -858,6 +886,17 @@ static int tcl_channel_add (Tcl_Interp * irp, char * newname, char * options)
       chan->status= CHAN_DYNAMICBANS | CHAN_GREET | CHAN_PROTECTOPS | CHAN_DONTKICKOPS |
     CHAN_LOGSTATUS | CHAN_STOPNETHACK | CHAN_CYCLE;
       chan->limit = (-1);
+/*      chan->flood_pub_thr = gfld_chan_thr; */
+      chan->flood_pub_thr = gfld_chan_thr;
+      chan->flood_pub_time = gfld_chan_time;
+      chan->flood_ctcp_thr = gfld_ctcp_thr;
+      chan->flood_ctcp_time = gfld_ctcp_time;
+      chan->flood_join_thr = gfld_join_thr;
+      chan->flood_join_time = gfld_join_time;
+      chan->flood_deop_thr = gfld_deop_thr;
+      chan->flood_deop_time = gfld_deop_time;
+      chan->flood_kick_thr = gfld_kick_thr;
+      chan->flood_kick_time = gfld_kick_time;
       strncpy(chan->name, newname, 80);
       chan->name[80] = 0;
       /* initialize chan->channel info */

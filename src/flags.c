@@ -7,13 +7,10 @@
  */
 
 #include "main.h"
-#include "rfc1459.h"
 
 extern int use_console_r;
 extern int debug_output;
 extern int require_p;
-extern struct userrec * userlist;
-extern struct chanset_t * chanset;
 extern struct dcc_t * dcc;
 extern int noshare;
 extern int allow_dk_cmds;
@@ -86,7 +83,6 @@ int logmodes (char * s) {
       case 'H':
 	 res |= debug_output ? LOG_BOTSHARE : 0;
 	 break;
-	 
       case '1':
 	 res |= LOG_LEV1;
 	 break;
@@ -119,7 +115,7 @@ int logmodes (char * s) {
 }
 
 char *masktype (int x) {
-   static char s[20];
+   static char s[24]; /* change this if you change the levels */
    char *p = s;
    if (x & LOG_MSGS)
       *p++ = 'm';
@@ -146,11 +142,11 @@ char *masktype (int x) {
    if (x & LOG_WALL)
       *p++ = 'w';
    if ((x & LOG_SRVOUT) && debug_output)
-     *p++ = 'v';
+      *p++ = 'v';
    if ((x & LOG_BOTNET) && debug_output)
-     *p++ = 't';
+      *p++ = 't';
    if ((x & LOG_BOTSHARE) && debug_output)
-     *p++ = 'h';
+      *p++ = 'h';
    if (x & LOG_LEV1)
       *p++ = '1';
    if (x & LOG_LEV2)
@@ -174,9 +170,8 @@ char *masktype (int x) {
 }
 
 char *maskname (int x) {
-   static char s[161];
+   static char s[207]; /* change this if you change the levels */
    int i = 0;
-   
    s[0] = 0;
    if (x & LOG_MSGS) 
       i += my_strcpy(s, "msgs, ");
@@ -205,9 +200,9 @@ char *maskname (int x) {
    if ((x & LOG_SRVOUT) && debug_output)
       i += my_strcpy( s + i, "server output, ");
    if ((x & LOG_BOTNET) && debug_output)
-     i += my_strcpy( s + i, "botnet traffic, ");
+      i += my_strcpy( s + i, "botnet traffic, ");
    if ((x & LOG_BOTSHARE) && debug_output)
-     i += my_strcpy( s + i, "share traffic, ");
+      i += my_strcpy( s + i, "share traffic, ");
    if (x & LOG_LEV1) 
       i += my_strcpy( s + i, "level 1, ");
    if (x & LOG_LEV2)
@@ -491,7 +486,7 @@ int flagrec_ok (struct flag_record * req,
 	      return 1;
 	    if (glob_kick(*have) || chan_kick(*have))
 	      return 0; /* +k cant use -|- commands */
-	    if (chan_deop(*have) || (glob_deop(*have) && !chan_deop(*have)))
+	    if (glob_deop(*have) || chan_deop(*have))
 	      return 0; /* neither can +d's */
 	 }
 	 return 1;

@@ -41,7 +41,7 @@ Tcl_Interp *interp;
 /* done - arthur2 */
 extern int backgrd, flood_telnet_thr, flood_telnet_time;
 extern int shtime, share_greet, require_p, keep_all_logs;
-extern int use_stderr, allow_new_telnets;
+extern int use_stderr, allow_new_telnets, stealth_telnets;
 extern int default_flags, conmask, switch_logfiles_at, connect_timeout;
 extern int firewallport, reserved_port, notify_users_at;
 extern int flood_thr, ignore_time;
@@ -73,8 +73,6 @@ int max_dcc = 20;
 /* valid dcc-portrange, dw/guppy */
 int min_dcc_port = 1024;
 int max_dcc_port = 65535;
-int global_flood_ctcp_thr = 5;
-int global_flood_ctcp_time = 30;
 /* quick write logs?
 flush em every min instead of every 5  */
 int quick_logs = 0;
@@ -118,7 +116,7 @@ static int tcl_logfile STDVAR
    }
    BADARGS(4, 4, " ?logModes channel logFile?");
    for (i = 0; i < max_logs; i++)
-      if ((logs[i].filename != NULL) && (strcmp(logs[i].filename, argv[3]) == 0)) {
+      if ((logs[i].filename != NULL) && (!strcmp(logs[i].filename, argv[3]))) {
 	 logs[i].mask = logmodes(argv[1]);
 	 nfree(logs[i].chname);
 	 logs[i].chname = NULL;
@@ -199,14 +197,12 @@ static char *tcl_eggcouplet (ClientData cdata, Tcl_Interp * irp, char * name1,
    } else {			/* writes */
       s = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
       if (s != NULL) {
+      int nr1, nr2;
 	 if (strlen(s) > 40)
 	    s[40] = 0;
-	 splitc(s1, s, ':');
-	 if (s1[0]) {
-	    *(cp->left) = atoi(s1);
-	    *(cp->right) = atoi(s);
-	 } else
-	    *(cp->left) = atoi(s);
+         sscanf(s,"%d%*c%d",&nr1,&nr2);
+         *(cp->left) = nr1; 
+         *(cp->right) = nr2;
       }
    }
    return NULL;
@@ -374,6 +370,7 @@ static tcl_ints def_tcl_ints[] =
    {"require-p", &require_p, 0},
    {"keep-all-logs", &keep_all_logs, 0},
    {"open-telnets", &allow_new_telnets, 0},
+   {"stealth-telnets", &stealth_telnets, 0},
    {"uptime", (int *) &online_since, 2},
    {"console", &conmask, 0},
    {"default-flags", &default_flags, 0},
@@ -397,7 +394,7 @@ static tcl_ints def_tcl_ints[] =
    {"log-time", &shtime, 0},
    {"allow-dk-cmds", &allow_dk_cmds, 0},
    {"resolve-timeout", &resolve_timeout, 0},
-   {"must-be-owner", &must_be_owner, 0},
+   {"must-be-owner", &must_be_owner, 1},
    {"use-silence", &use_silence, 0}, /* arthur2 */
    {0, 0, 0} /* arthur2 */
 };
@@ -405,7 +402,6 @@ static tcl_ints def_tcl_ints[] =
 static tcl_coups def_tcl_coups[] = {
    { "telnet-flood", &flood_telnet_thr, &flood_telnet_time },
    { "dcc-portrange", &min_dcc_port, &max_dcc_port }, /* dw */
-   { "global-flood-ctcp", &global_flood_ctcp_thr, &global_flood_ctcp_time }, /* arthur2 */
    { 0, 0, 0 }
 };
   
@@ -434,6 +430,7 @@ void init_tcl()
    char pver[25];
 
    /* initialize the interpreter */
+   context;
    interp = Tcl_CreateInterp();
    Tcl_Init(interp);
    init_bind();
@@ -443,7 +440,7 @@ void init_tcl()
    add_tcl_commands(tcluser_cmds);
    add_tcl_commands(tcldcc_cmds);
    add_tcl_commands(tclmisc_cmds);
-   
+
 #define Q(A,B) Tcl_CreateCommand(interp,A,B,NULL,NULL)
    Q("logfile", tcl_logfile);
    sscanf(egg_version, "%s", pver);

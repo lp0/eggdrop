@@ -75,7 +75,7 @@
 %{help=userinfo}%{+m}
 ###   %buserinfo script%b
    this nifty little script lets you define arbritary strings for each
-   user that they can set themselves of a master can set.
+   user that they can set themselves or a master can set.
    the default script contains the entries URL, BF (boyfriend),
    GF (girlfried), IRL (in real life), EMAIL, DOB (date of birth)
    some of these are used by other scripts (e.g. ques & seen).

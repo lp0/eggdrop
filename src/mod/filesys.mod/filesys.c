@@ -355,7 +355,7 @@ static int _dcc_send (int idx, char * filename, char * nick, char * dir)
       nfn = filename;
    else
       nfn++;
-   if (strcasecmp(nick, dcc[idx].nick) != 0)
+   if (strcasecmp(nick, dcc[idx].nick))
       dprintf(DP_HELP, "NOTICE %s :Here is a file from %s ...\n", nick, dcc[idx].nick);
    dprintf(idx, "Type '/DCC GET %s %s' to receive.\n", botname, nfn);
    dprintf(idx, "Sending: %s to %s\n", nfn, nick);
@@ -619,7 +619,7 @@ static void filesys_dcc_send (char * nick, char * from, struct userrec * u,
 	      if (j != i) {
 		 if ((dcc[j].type->flags & (DCT_FILETRAN|DCT_FILESEND))
 		     == (DCT_FILETRAN|DCT_FILESEND)) {
-		    if (strcmp(param, dcc[j].u.xfer->filename) == 0) {
+                    if (!strcmp(param, dcc[j].u.xfer->filename)) {
 		       dprintf(DP_HELP, 
 				 "NOTICE %s :That file is already being sent.\n", nick);
 		       lostdcc(i);

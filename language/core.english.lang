@@ -129,10 +129,11 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x53d,Bots connected
 0x53e,%B  (%E)\n\nPlease enter your nickname.\n
 0x53f,Cycling logfile %s, over max-logsize (%d)
+0x540,\nNickname.\n
 
 # IRC_
 
-0x600,banned.
+0x600,Banned
 0x601,You are banned
 0x602,Wanted to ban myself--deflected.
 0x603,that was fun, let's do it again!
@@ -242,6 +243,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x66b,nick flood
 0x66c,don't kick my friends, bud
 0x66d,...and don't come back.
+0x66e,Switching back to altnick %s
 
 0x700,Command line arguments:\n\
   -h   help\n\
@@ -265,8 +267,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x903,Mass deop on %s by %s
 0x904,Mass deop.  Go sit in a corner.
 0x905,Bogus ban
-0x906,is in my permban list.  You need to\n\
-use .-ban' in dcc chat if you want it gone for good.
+0x906,is in my permban list.  You need to use .-ban' in dcc chat if you want it gone for good.\n
 0x907,Oops.   Someone made me join %s... leaving...
 0x908,Mode change by fake op on %s!  Reversing...
 0x909,Abusing ill-gained server ops

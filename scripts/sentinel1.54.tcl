@@ -1,4 +1,4 @@
-# sentinel.tcl v1.52 (27 March 1999) by slennox <slenny@ozemail.com.au>
+# sentinel.tcl v1.54 (10 April 1999) by slennox <slenny@ozemail.com.au>
 # Latest versions can be found at www.ozemail.com.au/~slenny/eggdrop/
 #
 # Flood protection system for eggdrop 1.3.17 and later, with integrated
@@ -54,7 +54,7 @@
 #
 # Credits: BitchX simulation is based on that used in bitchxpack.tcl,
 # originally written by DeathHand. Special thanks to Bass, dw, and guppy
-# for their help :)
+# for their help, and \-\iTman for help with testing the script :)
 #
 # v1.00 - Initial release
 # v1.01 - Fixed erroneous ctcp reply, streamlined 'if' stuff
@@ -112,15 +112,19 @@
 # sl_tmrbans and sl_bansfull into single proc, bot now resets itself ready
 # for flood detection if +i or +m is removed before locktime expires,
 # addition to ban queue timers to improve ban host buffering, BitchX 
-# simulator no longer overwrites init-server setting, makes sure makes sure
-# ctcp-mode is set to 0 for 1.3.25+ bots, added validuser checks for
-# sl_note, removed some redundant isop checks, script now uses eggdrop's
-# ignore feature to ignore flooders  * due to changes with binds/procs you
-# will need to shut down and restart your bot when updating to this version
+# simulator no longer overwrites init-server setting, makes sure ctcp-mode
+# is set to 0 for 1.3.25+ bots, added validuser checks for sl_note, removed
+# some redundant isop checks, script now uses eggdrop's ignore feature to
+# ignore flooders  * due to changes with binds/procs you will need to shut
+# down and restart your bot when updating to this version
 # v1.52 - Improved kick and ban procs, made some changes to utimers in
 # sl_lock, automatic removal of +i/m after a channel flood can be disabled,
 # full ban list protection can be disabled, removed redundant sl_tmrbans
 # proc
+# v1.53 - Cleaned up BitchX stuff a little and fixed a couple of erroneous
+# replies, fixed problems with channels containing []{}\?*" characters
+# v1.54 - Fixed problem with +i not being removed if sl_bfmaxbans is set to
+# 0 (found by upstream)
 
 ## Configuration - please set the options below ##
 
@@ -205,14 +209,14 @@ proc sl_ctcp {nick uhost hand dest key arg} {
   if {[lindex $sl_ccflood 0] != 0 && [validchan $chan] && ![isop $nick $chan]} {
     if {$nick == $botnick} {return 0}
     if {$sl_ban != 0 && ![matchattr $hand f|f $chan]} {
-      set bhost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+      set bhost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
       lappend sl_ccbannick($chan) $nick
       lappend sl_ccbanhost($chan) $bhost
-      utimer [expr [lindex $sl_ccflood 1] + 6] "sl_ccbanqueue $chan"
+      utimer [expr [lindex $sl_ccflood 1] + 6] "sl_ccbanqueue [split $chan]"
     }
     if {$sl_flooded($chan)} {return 1}
     incr sl_ccqueue($chan)
-    utimer [lindex $sl_ccflood 1] "sl_ccqueuereset $chan"
+    utimer [lindex $sl_ccflood 1] "sl_ccqueuereset [split $chan]"
     if {$sl_ccqueue($chan) >= [lindex $sl_ccflood 0]} {
       sl_lock $chan "CTCP flood"
       return 1
@@ -243,109 +247,107 @@ proc sl_ctcp {nick uhost hand dest key arg} {
   set sl_bxonestack 1
   utimer 2 "set sl_bxonestack 0"
 
-  if {"$key"=="CLIENTINFO"} {
-    set bxcmd "[string toupper $arg]"
-    if {$bxcmd == "NONE"} {return 0}
-    if {$bxcmd == ""} {set bxcmd "NONE"}
-    switch $bxcmd {
-      NONE { set text "notice $nick :CLIENTINFO SED UTC ACTION DCC CDCC BDCC XDCC VERSION CLIENTINFO USERINFO ERRMSG FINGER TIME PING ECHO INVITE WHOAMI OP OPS UNBAN IDENT XLINK UPTIME  :Use CLIENTINFO <COMMAND> to get more specific information"}
-      SED { set text "notice $nick :CLIENTINFO SED contains simple_encrypted_data"}
-      UTC  { set text "notice $nick :CLIENTINFO UTC substitutes the local timezone"}
-      ACTION { set text "notice $nick :CLIENTINFO ACTION contains action descriptions for atmosphere"}
-      DCC { set text "notice $nick :CLIENTINFO DCC requests a direct_client_connection"}
-      CDCC { set text "notice $nick :CLIENTINFO CDCC checks cdcc info for you"}
-      BDCC { set text "notice $nick :CLIENTINFO BDCC checks cdcc info for you"}
-      XDCC { set text "notice $nick :CLIENTINFO XDCC checks cdcc info for you"}
-      VERSION { set text "notice $nick :CLIENTINFO VERSION shows client type, version and environment"}
-      CLIENTINFO { set text "notice $nick :CLIENTINFO CLIENTINFO gives information about available CTCP commands"}
-      USERINFO { set text "notice $nick :CLIENTINFO USERINFO returns user settable information"}
-      ERRMSG { set text "notice $nick :CLIENTINFO ERRMSG returns error messages"}
-      FINGER { set text "notice $nick :CLIENTINFO FINGER shows real name, login name and idle time of user"}
-      TIME { set text "notice $nick :CLIENTINFO TIME tells you the time on the user's host"}
-      PING { set text "notice $nick :CLIENTINFO PING returns the arguments it receives"}
-      ECHO { set text "notice $nick :CLIENTINFO ECHO returns the arguments it receives"}
-      INVITE { set text "notice $nick :CLIENTINFO INVITE invite to channel specified"}
-      WHOAMI { set text "notice $nick :CLIENTINFO WHOAMI user list information"}
-      OP { set text "notice $nick :CLIENTINFO OP ops the person if on userlist"}
-      OPS { set text "notice $nick :CLIENTINFO OPS ops the person if on userlist"}
-      UNBAN { set text "notice $nick :CLIENTINFO UNBAN unbans the person from channel"}
-      IDENT { set text "notice $nick :CLIENTINFO IDENT change userhost of userlist"}
-      XLINK { set text "notice $nick :CLIENTINFO XLINK x-filez rule"}
-      UPTIME { set text "notice $nick :CLIENTINFO UPTIME my uptime"}
-      default { set text "notice $nick :ERRMSG CLIENTINFO: $arg is not a valid function"}
+  if {$key == "CLIENTINFO"} {
+    set bxcmd [string toupper $arg]
+    if {$bxcmd == "NONE"} {
+      return 0
+    } elseif {$bxcmd == ""} {
+      set bxcmd "NONE"
     }
-    putserv "$text"
+    switch $bxcmd {
+      NONE { set text "NOTICE $nick :CLIENTINFO SED UTC ACTION DCC CDCC BDCC XDCC VERSION CLIENTINFO USERINFO ERRMSG FINGER TIME PING ECHO INVITE WHOAMI OP OPS UNBAN IDENT XLINK UPTIME  :Use CLIENTINFO <COMMAND> to get more specific information"}
+      SED { set text "NOTICE $nick :CLIENTINFO SED contains simple_encrypted_data"}
+      UTC  { set text "NOTICE $nick :CLIENTINFO UTC substitutes the local timezone"}
+      ACTION { set text "NOTICE $nick :CLIENTINFO ACTION contains action descriptions for atmosphere"}
+      DCC { set text "NOTICE $nick :CLIENTINFO DCC requests a direct_client_connection"}
+      CDCC { set text "NOTICE $nick :CLIENTINFO CDCC checks cdcc info for you"}
+      BDCC { set text "NOTICE $nick :CLIENTINFO BDCC checks cdcc info for you"}
+      XDCC { set text "NOTICE $nick :CLIENTINFO XDCC checks cdcc info for you"}
+      VERSION { set text "NOTICE $nick :CLIENTINFO VERSION shows client type, version and environment"}
+      CLIENTINFO { set text "NOTICE $nick :CLIENTINFO CLIENTINFO gives information about available CTCP commands"}
+      USERINFO { set text "NOTICE $nick :CLIENTINFO USERINFO returns user settable information"}
+      ERRMSG { set text "NOTICE $nick :CLIENTINFO ERRMSG returns error messages"}
+      FINGER { set text "NOTICE $nick :CLIENTINFO FINGER shows real name, login name and idle time of user"}
+      TIME { set text "NOTICE $nick :CLIENTINFO TIME tells you the time on the user's host"}
+      PING { set text "NOTICE $nick :CLIENTINFO PING returns the arguments it receives"}
+      ECHO { set text "NOTICE $nick :CLIENTINFO ECHO returns the arguments it receives"}
+      INVITE { set text "NOTICE $nick :CLIENTINFO INVITE invite to channel specified"}
+      WHOAMI { set text "NOTICE $nick :CLIENTINFO WHOAMI user list information"}
+      OP { set text "NOTICE $nick :CLIENTINFO OP ops the person if on userlist"}
+      OPS { set text "NOTICE $nick :CLIENTINFO OPS ops the person if on userlist"}
+      UNBAN { set text "NOTICE $nick :CLIENTINFO UNBAN unbans the person from channel"}
+      IDENT { set text "NOTICE $nick :CLIENTINFO IDENT change userhost of userlist"}
+      XLINK { set text "NOTICE $nick :CLIENTINFO XLINK x-filez rule"}
+      UPTIME { set text "NOTICE $nick :CLIENTINFO UPTIME my uptime"}
+      default { set text "NOTICE $nick :ERRMSG CLIENTINFO: $arg is not a valid function"}
+    }
+    putserv $text
     return 1
   }
 
-  if {"$key"=="VERSION"} {
+  if {$key == "VERSION"} {
     global sl_bxversion sl_bxsystem
-    putserv "notice $nick :VERSION BitchX-$sl_bxversion by panasync - $sl_bxsystem : Keep it to yourself!"
+    putserv "NOTICE $nick :VERSION BitchX-$sl_bxversion by panasync - $sl_bxsystem : Keep it to yourself!"
     return 1
   }
 
-  if {"$key"=="USERINFO"} {
-    putserv "notice $nick :USERINFO "
+  if {$key == "USERINFO"} {
+    putserv "NOTICE $nick :USERINFO "
     return 1
   }
 
-  if {"$key"=="FINGER"} {
+  if {$key == "FINGER"} {
     global realname sl_bxwhoami sl_bxmachine sl_bxjointime
     set idletime [expr [unixtime] - $sl_bxjointime]
-    putserv "notice $nick :FINGER $realname ($sl_bxwhoami@$sl_bxmachine) Idle $idletime seconds"
+    putserv "NOTICE $nick :FINGER $realname ($sl_bxwhoami@$sl_bxmachine) Idle $idletime seconds"
     return 1
   }
 
-  if {"$key"=="ECHO"} {
+  if {$key == "ECHO"} {
     if {[validchan $chan]} {return 1}
-    set arg [string range $arg 0 59]
-    putserv "notice $nick :ECHO $arg"
+    putserv "NOTICE $nick :ECHO [string range $arg 0 59]"
     return 1
   }
 
-  if {"$key"=="ERRMSG"} {
+  if {$key == "ERRMSG"} {
     if {[validchan $chan]} {return 1}
-    set arg [string range $arg 0 59]
-    putserv "notice $nick :ERRMSG $arg"
+    putserv "NOTICE $nick :ERRMSG [string range $arg 0 59]"
     return 1
   }
   
-  if {"$key"=="INVITE"} {
-    if {[llength $arg] == 0} {return 1}
-    if {[validchan $chan]} {return 1}
-    set chan [lindex $arg 0]
-    if {[string index $chan 0] == "#"} {
+  if {$key == "INVITE"} {
+    if {[llength $arg] == 0 || [validchan $chan]} {return 1}
+    set chan [lindex [split $arg] 0]
+    if {[string index $chan 0] == "#" || [string index $chan 0] == "+" || [string index $chan 0] == "&"} {
       if {[validchan $chan]} {
-        putserv "notice $nick :BitchX: Access Denied"
+        putserv "NOTICE $nick :BitchX: Access Denied"
       } else {
-        putserv "notice $nick :BitchX: I'm not on that channel"
+        putserv "NOTICE $nick :BitchX: I'm not on that channel"
       }
     }
     return 1
   }
 
-  if {"$key"=="WHOAMI"} {
+  if {$key == "WHOAMI"} {
     if {[validchan $chan]} {return 1}
-    putserv "notice $nick :BitchX: Access Denied"
+    putserv "NOTICE $nick :BitchX: Access Denied"
     return 1
   }
 
-  if {"$key"=="OP" || "$key"=="OPS"} {
-    if {[llength $arg] == 0} {return 1}
-    if {[validchan $chan]} {return 1}
-    set chan [lindex $arg 0]
-    putserv "notice $nick :BitchX: I'm not on $chan, or I'm not opped"
+  if {$key == "OP" || $key == "OPS"} {
+    if {[llength $arg] == 0 || [validchan $chan]} {return 1}
+    set chan [lindex [split $arg] 0]
+    putserv "NOTICE $nick :BitchX: I'm not on $chan, or I'm not opped"
     return 1
   }
 
-  if {"$key"=="UNBAN"} {
-    if {[llength $arg] == 0} {return 1}
-    if {[validchan $chan]} {return 1}
-    set chan [lindex $arg 0]
+  if {$key == "UNBAN"} {
+    if {[llength $arg] == 0 || [validchan $chan]} {return 1}
+    set chan [lindex [split $arg] 0]
     if {[validchan $chan]} {
-      putserv "notice $nick :BitchX: Access Denied"
+      putserv "NOTICE $nick :BitchX: Access Denied"
     } else {
-      putserv "notice $nick :BitchX: I'm not on that channel"
+      putserv "NOTICE $nick :BitchX: I'm not on that channel"
     }
     return 1
   }
@@ -356,7 +358,7 @@ proc sl_ctcp {nick uhost hand dest key arg} {
 proc sl_bmflood {nick uhost hand text} {
   global sl_bmflood sl_bflooded sl_bmqueue sl_note
   if {[lindex $sl_bmflood 0] == 0} {return 0}
-  if {[matchattr $hand b] && [string tolower [lindex $text 0]] == "go"} {return 0}
+  if {[matchattr $hand b] && [string tolower [lindex [split $text] 0]] == "go"} {return 0}
   if {$sl_bflooded} {
     sl_ignore $uhost $hand "MSG flooder"
     return 1
@@ -389,14 +391,14 @@ proc sl_avflood {from keyword arg} {
     set hand [nick2hand $nick $chan]
     if {![sl_checkaval [lrange $arg 1 end]]} {return 0}
     if {$sl_ban != 0 && $nick != $botnick && ![matchattr $hand f|f $chan]} {
-      set bhost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+      set bhost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
       lappend sl_avbannick($chan) $nick
       lappend sl_avbanhost($chan) $bhost
-      utimer [expr [lindex $sl_avflood 1] + 6] "sl_avbanqueue $chan"
+      utimer [expr [lindex $sl_avflood 1] + 6] "sl_avbanqueue [split $chan]"
     }
     if {$sl_flooded($chan)} {return 0}
     incr sl_avqueue($chan)
-    utimer [lindex $sl_avflood 1] "sl_avqueuereset $chan"
+    utimer [lindex $sl_avflood 1] "sl_avqueuereset [split $chan]"
     if {$sl_avqueue($chan) >= [lindex $sl_avflood 0]} {
       sl_lock $chan "AVALANCHE flood"
     }
@@ -414,13 +416,13 @@ proc sl_nkflood {nick uhost hand chan newnick} {
   set chan [string tolower $chan]
   if {[isop $newnick $chan]} {return 0}
   if {$sl_ban != 0 && $newnick != $botnick && ![matchattr $hand f|f $chan]} {
-    set bhost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+    set bhost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
     lappend sl_nkbanhost($chan) $bhost
-    utimer [expr [lindex $sl_nkflood 1] + 6] "sl_nkbanqueue $chan"
+    utimer [expr [lindex $sl_nkflood 1] + 6] "sl_nkbanqueue [split $chan]"
   }
   if {$sl_flooded($chan)} {return 0}
   incr sl_nkqueue($chan)
-  utimer [lindex $sl_nkflood 1] "sl_nkqueuereset $chan"
+  utimer [lindex $sl_nkflood 1] "sl_nkqueuereset [split $chan]"
   if {$sl_nkqueue($chan) >= [lindex $sl_nkflood 0]} {
     sl_lock $chan "NICK flood"
   }
@@ -429,14 +431,14 @@ proc sl_nkflood {nick uhost hand chan newnick} {
 proc sl_jflood {nick uhost hand chan} {
   global botnick sl_ban sl_bobanhost sl_bobannick sl_boflood sl_boqueue sl_flooded sl_globalban sl_jbanhost sljbannick sl_jflood sl_jqueue sl_pqueue
   if {$nick == $botnick} {return 0}
-  set ihost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+  set ihost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
   if {[isignore $ihost]} {
     killignore $ihost
   }
   set chan [string tolower $chan]
   if {[sl_checkbogus [lindex [split $uhost @] 0]]} {
     if {$sl_ban != 0 && ![matchattr $hand f|f $chan]} {
-      set bhost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+      set bhost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
       if {[botisop $chan] && !$sl_flooded($chan)} {
         putserv "KICK $chan $nick :sentinel: BOGUS username"
         if {$sl_globalban} {
@@ -448,11 +450,11 @@ proc sl_jflood {nick uhost hand chan} {
       }
       lappend sl_bobannick($chan) $nick
       lappend sl_bobanhost($chan) $bhost
-      utimer [lindex $sl_boflood 1] "sl_bobanqueue $chan"
+      utimer [lindex $sl_boflood 1] "sl_bobanqueue [split $chan]"
     }
     if {[lindex $sl_boflood 0] != 0 && !$sl_flooded($chan)} {
       incr sl_boqueue($chan)
-      utimer [lindex $sl_boflood 1] "sl_boqueuereset $chan"
+      utimer [lindex $sl_boflood 1] "sl_boqueuereset [split $chan]"
       if {$sl_boqueue($chan) >= [lindex $sl_boflood 0]} {
         sl_lock $chan "BOGUS joins"
       }
@@ -460,14 +462,14 @@ proc sl_jflood {nick uhost hand chan} {
   }
   if {[lindex $sl_jflood 0] == 0} {return 0}
   if {![matchattr $hand f|f $chan]} {
-    set bhost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+    set bhost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
     lappend sl_jbannick($chan) $nick
     lappend sl_jbanhost($chan) $bhost
-    utimer [expr [lindex $sl_jflood 1] + 6] "sl_jbanqueue $chan"
+    utimer [expr [lindex $sl_jflood 1] + 6] "sl_jbanqueue [split $chan]"
   }
   if {$sl_flooded($chan)} {return 0}
   incr sl_jqueue($chan)
-  utimer [lindex $sl_jflood 1] "sl_jqueuereset $chan"
+  utimer [lindex $sl_jflood 1] "sl_jqueuereset [split $chan]"
   if {$sl_jqueue($chan) >= [lindex $sl_jflood 0] && $sl_pqueue($chan) >= [lindex $sl_jflood 0]} {
     sl_lock $chan "JOIN-PART flood"
   }
@@ -484,14 +486,14 @@ proc sl_pflood {nick uhost hand chan} {
   if {$nick == $botnick} {return 0}
   set chan [string tolower $chan]
   if {$sl_ban != 0 && ![matchattr $hand f|f $chan]} {
-    set bhost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+    set bhost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
     lappend sl_pbannick($chan) $nick
     lappend sl_pbanhost($chan) $bhost
-    utimer [expr [lindex $sl_jflood 1] + 6] "sl_jbanqueue $chan"
+    utimer [expr [lindex $sl_jflood 1] + 6] "sl_jbanqueue [split $chan]"
   }
   if {$sl_flooded($chan)} {return 0}
   incr sl_pqueue($chan)
-  utimer [lindex $sl_jflood 1] "sl_pqueuereset $chan"
+  utimer [lindex $sl_jflood 1] "sl_pqueuereset [split $chan]"
 }
 
 proc sl_pfloodk {nick uhost hand chan kicked reason} {
@@ -501,7 +503,7 @@ proc sl_pfloodk {nick uhost hand chan kicked reason} {
   set chan [string tolower $chan]
   if {$sl_flooded($chan)} {return 0}
   incr sl_pqueue($chan)
-  utimer [lindex $sl_jflood 1] "sl_pqueuereset $chan"
+  utimer [lindex $sl_jflood 1] "sl_pqueuereset [split $chan]"
 }
 
 proc sl_ccqueuereset {chan} {
@@ -685,7 +687,7 @@ proc sl_ignore {uhost hand flood} {
       if {[matchattr $hand f|f $chan]} {return 0}
     }
   }
-  set ihost *!*[string tolower [string range $uhost [string first "@" $uhost] end]]
+  set ihost *!*[string tolower [string range $uhost [string first @ $uhost] end]]
   if {[isignore $ihost]} {return 1}
   newignore $ihost sentinel $flood $sl_igtime
   putlog "sentinel: added $ihost to ignore list ($flood)"
@@ -708,12 +710,12 @@ proc sl_lock {chan flood} {
      }
     }
     if {$sl_ilocktime != 0} {
-      utimer $sl_ilocktime "sl_unlock $chan i"
+      utimer $sl_ilocktime "sl_unlock [split $chan] i"
     }
     if {$sl_mlocktime != 0} {
-      utimer $sl_mlocktime "sl_unlock $chan m"
+      utimer $sl_mlocktime "sl_unlock [split $chan] m"
     }
-    utimer 120 "set sl_flooded($chan) 0"
+    utimer 120 "set sl_flooded([split $chan]) 0"
     utimer 120 "set sl_bflooded 0"
     putlog "sentinel: $flood detected on $chan! Channel locked temporarily."
     if {$sl_cfnotice != ""} {
@@ -726,7 +728,7 @@ proc sl_lock {chan flood} {
     set sl_flooded($chan) 1
     set sl_bflooded 1
     putlog "sentinel: $flood detected on $chan! Cannot lock channel because I'm not opped."
-    utimer 120 "set sl_flooded($chan) 0"
+    utimer 120 "set sl_flooded([split $chan]) 0"
     utimer 120 "set sl_bflooded 0"
   }
 }
@@ -736,7 +738,7 @@ proc sl_unlock {chan umode} {
   set sl_flooded($chan) 0
   if {![botisop $chan]} {return 0}
   if {$umode == "i" && [string match *i* [lindex [getchanmode $chan] 0]]} {
-    if {[llength [chanbans $chan]] >= $sl_bfmaxbans} {
+    if {$sl_bfmaxbans != 0 && [llength [chanbans $chan]] >= $sl_bfmaxbans} {
       putlog "sentinel: not removing +i on $chan due to full ban list."
     } else {
       pushmode $chan -i
@@ -772,12 +774,12 @@ proc sl_uc {nick uhost hand chan arg} {
 
 proc sl_mode {nick uhost hand chan mode victim} {
   global sl_ban sl_bfmaxbans sl_bfnotice sl_bfull sl_flooded sl_note
-  set mode [lindex $mode 0]
+  set mode [lindex [split $mode] 0]
   set chan [string tolower $chan]
   if {$mode == "+b" && $sl_bfmaxbans != 0 && !$sl_bfull($chan) && ![string match *i* [lindex [getchanmode $chan] 0]] && [botisop $chan] && [llength [chanbans $chan]] >= $sl_bfmaxbans} {
     putserv "MODE $chan +i"
     set sl_bfull($chan) 1
-    utimer 5 "set sl_bfull($chan) 0"
+    utimer 5 "set sl_bfull([split $chan]) 0"
     putlog "sentinel: locked $chan due to full ban list!"
     if {$sl_bfnotice != ""} {
       puthelp "NOTICE $chan :$sl_bfnotice"
@@ -786,8 +788,8 @@ proc sl_mode {nick uhost hand chan mode victim} {
       sendnote SENTINEL $sl_note "Locked $chan due to full ban list."
     }
   } elseif {$sl_ban && $mode == "+i" && $sl_flooded($chan)} {
-    utimer 3 "sl_dokicks $chan"
-    utimer 6 "sl_setbans $chan"
+    utimer 3 "sl_dokicks [split $chan]"
+    utimer 6 "sl_setbans [split $chan]"
   } elseif {$mode == "-i" || $mode == "-m"} {
     if {$sl_flooded($chan)} {
       set sl_flooded($chan) 0
@@ -1000,7 +1002,7 @@ if {$numversion >= 1032500} {
   set ctcp-mode 0
 }
 
-set sl_ver "v1.52"
+set sl_ver "v1.54"
 
 bind pub $sl_lockflag|$sl_lockflag lc sl_lc
 bind pub $sl_lockflag|$sl_lockflag uc sl_uc

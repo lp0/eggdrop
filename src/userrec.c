@@ -15,14 +15,12 @@
  */
 
 #include "main.h"
-#include "rfc1459.h"
 #include <sys/stat.h>
 #include "users.h"
 #include "chan.h"
 #include "modules.h"
 #include "tandem.h"
 
-extern char botuser[];
 extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char userfile[];
@@ -139,7 +137,7 @@ struct userrec *check_dcclist_hand (char * handle)
    int i;
    
    for (i = 0; i < dcc_total; i++) 
-     if (!rfc_casecmp(dcc[i].nick,handle))
+     if (!strcasecmp(dcc[i].nick,handle))
        return dcc[i].user;
    return NULL;
 }
@@ -153,7 +151,7 @@ struct userrec *get_user_by_handle (struct userrec * bu, char * handle)
    if (!handle[0] || (handle[0] == '*'))
       return NULL;
    if (bu == userlist) {
-      if (lastuser && !rfc_casecmp(lastuser->handle, handle)) {
+      if (lastuser && !strcasecmp(lastuser->handle, handle)) {
 	 cache_hit++;
 	 return lastuser;
       }
@@ -170,7 +168,7 @@ struct userrec *get_user_by_handle (struct userrec * bu, char * handle)
       cache_miss++;
    }
    while (u) {
-      if (!rfc_casecmp(u->handle, handle)) {
+      if (!strcasecmp(u->handle, handle)) {
 	 if (bu == userlist)
 	   lastuser = u;
 	 return u;
@@ -408,7 +406,7 @@ int sort_compare(struct userrec *a, struct userrec *b)
     if (a->flags & ~b->flags & USER_OP)
       return 0;
   }
-  return (rfc_casecmp(a->handle, b->handle)>0);
+  return (strcasecmp(a->handle, b->handle)>0);
 }
 
 void sort_userlist()
@@ -509,7 +507,7 @@ int change_handle (struct userrec * u, char * newh)
    strcpy(s, u->handle);
    strcpy(u->handle, newh);
    for (i = 0; i < dcc_total; i++) {
-      if (!rfc_casecmp(dcc[i].nick, s) &&
+      if (!strcasecmp(dcc[i].nick, s) &&
 	  (dcc[i].type != &DCC_BOT)) {
 	 strcpy(dcc[i].nick, newh);
 	 if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->channel >= 0)) {
@@ -626,7 +624,7 @@ int deluser (char * handle)
    struct userrec *u = userlist, *prev = NULL;
    int fnd = 0;
    while ((u != NULL) && (!fnd)) {
-      if (rfc_casecmp(u->handle, handle) == 0)
+      if (strcasecmp(u->handle, handle) == 0)
 	 fnd = 1;
       else {
 	 prev = u;

@@ -200,7 +200,7 @@ static void flush_fileq (char * to)
       q = fileq;
       fnd = 0;
       while (q != NULL) {
-	 if (strcasecmp(q->to, to) == 0) {
+         if (!strcasecmp(q->to, to)) {
 	    deq_this(q);
 	    q = NULL;
 	    fnd = 1;
@@ -217,7 +217,7 @@ static void send_next_file (char * to)
    char s[256], s1[256];
    int x;
    while (q != NULL) {
-      if (strcasecmp(q->to, to) == 0)
+      if (!strcasecmp(q->to, to))
 	 this = q;
       q = q->next;
    }
@@ -275,7 +275,7 @@ static void send_next_file (char * to)
       flush_fileq(s);
       return;
    }
-   if (strcasecmp(this->to, this->nick) != 0)
+   if (strcasecmp(this->to, this->nick))
       dprintf(DP_HELP, "NOTICE %s :Here is a file from %s ...\n", this->to,
 		this->nick);
    deq_this(this);
@@ -301,10 +301,10 @@ static void eof_dcc_fork_send (int idx)
 {
    char s1[121];
    fclose(dcc[idx].u.xfer->f);
-   if (strcmp(dcc[idx].nick, "*users") == 0) {
+   if (!strcmp(dcc[idx].nick, "*users")) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)
-	if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
+        if ((!strcasecmp(dcc[x].nick, dcc[idx].host)) &&
 	    (dcc[x].type->flags & DCT_BOT))
 	  y = x;
       if (y != 0) {
@@ -338,7 +338,7 @@ static void eof_dcc_send (int idx)
       /* success */
       ok = 0;
       fclose(dcc[idx].u.xfer->f);
-      if (strcmp(dcc[idx].nick, "*users") == 0) {
+      if (!strcmp(dcc[idx].nick, "*users")) {
 	 module_entry * me = module_find("share",0,0);
 	 if (me && me->funcs) {
 	   Function f = me->funcs[SHARE_FINISH]; 
@@ -408,10 +408,10 @@ static void eof_dcc_send (int idx)
    /* failure :( */
    context;
    fclose(dcc[idx].u.xfer->f);
-   if (strcmp(dcc[idx].nick, "*users") == 0) {
+   if (!strcmp(dcc[idx].nick, "*users")) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)
-	 if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
+         if ((!strcasecmp(dcc[x].nick, dcc[idx].host)) &&
 	     (dcc[x].type->flags & DCT_BOT))
 	    y = x;
       if (y) {
@@ -474,7 +474,7 @@ static void dcc_get (int idx, char * buf, int len)
    dcc[idx].u.xfer->acked = cmp;
    if ((cmp > dcc[idx].status) && (cmp <= dcc[idx].u.xfer->length)) {
       /* attempt to resume I guess */
-      if (strcmp(dcc[idx].nick, "*users") == 0) {
+      if (!strcmp(dcc[idx].nick, "*users")) {
 	 putlog(LOG_MISC, "*", "!!! Trying to skip ahead on userfile transfer");
       } else {
 	 fseek(dcc[idx].u.xfer->f, cmp, SEEK_SET);
@@ -490,11 +490,11 @@ static void dcc_get (int idx, char * buf, int len)
       /* successful send, we're done */
       killsock(dcc[idx].sock);
       fclose(dcc[idx].u.xfer->f);
-      if (strcmp(dcc[idx].nick, "*users") == 0) {
+      if (!strcmp(dcc[idx].nick, "*users")) {
 	 module_entry *me = module_find("share", 0, 0);
 	 int x, y = 0;
 	 for (x = 0; x < dcc_total; x++)
-	    if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
+            if ((!strcasecmp(dcc[x].nick, dcc[idx].host)) &&
 		(dcc[x].type->flags & DCT_BOT))
 	       y = x;
 	 if (y != 0)
@@ -550,10 +550,10 @@ static void eof_dcc_get (int idx)
    char xnick[NICKLEN],s[1024];
    context;
    fclose(dcc[idx].u.xfer->f);
-   if (strcmp(dcc[idx].nick, "*users") == 0) {
+   if (!strcmp(dcc[idx].nick, "*users")) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)
-	 if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
+         if ((!strcasecmp(dcc[x].nick, dcc[idx].host)) &&
 	     (dcc[x].type->flags & DCT_BOT))
 	    y = x;
       putlog(LOG_MISC, "*", "Lost userfile transfer; aborting.");
@@ -623,7 +623,7 @@ static int tcl_getfileq STDVAR
    fileq_t *q = fileq;
     BADARGS(2, 2, " handle");
    while (q != NULL) {
-      if (strcasecmp(q->nick, argv[1]) == 0) {
+      if (!strcasecmp(q->nick, argv[1])) {
 	 if (q->dir[0] == '*')
 	    sprintf(s, "%s %s/%s", q->to, &q->dir[1], q->file);
 	 else
@@ -692,10 +692,10 @@ static void transfer_get_timeout (int i)
    char xx[1024];
 
    context;
-   if (strcmp(dcc[i].nick, "*users") == 0) {
+   if (!strcmp(dcc[i].nick, "*users")) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)
-	if ((strcasecmp(dcc[x].nick, dcc[i].host) == 0) &&
+        if ((!strcasecmp(dcc[x].nick, dcc[i].host)) &&
 	    (dcc[x].type->flags & DCT_BOT))
 	  y = x;
       if (y != 0) {
@@ -735,10 +735,10 @@ static void transfer_get_timeout (int i)
 }
 
 static void tout_dcc_send (int idx) {
-   if (strcmp(dcc[idx].nick, "*users") == 0) {
+   if (!strcmp(dcc[idx].nick, "*users")) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)
-	if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
+        if ((!strcasecmp(dcc[x].nick, dcc[idx].host)) &&
 	    (dcc[x].type->flags & DCT_BOT))
 	  y = x;
       if (y != 0) {
@@ -831,7 +831,7 @@ static void dcc_fork_send (int idx,char * x,int y)
       return;
    dcc[idx].type = &DCC_SEND;
    sprintf(s1, "%s!%s", dcc[idx].nick, dcc[idx].host);
-   if (strcmp(dcc[idx].nick, "*users") != 0) {
+   if (strcmp(dcc[idx].nick, "*users")) {
       putlog(LOG_MISC, "*", "DCC connection: SEND %s (%s)",
 	     dcc[idx].type == &DCC_SEND ? dcc[idx].u.xfer->filename : "",
 	     s1);
@@ -872,7 +872,7 @@ static void wipe_tmp_filename (char * fn, int idx)
    for (i = 0; i < dcc_total; i++)
       if (i != idx)
 	 if ((dcc[i].type == &DCC_GET) || (dcc[i].type == &DCC_GET_PENDING))
-	    if (strcmp(dcc[i].u.xfer->filename, fn) == 0)
+            if (!strcmp(dcc[i].u.xfer->filename, fn))
 	       ok = 0;
    if (ok)
       unlink(fn);
@@ -884,7 +884,7 @@ static int at_limit (char * nick)
    int i, x = 0;
    for (i = 0; i < dcc_total; i++)
       if ((dcc[i].type == &DCC_GET) || (dcc[i].type == &DCC_GET_PENDING))
-	 if (strcasecmp(dcc[i].nick, nick) == 0)
+         if (!strcasecmp(dcc[i].nick, nick))
 	    x++;
    return (x >= dcc_limit);
 }
@@ -930,7 +930,7 @@ static void show_queued_files (int idx)
    char spaces [] = "                                 ";
    fileq_t *q = fileq;
    while (q != NULL) {
-      if (strcasecmp(q->nick, dcc[idx].nick) == 0) {
+      if (!strcasecmp(q->nick, dcc[idx].nick)) {
 	 if (!cnt) {
 	    spaces[HANDLEN-9] = 0;
 	    dprintf(idx, "  Send to  %s  Filename\n", spaces);
@@ -951,8 +951,8 @@ static void show_queued_files (int idx)
    }
    for (i = 0; i < dcc_total; i++) {
       if (((dcc[i].type == &DCC_GET_PENDING) || (dcc[i].type == &DCC_GET)) &&
-	  ((strcasecmp(dcc[i].nick, dcc[idx].nick) == 0) ||
-	   (strcasecmp(dcc[i].u.xfer->from, dcc[idx].nick) == 0))) {
+          ((!strcasecmp(dcc[i].nick, dcc[idx].nick)) ||
+           (!strcasecmp(dcc[i].u.xfer->from, dcc[idx].nick)))) {
 	 char *nfn;
 	 if (!cnt) {
 	    spaces[HANDLEN-9] = 0;
@@ -992,7 +992,7 @@ static void fileq_cancel (int idx, char * par)
       q = fileq;
       fnd = 0;
       while (q != NULL) {
-	 if (strcasecmp(dcc[idx].nick, q->nick) == 0) {
+         if (!strcasecmp(dcc[idx].nick, q->nick)) {
 	    if (q->dir[0] == '*')
 	       sprintf(s, "%s/%s", &q->dir[1], q->file);
 	    else
@@ -1018,8 +1018,8 @@ static void fileq_cancel (int idx, char * par)
    }
    for (i = 0; i < dcc_total; i++) {
       if (((dcc[i].type == &DCC_GET_PENDING) || (dcc[i].type == &DCC_GET)) &&
-	  ((strcasecmp(dcc[i].nick, dcc[idx].nick) == 0) ||
-	   (strcasecmp(dcc[i].u.xfer->from, dcc[idx].nick) == 0))) {
+          ((!strcasecmp(dcc[i].nick, dcc[idx].nick)) ||
+           (!strcasecmp(dcc[i].u.xfer->from, dcc[idx].nick)))) {
 	 char *nfn = strrchr(dcc[i].u.xfer->filename, '/');
 	 if (nfn == NULL)
 	    nfn = dcc[i].u.xfer->filename;
@@ -1027,7 +1027,7 @@ static void fileq_cancel (int idx, char * par)
 	    nfn++;
 	 if (wild_match_file(par, nfn)) {
 	    dprintf(idx, "Cancelled: %s  (aborted dcc send)\n", nfn);
-	    if (strcasecmp(dcc[i].nick, dcc[idx].nick) != 0)
+            if (strcasecmp(dcc[i].nick, dcc[idx].nick))
 	       dprintf(DP_HELP, "NOTICE %s :Transfer of %s aborted by %s\n", dcc[i].nick,
 			 nfn, dcc[idx].nick);
 	    if (dcc[i].type == &DCC_GET)
@@ -1286,7 +1286,7 @@ static int fstat_dupuser (struct userrec * u, struct userrec * o,
    context;
    if (e->u.extra) {
       fs = user_malloc(sizeof(struct filesys_stats));
-      memcpy(fs,e->u.extra,sizeof(struct filesys_stats));
+      my_memcpy(fs,e->u.extra,sizeof(struct filesys_stats));
       return set_user(&USERENTRY_FSTAT,u,fs);
    } 
    return 0;

@@ -31,11 +31,11 @@ static char newbotname[NICKLEN];
 /* current position in server list: */
 static int curserv;
 /* MSG flood */
-static int flood_thr;
-static int flood_time;
+static int flud_thr;
+static int flud_time;
 /* CTCP flood */
-static int flood_ctcp_thr;
-static int flood_ctcp_time;
+static int flud_ctcp_thr;
+static int flud_ctcp_time;
 /* what, if anything, to send to the server on connection */
 static char initserver[121];
 /* bot's user@host (refreshed whenever the bot joins a channel) */
@@ -85,9 +85,14 @@ static char bothost[81];
 static int check_mode_r;
 static int use_ison; /* arthur2 static */
 static int recycle; /* arthur2 static */
-/* net-type: 0 = efnet, 1 = ircnet, 2 = undernet, 3 = dalnet, 4 = others */
 static int net_type;
 static int must_be_owner; /* arthur2 */
+
+/* what, if anything, to do before connect to the server */
+static char connectserver[121];
+
+/* IRCNet LAGmeter support */
+static int lastpingtime = 0; /* drummer */
 
 static Function * global = NULL;
 
@@ -214,9 +219,16 @@ static void empty_msgq()
 static void queue_server (int which, char * buf, int len) {
    struct msgq_head * h = 0;
    struct msgq * q;
-
    if (serv < 0)
      return; /* don't even BOTHER if there's no server online */
+   
+    /* patch by drummer - no queue for PING and PONG */
+   if ((strncasecmp(buf,"PING",4)==0) || (strncasecmp(buf,"PONG",4)==0)) {
+      if ((buf[1]==73) || (buf[1]==105)) { lastpingtime=now; } /* lagmeter */
+      tputs(serv,buf,len);
+      return;
+      }
+
    switch (which) {
     case DP_MODE:
       h = &modeq;
@@ -454,7 +466,7 @@ static char *nick_change (ClientData cdata, Tcl_Interp * irp, char * name1,
       Tcl_SetVar2(interp, name1, name2, origbotname, TCL_GLOBAL_ONLY);
    } else {			/* writes */
       new = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
-      if (strcasecmp(origbotname, new)) {
+      if (rfc_casecmp(origbotname, new)) {
 	 if (origbotname[0])
 	   putlog(LOG_MISC, "*", "* IRC NICK CHANGE: %s -> %s", 
 		  origbotname, new);
@@ -524,12 +536,13 @@ static tcl_strings my_tcl_strings[] =
    {"altnick", altnick, NICKMAX, 0},
    {"realname", botrealname, 80, 0},
    {"init-server", initserver, 120, 0},
+   {"connect-server", connectserver, 120, 0},
    {0, 0, 0, 0}
 };
 
 static tcl_coups my_tcl_coups [] = {
-   { "flood-msg", &flood_thr, &flood_time },
-   { "flood-ctcp", &flood_ctcp_thr, &flood_ctcp_time },
+   { "flood-msg", &flud_thr, &flud_time },
+   { "flood-ctcp", &flud_ctcp_thr, &flud_ctcp_time },
    { 0, 0, 0 }
 };
 
@@ -658,6 +671,7 @@ static int ctcp_DCC_CHAT(char * nick, char * from, char * handle,
       putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
    } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
       /* invalid port range, do clients even use over 5000?? */
+      if(!quiet_reject)
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
          DCC_CONNECTFAILED1);
       putlog(LOG_MISC, "*", "%s: CHAT (%s!%s)", DCC_CONNECTFAILED3,
@@ -730,8 +744,8 @@ static void server_postrehash () {
       fatal("NO BOT NAME.", 0);
    if (serverlist == NULL)
       fatal("NO SERVER.", 0);
-   if (!strcasecmp(oldnick, botname)
-       && !strcasecmp(oldnick, altnick) 
+   if (!rfc_casecmp(oldnick, botname)
+       && !rfc_casecmp(oldnick, altnick) 
        && oldnick[0]) {
       /* change botname back, don't be premature */
       strcpy(botname, oldnick);
@@ -781,8 +795,10 @@ static void server_report (int idx, int details)
 	dprintf(idx, "    Requiring a net of at least %d server(s)\n", min_servs);
       if (initserver[0])
 	dprintf(idx, "    On connect, I do: %s\n", initserver);
+      if (connectserver[0])
+	dprintf(idx, "    Before connect, I do: %s\n", connectserver);
       dprintf(idx, "    Flood is: %d msg/%ds, %d ctcp/%ds\n",
-	      flood_thr, flood_time, flood_ctcp_thr, flood_ctcp_time);
+	      flud_thr, flud_time, flud_ctcp_thr, flud_ctcp_time);
    }
 }
 
@@ -953,10 +969,10 @@ static Function server_table[] =
      (Function) &quiet_reject,/* int */
      (Function) &serv,
      /* 8 - 11 */
-     (Function) &flood_thr,       /* int */
-     (Function) &flood_time,      /* int */
-     (Function) &flood_ctcp_thr,  /* int */
-     (Function) &flood_ctcp_time, /* int */
+     (Function) &flud_thr,       /* int */
+     (Function) &flud_time,      /* int */
+     (Function) &flud_ctcp_thr,  /* int */
+     (Function) &flud_ctcp_time, /* int */
      /* 12 - 15 */
      (Function) match_my_nick,
      (Function) check_tcl_flud,
@@ -1005,11 +1021,12 @@ char *server_start (Function * global_funcs)
    altnick[0] = 0;
    newbotname[0] = 0;
    curserv = 0;
-   flood_thr = 5;
-   flood_time = 60;
-   flood_ctcp_thr = 3;
-   flood_ctcp_time = 60;
+   flud_thr = 5;
+   flud_time = 60;
+   flud_ctcp_thr = 3;
+   flud_ctcp_time = 60;
    initserver[0] = 0;
+   connectserver[0] = 0; /* drummer */
    botuserhost[0] = 0;
    keepnick = 1;
    check_stoned = 1;
@@ -1037,8 +1054,6 @@ char *server_start (Function * global_funcs)
    use_ison = 1;
    recycle = 1;
    net_type = 0;
-   global_flood_ctcp_thr = 5;
-   global_flood_ctcp_time = 30;
    context;
    server_table[4] = (Function)botname;
    module_register(MODULE_NAME, server_table, 1, 0);

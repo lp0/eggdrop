@@ -72,29 +72,29 @@ static int ctcp_CLIENTINFO(char * nick, char * uhosr, char * handle,
       return 1;
    if (!msg[0])
      p = CLIENTINFO;
-   else if (strcasecmp(msg, "sed") == 0)
+   else if (!strcasecmp(msg, "sed"))
      p = CLIENTINFO_SED;
-   else if (strcasecmp(msg, "version") == 0)
+   else if (!strcasecmp(msg, "version"))
      p = CLIENTINFO_VERSION;
-   else if (strcasecmp(msg, "clientinfo") == 0)
+   else if (!strcasecmp(msg, "clientinfo"))
      p = CLIENTINFO_CLIENTINFO;
-   else if (strcasecmp(msg, "userinfo") == 0)
+   else if (!strcasecmp(msg, "userinfo"))
      p = CLIENTINFO_USERINFO;
-   else if (strcasecmp(msg, "errmsg") == 0)
+   else if (!strcasecmp(msg, "errmsg"))
      p = CLIENTINFO_ERRMSG;
-   else if (strcasecmp(msg, "finger") == 0)
+   else if (!strcasecmp(msg, "finger"))
      p = CLIENTINFO_FINGER;
-   else if (strcasecmp(msg, "time") == 0)
+   else if (!strcasecmp(msg, "time"))
      p = CLIENTINFO_TIME;
-   else if (strcasecmp(msg, "action") == 0)
+   else if (!strcasecmp(msg, "action"))
      p = CLIENTINFO_ACTION;
-   else if (strcasecmp(msg, "dcc") == 0)
+   else if (!strcasecmp(msg, "dcc"))
      p = CLIENTINFO_DCC;
-   else if (strcasecmp(msg, "utc") == 0)
+   else if (!strcasecmp(msg, "utc"))
      p = CLIENTINFO_UTC;
-   else if (strcasecmp(msg, "ping") == 0)
+   else if (!strcasecmp(msg, "ping"))
      p = CLIENTINFO_PING;
-   else if (strcasecmp(msg, "echo") == 0)
+   else if (!strcasecmp(msg, "echo"))
      p = CLIENTINFO_ECHO;
    if (p == NULL) {
       simple_sprintf(ctcp_reply,
@@ -128,8 +128,8 @@ static int ctcp_CHAT (char * nick, char * uhost, char * handle, char * object,
        ((atr & USER_OP) && !require_p)) {
       for (i = 0; i < dcc_total; i++) {
 	 if ((dcc[i].type->flags & DCT_LISTEN) &&
-	     ((strcmp(dcc[i].nick, "(telnet)") == 0) ||
-	      (strcmp(dcc[i].nick, "(users)") == 0))) {
+             ((!strcmp(dcc[i].nick, "(telnet)")) ||
+              (!strcmp(dcc[i].nick, "(users)")))) {
 	    ix = i;
 	    /* do me a favour and don't change this back to a CTCP reply, */
 	    /* CTCP replies are NOTICE's this has to be a PRIVMSG */

@@ -137,7 +137,7 @@ See also: whois, chattr
    It's just a nice way to get a feel for how the bots are connected
    physically. if 2 bots are sharing, a + will be indicated, or a ?
    if nothing is known.
-   Use vbottree if you want to see know bot versions.
+   Use vbottree if you want to know bot versions as well.
    
 See also: bots, botinfo
 %{help=chaddr}%{+t}

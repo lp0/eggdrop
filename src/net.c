@@ -19,7 +19,6 @@
 #endif
 #include <netinet/in.h>
 #include <arpa/inet.h>		/* is this really necessary? */
-#include <varargs.h>
 #include <errno.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
@@ -48,7 +47,7 @@ char firewall[121] = "";
 /* socks server port */
 int firewallport = 1080; /* default port of Sock4/5 firewalls */
 /* username of the user running the bot */
-char botuser[21] = "llama";
+char botuser[21] = "eggdrop";
 /* we should do some sanity checking on dcc connections. */
 int dcc_sanitycheck = 0;
 
@@ -413,6 +412,7 @@ int open_listen (int * port)
    struct sockaddr_in name;
    if (firewall[0]) {
       /* FIXME: can't do listen port thru firewall yet */
+      putlog(LOG_ALL, "*", "!! Cant open a listen port (you are using a firewall)\n");
       return -1;
    }
    sock = getsock(SOCK_LISTEN);
@@ -827,7 +827,8 @@ void tputs (int z, char * s, unsigned int len)
       }
    }
    putlog(LOG_MISC, "*", "!!! writing to nonexistent socket: %d", z);
-   putlog(LOG_MISC, "*", "    '%s'", s);
+   s[strlen(s) - 1] = 0;
+   putlog(LOG_MISC, "*", "!-> '%s'", s);
 }
 
 /* tputs might queue data for sockets, let's dump as much of it as */
@@ -943,12 +944,12 @@ int sanitycheck_dcc (char *nick, char *from, char *ipaddy, char *port) {
    * using the n-variant in case someone changes that... */
   strncpy(hostname, extracthostname(from), 256);
   strncpy(dnsname, hostnamefromip(my_htonl(ip)), 256);
-  if (strcasecmp(hostname, dnsname) == 0) {
+  if (!strcasecmp(hostname, dnsname)) {
     putlog(LOG_DEBUG, "*", "DNS information for submitted IP checks out.");
     return 1;
   }
   
-  if (strcmp(badaddress, dnsname) == 0) 
+  if (!strcmp(badaddress, dnsname)) 
     putlog(LOG_MISC, "*", "ALERT: (%s!%s) sent a DCC request with bogus IP information of %s port %u!", nick, from, badaddress, prt);
   else 
     putlog(LOG_MISC, "*", "ALERT: (%s!%s) sent a DCC request with bogus IP information of (%s [%s]) port %u!", nick, from, dnsname, badaddress, prt);

@@ -51,8 +51,13 @@ struct {
 #define DP_HELP         0x7FF4
 
 /* prototypes */
+#ifdef HAVE_STDARG_H
+void dprintf(int arg1, ...);
+void putlog(int arg1, ...);
+#else
 void dprintf();
 void putlog();
+#endif
 int expected_memory();
 int expmem_chanprog();
 int expmem_misc();
@@ -164,7 +169,7 @@ void debug_mem_to_dcc (int idx)
 	use[10] += l;
       else if (p) {
 	 for (me = module_list; me; me = me->next)
-	    if (strcmp(fn, me->name) == 0)
+            if (!strcmp(fn, me->name))
 	       me->mem_work += l;
       } else {
 	 dprintf(idx, "Not logging file %s!\n", fn);
@@ -218,7 +223,7 @@ void debug_mem_to_dcc (int idx)
 	 for (j = 0; j < lastused; j++) {
 	    if ((p = strchr(memtbl[j].file, ':')))
 		*p = 0;
-	    if (strcasecmp(memtbl[j].file, fn) == 0) {
+            if (!strcasecmp(memtbl[j].file, fn)) {
 	       if (p) 
 		 sprintf(&sofar[strlen(sofar)], "%-10s/%-4d:(%04d) ", 
 			 p+1, memtbl[j].line, memtbl[j].size);
@@ -258,7 +263,7 @@ void debug_mem_to_dcc (int idx)
 	    strcpy(fn, memtbl[j].file);
 	    if ((p = strchr(fn, ':')) != NULL) {
 	       *p = 0;
-	       if (strcasecmp(fn, me->name) == 0) {
+               if (!strcasecmp(fn, me->name)) {
 		  sprintf(&sofar[strlen(sofar)], "%-10s/%-4d:(%04X) ", p + 1,
 			  memtbl[j].line, memtbl[j].size);
 		  if (strlen(sofar) > 60) {

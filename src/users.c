@@ -18,7 +18,6 @@
    COPYING that was distributed with this code.
  */
 
-#include "rfc1459.h"
 #include "main.h"
 #include "users.h"
 #include "chan.h"
@@ -30,7 +29,6 @@ char natip[121] = "";
 char spaces[33] = "                                 ";
 char spaces2[33] = "                                 ";
 
-extern char botname[];
 extern struct dcc_t * dcc;
 extern int dcc_total;
 extern int noshare;
@@ -40,7 +38,6 @@ extern struct igrec *global_ign;
 extern char botnetnick[];
 extern struct chanset_t *chanset;
 extern Tcl_Interp * interp;
-extern char whois_fields[];
 extern time_t now;
 extern int use_silence;
 
@@ -710,7 +707,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 	       if (u) {
 		   ue = u->entries;
 		  for (;ue && !ok;ue=ue->next)
-		    if (ue->name && !rfc_casecmp(code+2,ue->name)) {
+		    if (ue->name && !strcasecmp(code+2,ue->name)) {
 		       struct list_type * list;
 		       
 		       list = user_malloc(sizeof(struct list_type));
@@ -779,7 +776,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 				  sanity_check(fr.global & USER_VALID));
 		     u = get_user_by_handle(bu,code);
 		     for (i = 0; i < dcc_total; i++) 
-		       if (!rfc_casecmp(code,dcc[i].nick))
+		       if (!strcasecmp(code,dcc[i].nick))
 			 dcc[i].user = u;
 		     u->flags_udef = fr.udef_global;
 		     /* if s starts with '/' it's got file info */
@@ -875,7 +872,7 @@ void autolink_cycle (char * start)
 	       }
 	       /* did we make it where we're supposed to start?  yay! */
 	       if (!ready)
-		 if (!rfc_casecmp(u->handle, start)) {
+		 if (!strcasecmp(u->handle, start)) {
 		    ready = 1;
 		    autc = NULL;
 		    /* if starting point is a +h bot, must be in 2nd cycle */
@@ -893,7 +890,7 @@ void autolink_cycle (char * start)
 	       int i;
 	       
 	       i = nextbot(u->handle);
-	       if ((i >= 0) && !rfc_casecmp(dcc[i].nick, u->handle)) {
+	       if ((i >= 0) && !strcasecmp(dcc[i].nick, u->handle)) {
 		  char * p = MISC_REJECTED;
 		  /* we're directly connected to the offending bot?! (shudder!) */
 		  putlog(LOG_BOTS, "*", "%s %s", BOT_REJECTING, dcc[i].nick);

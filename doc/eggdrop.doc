@@ -473,7 +473,7 @@ at <eggdrop@sodre.net> (after subscribing).  Thanks.
      your bot is on is very busy, and the bot can hardly keep track of the
      channel very well when it gets swapped out for minutes at a time.
 
-     (b) on some system (at least Linux) if the dns you bot is using to
+     (b) on some systems (at least Linux), if the dns your bot is using to
      lookup hostnames is broken, and *very* slow in responding (this
      can occur if the dns's uplink doesnt exist) then you will get 4/5
      minute time drifts continuously, not much can be done about this,

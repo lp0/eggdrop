@@ -1,6 +1,96 @@
 Changes in eggdrop: (since v1.3.0)
 ----------------------------------
 
+1.3.27
+Foundby   Fixedby   What....
+          poptix    Dalnet doesnt follow the RFC, now need to remove 
+                    RFC_COMPLIENT for the bot to correctly run on these
+                    networks (see configure).
+          Tothwolf  Removed obsolete SIGUSR1/SIGUSR2 signal handling since
+                    tcl8.1's threads uses these signals.
+poptix	  poptix    2 possible, 1 confirmed crash in notes handling.
+          drummer   Added tcl command encpass and put it in tcl-commands.doc
+          drummer   Fixed some strcmp's that should have been strcasecmp
+                    (botnet.c)
+    Tothwolf/Cybah  Fixed the stdarg.h/vararg.h problems with tcl8.1.
+          Cybah     updated .help adduser with the new static hostmask stuff
+		    from drummer.
+          Tothwolf  more rfc fixes, small Makefile.in change, typo in notes.c
+          arthur2   doc/nets.list file removed. more than 2/3 of those
+                    botnets didn't exist anymore.
+hath      arthur2   .su' .quit rejoined message was redundant.
+          Mixter    Fix for bot sending back an error on some bogus dcc's even
+                    though quiet_reject was turned on.
+          drummer   .adduser !<nick> will add nick using a static hostmask.
+                    bugfixes to .deluser.
+	  hath      More spelling mistakes in cmds1.help.
+	  hath      Spelling mistakes in notes.help.
+          slennox   private-user now works much more effectively
+          Tothwolf  fixed overflow problems in masktype() and maskname()
+          Tothwolf  small cleanup of allow_dk_cmds in flagrec_ok()
+          dw        use dcc-portrange to check telnet src port also.
+                    no longer allows telnets from invalid ips (*.255,*.0)
+          arthur2   ctcp-mode 2 now uses flood-ctcp setting.
+                    there was a confusion between flood_thr and flud_thr 
+                    in the src.
+          Hath      adds wire module to eggdrop.conf.dist file.
+          dw/vertex fixed 'read/write integer couplets' in tcl.c
+                    no more corrupted set var x:y read from the conf file
+                    now should global-flood-..setting for .+chan work, enjoy.
+          cybah     removed the obsolete dir
+          arthur2   'make install' also installs src/mod/*.mod/*.lang 
+                    language files.
+          arthur2   renames help/chaninfo in help/chaninfo.help.
+Deadgrll  arthur2   channels.mod wasn't properly accounting for the memory 
+                    it used.
+          SuperS    adds support for irix64 shells.
+          arthur2   .+chan now sets the new channel's flood-settings equal to
+                    the global-flood-settings in the bots config.
+                    set flood-settings to 0:0 to *deactivate* them (it no
+                    longer uses flood-ctcp and flood-msg as default).
+          arthur2   removed extern declaration of unused vars in /src/*.c
+          guppy     minor lang fixes in all 3 lang files.
+          Tothwolf  sanity check in flood check settings.
+various   poptix    small snprintf prob in misc.c
+          Q         you should use my_memcpy, and not memcpy.
+          Q         don't dereference functions.
+          Q         flush_mode() wrote in post[-1] if it was an empty string.
+hath      guppy     minor doc changes
+          drummer   patch to avoid +s-p +p-s floods, and .status will now
+                    show "xx members" or "inactive" or "pending"
+          drummer   new Tcl variable: connect-server, the bot will call this
+                    just before it connects to a server.
+          drummer   lagmeter support for IRCnet 
+          drummer   can now shutoff the annoying notes notify on join
+          drummer   getchanhost/nick2hand/hand2nick no longer require that you
+                    specify a channel to look on
+Tothwolf  poptix    werent fully rfc compliant, caused some crashes in
+                    certain circumstances, 107KB patch to fix everything,
+                    included some optimizations also.
+poptix    guppy     perm owners can su to owners without a password
+Michael   guppy     cmd_chnick can't be used to change perm owners anymore
+Mixter    guppy     tcl_pushmode should allow -l without an arg
+          guppy     added a few channels.mod functions to the function list
+dw        guppy     made the bot regain its altnick
+          guppy     bot now watches NICK and QUIT messages .. to see if it
+		    should grab its original name.
+          cybah     stealth-telnets shouldnt be read-only, fixed.
+          guppy     must-be-owner is now read only ...
+          Tothwolf  minor fixes to Makefile.in and src/Makefile
+          drummer   blowfish "" fix, and added putdccraw tcl command.
+          Al3X      Cosmetic changes to net.c
+Daemus    guppy     alltool's number_to_number had a small bug
+          guppy     typos in some of the doc files
+bass      guppy     english.lang, number 0x906 was screwy ..
+          cybah	    Added stealth-telnets option to config, so the banner
+		    doesnt get displayed when people telnet the bot. 
+          arthur2   Added +wasoptest channel setting, makes as if all +o
+                    users have +w flag on that particular channel.
+Creative1 Creative1 Fixed buffer-overflow bugs on botinfo, status, etc...
+                    when bot was on a lot of channels.
+Plex      Creative1 Fixed eof that didn't store console changes when a
+                    user left 'incorrectly'
+
 1.3.26
 Foundby   Fixedby   What....
           dw        added set quick-logs, if enabled flush logs
@@ -17,7 +107,7 @@ MC_8      dw        testip(alltools) didnt return 0 in every case when
 
 1.3.25
 Foundby   Fixedby   What....
-          poptix    Added max-logsize, allows you to set a maximum logfile
+Lobo^Loco poptix    Added max-logsize, allows you to set a maximum logfile
                     size.
           slennox   Successful dcc/telnet logins are logged.
 \-\itman  slennox   Added channel set example for +seen to eggdrop.conf.dist.

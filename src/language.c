@@ -113,12 +113,14 @@ char	*ctmp, *ctmp1;
                                   langfile, lline);
             } else {
                ltexts++;
-               *strchr( ltext, '\n') = 0;
+               ctmp = strchr( ltext, '\n');
+               *ctmp = 0;
                while(ltext[strlen(ltext) - 1] == '\\') {
                   ltext[strlen(ltext) - 1] = 0;
                   if(fgets(lbuf, 511, FLANG)) {
                      lline++;
-                     *(strchr(lbuf, '\n') ) = 0;
+                     ctmp = strchr(lbuf, '\n');
+                     *ctmp = 0;
                      if(strlen(lbuf) + strlen(ltext) > 511) {
                         putlog(LOG_MISC, "*", 
                            "Language: Message 0x%lx in %s at line %d too long.",
@@ -153,7 +155,8 @@ char	*ctmp, *ctmp1;
                ladd++;
          }
       } else {
-         if (lskip && (strlen(lbuf)==1  || *(strchr(lbuf, '\n')-1) != '\\'))
+         ctmp = strchr(lbuf, '\n');
+         if (lskip && (strlen(lbuf)==1 || *(ctmp-1) != '\\'))
             lskip = 0;
       }
    }

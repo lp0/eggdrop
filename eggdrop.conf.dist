@@ -185,6 +185,11 @@ set require-p 0
 # (If you set this to 1, you must set protect-telnet 0)
 set open-telnets 0
 
+# [0/1] Display 'Nickname.' instead of identifying ourselves when people
+# telnet in.
+# (usefull if someone portscans your machine, they wont know we're here)
+set stealth-telnets 1
+
 # how long (in seconds) should i wait for a connect (dcc chat, telnet,
 # relay, etc) before it times out?
 set connect-timeout 15
@@ -301,7 +306,8 @@ set max-dcc 50
 
 # this setting is so that people can't send fake ports to your bot when
 # they try to dcc it. irc clients should never use a port below 1024 and
-# well 65535 is the highest port possible. 
+# well 65535 is the highest port possible. this setting is used for telnet
+# too. 
 set dcc-portrange 1024:65535
 
 # add the 'dccsimul' tcl command (needed by certain scripts like
@@ -410,10 +416,10 @@ channel add #lamest {
 #   because the channel limit is full
 # flood-chan (number:seconds)
 #   how many channel messages in hom many seconds is a flood
-#   not specifying or using number = 0 will use global flood-msg settings
+#   not specifying or using number = 0 will not check chan floods!
 # flood-ctcp (number:seconds)
 #   how many channel messages in hom many seconds is a flood
-#   not specifying or using number = 0 will use global flood-ctcp settings
+#   not specifying or using number = 0 will not check ctcp floods!
 # flood-deop (number:seconds)
 #   how many deops in how many seconds is a mass de-op
 #   not specifying or using number = 0 will not check de-op floods!
@@ -422,7 +428,18 @@ channel add #lamest {
 #   not specifying or using number = 0 will not check mass kicks!
 # flood-join (number:seconds)
 #   how many joins/nick changes in how many seconds is a join flood?
-#   not specifying or using number = 0 will not check join floods.
+#   not specifying or using number = 0 will not check join floods!
+
+# when you .+chan #channel, its flood-chan, flood-deop, flood-kick,
+# flood-join and flood-ctcp settings will be automatically equal to
+# global-flood-chan, global-flood-deop, global-flood-kick,
+# global-flood-join and global-flood-ctcp. Samething if you don't specify
+# the static channel flood settings.
+set global-flood-chan 10:60
+set global-flood-deop 3:10
+set global-flood-kick 3:10
+set global-flood-join 5:60
+set global-flood-ctcp 3:60
 
 # note that "need-op", "need-invite", etc, are limited to 120 characters,
 # so if you want to so something more complicated, just write a proc,
@@ -495,6 +512,10 @@ channel set #lamest +cycle
 #   letting them kick-flood for instance, to protect the channel agaisnt
 #   clone attacks
 channel set #lamest +dontkickops
+
+#   during net-rejoins does a wasop test for +stopnethack (same as +w user
+#   flag, but affects a whole channel)
+channel set #lamest -wasoptest
 
 #   respond to seen requests in the channel?  (seen module must be loaded)
 channel set #lamest -seen
@@ -651,9 +672,9 @@ loadmodule ctcp
 
 # [0/1/2] 0: normal behavior. 1: bot ignores all CTCPs, except for CTCP
 # CHATs & PINGs requested by +o flag users. 2: bot doesn't answer more
-# than C CTCPs in S seconds. C/S are defined by set global-flood-ctcp C:S.  
+# than C CTCPs in S seconds. C/S are defined by the set flood-ctcp C:S (cf
+# server module)
 set ctcp-mode 0
-set global-flood-ctcp 5:30
 
 ##### IRC MODULE #####
 
@@ -688,12 +709,14 @@ set kick-bogus 0
 # Can prevent the above described kick-flood, but can also fill the banlist
 set ban-bogus 0
 
-# [0/1] Do you want the bot to kick for ctcp avalanches to a channel?
+# [0/1] Do you want the bot to kick for control character/ctcp avalanches
+# to a channel?
 # Remember that if it does, as it won't ban them, it can be at the origin
 # of a nice kick-flood
 set kick-fun 0
 
-# [0/1] Do you want the bot to ban for ctcp avalanches to a channel?
+# [0/1] Do you want the bot to ban for control character/ctcp avalanches
+# to a channel?
 # Can prevent the above described kick-flood, but can also fill the banlist
 set ban-fun 0
 
@@ -719,8 +742,8 @@ set mode-buf-length 200
 # novice users are not expected to understand what these two lines do; they
 # are just here to help you.  for more information on 'bind', check the file
 # 'tcl-commands.doc'
-unbind msg - hello *msg:hello
-bind msg - myword *msg:hello
+#unbind msg - hello *msg:hello
+#bind msg - myword *msg:hello
 
 # Many takeover attempts occur due to lame users blindy /msg ident'n to
 # the bot without checking if the bot is the bot.
@@ -858,11 +881,13 @@ set xfer-timeout 30
 # changes from other bots should be ignored ?
 #set private-globals "mnot"
 
-# when sharing user lists, DONT ACCEPT kill user/change handle users from
-# other bots?
-# NOTE: you could desync your usefiles by defining this, it's only for the
-# seriously paranoid
+# when sharing user lists, DON'T ACCEPT any userfile changes from other
+# bots?
+# NOTE: paranoid people should use this feature on their hub bot - this
+# will force all +host/+user/chpass/etc. changes to be made via the hub
 #set private-user 0
+
+
 
 ##### FILESYSTEM MODULE #####
 
@@ -924,6 +949,10 @@ set allow-fwd 0
 # set this to 1 if you want the bot to let people know hourly if they
 # have any notes
 set notify-users 1
+
+# set this to 1 if you want the bot to let people know on join if they
+# have any notes
+set notify-onjoin 1
 
 # comment out this next line, otherwise your bot won't start
 die "You didn't edit your config file like you were told, did you?"
@@ -987,6 +1016,15 @@ set info-party 0
 # uncomment this line to load assoc support, i.e naming channels on
 # the botnet
 #loadmodule assoc
+
+
+
+##### WIRE MODULE #####
+
+# this module provides all the standard .wire commands via dcc.
+# it's an encrypted partyline communication tool, compatible with wire.tcl
+# uncomment this line to load it
+#loadmodule wire
 
 
 

@@ -234,7 +234,7 @@ static void cmd_mns_ban (struct userrec * u, int idx, char * par)
 	    return;
 	 }
 	 for (b = chan->channel.ban;b->ban[0];b=b->next) {
-	    if (!strcasecmp(b->ban, ban)) {
+	    if (!rfc_casecmp(b->ban, ban)) {
 	       add_mode(chan, '-', 'b', b->ban);
 	       dprintf(idx, "%s '%s' on %s.\n", 
 			IRC_REMOVEDBAN, b->ban, chan->name);
@@ -303,7 +303,7 @@ static void cmd_info (struct userrec * u, int idx, char * par)
       dprintf(idx, "Your info line is locked.  Sorry.\n");
       return;
    }
-   if (strcasecmp(par, "none") == 0) {
+   if (!strcasecmp(par, "none")) {
       if (chname) {
 	 par[0] = 0;
 	 set_handle_chaninfo(userlist, dcc[idx].nick, chname, par);
@@ -585,7 +585,7 @@ static void cmd_mns_chan (struct userrec * u, int idx, char * par)
    putlog(LOG_CMDS, "*", "#%s# -chan %s", dcc[idx].nick, chname);
    for (i = 0; i < dcc_total; i++)
      if ((dcc[i].type->flags & DCT_CHAT)
-	 && !strcasecmp(dcc[i].u.chat->con_chan, chname)) {
+         && !rfc_casecmp(dcc[i].u.chat->con_chan, chname)) { 
 	dprintf(i, "%s is no longer a valid channel, changing your console to '*'\n",
 		chname);
 	strcpy(dcc[i].u.chat->con_chan, "*");
@@ -655,8 +655,9 @@ static void cmd_chaninfo (struct userrec * u, int idx, char * par) {
 	      channel_autovoice(chan) ? '+' : '-',
 	      channel_cycle(chan) ? '+' : '-',
               (chan->status & CHAN_SEEN) ? '+' : '-');
-      dprintf(idx, "     %cdontkickops\n",
-              (chan->status & CHAN_DONTKICKOPS) ? '+' : '-');
+      dprintf(idx, "     %cdontkickops              %cwasoptest\n",
+              (chan->status & CHAN_DONTKICKOPS) ? '+' : '-',
+              (chan->status & CHAN_WASOPTEST) ? '+' : '-');
       dprintf(idx, "flood settings: chan ctcp join kick deop\n");
       dprintf(idx, "number:          %3d  %3d  %3d  %3d  %3d\n",
 	      chan->flood_pub_thr, chan->flood_ctcp_thr, chan->flood_join_thr,
@@ -699,7 +700,7 @@ static void cmd_chanset (struct userrec * u, int idx, char * par) {
 	 answers[0] = 0;
 	 while (list[0][0]) {
 	    if (list[0][0] == '+' || list[0][0] == '-' ||
-		(strcmp(list[0], "dont-idle-kick") == 0)) {
+                (!strcmp(list[0], "dont-idle-kick"))) {
                if (tcl_channel_modify(0, chan, 1, list) == TCL_OK) {
 		  strcat(answers, list[0]);
 		  strcat(answers, " ");

@@ -2,7 +2,7 @@ struct chanuserrec *get_chanrec (struct userrec * u, char * chname)
 {
    struct chanuserrec *ch = u->chanrec;
    while (ch != NULL) {
-      if (strcasecmp(ch->channel, chname) == 0)
+      if (!rfc_casecmp(ch->channel, chname))
 	 return ch;
       ch = ch->next;
    }
@@ -107,7 +107,7 @@ static void del_chanrec (struct userrec * u, char * chname)
    lst = NULL;
    ch = u->chanrec;
    while (ch) {
-      if (strcasecmp(chname, ch->channel) == 0) {
+      if (!rfc_casecmp(chname, ch->channel)) {
 	 if (lst == NULL)
 	    u->chanrec = ch->next;
 	 else
@@ -140,7 +140,7 @@ static void set_handle_laston (char * chan, struct userrec * u, time_t n)
 static int u_sticky_ban (struct banrec * u, char * uhost)
 {
    for (;u;u=u->next) 
-      if (!strcasecmp(u->banmask,uhost))
+      if (!rfc_casecmp(u->banmask,uhost))
 	 return (u->flags & BANREC_STICKY);
    return 0;
 }
@@ -157,7 +157,7 @@ static int u_setsticky_ban (struct chanset_t * chan, char * uhost, int sticky)
    for (;u;u=u->next) {
       if (j >= 0)
 	j--;
-      if (!j || ((j < 0) && !strcasecmp(u->banmask,uhost))) {
+      if (!j || ((j < 0) && !rfc_casecmp(u->banmask,uhost))) {
 	 if (sticky > 0)
 	   u->flags |= BANREC_STICKY;
 	 else if (!sticky)
@@ -183,7 +183,7 @@ static int u_setsticky_ban (struct chanset_t * chan, char * uhost, int sticky)
 static int u_equals_ban (struct banrec * u, char * uhost)
 {
    for (;u;u=u->next)
-     if (!strcasecmp(u->banmask, uhost)) {
+     if (!rfc_casecmp(u->banmask, uhost)) {
 	if (u->flags & BANREC_PERM)
 	  return 2;
 	else
@@ -217,7 +217,7 @@ static int u_delban (struct chanset_t * c, char * who, int doit)
    } else {
       /* find matching host, if there is one */
       for (;*u && !i;u=&((*u)->next)) 
-	if (!strcasecmp((*u)->banmask,who)) {
+	if (!rfc_casecmp((*u)->banmask,who)) {
 	   i = 1;
 	   break;
 	}
@@ -434,7 +434,7 @@ static void tell_bans (int idx, int show_inact, char * match)
 	    s1 = splitnick(&s2);
 	    if (s1[0])
 	       sprintf(fill, "%s (%s!%s)", b->ban, s1, s2);
-	    else if (strcasecmp(s, "existant") == 0)
+            else if (!strcasecmp(s, "existant"))
 	       sprintf(fill, "%s (%s)", b->ban, s2);
 	    else
 	       sprintf(fill, "%s (server %s)", b->ban, s2);

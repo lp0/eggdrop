@@ -75,7 +75,7 @@ static int num_notes (char * user)
      if ((s[0]) && (s[0] != '#') && (s[0] != ';')) {    /* not comment */
         s1 = s;
         to = newsplit(&s1);
-        if (strcasecmp(to, user) == 0)
+        if (!strcasecmp(to, user))
            tot++;
      }
       }
@@ -186,23 +186,37 @@ static int tcl_storenote STDVAR
    int idx;
    char u[20], *f1, *to = NULL, work[1024];
    struct userrec * ur;
+   struct userrec * ur2;
 
    BADARGS(5,5," from to msg idx");
 
    idx = findanyidx(atoi(argv[4]));
    ur = get_user_by_handle(userlist,argv[2]);
    if (ur && allow_fwd && (f1 = get_user(&USERENTRY_FWD,ur))) {
-      char fwd[161], *p, *q, *r;
+      char fwd[161], fwd2[161], *f2, *p, *q, *r;
       int ok = 1;
       /* user is valid & has a valid forwarding address */
       strcpy(fwd,f1); /* only 40 bytes are stored in the userfile */
       p = strchr(fwd, '@');
       if (p && !strcasecmp(p+1,botnetnick)) {
-     *p = 0;
-     if (!strcasecmp(fwd,argv[2])) /* they're forward to themselves on
+        *p = 0;
+        if (!strcasecmp(fwd,argv[2])) /* they're forward to themselves on
                     * the same bot, llama's */
-       ok = 0;
-     p = NULL;
+          ok = 0;
+	strcpy(fwd2,fwd);
+	splitc(fwd2,fwd2,'@');
+	ur2 = get_user_by_handle(userlist,fwd2); /* get the user record of the
+					 user that we're forwarding to locally */
+	if (!ur2)
+	  ok = 0;
+	if ( (f2 = get_user(&USERENTRY_FWD,ur2)) ) {
+	  strcpy(fwd2,f2);
+	  splitc(fwd2,fwd2,'@');
+	  if (!strcasecmp(fwd2,argv[2])) /* they're forwarding to someone who
+					forwards back to them! */
+	    ok = 0;
+	}
+        p = NULL;
       }
       if ((argv[1][0] != '@') && ((argv[3][0] == '<') || (argv[3][0] == '>')))
     ok = 0; /* probablly fake pre 1.3 hax0r */
@@ -365,7 +379,7 @@ static int tcl_erasenotes STDVAR
       if ((s[0]) && (s[0] != '#') & (s[0] != ';')) {        /* not comment */
     s1 = s;
     to = newsplit(&s1);
-    if (strcasecmp(to, argv[1]) == 0) {
+    if (!strcasecmp(to, argv[1])) {
       read++;
       if (!notes_in(nl, read)) {
         fprintf(g, "%s %s\n", to, s1);
@@ -456,7 +470,7 @@ static void notes_read (char * hand, char * nick, char * srd, int idx)
      if ((s[0]) && (s[0] != '#') & (s[0] != ';')) {     /* not comment */
         s1 = s;
         to = newsplit(&s1);
-        if (strcasecmp(to, hand) == 0) {
+        if (!strcasecmp(to, hand)) {
            int lapse;
            from = newsplit(&s1);
            dt= newsplit(&s1);
@@ -573,7 +587,7 @@ static void notes_del (char * hand, char * nick, char * sdl, int idx)
      if ((s[0]) && (s[0] != '#') && (s[0] != ';')) {    /* not comment */
         s1 = s;
         to = newsplit(&s1);
-        if (strcasecmp(to, hand) == 0) {
+        if (!strcasecmp(to, hand)) {
             if (!notes_in(dl, in))
             fprintf(g, "%s %s\n", to, s1);
         else
@@ -659,7 +673,7 @@ static int tcl_notes STDVAR
      if ((s[0]) && (s[0] != '#') & (s[0] != ';')) {     /* not comment */
         s1 = s;
         to = newsplit(&s1);
-        if (strcasecmp(to, argv[1]) == 0) {
+        if (!strcasecmp(to, argv[1])) {
            read++;
            if (notes_in(nl, read)) {
           count++;
@@ -693,15 +707,15 @@ static void cmd_notes (struct userrec * u, int idx, char * par)
       return;
    }
    fcn = newsplit(&par);
-   if (strcasecmp(fcn, "index") == 0)
+   if (!strcasecmp(fcn, "index"))
       notes_read(dcc[idx].nick, "", "+", idx);
-   else if (strcasecmp(fcn, "read") == 0) {
-      if (strcasecmp(par, "all") == 0)
+   else if (!strcasecmp(fcn, "read")) {
+      if (!strcasecmp(par, "all"))
      notes_read(dcc[idx].nick, "", "-", idx);
       else
      notes_read(dcc[idx].nick, "", par, idx);
-   } else if (strcasecmp(fcn, "erase") == 0) {
-      if (strcasecmp(par, "all") == 0)
+   } else if (!strcasecmp(fcn, "erase")) {
+      if (!strcasecmp(par, "all"))
      notes_del(dcc[idx].nick, "", "-", idx);
       else
      notes_del(dcc[idx].nick, "", par, idx);
@@ -772,19 +786,19 @@ static int msg_notes (char * nick, char * host, struct userrec * u, char * par)
      return 0;
    }
    fcn = newsplit(&par);
-   if (strcasecmp(fcn, "INDEX") == 0)
+   if (!strcasecmp(fcn, "INDEX"))
       notes_read(u->handle, nick, "+", -1);
-   else if (strcasecmp(fcn, "READ") == 0) {
-      if (strcasecmp(par, "ALL") == 0)
+   else if (!strcasecmp(fcn, "READ")) {
+      if (strcasecmp(par, "ALL"))
      notes_read(u->handle, nick, "-", -1);
       else
      notes_read(u->handle, nick, par, -1);
-   } else if (strcasecmp(fcn, "ERASE") == 0) {
-      if (strcasecmp(par, "ALL") == 0)
+   } else if (!strcasecmp(fcn, "ERASE")) {
+      if (!strcasecmp(par, "ALL"))
      notes_del(u->handle, nick, "-", -1);
       else
      notes_del(u->handle, nick, par, -1);
-   } else if (strcasecmp(fcn, "TO") == 0) {
+   } else if (!strcasecmp(fcn, "TO")) {
       char *to;
       int i;
       FILE *f;
@@ -805,7 +819,7 @@ static int msg_notes (char * nick, char * host, struct userrec * u, char * par)
      return 1;
       }
       for (i = 0; i < dcc_total; i++) {
-     if ((strcasecmp(dcc[i].nick, to) == 0) &&
+     if ((!strcasecmp(dcc[i].nick, to)) &&
          (dcc[i].type->flags & DCT_GETNOTES)) {
         int aok = 1;
         if (dcc[i].type->flags & DCT_CHAT)
@@ -864,7 +878,7 @@ static void notes_hourly() {
         k = num_notes(u->handle);
            for (l = 0; l < dcc_total; l++) {
           if ((dcc[l].type->flags & DCT_CHAT)
-              && (strcasecmp(dcc[l].nick, u->handle) == 0))
+              && (!strcasecmp(dcc[l].nick, u->handle)))
             k = 0;  /* they already know they have notes */
            }
            if (k) {
@@ -911,7 +925,7 @@ static void join_notes (char * nick, char * uhost, char * handle, char * par) {
 
    for (j = 0; j < dcc_total; j++)
      if ((dcc[j].type->flags & DCT_CHAT) &&
-     (strcasecmp(dcc[j].nick, handle) == 0))
+     (!strcasecmp(dcc[j].nick, handle)))
        i = 0;       /* they already know they have notes */
    if (i) {
       dprintf(DP_HELP, "NOTICE %s :You have %d note%s waiting on %s.\n",
@@ -1053,7 +1067,7 @@ char * notes_start (Function * global_funcs) {
    add_help_reference("notes.help");
    notes_server_setup(0);
    notes_irc_setup(0);
-   memcpy(&USERENTRY_FWD,&USERENTRY_INFO,sizeof(void *)*12);
+   my_memcpy(&USERENTRY_FWD,&USERENTRY_INFO,sizeof(void *)*12);
    add_entry_type ( &USERENTRY_FWD );
    context;
    return NULL;

@@ -109,7 +109,7 @@ static void add_assoc (char * name, int chan) {
 
    context;
    while (a != NULL) {
-      if ((name[0] != 0) && (strcasecmp(a->name, name) == 0)) {
+      if ((name[0] != 0) && (!strcasecmp(a->name, name))) {
 	 kill_assoc(a->channel);
 	 add_assoc(name, chan);
 	 return;
@@ -156,7 +156,7 @@ static int get_assoc (char * name) {
 
    context;
    while (a != NULL) {
-      if (strcasecmp(a->name, name) == 0)
+      if (!strcasecmp(a->name, name))
 	 return a->channel;
       a = a->next;
    }

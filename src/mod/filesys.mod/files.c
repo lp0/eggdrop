@@ -156,8 +156,8 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
       p++;
       strcpy(elem, new);
       strcpy(new, p);
-      if ((strcmp(elem, ".") == 0) || (!elem[0])) {	/* do nothing */
-      } else if (strcmp(elem, "..") == 0) {	/* go back */
+      if (!(strcmp(elem, ".")) || (!elem[0])) {     /* do nothing */
+      } else if (!strcmp(elem, "..")) {     /* go back */
 	 /* always allowed */
 	 p = strrchr(real, '/');
 	 if (p == NULL) {
@@ -756,7 +756,7 @@ static void cmd_desc (int idx, char * par)
       if (!(fdb.stat & FILE_HIDDEN)) {
 	 ok = 1;
 	 if ((!(dcc[idx].user->flags & USER_JANITOR)) &&
-	     (strcasecmp(fdb.uploader, dcc[idx].nick) != 0))
+             (strcasecmp(fdb.uploader, dcc[idx].nick)))
 	    dprintf(idx, FILES_NOTOWNER, fdb.filename);
 	 else {
 	    strcpy(fdb.desc, desc);
@@ -1001,8 +1001,8 @@ static void cmd_mv_cp (int idx, char * par, int copy)
    } else
       newfn[0] = 0;
    /* stupidness checks */
-   if ((strcmp(oldpath, newpath) == 0) &&
-       ((!newfn[0]) || (strcmp(newfn, fn) == 0))) {
+   if ((!strcmp(oldpath, newpath)) &&
+       ((!newfn[0]) || (!strcmp(newfn, fn)))) {
       dprintf(idx, FILES_STUPID, copy ? FILES_COPY : FILES_MOVE);
       return;
    }
@@ -1012,7 +1012,7 @@ static void cmd_mv_cp (int idx, char * par, int copy)
    else
       only_first = 0;
    f = filedb_open(oldpath,0);
-   if (strcmp(oldpath, newpath) == 0)
+   if (!strcmp(oldpath, newpath))
       g = NULL;
    else
       g = filedb_open(newpath,0);
@@ -1033,7 +1033,7 @@ static void cmd_mv_cp (int idx, char * par, int copy)
 		 oldpath[0] ? "/" : "", fdb.filename);
 	 sprintf(s1, "%s%s%s%s", dccdir, newpath, 
 		 newpath[0] ? "/" : "", newfn[0] ? newfn : fdb.filename);
-	 if (strcmp(s, s1) == 0) {
+         if (!strcmp(s, s1)) {
 	    dprintf(idx, "%s /%s%s%s %s\n", FILES_SKIPSTUPID,
 		      copy ? FILES_COPY : FILES_MOVE, newpath,
 		      newpath[0] ? "/" : "", newfn[0] ? newfn : fdb.filename);

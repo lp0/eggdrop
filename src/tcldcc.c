@@ -13,7 +13,6 @@
  */
 
 #include "main.h"
-#include "rfc1459.h"
 #include "tandem.h"
 
 extern Tcl_Interp *interp;
@@ -22,7 +21,6 @@ extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char botnetnick[];
 extern int backgrd;
-extern int noshare;
 extern party_t *party;
 extern int parties;
 extern int make_userfile;
@@ -57,6 +55,36 @@ static int tcl_putdcc STDVAR
       return TCL_ERROR;
    }
    dumplots(-i, "", argv[2]);
+
+   return TCL_OK;
+}
+
+
+/* function added by drummer@sophia.jpte.hu	*/
+/* allows tcl scripts to send out raw data	*/
+/* can be used for fast server write (idx=0)	*/
+/* usage: putdccraw <idx> <size> <rawdata>	*/
+/* example: putdccraw 6 13 "eggdrop rulz\n"	*/
+static int tcl_putdccraw STDVAR 
+{
+   int i, j, z;
+   
+   context;
+   BADARGS(4, 4, " idx size text");
+   z = atoi(argv[1]);
+   j = 0;
+   
+   for (i = 0; i < dcc_total; i++) {
+      if ((strcmp(dcc[i].nick,"(server)")==0) && (z == 0)) { j = dcc[i].sock; }
+      if (dcc[i].sock==z) { j = dcc[i].sock; }
+   }
+   
+   if (j == 0) {
+      Tcl_AppendResult(irp, "invalid idx", NULL);
+      return TCL_ERROR;
+      }
+   tputs(j, argv[3], atoi(argv[2]));
+
    return TCL_OK;
 }
 
@@ -107,7 +135,7 @@ static int tcl_hand2idx STDVAR
    context;
    BADARGS(2, 2, " nickname");
    for (i = 0; i < dcc_total; i++)
-      if ((rfc_casecmp(argv[1], dcc[i].nick) == 0) &&
+      if ((strcasecmp(argv[1], dcc[i].nick) == 0) &&
 	  (dcc[i].type->flags & DCT_SIMUL)) {
 	 simple_sprintf(s, "%d", dcc[i].sock);
 	 Tcl_AppendResult(irp, s, NULL);
@@ -557,7 +585,7 @@ static int tcl_dcclist STDVAR
    BADARGS(1, 2, " ?type?");
    for (i = 0; i < dcc_total; i++) {
       if ((argc == 1) || 
-	  (dcc[i].type && !rfc_casecmp(dcc[i].type->name,argv[1]))) {
+	  (dcc[i].type && !strcasecmp(dcc[i].type->name,argv[1]))) {
 	 sprintf(idxstr, "%ld", dcc[i].sock);
 	 if (dcc[i].type && dcc[i].type->display)
 	    dcc[i].type->display(i,other);
@@ -769,7 +797,7 @@ static int tcl_unlink STDVAR
        x = 0;
    else {
       x = 1;
-      if (rfc_casecmp(bot, dcc[i].nick) == 0)
+      if (strcasecmp(bot, dcc[i].nick) == 0)
 	 x = botunlink(-2, bot, argv[2]);
       else
 	 botnet_send_unlink(i,botnetnick,lastbot(bot),bot,argv[2]);
@@ -933,7 +961,7 @@ static int tcl_boot STDVAR
       char whonick[161];
        splitc(whonick, who, '@');
        whonick[161] = 0;
-      if (rfc_casecmp(who, botnetnick) == 0)
+      if (strcasecmp(who, botnetnick) == 0)
 	  strcpy(who, whonick);
       else if (remote_boots > 1) {
 	 i = nextbot(who);
@@ -945,7 +973,7 @@ static int tcl_boot STDVAR
       }
    }
    for (i = 0; i < dcc_total; i++)
-      if ((rfc_casecmp(dcc[i].nick, who) == 0) && !ok &&
+      if ((strcasecmp(dcc[i].nick, who) == 0) && !ok &&
 	  (dcc[i].type->flags & DCT_CANBOOT)) {
 	 do_boot(i, botnetnick, argv[2] ? argv[2] : "");
 	 ok = 1;
@@ -989,6 +1017,7 @@ static int tcl_restart STDVAR
 
 tcl_cmds tcldcc_cmds [] = {   
    { "putdcc", tcl_putdcc },
+   { "putdccraw", tcl_putdccraw },
    { "putidx", tcl_putdcc },
    { "dccsimul", tcl_dccsimul },
    { "dccbroadcast", tcl_dccbroadcast },

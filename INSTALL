@@ -39,7 +39,7 @@ This file is only for experienced users.
     3. Eggdrop must be installed in a directory somewhere.  This is
        accomplished by entering the unix command:
 		make install DEST=<directory>
- 		expample make instal DEST=~/Egg
+ 		example make install DEST=/home/egguser/eggdrop
 
 	[The following is performed from the directory installed above]
 

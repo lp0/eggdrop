@@ -48,6 +48,8 @@ static int ban_bogus = 0;
 static int kick_fun = 0;
 static int ban_fun = 0;
 static int allow_desync = 0;
+static int keepnick = 1; /* keepnick */
+static char altnick[NICKLEN]; /* dang it, we need this here too */
 
 #include "chan.c"
 #include "mode.c"
@@ -178,7 +180,7 @@ static void newban (struct chanset_t * chan, char * s, char * who)
 {
    banlist *b;
    b = chan->channel.ban;
-   while (b->ban[0] && strcasecmp(b->ban, s))
+   while (b->ban[0] && rfc_casecmp(b->ban, s))
       b = b->next;
    if (b->ban[0])
       return;			/* already existent ban */
@@ -200,7 +202,7 @@ static void newexempt (struct chanset_t * chan, char * s, char * who)
    exemptlist *e;
    context;
    e = chan->channel.exempt;
-   while (e->exempt[0] && strcasecmp(e->exempt, s))
+   while (e->exempt[0] && rfc_casecmp(e->exempt, s))
       e = e->next;
    if (e->exempt[0])
       return;			/* already existent exemption */
@@ -222,7 +224,7 @@ static void newinvite (struct chanset_t * chan, char * s, char * who)
    invitelist *inv;
    context;
    inv = chan->channel.invite;
-   while (inv->invite[0] && strcasecmp(inv->invite, s))
+   while (inv->invite[0] && rfc_casecmp(inv->invite, s))
       inv = inv->next;
    if (inv->invite[0])
       return;			/* already existent invitation */
@@ -244,7 +246,7 @@ static int killmember (struct chanset_t * chan, char * nick)
    memberlist *x, *old;
    x = chan->channel.member;
    old = NULL;
-   while (x->nick[0] && strcasecmp(x->nick, nick)) {
+   while (x->nick[0] && rfc_casecmp(x->nick, nick)) {
       old = x;
       x = x->next;
    }
@@ -712,8 +714,16 @@ static tcl_ints myints[] =
      {"net-type", &net_type, 0},
      {"strict-host", &strict_host, 0}, /* arthur2 */
      {"ctcp-mode", &ctcp_mode, 0}, /* arthur2 */
+     {"keep-nick", &keepnick, 0}, /* guppy */
      {0,0,0} /* arthur2 */
 };
+
+static tcl_strings mystrings[] =
+{
+     {"altnick", altnick, NICKMAX, 0},
+     {0, 0, 0, 0}
+};
+
 
 /* for EVERY channel */
 static void flush_modes()
@@ -748,7 +758,7 @@ static void irc_report (int idx, int details)
 	   p = MISC_PENDING;
 	 else if (!me_op(chan))
 	   p = MISC_WANTOPS;
-	 l = simple_sprintf(ch, "%s %s%s%s, ", chan->name, p ? "(":"",
+	 l = simple_sprintf(ch, "%s%s%s%s, ", chan->name, p ? "(":"",
 			    p?p:"", p ? ")":"");
 	 if ((k + l) > 70) {
 	    dprintf(idx,"   %s\n",q);
@@ -830,6 +840,7 @@ static char *irc_close()
    del_bind_table(H_pub);
    context;
    rem_tcl_ints(myints);
+   rem_tcl_strings(mystrings);
    rem_builtins(H_dcc,irc_dcc,18);
    rem_builtins(H_msg,C_msg,20);
    rem_builtins(H_raw,irc_raw,28);
@@ -908,6 +919,7 @@ char *irc_start (Function* global_funcs)
 		  traced_nettype, NULL);
    context;
    add_tcl_ints(myints);
+   add_tcl_strings(mystrings);
    add_builtins(H_dcc,irc_dcc,18);
    add_builtins(H_msg,C_msg,20);
    add_builtins(H_raw,irc_raw,28);

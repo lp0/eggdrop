@@ -11,7 +11,6 @@
  */
 #include "main.h"
 #include "users.h"
-#include "rfc1459.h"
 
 extern int noshare;
 extern struct userrec * userlist;
@@ -906,7 +905,7 @@ static int hosts_expmem (struct user_entry * e) {
 static void hosts_display (int idx, struct user_entry * e) {
    char s[1024];
    struct list_type * q;
-   
+
    s[0] = 0;
    strcpy(s, "  HOSTS: ");
    for (q = e->u.list;q;q=q->next) {
@@ -930,7 +929,7 @@ static void hosts_display (int idx, struct user_entry * e) {
 
 static int hosts_set (struct userrec * u, struct user_entry * e, void * buf) {
    context;
-   if (!buf || !rfc_casecmp(buf,"none")) {
+   if (!buf || !strcasecmp(buf,"none")) {
       contextnote("SEGV with sharing bug track"); 
       /* when the bot crashes, it's in this part, not in the 'else' part */
       contextnote((e->u.list) ? "e->u.list is valid" : "e->u.list is NULL!")
@@ -971,6 +970,7 @@ static int hosts_set (struct userrec * u, struct user_entry * e, void * buf) {
       (*t)->extra = user_malloc(strlen(host)+1);
       strcpy((*t)->extra,host);
    }
+   contextnote("please report this bug to eggheads@eggheads.org");
    return 1;
 }
 
@@ -991,7 +991,7 @@ static int hosts_tcl_set (Tcl_Interp * irp, struct userrec * u,
    if (argc == 4) 
      addhost_by_handle(u->handle,argv[3]);
    else {
-      while (e->u.list && rfc_casecmp(e->u.list->extra,"none"))
+      while (e->u.list && strcasecmp(e->u.list->extra,"none"))
 	delhost_by_handle(u->handle,e->u.list->extra);
    }
    return TCL_OK;
@@ -1079,7 +1079,7 @@ struct user_entry_type * find_entry_type ( char * name ) {
    struct user_entry_type * p;
    
    for (p = entry_type_list;p;p = p->next) {
-      if (!rfc_casecmp(name,p->name))
+      if (!strcasecmp(name,p->name))
 	return p;
    }
    return NULL;
@@ -1091,7 +1091,7 @@ struct user_entry * find_user_entry ( struct user_entry_type * et,
    
    for (e = &(u->entries);*e;e = &((*e)->next)) {
       if (((*e)->type == et) || 
-	  ((*e)->name && !rfc_casecmp((*e)->name,et->name))) {
+	  ((*e)->name && !strcasecmp((*e)->name,et->name))) {
 	 t = *e;
 	 *e = t->next;
 	 t->next = u->entries;

@@ -298,7 +298,7 @@ static void filedb_update (char * path, FILE * f, int sort) {
 	       fread(&fdb[1 - ret], sizeof(filedb), 1, f);
 	       if (!feof(f)) {
 		  if ((fdb[0].stat & FILE_UNUSED) ||
-		      (strcasecmp(fdb[ret].filename,fdb[1-ret].filename) < 0)) {
+                      (strcasecmp(fdb[ret].filename,fdb[1-ret].filename) < 0)) {
 		     /* our current is < the checked one, insert here */
 		     fseek(f, oldwhere, SEEK_SET);
 		     fwrite(&fdb[ret], sizeof(filedb), 1, f);

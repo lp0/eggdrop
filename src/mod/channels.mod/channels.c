@@ -18,6 +18,17 @@ static char chanfile [121] = "chanfile";
 static Function * global = NULL;
 static int chan_hack = 0;
 static int must_be_owner = 0;
+/* global flood settings */
+static int gfld_chan_thr;
+static int gfld_chan_time;
+static int gfld_deop_thr;
+static int gfld_deop_time;
+static int gfld_kick_thr;
+static int gfld_kick_time;
+static int gfld_join_thr;
+static int gfld_join_time;
+static int gfld_ctcp_thr;  
+static int gfld_ctcp_time;
 
 #include "cmdschan.c"
 #include "tclchan.c"
@@ -104,6 +115,8 @@ static void set_mode_protect (struct chanset_t * chan, char * set) {
 	 }
       }
    }
+   /* drummer: +s-p +p-s flood fixed. */
+   if (chan->mode_pls_prot && CHANSEC) chan->mode_pls_prot &= ~CHANPRIV;
    dprintf(DP_MODE,"MODE %s\n",chan->name);
 }
 
@@ -165,7 +178,7 @@ static int isbanned (struct chanset_t * chan, char * user)
    banlist *b;
    
    b = chan->channel.ban;
-   while (b->ban[0] && strcasecmp(b->ban, user))
+   while (b->ban[0] && rfc_casecmp(b->ban, user))
      b = b->next;
    if (!b->ban[0])
       return 0;
@@ -348,6 +361,8 @@ static void write_channels()
 	      channel_protectops(chan) ? '+' : '-');
       fprintf(f, "%cdontkickops ", 
 	      channel_dontkickops(chan) ? '+' : '-');
+      fprintf(f, "%cwasoptest ",
+              channel_wasoptest(chan) ? '+' : '-');
       fprintf(f, "%cstatuslog ", 
 	      channel_logstatus(chan) ? '+' : '-');
       fprintf(f, "%cstopnethack ", 
@@ -486,8 +501,8 @@ static void channels_report (int idx, int details) {
 		   chan->channel.members, chan->channel.members == 1 ? "," : "s,", s2, s);
 	 else {
            context;
-	   dprintf(idx, "    %-10s: (inactive), enforcing \"%s\"  (%s)\n",
-		   chan->name, s2, s);
+ 	   dprintf(idx, "    %-10s: (%s), enforcing \"%s\"  (%s)\n",
+ 		chan->name, channel_pending(chan) ? "pending" : "inactive", s2, s);
          }
 	 if (details) {
 	    s[0] = 0;
@@ -510,6 +525,8 @@ static void channels_report (int idx, int details) {
 	      i += my_strcpy(s + i, "protect-ops ");
             if (channel_dontkickops(chan))
               i += my_strcpy(s + i, "dont-kick-ops ");
+            if (channel_wasoptest(chan))
+              i += my_strcpy(s + i, "was-op-test ");
 	    if (channel_logstatus(chan))
 	      i += my_strcpy(s + i, "log-status ");
 	    if (channel_revenge(chan))
@@ -556,6 +573,8 @@ static int channels_expmem ()
 {
    int tot = 0;
    banlist *b;
+   exemptlist *e;
+   invitelist *inv;
    struct chanset_t *chan = chanset;
    
    context;
@@ -573,6 +592,22 @@ static int channels_expmem ()
 	 tot += sizeof(struct banstruct);
 	 b = b->next;
       }
+      e = chan->channel.exempt;
+      while (e != NULL) {
+         tot += strlen(e->exempt) + 1;
+         if (e->exempt[0])
+            tot += strlen(e->who) + 1;
+         tot += sizeof(struct exbanstruct);
+         e = e->next;
+      }
+      inv = chan->channel.invite;
+      while (inv != NULL) {
+         tot += strlen(inv->invite) + 1;
+         if (inv->invite[0])
+            tot += strlen(inv->who) + 1;
+         tot += sizeof(struct exinvitestruct);
+         inv = inv->next;
+      }
       chan = chan->next;
    }
    return tot;
@@ -588,6 +623,16 @@ static tcl_ints my_tcl_ints [] = {
 	 { 0, 0, 0 }
 };
 
+static tcl_coups mychan_tcl_coups [] = {
+   { "global-flood-chan", &gfld_chan_thr, &gfld_chan_time },
+   { "global-flood-deop", &gfld_deop_thr, &gfld_deop_time },
+   { "global-flood-kick", &gfld_kick_thr, &gfld_kick_time },
+   { "global-flood-join", &gfld_join_thr, &gfld_join_time },
+   { "global-flood-ctcp", &gfld_ctcp_thr, &gfld_ctcp_time },
+   { 0, 0, 0 }
+};
+
+
 static tcl_strings my_tcl_strings [] = {
      {"chanfile", chanfile, 120, STR_PROTECT},
      {0,0,0,0}
@@ -602,12 +647,13 @@ static char *channels_close()
    rem_tcl_commands(channels_cmds);
    rem_tcl_strings(my_tcl_strings);
    rem_tcl_ints(my_tcl_ints);
+   rem_tcl_coups(mychan_tcl_coups);
    del_hook(HOOK_USERFILE,channels_writeuserfile);
    del_hook(HOOK_REHASH,channels_rehash);
    del_hook(HOOK_PRE_REHASH,channels_prerehash);
    del_hook(HOOK_MINUTELY,check_expired_bans);
    rem_help_reference("channels.help");
-   rem_help_reference("chaninfo"); 
+   rem_help_reference("chaninfo.help"); 
    module_undepend(MODULE_NAME);
    return NULL;
 }
@@ -655,6 +701,16 @@ static Function channels_table[] =
 char *channels_start (Function * global_funcs)
 {
    global = global_funcs;
+   gfld_chan_thr = 10; 
+   gfld_chan_time = 60;
+   gfld_deop_thr = 3;
+   gfld_deop_time = 10;
+   gfld_kick_thr = 3;
+   gfld_kick_time = 10;   
+   gfld_join_thr = 5;
+   gfld_join_time = 60;
+   gfld_ctcp_thr = 5;
+   gfld_ctcp_time = 60;
    context;
    module_register(MODULE_NAME, channels_table, 1, 0);
    if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
@@ -668,10 +724,12 @@ char *channels_start (Function * global_funcs)
    add_tcl_commands(channels_cmds);
    add_tcl_strings(my_tcl_strings);
    add_help_reference("channels.help");
-   add_help_reference("chaninfo"); 
+   add_help_reference("chaninfo.help"); 
    my_tcl_ints[0].val = &share_greet;
    add_tcl_ints(my_tcl_ints);
+   add_tcl_coups(mychan_tcl_coups);  
    read_channels(0);
    setstatic = 1; 
    return NULL;
 }
+

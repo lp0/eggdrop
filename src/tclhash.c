@@ -31,11 +31,8 @@
 
 extern Tcl_Interp * interp;
 extern struct dcc_t * dcc;
-extern int require_p;
-extern struct chanset_t * chanset;
 extern struct userrec * userlist;
 extern int debug_tcl;
-extern int raw_binds;
 extern int dcc_total;
 extern time_t now;
 
@@ -77,7 +74,7 @@ int expmem_tclhash () {
 }
 
 
-extern cmd_t C_dcc[], C_dcc_irc[], C_fil[];
+extern cmd_t C_dcc[], C_dcc_irc[], C_fil[]; /* wtf ??? */
 static int tcl_bind();
 
 void init_bind () {

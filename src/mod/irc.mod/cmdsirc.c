@@ -504,7 +504,7 @@ static void cmd_channel (struct userrec * u, int idx, char * par)
 	 if (chan_issplit(m))
 	   dprintf(idx, "%c%s%s %s%s %s %c     <- netsplit, %lus\n", chanflag,
 		   m->nick, spaces, handle, spaces2, s, atrflag, now - (m->split));
-	 else if (strcmp(m->nick, botname) == 0)
+         else if (!rfc_casecmp(m->nick, botname))
 	   dprintf(idx, "%c%s%s %s%s %s %c     <- it's me!\n", chanflag, m->nick,
 		   spaces, handle, spaces2, s, atrflag);
 	 else {
@@ -612,25 +612,23 @@ static void cmd_adduser (struct userrec * u, int idx, char * par)
 {
    char *nick, *hand;
    struct chanset_t *chan;
-   memberlist *m;
+   memberlist *m = 0;
    char s[121], s1[121];
    int atr = u ? u->flags : 0;
+   int statichost = 0;
+   char * p1 = (char*) &s1;
    
    context;
-   if (!par[0]) {
+   if ((!par[0]) || ((par[0]=='!') && (!par[1]))) {
       dprintf(idx, "Usage: adduser <nick> [handle]\n");
       return;
    }
-   chan = findchan(dcc[idx].u.chat->con_chan);
-   if (!chan) {
-      dprintf(idx, "Your console channel is invalid.\n");
-      return;
-   }
-   if (!channel_active(chan)) {
-      dprintf(idx, "I'm not on %s!\n", chan->name);
-      return;
-   }
    nick = newsplit(&par);
+   /* patch that allow to create users with static host (drummer,20Apr99) */
+   if (nick[0] == '!') {
+      statichost = 1;
+      nick++;
+      }
    if (!par[0]) {
       hand = nick;
    } else {
@@ -649,13 +647,25 @@ static void cmd_adduser (struct userrec * u, int idx, char * par)
       }
       hand = par;
    }
-   m = ismember(chan, nick);
-   if (!m) {
-      dprintf(idx, "%s is not on %s.\n", nick, chan->name);
-      return;
-   }
-   if (strlen(hand) > 9)
-     hand[9] = 0;
+
+        context;
+   
+        chan = chanset;
+        while ((chan != NULL) && (m==NULL)) {
+                m = ismember(chan, nick);
+                chan=chan->next;
+        }
+ 
+        if (!m) {
+                dprintf(idx, "%s is not on any channels I monitor\n", nick);
+                return;
+        }       /* else
+                dprintf(idx,"I found %s on %s as %s\n", nick, chan->name, m->userhost);
+                */
+        
+        if (strlen(hand) > HANDLEN)
+                hand[HANDLEN] = 0;
+
    simple_sprintf(s, "%s!%s", m->nick, m->userhost);
    u = get_user_by_host(s);
    if (u) {
@@ -668,13 +678,20 @@ static void cmd_adduser (struct userrec * u, int idx, char * par)
       dprintf(idx, "You can't add hostmasks to the bot owner.\n");
       return;
    }
+   if (statichost==0)
    maskhost(s, s1);
+    else {
+      strcpy(s1,s);
+      p1 = strchr(s1,'!');
+      p1--;
+      p1[0] = '*';
+      }
    if (!u) {
-      dprintf(idx, "Added [%s]%s with no password.\n", hand, s1);
-      userlist = adduser(userlist, hand, s1, "-", default_flags);
+      dprintf(idx, "Added [%s]%s with no password.\n", hand, p1);
+      userlist = adduser(userlist, hand, p1, "-", default_flags);
    } else {
-      dprintf(idx, "Added hostmask %s to %s.\n", s1, u->handle);
-      addhost_by_handle(hand,s1);
+      dprintf(idx, "Added hostmask %s to %s.\n", p1, u->handle);
+      addhost_by_handle(hand,p1);
       get_user_flagrec(u,&user,chan->name);
       if (!(m->flags & CHANOP) &&
 	  (chan_op(user) || (glob_op(user) && !chan_deop(user)))
@@ -741,8 +758,8 @@ static void cmd_deluser (struct userrec * u, int idx, char * par)
       strncpy(buf, u->handle, HANDLEN);
       buf[HANDLEN] = 0;
       if (deluser(u->handle)) {
-	 dprintf(idx, "Deleted %s.\n", u->handle);
-	 putlog(LOG_CMDS, "*", "#%s# deluser %s [%s]", dcc[idx].nick, nick, u->handle);
+	 dprintf(idx, "Deleted %s.\n", buf); /* ?!?! :) */
+	 putlog(LOG_CMDS, "*", "#%s# deluser %s [%s]", dcc[idx].nick, nick, buf);
       } else {
 	 dprintf(idx, "Failed.\n");
       }

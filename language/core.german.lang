@@ -134,10 +134,11 @@ Baue eine Telnetverbindung zu dem Bot auf und gib 'NEW' als deinen Nickname.
 0x53d,verbundene Bots:
 0x53e,%B  (%E)\n\nBitte gib deinen Nickname ein:\n
 0x53f,Restarte Logdatei %s, ueber max. Groesse (%d)
+0x540,\nNicknamen.\n
 
 # IRC_
 
-0x600,gebannt!
+0x600,gebannt
 0x601,Du bist gebannt!
 0x602,Wollte mich selbst bannen -- umgeleitet.
 0x603,das hat Spaﬂ gemacht, machen wirs doch nochmal!
@@ -270,7 +271,7 @@ Baue eine Telnetverbindung zu dem Bot auf und gib 'NEW' als deinen Nickname.
 0x903,Massen-deop auf %s von %s
 0x904,Massen-deop.  Setz dich in eine Ecke.
 0x905,Falscher ban
-0x906,ist in meiner Banliste.  Du muﬂt im DCC Chat '-ban' benutzen, wenn Du willst daﬂ es funktioniert.
+0x906,ist in meiner Banliste.  Du muﬂt im DCC Chat '-ban' benutzen, wenn Du willst daﬂ es funktioniert.\n
 0x907,Oops.   Irgendjemand hat mich dazu veranlaﬂt %s zu betreten... verlasse diesen Channel...
 0x908,Modewechsel von falschem op auf %s!  Mache das wieder r¸ckg‰ngig...
 0x909,Miﬂbrauch von illegal erhaltenen Server-ops...

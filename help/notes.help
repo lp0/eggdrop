@@ -13,7 +13,7 @@
 see also: note, whom
 %{help=notes module}
 ###  help on the %bnotes modules%b
-   This module provides the means for storing & retreiving notes
+   This module provides the means for storing & retrieving notes
    at a later stage. 
    Commands:
       %bnotes%b%{+m}  %bfwd%b%{-}
@@ -21,7 +21,7 @@ see also: note, whom
 %{+n}
    Tcl variables:
       %bnote-life%b  %bmax-notes%b  %ballow-fwd%b  %bnotefile%b
-   (user %b'.help set <varibale>'%b for more info)
+   (use %b'.help set <variable>'%b for more info)
 %{help=fwd}%{+m}
 ###   %bfwd%b <handle> [desto]
    This allows you to set a note forwarding address for a user,

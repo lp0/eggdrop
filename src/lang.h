@@ -154,6 +154,7 @@
 #define MISC_BOTSCONNECTED get_language(0x53d)
 #define MISC_BANNER     get_language(0x53e)
 #define MISC_CLOGS      get_language(0x53f)
+#define MISC_BANNER_STEALTH get_language(0x540)
 
 /* IRC */
 #define IRC_BANNED	get_language(0x600)
@@ -278,7 +279,7 @@
 #define IRC_LEMMINGBOT          get_language(0x66b)
 #define IRC_PROTECT             get_language(0x66c)		
 #define IRC_COMMENTKICK         get_language(0x66d)
-
+#define IRC_GETALTNICK	get_language(0x66e)
 /* Eggdrop command line usage */
 
 #define EGG_USAGE	get_language(0x700)

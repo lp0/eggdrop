@@ -21,11 +21,8 @@
 #include <sys/utsname.h>
 #endif
 
-/* eggdrop always uses the same interpreter */
-extern Tcl_Interp *interp;
 extern tcl_timer_t *timer, *utimer;
 extern struct dcc_t * dcc;
-extern int dcc_total;
 extern char origbotname[];
 extern struct userrec * userlist;
 extern time_t now;

@@ -90,7 +90,7 @@ static void do_ban (struct chanset_t * chan, char * ban ) {
    banlist *b;
    
    for (b  = chan->channel.ban; b->ban[0]; b = b->next) 
-     if (wild_match(ban, b->ban) && strcasecmp(ban, b->ban)) 
+     if (wild_match(ban, b->ban) && rfc_casecmp(ban, b->ban)) 
        add_mode (chan, '-', 'b', b->ban);
    add_mode(chan, '+', 'b', ban);
    flush_mode(chan, QUICK);
@@ -122,19 +122,11 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
    case FLOOD_NOTICE:
       thr = chan->flood_pub_thr;
       lapse = chan->flood_pub_time;
-      if (!thr && !lapse) {
-	 thr = flud_thr;
-	 lapse = flud_time;
-      }
       strcpy(ftype, "pub");
       break;
     case FLOOD_CTCP:
       thr = chan->flood_ctcp_thr;
       lapse = chan->flood_ctcp_time;
-      if (!thr && !lapse) {
-	 thr = flud_ctcp_thr;
-	 lapse = flud_ctcp_time;
-      }
       strcpy(ftype, "pub");
       break;
    case FLOOD_JOIN:
@@ -157,7 +149,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
       strcpy(ftype,"kick");
       break;
    }
-   if (thr == 0)
+   if ((thr == 0) || (lapse == 0))
       return 0;			/* no flood protection */
    /* okay, make sure i'm not flood-checking myself */
    if (match_my_nick(floodnick))
@@ -175,7 +167,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
       if (!p)
 	return 0;
    }
-   if (strcasecmp(chan->floodwho[which], p)) {	/* new */
+   if (rfc_casecmp(chan->floodwho[which], p)) {  /* new */
       strncpy(chan->floodwho[which], p,81);
       chan->floodwho[which][81] = 0;
       chan->floodtime[which] = now;
@@ -191,7 +183,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
    /* deop'n the same person, sillyness ;) - so just ignore it */
    context;
    if (which == FLOOD_DEOP) {
-      if (!strcasecmp(chan->deopd,victim))
+      if (!rfc_casecmp(chan->deopd,victim))
 	return 0;
       else
 	strcpy(chan->deopd,victim);
@@ -562,7 +554,7 @@ static void recheck_channel (struct chanset_t * chan, int dobans) {
    } else if ((mns & CHANLIMIT) && (chan->channel.maxmembers >= 0))
 	add_mode(chan, '-', 'l', "");
    if (chan->key_prot[0]) {
-      if (strcasecmp(chan->channel.key, chan->key_prot) != 0) {
+      if (rfc_casecmp(chan->channel.key, chan->key_prot) != 0) {
 	 if (chan->channel.key[0]) {
 	    add_mode(chan, '-', 'k', chan->channel.key);
 	 }
@@ -1038,7 +1030,7 @@ static int gotinvite (char * from, char * msg)
    fixcolon(msg);
    nick = splitnick(&from);
 
-   if (!strcasecmp(last_invchan, msg)) {
+   if (!rfc_casecmp(last_invchan, msg)) {
     if (now - last_invtime < 30)
 	 return 0; /* two invites to the same channel in 30 seconds? */
    }
@@ -1185,7 +1177,7 @@ static int gotjoin (char * from, char * chname) {
 	 reset_chan_info(chan);
       } else {
 	 m = ismember(chan, nick);
-	 if (m && m->split && !strcasecmp(m->userhost,uhost)) {
+         if (m && m->split && !strcasecmp(m->userhost,uhost)) {
 	    check_tcl_rejn(nick, uhost, u, chan->name);
 	    m->split = 0;
 	    m->last = now;
@@ -1394,7 +1386,7 @@ static int gotkick (char * from, char * msg)
 	     /* wasnt *me* kicking them ? */
 	     && !match_my_nick(whodid)
 	     /* not kicking themselves? */
-	     && strcasecmp(whodid,nick) 
+             && rfc_casecmp(whodid,nick) 
 	     /* and Im opped ? */
              && me_op(chan))
 	   dprintf(DP_MODE, "KICK %s %s :%s\n", chname,
@@ -1441,7 +1433,7 @@ static int gotnick (char * from, char * msg)
       if (m) {
 	 putlog(LOG_JOIN, chan->name, "Nick change: %s -> %s", nick, msg);
 	 m->last = now;
-	 if (strcasecmp(nick, msg) != 0) {
+         if (rfc_casecmp(nick, msg)) {
 	    /* not just a capitalization change */
 	    mm = ismember(chan, msg);
 	    if (mm) {
@@ -1521,6 +1513,21 @@ static int gotquit (char * from, char * msg)
 	    check_lonely_channel(chan);
 	 }
       }
+   }
+   /* our nick quit? if so, grab it */
+   /* heck, our altnick quit maybe, maybe we want it */
+   if (keepnick) {
+    if (!rfc_casecmp(nick, origbotname)) {
+      putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
+      strcpy(newbotname, botname);   /* save, just in case */
+      strcpy(botname, origbotname);
+      dprintf(DP_MODE, "NICK %s\n", botname);
+    } else if (!rfc_casecmp(nick, altnick) && rfc_casecmp(botname, origbotname)) {
+      putlog(LOG_MISC, "*", IRC_GETALTNICK, altnick);
+      strcpy(newbotname, botname);   /* save, just in case */
+      strcpy(botname, altnick);
+      dprintf(DP_MODE, "NICK %s\n", botname);
+    }
    }
    return 0;
 }
@@ -1626,10 +1633,10 @@ static int gotmsg (char * from, char * msg)
       if (ctcp_mode != 2) {
          dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
       } else {
-         if (now - last_ctcp > global_flood_ctcp_time) {
+         if (now - last_ctcp > flud_ctcp_time) {
             dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
             count_ctcp = 1;
-         } else if (count_ctcp < global_flood_ctcp_thr) {
+         } else if (count_ctcp < flud_ctcp_thr) {
             dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
             count_ctcp++;
          }

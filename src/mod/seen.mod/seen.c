@@ -57,7 +57,6 @@
 #define MODULE_NAME "seen"
 
 #include <time.h>
-#include <varargs.h>
 
 #include "../module.h"
 #include "../../users.h"
@@ -363,7 +362,7 @@ TARGETCONT:
 context;
 /* Looking for ones own nick? */
 
-   if(!strcasecmp(nick, whotarget)) {
+   if(!rfc_casecmp(nick, whotarget)) {
       dprintf(idx, "%s%sLooking for yourself, eh %s?\n", 
                            prefix, whoredirect, nick);
       return;
@@ -478,7 +477,7 @@ context;
    for (i = 0; i < dcc_total; i++) {
       if(dcc[i].type->flags & DCT_CHAT) {
          if(!strcasecmp(whotarget, dcc[i].nick)) {
-            if (!strcasecmp(channel, dcc[i].u.chat->con_chan) &&
+            if (!rfc_casecmp(channel, dcc[i].u.chat->con_chan) &&
                         dcc[i].u.chat->con_flags & LOG_PUBLIC) {
                strcat(whoredirect, whotarget);
                strcat(whoredirect, 
@@ -502,7 +501,7 @@ context;
      cr = NULL;
    else
      for (cr = urec->chanrec;cr;cr = cr->next) {
-	if (!strcasecmp(cr->channel,channel)) {
+        if (!rfc_casecmp(cr->channel,channel)) {
 	   if (cr->laston) {
 	      laston = cr->laston;
 	      lastonplace = channel;

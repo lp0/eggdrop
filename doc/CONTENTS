@@ -20,10 +20,6 @@ eggdrop.doc
 man1/
    unix man pages, should you ever need them
 
-nets.list
-   a list of current active eggdrop bot networks ("botnets") that you
-   might want to join
-
 Ode_To_Beldin
    A tribute to the latest acheiver in eggdrop coding.
 

@@ -32,6 +32,7 @@
 	%bgreet%b        say a users info line when they join the channel
 	%bprotectops%b   re-op a +o user who gets deopped?
 	%bdontkickops%b  never kick +o flag people
+        %bwasoptest%b    does a wasop test for +stopnethacks
 	%bstatuslog%b    log the channel status every 5 minutes
 	%bstopnethack%b  de-op anyone who enters the channel with server
 	             ops

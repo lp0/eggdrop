@@ -39,7 +39,6 @@ debug: ${OBJS} ${XREQ}
 	@echo "Successful compile: eggdrop (debug version)"
 	@echo ""
 
-	
 botcmd.o: botcmd.c
 	@echo "(This will take a while. Go make a pizza or something.)"
 	${CC} ${CFLAGS} botcmd.c
@@ -65,9 +64,6 @@ dccutil.o: dccutil.c
 flags.o: flags.c
 	${CC} ${CFLAGS} flags.c
 
-hash.o: hash.c
-	${CC} ${CFLAGS} hash.c
-	
 language.o: language.c 
 	${CC} ${CFLAGS} language.c
 
@@ -88,7 +84,10 @@ modules.o: modules.c
 
 net.o: net.c
 	${CC} ${CFLAGS} net.c
-	
+
+rfc1459.o: rfc1459.c
+	${CC} ${CFLAGS} rfc1459.c
+
 tcl.o: tcl.c
 	${CC} ${CFLAGS} tcl.c
 	

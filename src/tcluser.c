@@ -13,7 +13,6 @@
  */
 
 #include "main.h"
-#include "rfc1459.h"
 #include "users.h"
 #include "chan.h"
 #include "tandem.h"
@@ -27,8 +26,6 @@ extern int dcc_total;
 extern char origbotname[];
 extern char botnetnick[];
 extern int ignore_time;
-extern int noshare;
-extern struct chanset_t * chanset;
 extern time_t now;
 
 /***********************************************************************/
@@ -350,7 +347,7 @@ static int tcl_chnick STDVAR {
 	x = 0;
       else if (get_user_by_handle(userlist,hand))
 	x = 0;
-      else if (!rfc_casecmp(origbotname, hand) || !rfc_casecmp(botnetnick, hand))
+      else if (!strcasecmp(origbotname, hand) || !strcasecmp(botnetnick, hand))
 	x = 0;
       else if (hand[0] == '*')
 	x = 0;

@@ -388,8 +388,8 @@ static int tcl_mv_cp (Tcl_Interp * irp, int argc, char ** argv, int copy)
    } else
       newfn[0] = 0;
    /* stupidness checks */
-   if ((strcmp(oldpath, newpath) == 0) &&
-       ((!newfn[0]) || (strcmp(newfn, fn) == 0))) {
+   if ((!strcmp(oldpath, newpath)) &&
+       ((!newfn[0]) || (!strcmp(newfn, fn)))) {
       Tcl_AppendResult(irp, "-3", NULL);	/* stoopid copy to self */
       return TCL_OK;
    }
@@ -420,7 +420,7 @@ static int tcl_mv_cp (Tcl_Interp * irp, int argc, char ** argv, int copy)
 		 oldpath[0] ? "/" : "", fdb.filename);
 	 sprintf(s1, "%s%s%s%s", dccdir, newpath,
 		 newpath[0] ? "/" : "", newfn[0] ? newfn : fdb.filename);
-	 if (strcmp(s, s1) == 0) {
+         if (!strcmp(s, s1)) {
 	    Tcl_AppendResult(irp, "-3", NULL);	/* stoopid copy to self */
 	    skip_this = 1;
 	 }

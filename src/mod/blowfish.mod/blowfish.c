@@ -150,7 +150,7 @@ static void blowfish_init (UBYTE_08bits * key, short keybytes)
    for (i = 0; i < BOXES; i++)
       if (box[i].P != NULL) {
 	 if ((box[i].keybytes == keybytes) &&
-	 (strncmp((char *) (box[i].key), (char *) key, keybytes) == 0)) {
+         (!strncmp((char *) (box[i].key), (char *) key, keybytes))) {
 	    /* match! */
 	    box[i].lastuse = now;
 	    bf_P = box[i].P;
@@ -367,7 +367,7 @@ static int tcl_encrypt STDVAR
        Tcl_AppendResult(irp, p, NULL);
        nfree(p);
        } else {
-       Tcl_AppendResult(irp, "", NULL);
+       Tcl_AppendResult(irp, argv[2], NULL);
        }
     return TCL_OK;
 }
@@ -376,16 +376,35 @@ static int tcl_decrypt STDVAR
 {
    char *p;
     BADARGS(3, 3, " key string");
+    if (strlen(argv[1])>0) {
     p = decrypt_string(argv[1], argv[2]);
     Tcl_AppendResult(irp, p, NULL);
     nfree(p);
+	} else {
+       Tcl_AppendResult(irp, argv[2], NULL);
+       }
     return TCL_OK;
 }
+
+static int tcl_encpass STDVAR
+{
+   char p[512];
+    BADARGS(2, 2, " string");
+    if (strlen(argv[1])>0) {
+       blowfish_encrypt_pass(argv[1], p);
+       Tcl_AppendResult(irp, p, NULL);
+       } else {
+       Tcl_AppendResult(irp, "", NULL);
+       }
+    return TCL_OK;
+}
+
 
 static tcl_cmds mytcls[] =
 {
    {"encrypt", tcl_encrypt},
    {"decrypt", tcl_decrypt},
+   {"encpass", tcl_encpass},
    {0, 0}
 };
 

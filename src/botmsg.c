@@ -14,8 +14,6 @@
 
 #include "main.h"
 #include "tandem.h"
-#include "rfc1459.h"
-#include <varargs.h>
 
 extern struct dcc_t * dcc;
 extern int dcc_total,tands;
@@ -28,15 +26,14 @@ static char OBUF[1024];
 
 #ifndef NO_OLD_BOTNET
 /* ditto for tandem bots */
-void tandout_but(va_alist)
-va_dcl
+void tandout_but VARARGS_DEF(int, arg1)
 {
    int i, x, l;
-   va_list va;
    char *format;
    char s[601];
-   va_start(va);
-   x = va_arg(va, int);
+
+   va_list va;
+   x = VARARGS_START(int, arg1, va);
    format = va_arg(va, char *);
 #ifdef HAVE_VSNPRINTF
    if ((l = vsnprintf(s, 511, format, va)) < 0) 
@@ -96,15 +93,13 @@ char * int_to_base10 (unsigned int val) {
    return buf_base10+i;
 }
 
-int simple_sprintf (va_alist)
-va_dcl
+int simple_sprintf VARARGS_DEF(char *,arg1)
 {
    char *buf, *format, *s;
    int c = 0,i;
    
    va_list va;
-   va_start(va);
-   buf = va_arg(va, char *);
+   buf = VARARGS_START(char *, arg1, va);
    format = va_arg(va, char *);
    while (*format && (c<1023)) {
       if (*format == '%') {
@@ -234,16 +229,14 @@ void botnet_send_pong (int idx) {
      tputs(dcc[idx].sock,"po\n",3);
 }
 
-void botnet_send_priv (va_alist)
-va_dcl
+void botnet_send_priv VARARGS_DEF(int, arg1)
 {
    int idx, l;
    char * from, * to, * tobot, * format;
    char tbuf[1024];
    
    va_list va;
-   va_start(va);
-   idx = va_arg(va, int);
+   idx = VARARGS_START(int, arg1, va);
    from = va_arg(va, char *);
    to = va_arg(va, char *);
    tobot = va_arg(va, char *);
@@ -702,9 +695,9 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
       x[20] = 0;
       *p = '@';
       p++;
-      if (rfc_casecmp(p, botnetnick) == 0)	/* to me?? */
+      if (!strcasecmp(p, botnetnick))	/* to me?? */
 	return add_note(x, from, msg, idx, echo);	/* start over, dimwit. */
-      if (rfc_casecmp(from, botnetnick)) {
+      if (strcasecmp(from, botnetnick)) {
 	 if (strlen(from) > 40)
 	   from[40] = 0;
 	 if (strchr(from,'@')) {
@@ -761,7 +754,7 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
    for (i = 0; i < dcc_total; i++) {
       if ((dcc[i].type->flags & DCT_GETNOTES) &&
 	  ((sock == (-1)) || (sock == dcc[i].sock)) &&
-	  (rfc_casecmp(dcc[i].nick, to) == 0)) {
+	  (!strcasecmp(dcc[i].nick, to))) {
 	 int aok = 1;
 	 if (dcc[i].type == &DCC_CHAT)
 	   if ((dcc[i].u.chat->away != NULL) &&
@@ -787,7 +780,7 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
 	       else if (*from == '@')
 		 fr = p + 1;
 	    }  
-	    if ((idx == (-2)) || (rfc_casecmp(from, botnetnick) == 0))
+	    if ((idx == (-2)) || (!strcasecmp(from, botnetnick)))
 	      dprintf(i, "*** [%s] %s%s\n", fr, l ? work : "", msg);
 	    else
 	      dprintf(i, "%cNote [%s]: %s%s\n", 7, fr, l ? work : "", msg);

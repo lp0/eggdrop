@@ -16,7 +16,6 @@
 
 #include "main.h"
 #include <ctype.h>
-#include "rfc1459.h"
 #include <errno.h>
 #include "modules.h"
 #include "tandem.h"
@@ -39,6 +38,8 @@ char tempdir[121] = "";
 int require_p = 0;
 /* allow people to introduce themselves via telnet */
 int allow_new_telnets = 0;
+/*	Display telnet banner? <cybah>	*/
+int stealth_telnets = 1;
 /* name of the IRC network you're on */
 char network[41] = "unknown-net";
 /* time to wait for a password from a user */
@@ -53,6 +54,8 @@ int protect_telnet = 1;
 int flood_telnet_thr = 5;
 /* in how many seconds? */
 int flood_telnet_time = 60;
+/* valid portrange for telnets */
+extern int min_dcc_port, max_dcc_port;
 
 static void strip_telnet (int sock, char * buf, int * len)
 {
@@ -265,23 +268,23 @@ static void dcc_bot_new (int idx, char * buf,int x)
    
    strip_telnet(dcc[idx].sock, buf, &x);
    code = newsplit(&buf);
-   if (strcasecmp(code, "*hello!") == 0) {
+   if (!strcasecmp(code, "*hello!")) {
       greet_new_bot(idx);
    } else if (
 	      !strcasecmp(code, "version") ||
 	      !strcasecmp(code, "v")) {
       bot_version(idx, buf);
-   } else if (strcasecmp(code, "badpass") == 0) {
+   } else if (!strcasecmp(code, "badpass")) {
       /* we entered the wrong password */
       putlog(LOG_BOTS, "*", "Bad password on connect attempt to %s.",
 	     dcc[idx].nick);
-   } else if (strcasecmp(code, "passreq") == 0) {
+   } else if (strcasecmp(code, "passreq")) {
       if (u_pass_match(u,"-")) {
 	 putlog(LOG_BOTS, "*", "Password required for connection to %s.",
 		dcc[idx].nick);
 	 dprintf(idx, "-\n");
       }
-   } else if (strcasecmp(code, "error") == 0) {
+   } else if (!strcasecmp(code, "error")) {
       putlog(LOG_BOTS, "*", "ERROR linking %s: %s", dcc[idx].nick, buf);
    }
    /* ignore otherwise */
@@ -353,7 +356,7 @@ static void dcc_bot (int idx, char * code,int i) {
    f = 0;
    i = 0;
    while ((C_bot[i].name != NULL) && (!f)) {
-      int y = rfc_casecmp(code, C_bot[i].name);
+      int y = strcasecmp(code, C_bot[i].name);
       
       if (y == 0) {
 	 /* found a match */
@@ -697,8 +700,6 @@ static int check_ansi (char * v)
 
 static void eof_dcc_chat (int idx) {
    context;
-   dcc[idx].u.chat->con_flags = 0;
-   context;
    putlog(LOG_MISC, "*", "Lost dcc connection to %s (%s/%d)", dcc[idx].nick,
 	  dcc[idx].host, dcc[idx].port);
    context;
@@ -801,7 +802,7 @@ static void dcc_chat (int idx, char * buf,int i)
                   dprintf(idx, "Returning to real nick %s!\r\n", dcc[idx].u.chat->su_nick);
                   nfree(dcc[idx].u.chat->su_nick);
                   dcc[idx].u.chat->su_nick = NULL;
-				  chanout_but(-1, dcc[idx].u.chat->channel, "*** %s has rejoined the party line.\n", dcc[idx].nick);
+		  /* chanout_but(-1, dcc[idx].u.chat->channel, "*** %s has rejoined the party line.\n", dcc[idx].nick); */
                   dcc_chatter(idx);
                   return;
                } 
@@ -965,12 +966,19 @@ static void dcc_telnet (int idx, char * buf,int i)
       <bindle> [09:37] Lost connection while identing [168.246.255.191/0]
     */
    context;
-   if (port < 1024) {
+   /* use dcc-portrange x:x on incoming telnets to ,dw */
+   if ((port < min_dcc_port) || (port > max_dcc_port)) {
    putlog(LOG_BOTS, "*", "Refused %s/%d (bad src port)", s, port);
       killsock(sock);
       return;
    }
    context;
+   /* deny ips that ends with 0 or 255, dw */
+   if ((ip & 0xff) == 0 || (ip & 0xff) == 0xff) {
+   putlog(LOG_BOTS, "*", "Refused %s/%d (invalid ip)", s, port);
+      killsock(sock);
+      return;
+   }
    if (dcc[idx].host[0] == '@') {
       /* restrict by hostname */
       if (!wild_match(dcc[idx].host+1, s)) {
@@ -1086,7 +1094,7 @@ static void dcc_telnet_id (int idx, char * buf,int atr)
       return;
    }
    dcc[idx].status &= ~(STAT_BOTONLY | STAT_USRONLY);
-   if ((strcasecmp(buf, "NEW") == 0) && 
+   if ((!strcasecmp(buf, "NEW")) && 
        ((allow_new_telnets) || (make_userfile))) {
       dcc[idx].type = &DCC_TELNET_NEW;
       dcc[idx].timeval = now;
@@ -1237,7 +1245,7 @@ static void dcc_telnet_new (int idx, char * buf, int x)
       dprintf(idx, "\nSorry, that nickname is taken already.\n");
       dprintf(idx, "Try another one please:\n");
       return;
-   } else if (!rfc_casecmp(buf, origbotname) || !rfc_casecmp(buf, botnetnick)) {
+   } else if (!strcasecmp(buf, origbotname) || !strcasecmp(buf, botnetnick)) {
       dprintf(idx, "Sorry, can't use my name for a nick.\n");
    } else {
       if (make_userfile)
@@ -1719,8 +1727,15 @@ void dcc_telnet_got_ident(int i, char * host) {
    dcc[i].nick[HANDLEN] = 0;
    dcc[i].timeval = now;
    strcpy(dcc[i].u.chat->con_chan, chanset?chanset->name:"*");
-   dprintf(i, "\r\n\r\n");
-   sub_lang(i, MISC_BANNER);
-   if (allow_new_telnets)
-      dprintf(i, "(If you are new, enter 'NEW' here.)\r\n");
+        /*        This is so we dont tell someone doing a portscan anything
+                about ourselves. <cybah>
+        */
+        if(stealth_telnets) {
+                sub_lang(i, MISC_BANNER_STEALTH);
+        } else {
+                dprintf(i, "\r\n\r\n");
+                sub_lang(i, MISC_BANNER);
+        }
+        if (allow_new_telnets)
+                dprintf(i, "(If you are new, enter 'NEW' here.)\r\n");
 }

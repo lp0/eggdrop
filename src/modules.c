@@ -58,11 +58,10 @@ extern int reserved_port, noshare, dcc_total, egg_numver, use_silence;
 extern int use_console_r, ignore_time, debug_output, gban_total, make_userfile;
 extern int default_flags, require_p, max_dcc, share_greet, password_timeout;
 extern int min_dcc_port, max_dcc_port; /* dw */
-extern int global_flood_ctcp_thr, global_flood_ctcp_time; /* arthur2 */
 extern int do_restart;
 extern time_t now, online_since;
 extern struct chanset_t * chanset;
-int cmd_die(), xtra_kill(), xtra_unpack();
+int cmd_die(), xtra_kill(), xtra_unpack(); /* wtf ??? */
 static int module_rename (char * name, char * newname);
 
 #ifndef STATIC
@@ -420,8 +419,8 @@ Function global_table [] =
      /* 216 - 219 */
      (Function) &min_dcc_port, /* dw */
      (Function) &max_dcc_port,
-     (Function) &global_flood_ctcp_thr, /* arthur2 */
-     (Function) &global_flood_ctcp_time, /* arthur2 */
+     (Function) rfc_casecmp,
+     (Function) rfc_ncasecmp,
 };
 
 void init_modules(void)
@@ -523,6 +522,7 @@ const char *module_load (char * name)
    if (module_find(name, 0, 0) != NULL)
       return MOD_ALREADYLOAD;
 #ifndef STATIC
+   context;
    if (moddir[0] != '/') {
       if (getcwd(workbuf, 1024) == NULL)
 	return MOD_BADCWD;
@@ -531,6 +531,7 @@ const char *module_load (char * name)
      sprintf(workbuf,"%s%s.so",moddir,name);
 #ifdef HPUX_HACKS
    hand = shl_load(workbuf, BIND_IMMEDIATE, 0L);
+   context;
    if (!hand)
      return "Can't load module.";
 #else
@@ -539,6 +540,7 @@ const char *module_load (char * name)
    if (hand == LDR_NULL_MODULE)
      return "Can't load module.";
 #else
+   context;
    hand = dlopen(workbuf, DLFLAGS);
    if (!hand)
       return dlerror(); 
@@ -547,6 +549,7 @@ const char *module_load (char * name)
      
    sprintf(workbuf, "%s_start", name);
 #ifdef HPUX_HACKS
+   context;
    if (shl_findsym(&hand, workbuf, (short) TYPE_PROCEDURE, (void *)&f))
      f = NULL;
 #else
@@ -582,6 +585,7 @@ const char *module_load (char * name)
    }
 #else
    for (sl = static_modules;sl && strcasecmp(sl->name,name);sl = sl->next);
+   context;
    if (!sl) 
      return "Unkown module.";
    f =(Function) sl->func;
@@ -591,6 +595,7 @@ const char *module_load (char * name)
       return "Malloc error";
    p->name = nmalloc(strlen(name) + 1);
    strcpy(p->name, name);
+   context;
    p->major = 0;
    p->minor = 0;
 #ifndef STATIC
@@ -600,6 +605,7 @@ const char *module_load (char * name)
    p->next = module_list;
    module_list = p;
    e =  (((char *(*)())f)(global_table));
+   context;
    if (e) {
       module_list = module_list->next;
       nfree(p->name);
@@ -619,7 +625,7 @@ char *module_unload (char * name,char * user)
    Function *f;
    context;
    while (p) {
-      if ((p->name != NULL) && (strcmp(name, p->name) == 0)) {
+      if ((p->name != NULL) && (!strcmp(name, p->name))) {
 	 dependancy *d = dependancy_list;
 	 
 	 while (d!=NULL) {

@@ -180,6 +180,13 @@ case $system in
     SHLIB_LD="ld -b"
     need_dl=0;
     ;;
+  IRIX64)
+    echo "$ac_t""you are cursed with IRIX" 1>&6
+    IRIX=yes 
+    STRIP=   
+    need_dl=0
+    DEFAULT_MAKE=static
+    ;;
   IRIX)
     AC_MSG_RESULT(you are cursed with IRIX)
     IRIX=yes
@@ -229,7 +236,7 @@ AC_CHECK_SIZEOF(int)
 dnl Checks for header files.
 AC_HEADER_DIRENT
 AC_HEADER_SYS_WAIT
-AC_CHECK_HEADERS(sys/time.h sys/select.h sys/rusage.h unistd.h dlfcn.h)
+AC_CHECK_HEADERS(sys/time.h sys/select.h sys/rusage.h unistd.h stdarg.h dlfcn.h)
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
@@ -514,5 +521,10 @@ make clean
 
 echo ""
 echo "Configure is done."
+echo ""
+echo "If your bot will be on Dalnet, or a network that uses their server"
+echo "code, please edit the Makefile and remove \"-DRFC_COMPLIANT\" from"
+echo "the \"CFLAGS=\" line."
+echo ""
 echo "Type 'make' to create the bot"
 echo ""

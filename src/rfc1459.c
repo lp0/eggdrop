@@ -18,10 +18,11 @@
  * --+ Dagmar
  *
  * =================================================================== */
-
-
-
 #include "rfc1459.h"
+#include <string.h>
+
+#ifdef RFC_COMPLIANT
+
 
 int rfc_casecmp(char *s1,char *s2)
 {
@@ -121,3 +122,12 @@ unsigned char rfc_touppertab[] =
                   0xea, 0xeb, 0xec, 0xed, 0xee, 0xef,
                   0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7, 0xf8, 0xf9,
                   0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff };
+
+#else 
+int rfc_casecmp(char *s1,char *s2) {
+  return strcasecmp(s1,s2);
+}
+int rfc_ncasecmp(char *s1,char *s2,int n) {
+  return strncasecmp(s1,s2,n);
+}
+#endif

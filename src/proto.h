@@ -74,7 +74,8 @@ int getparty (char *, int);
 
 /* botmsg.c */
 int add_note (char *,char *,char *,int,int);
-int simple_sprintf();
+int simple_sprintf VARARGS(char *, arg1);
+void tandout_but VARARGS(int, arg1);
 char * int_to_base10(unsigned int);
 char * int_to_base64(unsigned int);
 
@@ -107,11 +108,11 @@ char * stripmasktype (int);
 void failed_link (int);
 
 /* dccutil.c */
-void dprintf();
-void chatout();
+void dprintf VARARGS(int, arg1);
+void chatout VARARGS(char *, arg1);
 extern void (*shareout)();
 extern void (*sharein)(int, char *);
-void chanout_but();
+void chanout_but VARARGS(int, arg1);
 void dcc_chatter (int);
 void lostdcc (int);
 void makepass (char *);
@@ -154,7 +155,7 @@ void debug_mem_to_dcc (int);
 
 /* misc.c */
 int my_strcpy(char *, char *);
-void putlog();
+void putlog VARARGS(int, arg1);
 void flushlogs();
 void check_logsize();
 void maskhost (char *, char *);
@@ -242,4 +243,10 @@ void tell_file_stats (int, char *);
 void tell_user_ident (int,char *,int);
 void tell_users_match (int,char *,int,int,int,char *);
 int readuserfile (char *,struct userrec **);
+
+/* rfc1459.c */
+int rfc_casecmp (char *, char *);
+int rfc_ncasecmp (char *, char *, int);
+
 #endif
+

@@ -123,7 +123,7 @@ static void flush_mode (struct chanset_t * chan, int pri) {
    *p = 0;
    for (i = 0; i < modesperline; i++)
       chan->cmode[i].type = 0;
-   if (post[strlen(post) - 1] == ' ')
+   if (post[0] && post[strlen(post) - 1] == ' ')
       post[strlen(post) - 1] = 0;
    if (post[0]) {
       strcat(out, " ");
@@ -193,7 +193,7 @@ static void real_add_mode (struct chanset_t * chan,
       /* op-type mode change */
       for (i = 0; i < modesperline; i++)
 	 if ((chan->cmode[i].type == type) && (chan->cmode[i].op != NULL) &&
-	     (strcasecmp(chan->cmode[i].op, op) == 0))
+             (!rfc_casecmp(chan->cmode[i].op, op)))
 	    return;		/* already in there :- duplicate */
       ok = 0;			/* add mode to buffer */
       l = strlen(op) + 1;
@@ -330,22 +330,23 @@ static void got_op (struct chanset_t * chan, char * nick, char * from,
       add_mode(chan, '-', 'o', who);
       m->flags |= SENTDEOP;
    }
-   if (chan_wasoptest(victim) || glob_wasoptest(victim)) { /* 1.3.21 behavior: wasop test needed for stopnethack */
-   if (!nick[0] && !chan_wasop(m) && !chan_sentdeop(m) &&
-       me_op(chan) && channel_stopnethack(chan)) {
-      add_mode(chan, '-', 'o', who);
-      m->flags |= (FAKEOP | SENTDEOP);
+   if (chan_wasoptest(victim) || glob_wasoptest(victim) || channel_wasoptest(chan)) {
+   /* 1.3.21 behavior: wasop test needed for stopnethack */
+      if (!nick[0] && !chan_wasop(m) && !chan_sentdeop(m) &&
+         me_op(chan) && channel_stopnethack(chan)) {
+         add_mode(chan, '-', 'o', who);
+         m->flags |= (FAKEOP | SENTDEOP);
       } else {
-     m->flags &= ~FAKEOP;
+        m->flags &= ~FAKEOP;
       }
    } else { /* 1.3.20 behavior: wasop test unwanted for stopnethack */
       if (!nick[0] && !(chan_op(victim) || (glob_op(victim) &&
-                                            !chan_deop(victim))) &&
-          !chan_sentdeop(m) && me_op(chan) && channel_stopnethack(chan)) {
-          add_mode(chan, '-', 'o', who);
-          m->flags |= (FAKEOP | SENTDEOP);
+         !chan_deop(victim))) &&
+         !chan_sentdeop(m) && me_op(chan) && channel_stopnethack(chan)) {
+         add_mode(chan, '-', 'o', who);
+         m->flags |= (FAKEOP | SENTDEOP);
       } else {
-          m->flags &= ~FAKEOP;
+         m->flags &= ~FAKEOP;
       }
    }   
    m->flags |= CHANOP;
@@ -381,7 +382,7 @@ static void got_deop (struct chanset_t * chan, char * nick, char * from,
       else if (chan_op(victim) || chan_friend(victim))
 	ok = 0;
       if (!ok && !match_my_nick(nick) &&
-	  strcasecmp(who, nick) && chan_hasop(m) &&
+          rfc_casecmp(who, nick) && chan_hasop(m) &&
 	  !match_my_nick(who)) {	/* added 25mar1996, robey */
 	 /* reop? */
 	 /* let's break it down home boy...*/
@@ -582,7 +583,7 @@ static void got_unban (struct chanset_t * chan, char * nick, char * from,
    
    b = chan->channel.ban;
    old = NULL;
-   while (b->ban[0] && strcasecmp(b->ban, who)) {
+   while (b->ban[0] && rfc_casecmp(b->ban, who)) {
       old = b;
       b = b->next;
    }
@@ -695,7 +696,7 @@ static void got_unexempt (struct chanset_t * chan, char * nick, char * from,
     context;
     e = chan->channel.exempt;
     old = NULL;
-    while (e->exempt[0] && strcasecmp(e->exempt, who)) {
+    while (e->exempt[0] && rfc_casecmp(e->exempt, who)) {
         old = e;
         e = e->next;
     }
@@ -771,7 +772,7 @@ static void got_uninvite (struct chanset_t * chan, char * nick, char * from,
 
     inv = chan->channel.invite;
     old = NULL;
-    while (inv->invite[0] && strcasecmp(inv->invite, who)) {
+    while (inv->invite[0] && rfc_casecmp(inv->invite, who)) {
         old = inv;
         inv = inv->next;
     }

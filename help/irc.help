@@ -1,5 +1,5 @@
 %{help=adduser}%{+m|m}
-###  %badduser%b <nickname> [handle]
+###  %badduser%b [!]<nickname> [handle]
    Creates a new user record for a user on the channel, using their
    current hostname.  It's similar to a user msg'ing the bot 'hello'
    except that no information is sent to that user.  If the bot
@@ -11,6 +11,9 @@
    If the user is using a different nickname than the bot normally
    knows her by, you can specify her "handle" (the nickname that the
    bot remembers).
+
+   If you want to add a user using a static hostmask, prefix their nick
+   with a '!'. ie .adduser !Lamer
    
 see also: +host, -host, +user, -user
 %{help=deluser}%{+m|m}
