@@ -276,38 +276,18 @@ static void got_op (struct chanset_t * chan, char * nick, char * from,
 	   add_mode(chan, '-', 'o', who);
 	   m->flags |= SENTDEOP;
 	}
-   } else if (reversing && !chan_sentdeop(m) &&
-	      !match_my_nick(who)) {
+   } else if (reversing && !chan_sentdeop(m) && !match_my_nick(who)) {
       add_mode(chan, '-', 'o', who);
       m->flags |= SENTDEOP;
    }
-   if (nick[0] == 0) {		/* server op! */
-      int ok = 0;
-	/* oppee is a global or channel master */
-      if (glob_master(victim) || chan_master(victim))
-	 ok = 1;
-	/* oppee is not channel +d */
-      else if (!chan_deop(victim)) {
-	 /* oppee is not global +d and is a friend or global op */
-	 if (!glob_deop(victim) &&
-	     (glob_friend(victim) || glob_op(victim)
-	      /* or oppee is a channel friend or a channel op */
-	      || chan_friend(victim) || chan_op(victim)))
-	   ok = 1;
-	 /* oppee is a channel op */
-      }
-      /* if didn't pass the above AND opper isn't a channel op 
-       * AND opper isn't being deopped AND I'm opped
-       * AND channel is +stopnethack */
-      if (!ok && !chan_hasop(m) && !chan_sentdeop(m) &&
-	  me_op(chan) && channel_stopnethack(chan)) {
-	 add_mode(chan, '-', 'o', who);
-	 m->flags |= (FAKEOP | SENTDEOP);
-      }
+   if (!nick[0] && !chan_wasop(m) && !chan_sentdeop(m) &&
+       me_op(chan) && channel_stopnethack(chan)) {
+      add_mode(chan, '-', 'o', who);
+      m->flags |= (FAKEOP | SENTDEOP);
    } else
      m->flags &= ~FAKEOP;
    m->flags |= CHANOP;
-   m->flags &= ~SENTOP;
+   m->flags &= ~(SENTOP | WASOP);
    if (check_chan)
       recheck_channel(chan,1);
 }
@@ -407,7 +387,7 @@ static void got_deop (struct chanset_t * chan, char * nick, char * from,
 	    take_revenge(chan, s1, s2);
 	 }
    }
-   m->flags &= ~(FAKEOP | CHANOP | SENTDEOP);
+   m->flags &= ~(FAKEOP | CHANOP | SENTDEOP | WASOP);
 }
 
 
@@ -609,18 +589,20 @@ static void gotmode (char * from, char * msg) {
 	 get_user_flagrec(u,&user,ch);
 	 nick = splitnick(&from);
 	 m = ismember(chan, nick);
+	 if (m)
+	   m->last = now;
 	 if (allow_desync == 0) {
 	   if (m && me_op(chan)) {
 	     if (chan_fakeop(m)) {
 	        putlog(LOG_MODES, ch, CHAN_FAKEMODE, ch);
 	        dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick,
-              CHAN_FAKEMODE_KICK);
+			CHAN_FAKEMODE_KICK);
 	        reversing = 1;
 	     } else if (!chan_hasop(m)) {
-	       putlog(LOG_MODES, ch, CHAN_DESYNCMODE, ch);
-	       dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick,
-             CHAN_DESYNCMODE_KICK);
-	       reversing = 1;
+		putlog(LOG_MODES, ch, CHAN_DESYNCMODE, ch);
+		dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick,
+			CHAN_DESYNCMODE_KICK);
+		reversing = 1;
 	     }
 	   }
 	 }

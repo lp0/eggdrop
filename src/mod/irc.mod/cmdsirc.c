@@ -571,7 +571,9 @@ static void cmd_resetbans (struct userrec * u, int idx, char * par)
    struct chanset_t *chan = findchan(dcc[idx].u.chat->con_chan);
    
    get_user_flagrec(u,&user,dcc[idx].u.chat->con_chan);
-   if (glob_op(user) || chan_op(user)) {
+   if (!chan) 
+     dprintf(idx, "Invalid console channel.\n");
+   else if (glob_op(user) || chan_op(user)) {
       putlog(LOG_CMDS, "*", "#%s# (%s) resetbans", dcc[idx].nick, chan->name);
       dprintf(idx, "Resetting bans on %s...\n", chan->name);
       resetbans(chan);

@@ -443,6 +443,7 @@ static void dcc_chat_pass (int idx, char * buf,int atr)
 	 dcc[idx].type = &DCC_CHAT;
 	 dcc[idx].status &= ~STAT_CHAT;
 	 dcc[idx].u.chat->con_flags = (atr & USER_MASTER) ? conmask : 0;
+	 dcc[idx].u.chat->channel = -2;
 	 if (dcc[idx].status & STAT_TELNET)
 	    dprintf(idx, "\377\374\001\n");	/* turn echo back on */
 	 dcc_chatter(idx);
@@ -1236,8 +1237,7 @@ static void dcc_telnet_new (int idx, char * buf, int x)
       dcc[idx].status = STAT_ECHO | STAT_TELNET;
       dcc[idx].type = &DCC_CHAT;	/* just so next line will work */
       dcc[idx].user = get_user_by_handle(userlist,buf);
-      check_dcc_attrs(dcc[idx].user,
-		      USER_PARTY | default_flags);
+      check_dcc_attrs(dcc[idx].user, USER_PARTY | default_flags);
       dcc[idx].type = &DCC_TELNET_PW;
       if (make_userfile) {
 	 dprintf(idx, "\nYOU ARE THE MASTER/OWNER ON THIS BOT NOW\n");
@@ -1293,6 +1293,7 @@ static void dcc_telnet_pw (int idx, char * buf,int x)
    dprintf(idx, "\nRemember that!  You'll need it next time you log in.\n");
    dprintf(idx, "You now have an account on %s...\n\n\n", botnetnick);
    dcc[idx].type = &DCC_CHAT;
+   dcc[idx].u.chat->channel = -2;
    dcc_chatter(idx);
 }
 

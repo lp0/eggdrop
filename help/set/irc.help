@@ -26,6 +26,9 @@
 %{help=set bounce-bans}%{+n}
 ### %bset bounce-bans%b 0/1
    do you want the bot to unban any bans set by servers?
+%{help=set kick-bogus}%{+n}
+### %bset kick-bogus%b 0/1
+   do you want the bot to kick bogus usernames?
 %{help=set use-354}%{+n}
 ### %bset use-354%b 0/1
    ircu has a new format for /who channel (which returns 354 numeric)

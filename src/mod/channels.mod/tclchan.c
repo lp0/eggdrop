@@ -237,6 +237,10 @@ static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan) {
       Tcl_AppendElement(irp, "+protectops");
    else
       Tcl_AppendElement(irp, "-protectops");
+   if (chan->status& CHAN_DONTKICKOPS)
+      Tcl_AppendElement(irp, "+dontkickops");
+   else
+      Tcl_AppendElement(irp, "-dontkickops");
    if (chan->status& CHAN_LOGSTATUS)
       Tcl_AppendElement(irp, "+statuslog");
    else
@@ -425,6 +429,10 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
 	 chan->status|= CHAN_PROTECTOPS;
       else if (strcmp(item[i], "-protectops") == 0)
 	 chan->status&= ~CHAN_PROTECTOPS;
+      else if (strcmp(item[i], "+dontkickops") == 0)
+         chan->status|= CHAN_DONTKICKOPS;
+      else if (strcmp(item[i], "-dontkickops") == 0)
+         chan->status&= ~CHAN_DONTKICKOPS;
       else if (strcmp(item[i], "+statuslog") == 0)
 	 chan->status|= CHAN_LOGSTATUS;
       else if (strcmp(item[i], "-statuslog") == 0)
@@ -762,7 +770,7 @@ static int tcl_channel_add (Tcl_Interp * irp, char * newname, char * options)
       /* hells bells, why set *every* variable to 0 when we have bzero ? */
       bzero(chan,sizeof(struct chanset_t));
       chan->limit_prot = (-1);
-      chan->status= CHAN_DYNAMICBANS | CHAN_GREET | CHAN_PROTECTOPS |
+      chan->status= CHAN_DYNAMICBANS | CHAN_GREET | CHAN_PROTECTOPS | CHAN_DONTKICKOPS |
 	CHAN_LOGSTATUS | CHAN_STOPNETHACK | CHAN_CYCLE;
       chan->limit = (-1);
       strncpy(chan->name, newname, 80);

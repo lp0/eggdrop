@@ -10,6 +10,8 @@
  * COPYING that was distributed with this code.
  */
 
+#include <ctype.h>
+
 static struct flag_record user = {
    FR_GLOBAL|FR_CHAN, 0,0,0,0,0
 };
@@ -23,9 +25,12 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
    struct chanset_t *chan = 0;
    int bogus = 0;
    module_entry * me;   
+   /* The two lines below added for bantime */
+   unsigned long int expire_time = 0, expire_foo;
+   char * p_expire;
 
    if (!par[0]) {
-      dprintf(idx, "Usage: +ban <hostmask> [channel] [reason]\n");
+      dprintf(idx, "Usage: +ban <hostmask> [channel] [%%bantime<XdXhXm>] [reason]\n");
    } else {
       who = newsplit(&par);
       for (p = who; *p; p++)
@@ -45,11 +50,43 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	 if (!chname)
 	   chname = dcc[idx].u.chat->con_chan;
 	 get_user_flagrec(u,&user,chname);
-	 if (!((glob_op(user) && !chan_deop(user)) || chan_op(user)))
+	 chan = findchan(chname);
+	 if (!chan || !((glob_op(user) && !chan_deop(user)) || chan_op(user)))
 	   return;
+      } else 
+	chan = 0;
+      /* Added by Q and Solal  - Requested by Arty2, special thanx :) */
+      if (par[0] == '%') {
+         p = newsplit (&par);
+	 p_expire = p + 1;
+	 while (*(++p) != 0) {
+	    switch (tolower(*p)) {
+	      case 'd':
+	       *p = 0;
+	       expire_foo = strtol (p_expire, NULL, 10);
+	       if (expire_foo > 365) 
+		 expire_foo = 365;
+	       expire_time += 86400 * expire_foo;
+	       p_expire = p + 1;
+	       break;
+	      case 'h':
+	       *p = 0;
+	       expire_foo = strtol (p_expire, NULL, 10);
+	       if (expire_foo > 8760)
+		 expire_foo = 8760;
+	       expire_time += 3600 * expire_foo;
+	       p_expire = p + 1;
+	       break;
+	      case 'm':
+	       *p = 0;
+	       expire_foo = strtol (p_expire, NULL, 10);
+	       if (expire_foo > 525600) 
+		 expire_foo = 525600;
+	       expire_time += 60 * expire_foo;
+	       p_expire = p + 1;
+	    }
+	 }
       }
-      if (chname)
-	chan = findchan(chname);
       if (!par[0])
 	par = "requested";
       else if (strlen(par) > 65)
@@ -80,7 +117,8 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	 }
 	 /* irc can't understand bans longer than that */
 	 if (chan) {
-	    u_addban(chan, s, dcc[idx].nick, par, 0L, 0);
+	    u_addban(chan, s, dcc[idx].nick, par,
+		     expire_time ? now + expire_time : 0, 0);
 	    if (par[0] == '*') {
 	       par++;
 	       putlog(LOG_CMDS, "*", "#%s# (%s) +ban %s %s (%s) (sticky)", dcc[idx].nick,
@@ -93,7 +131,8 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	    }
   	    add_mode(chan, '+', 'b', s);
   	 } else {
-  	    u_addban(NULL, s, dcc[idx].nick, par, 0L, 0);
+	    u_addban(NULL, s, dcc[idx].nick, par, 
+		     expire_time ? now + expire_time : 0, 0);
 	    if (par[0] == '*') {
 	       par++;
 	       putlog(LOG_CMDS, "*", "#%s# (GLOBAL) +ban %s (%s) (sticky)", dcc[idx].nick,
@@ -610,6 +649,8 @@ static void cmd_chaninfo (struct userrec * u, int idx, char * par) {
 	      channel_autovoice(chan) ? '+' : '-',
 	      channel_cycle(chan) ? '+' : '-',
               (chan->status & CHAN_SEEN) ? '+' : '-');
+      dprintf(idx, "     %cdontkickops\n",
+              (chan->status & CHAN_DONTKICKOPS) ? '+' : '-');
       dprintf(idx, "flood settings: chan ctcp join kick deop\n");
       dprintf(idx, "number:          %3d  %3d  %3d  %3d  %3d\n",
 	      chan->flood_pub_thr, chan->flood_ctcp_thr, chan->flood_join_thr,

@@ -197,7 +197,7 @@ ainstall:
 	@if test ! -r $(DEST)/motd; then \
 	        $(CP1) motd $(DEST)/; \
 	fi
-	@if test -L $(DEST)/modules; then \
+	@if test -h $(DEST)/modules; then \
 		echo Removing symlink to archival modules directory.; \
 		rm -f $(DEST)/modules; \
 	fi
@@ -205,19 +205,19 @@ ainstall:
 		echo Moving old modules into \'modules.old\' directory.; \
 		rm -rf $(DEST)/modules.old; \
 		mv -f $(DEST)/modules $(DEST)/modules.old; \
-		mkdir $(DEST)/modules; \
 	fi
 	@if test ! -d $(DEST)/modules\-${NEWVERSION}/; then \
 		echo Creating modules\-${NEWVERSION} directory and symlink.; \
 		mkdir $(DEST)/modules\-${NEWVERSION}; \
-		$(LN_S) modules\-${NEWVERSION} $(DEST)/modules; \
 	fi
+	@$(LN_S) modules\-${NEWVERSION} $(DEST)/modules
 	@if test -r assoc.so; then \
 		echo Copying new modules.; \
 		$(CP3) *.so $(DEST)/modules/; \
 	fi
-	@if test -L $(DEST)/eggdrop; then \
+	@if test -h $(DEST)/eggdrop; then \
 		echo Removing symlink to archival eggdrop binary.; \
+		rm -f $(DEST)/eggdrop; \
 	fi
 	@if test -r $(DEST)/eggdrop; then \
 		echo Renamed the old \'eggdrop\' executable to \'oeggdrop\'.; \
@@ -245,9 +245,9 @@ ainstall:
 	@if test ! -d $(DEST)/scripts; then \
 		echo Creating a \'scripts\' subdirectory.; \
 		mkdir $(DEST)/scripts; \
+		echo Copying scripts.; \
+		$(CP2) scripts/* $(DEST)/scripts; \
 	fi
-	@echo Copying scripts.
-	@$(CP2) scripts/* $(DEST)/scripts
 	@echo
 	@${MAKE} REALDEST=`cd $(DEST);pwd` install2
 	@echo

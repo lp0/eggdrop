@@ -222,6 +222,8 @@ void dcc_chatter (int idx)
 	 /* if the chat channel has already been altered it's *highly*
 	  * probably join/part messages have been broadcast everywhere,
 	  * so dont bother sending them */
+	 if (i == -2)
+	   i = 0;
 	 dcc[idx].u.chat->channel = i;
 	 if (dcc[idx].u.chat->channel >= 0) {
 	    context;

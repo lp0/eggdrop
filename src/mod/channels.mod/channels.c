@@ -306,6 +306,8 @@ static void write_channels()
 	      channel_greet(chan) ? '+' : '-');
       fprintf(f, "%cprotectops ", 
 	      channel_protectops(chan) ? '+' : '-');
+      fprintf(f, "%cdontkickops ", 
+	      channel_dontkickops(chan) ? '+' : '-');
       fprintf(f, "%cstatuslog ", 
 	      channel_logstatus(chan) ? '+' : '-');
       fprintf(f, "%cstopnethack ", 
@@ -461,6 +463,8 @@ static void channels_report (int idx, int details) {
 	      i += my_strcpy(s + i, "greet ");
 	    if (channel_protectops(chan))
 	      i += my_strcpy(s + i, "protect-ops ");
+            if (channel_dontkickops(chan))
+              i += my_strcpy(s + i, "dont-kick-ops ");
 	    if (channel_logstatus(chan))
 	      i += my_strcpy(s + i, "log-status ");
 	    if (channel_revenge(chan))

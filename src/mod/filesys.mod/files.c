@@ -360,7 +360,7 @@ static void cmd_lsa (int idx, char * par)
 static void cmd_get (int idx, char * par)
 {
    int ok = 0, ok2 = 1,i;
-   char *p, *what, destdir[121], s[DIRLEN + 1];
+   char *p, *what, destdir[DIRLEN + 1], s[DIRLEN + 1];
    filedb fdb;
    FILE *f;
    long where = 0;
@@ -385,7 +385,7 @@ static void cmd_get (int idx, char * par)
 	 return;
       }
    } else {
-      strncpy(destdir, dcc[idx].u.file->dir,121);
+      strncpy(destdir, dcc[idx].u.file->dir, 121);
       destdir[121] = 0;
    }
    f = filedb_open(destdir,0);

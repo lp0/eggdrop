@@ -194,35 +194,36 @@ void maskhost (char * s, char * nw)
    p = (q = strchr(s, '!')) ? q + 1 : s;
    /* strip of any nick, if a username is found, use last 8 chars */
    if ((q = strchr(p, '@'))) {
-         if ((q - p) > 10) {
-	          nw[0] = '*';
-	          p = q - 8;
-	          i = 1;
-	       } else
-           i = 0;
-         while (*p != '@')
-           nw[i++] = *p++;
-         nw[i++] = '@';
-         q++;
-      } else {
-            nw[0] = '*';
-            nw[1] = '@';
-            i = 2;
-            q = s;
-      }
+         if ((q - p) > 9) {
+	    nw[0] = '*';
+	    p = q - 7;
+	    i = 1;
+	 } else
+	i = 0;
+      while (*p != '@')
+	nw[i++] = *p++;
+      nw[i++] = '@';
+      q++;
+   } else {
+      nw[0] = '*';
+      nw[1] = '@';
+      i = 2;
+      q = s;
+   }
+   nw += i;
    /* now q points to the hostname, i point to where to put the mask */
    if (!(p = strchr(q, '.')) || !(e = strchr(p + 1, '.')))
      /* TLD or 2 part host */
-     strcpy(nw + i, q);
+     strcpy(nw, q);
    else {
       for (f = e; *f; f++);
       f--;
       if ((*f >= '0') && (*f <= '9')) {  /* numeric IP address */
 	 while (*f != '.')
 	   f--;
-	 strncpy(nw + i, q, f - q);
-	 i += (f - q);
-	 strcpy(nw + i, ".*");
+	 strncpy(nw, q, f - q);
+	 nw += (f - q);
+	 strcpy(nw, ".*");
       } else { /* normal host >= 3 parts */
 	 /* ok, people whined at me...how about this? ..
 	  *    a.b.c  -> *.b.c
@@ -240,7 +241,7 @@ void maskhost (char * s, char * nw)
 	   x = p;
 	 else 
 	   x = e;
-	 sprintf(nw + i, "*%s", x);
+	 sprintf(nw, "*%s", x);
       }
    }
 }

@@ -404,21 +404,15 @@ static int tcl_control STDVAR
 
 static int tcl_valididx STDVAR
 {
-   int idx, i;
+   int idx;
    
    context;
    BADARGS(2, 2, " idx");
-   i = atoi(argv[1]);
-   idx = findidx(i);
-   if (idx < 0) {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
-   }
-   if (dcc[idx].type->flags & DCT_VALIDIDX) {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
-   }
-   Tcl_AppendResult(irp, "1", NULL);
+   idx = findidx(atoi(argv[1]));
+   if ((idx < 0) || !(dcc[idx].type->flags & DCT_VALIDIDX)) 
+     Tcl_AppendResult(irp, "0", NULL);
+   else
+     Tcl_AppendResult(irp, "1", NULL);
    return TCL_OK;
 }
 
@@ -443,7 +437,8 @@ static int tcl_killdcc STDVAR
 		  dcc[idx].nick, dcc[idx].u.chat ? "channel" : "partyline",
 		  argc==3 ? ": " : "", argc == 3 ? argv[2]:"");
       botnet_send_part_idx(idx, argc==3 ? argv[2]:"");
-      if (dcc[idx].u.chat->channel < GLOBAL_CHANS)
+      if ((dcc[idx].u.chat->channel >= 0)
+	  && (dcc[idx].u.chat->channel < GLOBAL_CHANS))
 	check_tcl_chpt(botnetnick, dcc[idx].nick, dcc[idx].sock,
 		       dcc[idx].u.chat->channel);
       check_tcl_chof(dcc[idx].nick, dcc[idx].sock);

@@ -14,7 +14,7 @@ typedef struct memstruct {
   char nick[NICKLEN];        /* "dalnet" allows 30 */
   char userhost[UHOSTLEN];
   time_t joined;
-  unsigned char flags;
+  unsigned short flags;
   time_t split;         /* in case they were just netsplit */
   time_t last;          /* for measuring idle time */
   struct userrec *user;
@@ -29,6 +29,7 @@ typedef struct memstruct {
 #define SENTKICK    0x0020    /* a kick was already sent out for this user */
 #define SENTVOICE   0x0040    /* a voice has been sent since a deop */
 #define SENTDEVOICE 0x0080    /* a devoice has been sent */
+#define WASOP       0x0100    /* was an op before a split */
 
 #define chan_hasvoice(x) (x->flags & CHANVOICE)
 #define chan_hasop(x) (x->flags & CHANOP)
@@ -38,6 +39,7 @@ typedef struct memstruct {
 #define chan_sentkick(x) (x->flags & SENTKICK)
 #define chan_sentvoice(x) (x->flags & SENTVOICE)
 #define chan_issplit(x) (x->split > 0)
+#define chan_wasop(x) (x->flags & WASOP)
 
 typedef struct banstruct {
   char *ban;
@@ -129,6 +131,7 @@ struct chanset_t {
 #define CHAN_SECRET         0x0800    /* don't advertise channel on botnet */
 #define CHAN_AUTOVOICE      0x1000    /* dish out voice stuff automatically */
 #define CHAN_CYCLE	    0x2000    /* cycle the channel if possible */
+#define CHAN_DONTKICKOPS    0x4000    /* never kick +o flag people - arthur2 */
 #define CHAN_ACTIVE          0x1000000    /* like i'm actually on the channel and
                                        * stuff */
 #define CHAN_PEND            0x2000000    /* just joined; waiting for end of 
@@ -160,6 +163,7 @@ struct chanset_t *findchan();
 #define channel_dynamicbans(chan) (chan->status & CHAN_DYNAMICBANS)
 #define channel_nouserbans(chan) (chan->status & CHAN_NOUSERBANS)
 #define channel_protectops(chan) (chan->status & CHAN_PROTECTOPS)
+#define channel_dontkickops(chan) (chan->status & CHAN_DONTKICKOPS)
 #define channel_stopnethack(chan) (chan->status & CHAN_STOPNETHACK)
 #define channel_secret(chan) (chan->status & CHAN_SECRET)
 #define channel_shared(chan) (chan->status & CHAN_SHARED)

@@ -82,6 +82,7 @@ static int lowercase_ctcp;
 static char bothost[81];
 /* check for IRCNET +r modes */
 static int check_mode_r;
+int use_ison;
 
 static Function * global = NULL;
 
@@ -520,6 +521,7 @@ static tcl_ints my_tcl_ints[] =
    {"server-cycle-wait", (int *)&server_cycle_wait, 0},
    {"default-port", &default_port, 0},
    {"check-mode-r", &check_mode_r, 0},
+   {"use-ison", &use_ison, 0},
    { 0, 0, 0}
 };
 
@@ -840,7 +842,7 @@ static char *server_close() {
    clearq(serverlist);
    context;
    rem_builtins(H_dcc,C_dcc_serv,4);
-   rem_builtins(H_raw,my_raw_binds,17);
+   rem_builtins(H_raw,my_raw_binds,18);
    rem_builtins(H_ctcp,my_ctcps,1);
    context;
    C_t[0].name = "die";
@@ -983,6 +985,7 @@ char *server_start (Function * global_funcs)
    check_mode_r = 1;
    maxqmsg = 300;
    burst = 0;
+   use_ison = 1;
    context;
    server_table[4] = (Function)botname;
    module_register(MODULE_NAME, server_table, 1, 0);
@@ -1017,7 +1020,7 @@ char *server_start (Function * global_funcs)
    H_ctcr = add_bind_table("ctcr",HT_STACKABLE,server_6char);
    H_ctcp = add_bind_table("ctcp",HT_STACKABLE,server_6char);
    context;
-   add_builtins(H_raw,my_raw_binds,17);
+   add_builtins(H_raw,my_raw_binds,18);
    add_builtins(H_dcc,C_dcc_serv,4);
    add_builtins(H_ctcp,my_ctcps,1);
    add_help_reference("server.help");

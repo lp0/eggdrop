@@ -408,6 +408,7 @@ Function global_table [] =
      (Function) botname,
      /* 212 - ??? */
      (Function) remove_gunk,
+     (Function) check_tcl_chjn,
 };
 
 void init_modules(void)

@@ -6,6 +6,8 @@
  * COPYING that was distributed with this code.
  */
 
+extern int use_ison;
+
 /* check for tcl-bound msg command, return 1 if found */
 /* msg: proc-name <nick> <user@host> <handle> <args...> */
 static int check_tcl_msg (char * cmd, char * nick, 
@@ -576,7 +578,10 @@ static void minutely_checks()
        * that it's not just a truncation of the full nick */	 
       if (strncmp(botname, origbotname, strlen(botname)) != 0) {
 	 /* see if my nickname is in use and if if my nick is right */
-	 dprintf(DP_MODE, "TRACE %s\n", origbotname);
+	 if (use_ison) 
+	   dprintf(DP_MODE, "ISON :%s\n", origbotname);
+	 else
+	   dprintf(DP_MODE, "TRACE %s\n", origbotname);
 	 /* will return 206(undernet), 401(other),
 	  or 402(efnet) numeric if not online */
       }
@@ -612,19 +617,33 @@ static int gotpong (char * from, char * msg)
    return 0;
 }
 
+static void got303 (char * from, char * msg) {
+   if (use_ison) {
+      newsplit(&msg);
+      fixcolon(msg);
+      if (!msg[0] && strcasecmp(botname, origbotname)) {
+	 putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
+	 strcpy(newbotname, botname);	/* save, just in case */
+	 strcpy(botname, origbotname);
+	 dprintf(DP_MODE, "NICK %s\n", botname);
+      }
+   }
+}
+
 /* trace failed! meaning my nick is not in use!
    206 (undernet)
    401 (other non-efnet)
    402 (Efnet)
  */
-static void trace_fail (char * from, char * msg)
-{
-   if (strcasecmp(botname, origbotname) == 0)
-      return;
-   putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-   strcpy(newbotname, botname);	/* save, just in case */
-   strcpy(botname, origbotname);
-   dprintf(DP_MODE, "NICK %s\n", botname);
+static void trace_fail (char * from, char * msg) {
+   if (!use_ison) {
+      if (strcasecmp(botname, origbotname)) {
+	 putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
+	 strcpy(newbotname, botname);	/* save, just in case */
+	 strcpy(botname, origbotname);
+	 dprintf(DP_MODE, "NICK %s\n", botname);
+      }
+   }
 }
 
 /* 432 : bad nickname */
@@ -893,7 +912,7 @@ static int gotping (char * from, char * msg)
    return 0;
 }
 
-static cmd_t my_raw_binds [17] = {
+static cmd_t my_raw_binds [18] = {
      {"PRIVMSG", "", (Function) gotmsg, NULL} ,
      {"NOTICE", "", (Function) gotnotice, NULL}, 
      {"MODE", "", (Function) gotmode, NULL},
@@ -903,6 +922,7 @@ static cmd_t my_raw_binds [17] = {
      {"001", "", (Function) got001, NULL},
      {"206", "", (Function) trace_fail, NULL},
      {"251", "", (Function) got251, NULL},
+     {"303", "", (Function) got303, NULL},
      {"401", "", (Function) trace_fail, NULL},
      {"402", "", (Function) trace_fail, NULL},
      {"432", "", (Function) got432, NULL},

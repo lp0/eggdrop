@@ -1,10 +1,11 @@
 %{help=+ban}%{+o|o}
-###  %b+ban%b <hostmask> [channel] [comment]
+###  %b+ban%b <hostmask> [channel] [%%bantime <XdXhXm>] [comment]
    Adds a ban to the list of permanent bans stored on the bot,
-   with an optional comment.  This ban will be in effect for every
-   channel on the bot if no channel is supplied, and is stored
+   with optional comment and bantime.  This ban will be in effect for
+   every channel on the bot if no channel is supplied, and is stored
    with your nickname and comment.  Prefixing a comment with @ will
-   make it only visible within the bot.
+   make it only visible within the bot. Bantime has to be expressed
+   in days, hours and minutes.
 See also: bans, -ban, stick, unstick
 %{help=+chan}%{+n}
 ### %b+chan%b <channel>

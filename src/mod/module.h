@@ -294,6 +294,7 @@
 #define botname ((char *)(global[211]))
 /* 212 - ??? */
 #define remove_gunk ((void(*)(char *))global[212])
+#define check_tcl_chjn ((void (*) (char *,char *,int,char,int,char *))global[213])
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */

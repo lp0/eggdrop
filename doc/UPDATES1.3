@@ -1,6 +1,33 @@
 Changes in eggdrop: (since v1.3.0)
 ----------------------------------
 
+1.3.21
+Foundby   Fixedby   What....
+Toby Verall Beldin  hmm, console needs check_tcl_chjn, it aint exported.
+Arty2     Q & Solal ban time limit added to +ban
+ScottDrake Beldin   crash on channel join with no-chanrec-info on
+          Arthur2   better +m/+f checking & +dontkickops flag
+	  Arthur2   kick-bogus flag
+Dagmar    Beldin    the notes SEGV was due to the away sock # change
+          BB/Beldin - +stopnethack works decently now, any *valid* pre-split op
+	              is allowed *ALL* other ops are de-opped.
+		    - update idle-time on a mode change
+	            - chon bindings that used killdcc were sending an unwanted
+		      part message
+Brian T   Beldin    get <Dir>/<file> SEGV'n in file sys (legcay of the 
+                    cmd_chdir fixes)
+Michael   Beldin    .unload filesys + .files caused SEGV
+poptix    Beldin    TRACE is being used for detect added use-ison variable
+                    to use ISON if requried
+Mr_Jode   Beldin    it was possible for global +o's to set global bans 
+                    (should be +m only)
+TothWolf  Beldin    valididx wasnt return sane results
+          Tothwolf  dont overwrite scripts dir
+TothWolf  Beldin    calling the nick binding later in gotnick makes life easier
+        Roger Stone .resetbans SEGV on invalid console channel
+TheUnknown Beldin   take_revenge needed to update a channel members user entry
+                    otherwise many extra bad users could be created.
+		    
 1.3.20
 Foundby   Fixedby   What....
 data      Beldin    -host was possible on other users by anyone

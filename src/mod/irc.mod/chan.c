@@ -105,7 +105,9 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
    context;
    if (glob_bot(fr) 
        || ((which == FLOOD_DEOP) && (glob_master(fr) || chan_master(fr)))
-       || ((which != FLOOD_DEOP) && (glob_friend(fr) || chan_friend(fr))))
+       || ((which != FLOOD_DEOP) && (glob_friend(fr) || chan_friend(fr)))
+       || (channel_dontkickops(chan) && (chan_op(fr) || 
+					 (glob_op(fr) && !chan_deop(fr))))) /* arthur2 */
      return 0;
    /* determine how many are necessary to make a flood */
    switch (which) {
@@ -262,28 +264,10 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 
 /* given a [nick!]user@host, place a quick ban on them on a chan */
 static char *quickban (struct chanset_t * chan, char * uhost) {
-   char s1[512], *pp;
-   int i;
-   static char s[512];
-   strcpy(s, uhost);
-   maskhost(s, s1);
-   /* detect long username (10-char username can't add the '*') */
-   i = 0;
-   pp = strchr(uhost, '!');
-   if (pp == NULL)
-      pp = uhost;
-   else
-      pp++;
-   while ((*pp) && (*pp != '@')) {
-      pp++;
-      i++;
-   }
-   if (i > 9)
-      sprintf(s, "*!*%s", s1+i-7);
-   else
-      sprintf(s, "*!*%s", s1+2);	/* gotta add that extra '*' */
-   do_ban(chan, s);
-   return s;
+   static char s1[512];
+   maskhost(uhost, s1);
+   do_ban(chan, s1);
+   return s1;
 }
 
 /* kicks any user (except friends/masters) with certain mask from channel
@@ -304,8 +288,8 @@ static void kick_all (struct chanset_t * chan, char * hostmask, char * comment) 
       sprintf(s, "%s!%s", m->nick, m->userhost);
       if (!chan_sentkick(m) && wild_match(hostmask, s) &&
 	  !match_my_nick(m->nick) &&
-	  !glob_master(fr) && !chan_master(fr) &&
-	  !glob_friend(fr) && !chan_friend(fr)) {
+	  !glob_friend(fr) && !chan_friend(fr) &&
+	  !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) { /* arthur2 */
 	 if (!flushed) {
 	    /* we need to kick someone, flush eventual bans first */
 	    context;
@@ -673,7 +657,9 @@ static int got352or4 (struct chanset_t * chan, char * user, char * host,
        && (u_match_ban(global_bans,userhost) 
 	   || u_match_ban(chan->bans, userhost))
        /* and it's not me, and i'm an op */
-       && !match_my_nick(nick) && me_op(chan))
+       && !match_my_nick(nick) && me_op(chan)
+       && !chan_friend(fr) && !glob_friend(fr) /* arthur2 */
+       && !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) /* arthur2 */
      /* *bewm* */
      dprintf(DP_SERVER, "KICK %s %s :banned\n", chan->name, nick);
    /* if the user is a +k */
@@ -1082,11 +1068,11 @@ static int gotjoin (char * from, char * chname) {
 	    check_tcl_rejn(nick, uhost, u, chan->name);
 	    m->split = 0;
 	    m->last = now;
-	    m->flags = 0;	/* clean slate, let server refresh */
+	    m->flags = (chan_hasop(m) ? WASOP : 0);
 	    m->user = u;
 	    set_handle_laston(chname, u, now);
 	    /* had ops before split, Im an op */
-	    if (chan_hasop(m) && me_op(chan)
+	    if (chan_wasop(m) && me_op(chan)
 		/* channel is +autoop... */
 		&& ((chan->status & CHAN_OPONJOIN)
 		    /* OR user is maked autoop */
@@ -1137,7 +1123,7 @@ static int gotjoin (char * from, char * chname) {
 			"%s (%s) joined %s.", nick, uhost, chname);
 	       if (me_op(chan)) 
 		 for (p = m->userhost; *p; p++)
-		   if (((unsigned char )*p) < 32) {
+		   if ((((unsigned char )*p) < 32) && kick_bogus) {
 		      dprintf(DP_MODE, "KICK %s %s :bogus username\n",
 			      chname, nick);
 		      return 0;
@@ -1175,7 +1161,8 @@ static int gotjoin (char * from, char * chname) {
 		    li = get_user(&USERENTRY_LASTON,m->user);
 		  if (channel_greet(chan) && use_info && 
 		      ((cr && (now -  cr->laston > wait_info))
-		       || (no_chanrec_info && (now - li->laston > wait_info)))) {
+		       || (no_chanrec_info && 
+			   (!li || (now - li->laston > wait_info))))) {
 		     char s1[512], * s;
 		     
 		     if (!(u->flags & USER_BOT)) {
@@ -1339,7 +1326,6 @@ static int gotnick (char * from, char * msg)
 	       killmember(chan, mm->nick);
 	    }
 	 }
-	 check_tcl_nick(nick, uhost, u, chan->name, msg);
 	 detect_chan_flood(nick, uhost, from, chan, FLOOD_NICK, 0);
 	 /* any pending kick to the old nick is lost. Ernst 18/3/98 */
 	 if (chan_sentkick(m))
@@ -1352,6 +1338,7 @@ static int gotnick (char * from, char * msg)
 	     (u_match_ban(global_bans,s1) || u_match_ban(chan->bans, s1)))
 	   refresh_ban_kick(chan, s1, msg);
 	 strcpy(m->nick, msg);
+	 check_tcl_nick(nick, uhost, u, chan->name, msg);
       }
       chan = chan->next;
    }
@@ -1439,7 +1426,7 @@ static int gotmsg (char * from, char * msg)
       /* discard -- kick user if it was to the channel */
       if (me_op(chan) &&
 	  !chan_friend(fr) && !glob_friend(fr) &&
-	  !chan_master(fr) && !glob_master(fr)) {
+          !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) { /* arthur2 */
 	 m = ismember(chan, nick);
 	 if (m && !chan_sentkick(m)) {
 	    m->flags |= SENTKICK;
@@ -1549,7 +1536,7 @@ static int gotnotice (char * from, char * msg)
       /* discard -- kick user if it was to the channel */
       if (me_op(chan) &&
           !chan_friend(fr) && !glob_friend(fr) &&
-          !chan_master(fr) && !glob_master(fr)) {
+          !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) { /* arthur2 */
 	 m = ismember(chan, nick);
 	 if (m || !chan_sentkick(m)) {
 	   m->flags |= SENTKICK;
