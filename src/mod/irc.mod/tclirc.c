@@ -38,15 +38,12 @@ static int tcl_chanlist STDVAR
    while (m->nick[0]) {
       simple_sprintf(s1, "%s!%s", m->nick, m->userhost);
       u = get_user_by_host(s1);
-      if (u) {
-	 get_user_flagrec(u,&user,argv[1]);
-         user.match = plus.match;
-         if (flagrec_eq(&plus,&user)) {
-            if (!f || !flagrec_eq(&minus,&user))
-                  Tcl_AppendElement(irp, m->nick);
-	    
-	 } 
-      }
+      get_user_flagrec(u,&user,argv[1]);
+      user.match = plus.match;
+      if (flagrec_eq(&plus,&user)) {
+	 if (!f || !flagrec_eq(&minus,&user))
+	   Tcl_AppendElement(irp, m->nick);
+      } 
       m = m->next;
    }
    return TCL_OK;

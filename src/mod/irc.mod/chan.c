@@ -421,8 +421,8 @@ static void recheck_channel (struct chanset_t * chan, int dobans)
 		    p?p:  "...and thank you for playing.\n");
 	    /* otherwise, lets check +v stuff if the llamas want it */
 	 } else if (channel_autovoice(chan)) {
-	    /* do they not have +v on the channel */
-	    if (!chan_hasvoice(m)
+	    /* do they not have +v or +o on the channel */
+	    if (!chan_hasvoice(m) && !chan_hasop(m) 
 		/* do they have the +v & no +q */
 		&& (chan_voice(fr) || (glob_voice(fr) && !chan_quiet(fr))))
 	      /* give them a voice */

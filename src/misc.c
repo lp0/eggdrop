@@ -715,10 +715,11 @@ void help_subst (char * s, char * nick, struct flag_record * flags,
 		  blind &= ~1;
 		  subwidth = 70;
 		  if (cols) {
-		     subst_addcol(s, "\377");
+		     subst_addcol(sub, "\377");
 		     nfree(colstr);
 		     colstr = NULL;
 		     cols = 0;
+		     towrite = sub;
 		  }
 	       } else if (!strcasecmp(q, "center"))
 		    center = 1;

@@ -399,7 +399,7 @@ void write_userfile(int idx)
       u = u->next;
    }
    context;
-   if (!ok) {
+   if (!ok || fflush(f)) {
       putlog(LOG_MISC, "*", "%s (%s)", USERF_ERRWRITE,strerror(ferror(f)));
       fclose(f);
       return;

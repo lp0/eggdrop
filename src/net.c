@@ -804,10 +804,9 @@ void dequeue_sockets()
 	 if ((x < 0) && (errno != EAGAIN) 
 #ifdef EBADSLT 
 	     && (errno != EBADSLT)
-#else
+#endif
 #ifdef ENOTCONN
 	     && (errno != ENOTCONN)
-#endif
 #endif
 	     ) {
 	    /* this detects an EOF during writing */

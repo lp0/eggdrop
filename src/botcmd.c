@@ -496,8 +496,7 @@ static void bot_link (int idx, char * par)
 }
 
 /* unlink <from@bot> <linking-bot> <undesired-bot> <reason> */
-static void bot_unlink (int idx, char * par)
-{
+static void bot_unlink (int idx, char * par) {
    char *from, *bot, *rfrom, *p, *undes;
    int i;
    

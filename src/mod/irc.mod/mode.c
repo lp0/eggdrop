@@ -732,9 +732,9 @@ static void gotmode (char * from, char * msg)
 			if (channel_autovoice(chan) && 
 			    (chan_voice(victim) || 
 			     (glob_voice(victim) && !chan_quiet(victim))))
-			  add_mode(chan, '-', 'v', op);
+			  add_mode(chan, '+', 'v', op);
 			else if (reversing)
-			  add_mode(chan, '-', 'v', op);
+			  add_mode(chan, '+', 'v', op);
 		     }
 		  }
 	       }

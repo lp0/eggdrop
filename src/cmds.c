@@ -1962,10 +1962,10 @@ static void cmd_set (struct userrec * u, int idx, char * msg)
      dprintf(idx, "Error: %s\n", interp->result);
 }
 
-static void cmd_modulestat (struct userrec * u, int idx, char * par)
+static void cmd_module (struct userrec * u, int idx, char * par)
 {
    context;
-   putlog(LOG_CMDS, "*", "#%s# modulestat %s", dcc[idx].nick,par);
+   putlog(LOG_CMDS, "*", "#%s# module %s", dcc[idx].nick,par);
    do_module_report(idx,2,par[0]?par:NULL);
 }
 
@@ -2105,6 +2105,7 @@ static void cmd_pls_host (struct userrec * u, int idx, char * par)
    char * handle, *host;
    struct userrec * u2;
    struct list_type *q;
+   struct flag_record fr = {FR_CHAN|FR_ANYWH,0,0,0,0,0};
    
    context;
    handle = newsplit(&par);
@@ -2123,8 +2124,9 @@ static void cmd_pls_host (struct userrec * u, int idx, char * par)
 	dprintf(idx, "That hostmask is already there.\n");
 	return;
      }
+   get_user_flagrec(u, &fr, NULL);
    if ((u->flags & USER_BOTMAST) && !(u->flags & USER_MASTER)
-       && !(u2->flags & USER_BOT)) {
+       && !(u2->flags & USER_BOT) && !chan_master(fr)) {
       dprintf(idx, "You can't add hostmasks to non-bots.\n");
       return;
    }
@@ -2147,6 +2149,7 @@ static void cmd_mns_host (struct userrec * u, int idx, char * par)
 {
    char * handle, *host;
    struct userrec * u2;
+   struct flag_record fr = {FR_CHAN|FR_ANYWH,0,0,0,0,0};
    
    if (!par[0]) {
       dprintf(idx, "Usage: -host [handle] <hostmask>\n");
@@ -2166,8 +2169,9 @@ static void cmd_mns_host (struct userrec * u, int idx, char * par)
       return;
    }
    if (strcasecmp(handle, dcc[idx].nick)) {
+      get_user_flagrec(u, &fr, NULL);
       if (!(u2->flags & USER_BOT) && (u->flags & USER_BOTMAST) &&
-	  !(u->flags & USER_MASTER)) {
+	  !(u->flags & USER_MASTER) && !chan_master(fr)) {
 	 dprintf(idx, "You can't remove hostmasks from non-bots.\n");
 	 return;
       } else if ((u2->flags & USER_BOT) && (bot_flags(u2) & BOT_SHARE)
@@ -2245,7 +2249,7 @@ cmd_t C_dcc[63]={
   { "loadmod", "n", (Function)cmd_loadmodule, NULL },
   { "match", "to|o", (Function)cmd_match, NULL },
   { "me", "", (Function)cmd_me, NULL },
-  { "module", "m", (Function)cmd_modulestat, NULL },
+  { "module", "m", (Function)cmd_module, NULL },
   { "modules", "n", (Function)cmd_modules, NULL },
   { "motd", "", (Function)cmd_motd, NULL },
   { "newpass", "", (Function)cmd_newpass, NULL },

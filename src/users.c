@@ -647,20 +647,25 @@ int readuserfile (char * file, struct userrec ** ret, int private_owner) {
 		  fr.match = FR_CHAN;
 		  break_down_flags(fl,&fr,0);
 		  if (findchan(chname)) {
-		     cr = (struct chanuserrec *) 
-		       user_malloc(sizeof(struct chanuserrec));
-		     cr->next = u->chanrec;
-		     u->chanrec = cr;
-		     strncpy(cr->channel,chname,80);
-		     cr->channel[80] = 0;
-		     cr->laston = atoi(st);
-		     cr->flags = fr.chan;
-		     cr->flags_udef = fr.udef_chan;
-		     if (s[0]) {
-			cr->info = (char *) nmalloc(strlen(s) + 1);
-			strcpy(cr->info, s);
-		     } else
-		       cr->info = NULL;
+		     for (cr = u->chanrec; cr; cr = cr->next)
+		       if (!strcasecmp(cr->channel, chname))
+			 break;
+		     if (!cr) {
+			cr = (struct chanuserrec *) 
+			  user_malloc(sizeof(struct chanuserrec));
+			cr->next = u->chanrec;
+			u->chanrec = cr;
+			strncpy(cr->channel,chname,80);
+			cr->channel[80] = 0;
+			cr->laston = atoi(st);
+			cr->flags = fr.chan;
+			cr->flags_udef = fr.udef_chan;
+			if (s[0]) {
+			   cr->info = (char *) nmalloc(strlen(s) + 1);
+			   strcpy(cr->info, s);
+			} else
+			  cr->info = NULL;
+		     }
 		  }
 	       }
 	    } else if (strncmp(code, "::", 2) == 0) {

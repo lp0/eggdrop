@@ -886,17 +886,17 @@ void check_tcl_time (struct tm * tm)
 {
    char y[100];
    context;
-   simple_sprintf(y, "%02d", tm->tm_min);
+   sprintf(y, "%02d", tm->tm_min);
    Tcl_SetVar(interp, "_time1", y, 0);
-   simple_sprintf(y, "%02d", tm->tm_hour);
+   sprintf(y, "%02d", tm->tm_hour);
    Tcl_SetVar(interp, "_time2", y, 0);
-   simple_sprintf(y, "%02d", tm->tm_mday);
+   sprintf(y, "%02d", tm->tm_mday);
    Tcl_SetVar(interp, "_time3", y, 0);
-   simple_sprintf(y, "%02d", tm->tm_mon);
+   sprintf(y, "%02d", tm->tm_mon);
    Tcl_SetVar(interp, "_time4", y, 0);
-   simple_sprintf(y, "%04d", tm->tm_year + 1900);
+   sprintf(y, "%04d", tm->tm_year + 1900);
    Tcl_SetVar(interp, "_time5", y, 0);
-   simple_sprintf(y, "%d %d %d %d %d", tm->tm_min, tm->tm_hour, tm->tm_mday,
+   sprintf(y, "%02d %02d %02d %02d %04d", tm->tm_min, tm->tm_hour, tm->tm_mday,
 	   tm->tm_mon, tm->tm_year + 1900);
    context;
    check_tcl_bind(H_time, y, 0,

@@ -1,5 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT(eggdrop.conf.dist)
+ac_default_prefix=\$HOME/eggdrop
 AC_CONFIG_HEADER(config.h)
 
 echo ""
@@ -73,6 +74,7 @@ IRIX=no
 NT=no
 EGGEXEC=eggdrop
 LINUX=no
+need_dl=1
 DEFAULT_MAKE=eggdrop
 BEL_MOD_CC="${CC}"
 BEL_MOD_LD="${CC}"
@@ -104,6 +106,7 @@ case $system in
       AC_DEFINE(MODULES_OK)
     else
       AC_MSG_RESULT(BSD/OS 2! statically linked modules are the only choice)
+      need_dl=0
       DEFAULT_MAKE=static
     fi
     AC_CHECK_PROG(GMAKE,gmake,gmake)
@@ -158,6 +161,7 @@ case $system in
         ;;
       *)
         AC_MSG_RESULT(Some other weird OSF! No modules for you..)
+	need_dl=0
 	DEFAULT_MAKE=static
 	;;
     esac
@@ -168,14 +172,15 @@ case $system in
     AC_CHECK_LIB(dld,shl_load)
     AC_DEFINE(MODULES_OK)
     AC_DEFINE(HPUX_HACKS)
-    BEL_MOD_LD=gcc -Wl,-E
-    SHLIB_CC=gcc -fPIC
-    SHLIB_LD=ld -b
+    BEL_MOD_LD="gcc -Wl,-E"
+    SHLIB_CC="gcc -fPIC"
+    SHLIB_LD="ld -b"
     ;;
   IRIX)
     AC_MSG_RESULT(you are cursed with IRIX)
     IRIX=yes
     STRIP=
+    need_dl=0
     DEFAULT_MAKE=static
     ;;
   *)
@@ -188,6 +193,7 @@ case $system in
       AC_MSG_RESULT(Something unknown!!)
       AC_MSG_RESULT(If you get dynamic modules to work, be sure to let the devel team know HOW :)
     fi
+    need_dl=0
     DEFAULT_MAKE=static
     ;;
 esac
@@ -267,12 +273,12 @@ dnl where is tcl?  is it here?
 
 # ---------- begin robey's tcl thingies
 
-libnames="tcl.so tcl.so.1 tcl76.so.1.0 tcl75.so.1.0 tcl80.so.1.0\
-         tcl76.so.1 tcl75.so.1 tcl74.so.1 tcl80.so.1\
-         tcl7.6.so tcl7.5.so tcl7.4.so tcl 8.0.so\
-         tcl7.6.so.1 tcl7.5.so.1 tcl7.4.so.1 tcl8.0.so.1\
-         tcl.a tcl76.a tcl75.a tcl74.a tcl80.a\
-         tcl7.6.a tcl7.5.a tcl7.4.a tcl8.0.a"
+libnames="tcl.so tcl.so.1 tcl81.so.1.0 tcl80.so.1.0 tcl76.so.1.0 tcl75.so.1.0\
+          tcl81.so.1 tcl80.so.1 tcl76.so.1 tcl75.so.1\
+	  tcl8.1.so tcl8.0.so tcl7.6.so tcl7.5.so\
+	  tcl8.1.so.1 tcl8.0.so.1 tcl7.6.so.1 tcl7.5.so.1\
+	  tcl.a tcl81.a tcl80.a tcl76.a tcl75.a tcl74.a\
+	  tcl8.1.a tcl8.0.a tcl7.6.a tcl7.5.a tcl7.4.a"
 
 # look for libtcl.a: if TCLLIB is set, check there first
 if test "$TCLLIB" != ""; then
@@ -370,31 +376,26 @@ if test "$TCLLIB" = ""; then
 else
   echo Checking $TCLINC directory for tcl version
   AC_MSG_CHECKING(for Tcl version)
-  tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.4" | wc -l`
+  tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.5" | wc -l`
   if test $tclver = 0; then
-    tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.5" | wc -l`
+    tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.6" | wc -l`
     if test $tclver = 0; then
-      tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.6" | wc -l`
+      tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
       if test $tclver = 0; then
-        tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
+        tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.1" | wc -l`
         if test $tclver = 1; then
-	  AC_MSG_RESULT(8.0 found -- We think this works now)
-          need_dl=1
+	  AC_MSG_RESULT(8.1 found)
         else
           AC_MSG_RESULT(hmm... unknown version)
         fi
       else
-        AC_MSG_RESULT(7.6 found!)
-        need_dl=1
+        AC_MSG_RESULT(8.0 found!)
       fi
     else
-      AC_MSG_RESULT(7.5 found!)
-      need_dl=1
+      AC_MSG_RESULT(7.6 found!)
     fi
   else      
-    AC_MSG_RESULT(7.4 found)
-    echo "   7.4 is kind of old; you may want to upgrade soon."
-    need_dl=0
+    AC_MSG_RESULT(7.5 found)
   fi
 
   if test $need_dl = 1 -a "${ac_cv_func_dlopen}" = "no"; then
@@ -435,9 +436,9 @@ else
     TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
   else
     echo ""
-    echo "You're tcl version is way to old - Version 7.3 or earlier"
+    echo "You're tcl version is way to old - Version 7.4 or earlier"
     echo "I suggest you download and complie a more recent version"
-    echo "The most reliable current version is 7.6"
+    echo "The most reliable current version is 8.0"
     echo ""
     exit 1
   fi

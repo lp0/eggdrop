@@ -322,7 +322,7 @@ void botnet_send_unlinked (int idx, char * bot, char * args) {
       l = simple_sprintf(OBUF,"un %s %s\n",bot,args?args:"");
       send_tand_but(idx,OBUF,l);
 #ifndef NO_OLD_BOTNET
-      if ((b_numver(idx) >= NEAT_BOTNET) && args && args[0])
+      if ((idx >= 0) && (b_numver(idx) >= NEAT_BOTNET) && args && args[0])
 	tandout_but(idx, "chat %s %s\n", lastbot(bot), args);
       tandout_but(idx, "unlinked %s\n", bot);
 #endif
