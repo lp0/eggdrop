@@ -79,8 +79,8 @@ extern jmp_buf alarmret;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.22";
-int egg_numver = 1032200;
+char egg_version[1024] = "1.3.23";
+int egg_numver = 1032300;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -726,6 +726,8 @@ int main (int argc, char ** argv)
       int socket_cleanup = 0;
       
       context;
+      /* process a single tcl event */
+      Tcl_DoOneEvent(TCL_ALL_EVENTS|TCL_DONT_WAIT);
       /* lets move some of this here, reducing the numer of actual
        * calls to periodic_timers */
       now = time(NULL);

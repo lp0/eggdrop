@@ -295,6 +295,7 @@
 /* 212 - ??? */
 #define remove_gunk ((void(*)(char *))global[212])
 #define check_tcl_chjn ((void (*) (char *,char *,int,char,int,char *))global[213])
+#define sanitycheck_dcc ((int (*)(char *, char *, char *, char *))global[214])
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */

@@ -55,7 +55,7 @@ extern int modesperline, maxqmsg, wait_split, wait_info,
  wait_dcc_xfer, die_on_sighup,die_on_sigterm,
  trigger_on_ignore,answer_ctcp, lowercase_ctcp, max_logs, enable_simul;
 extern int dcc_total,mode_buf_len, debug_output, identtimeout, protect_telnet;
-extern int egg_numver, share_unlinks;
+extern int egg_numver, share_unlinks, dcc_sanitycheck, sort_users;
 extern struct server_list *serverlist;
 extern struct dcc_t * dcc;
 extern char egg_version[], langdir[];
@@ -385,6 +385,8 @@ static tcl_ints def_tcl_ints[] =
    {"enable-simul", &enable_simul, 1},
    {"debug-output", &debug_output, 1},
    {"protect-telnet", &protect_telnet, 0},
+   {"dcc-sanitycheck", &dcc_sanitycheck, 0},
+   {"sort-users", &sort_users, 0},
    {"ident-timeout", &identtimeout, 0},
    {"share-unlinks", &share_unlinks, 0},
    {"log-time", &shtime, 0},

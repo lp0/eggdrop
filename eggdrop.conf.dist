@@ -113,6 +113,9 @@ set console "mkcobxs"
 # the userfile: where user records are stored
 set userfile "LamestBot.user"
 
+# do you want the userlist to be sorted when saving
+set sort-users 0
+
 # where the help files can be found (and there are plenty)
 set help-path "help/"
 
@@ -143,6 +146,13 @@ listen 3333 all
 # It greatly improves protection from IRCOPs, but makes it impossible 
 # for NOIRC bots to add hosts or have NEW as a valid login
 set protect-telnet 0
+
+# This setting will make the bot ignore DCC chat requests which appear to
+# have bogus information on the grounds that the user may have been trying
+# to make the bot connect to somewhere that will get it into trouble, or
+# that the user has a broken client (like mIRC tends to do), in which case
+# the connect wouldn't work anyway.  It's suggested that you turn this on.
+set dcc-sanitycheck 0
 
 # and a timeout value for ident lookups would help (seconds)
 set ident-timeout 30
@@ -449,6 +459,11 @@ channel set #lamest -shared
 #   cycle the channel when it becomes op-less?
 channel set #lamest -cycle
 
+#   do you want the bot not to be able to kick +o flag users ?
+#   letting them kick-flood for instance, to protect the channel agaisnt
+#   clone attacks
+channel set #lamest +dontkickops
+
 # here's a shorter example:
 channel add #botcentral {
   chanmode "+mntisl 1"
@@ -607,6 +622,11 @@ set allow_desync 0
 #  IRCnet   = 4   <- kick 4 nicks per bunch (new in ircd 2.9.5)
 #  Undernet = 0
 set kick-method 1
+
+# [0/1] Do you want the bot to kick bogus usernames ?
+# Remember that if it does, as it won't ban them, it can be at the origin
+# of a nice kick-flood
+set kick-bogus 1
 
 # [0/1] let users introduce themselves to the bot via 'hello'?
 set learn-users 1

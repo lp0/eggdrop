@@ -176,6 +176,7 @@ void add_help_reference (char * file);
 void debug_help(int);
 void reload_help_data(void);
 void remove_gunk(char *);
+char * extracthostname (char *);
 
 /* net.c */
 void my_memcpy (char *, char *, int);
@@ -195,6 +196,7 @@ void tputs (int, char *,unsigned int);
 void dequeue_sockets();
 int sockgets (char *,int *);
 void tell_netdebug (int);
+int sanitycheck_dcc (char *, char *, char *, char *);
 
 /* tcl.c */
 void protect_tcl();

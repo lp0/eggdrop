@@ -232,7 +232,8 @@ static int channels_chon (char * handle, int idx) {
 static void write_channels()
 {
    FILE *f;
-   char s[121], w[1024];
+   char s[121], w[1024], name[163];
+   int i, j;
    struct chanset_t *chan;
 
    context;
@@ -249,10 +250,18 @@ static void write_channels()
    fprintf(f, "#Dynamic Channel File for %s (%s) -- written %s\n",
 	   origbotname, ver, ctime(&now));
    for (chan = chanset; chan; chan = chan->next) {
+      for(i=0, j=0; i < strlen(chan->name); i++, j++) {
+        if(strchr("[];$", chan->name[i])) {
+          name[j] = '\\';
+          j++;
+        }
+        name[j] = chan->name[i];
+      }
+      name[j++] = '\0';
       if (channel_static(chan)) {
-	 fprintf(f, "channel set %s ", chan->name);
+	 fprintf(f, "channel set %s ",name);
       } else {
-	 fprintf(f, "channel add %s {", chan->name);
+	 fprintf(f, "channel add %s {",name);
       }
       get_mode_protect(chan, w);
       if (w[0])

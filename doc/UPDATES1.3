@@ -1,6 +1,43 @@
 Changes in eggdrop: (since v1.3.0)
 ----------------------------------
 
+1.3.23
+Foundby   Fixedby   What....
+Nobody    Dagmar    Sanity checking now optionally performed on DCC
+                    connections to prevent spoofing foolishness.
+          Beldin    BSDI 4.0 configure broken
+Eraseme   Beldin    .unload wire didnt clean up the dcc bindings
+          Kirk      more HPUX fixes
+          smok      lang'd a string in .info
+Unknown   smok      msg info would add info for non-existant channels.
+          vod/capster Simple Quoting of silly channel names in channel files
+	            implemented.
+          Arthur2   eggdrop.conf additions
+          Tothwolf  Add a call to Tcl_DoOneEvent() in src/main.c needed
+                    for socket(n) and some other tcl commands.
+          Tothwolf  chan.c was missing a \n in a dprintf.
+Tothwolf  BB        Added a 5th element returned from tcl dcclist function
+                    giving additional (e.g. script) information.
+          Guppy     chan.c was missing another \n concerning +k support
+          Guppy     if the bot gets the nickname already in use message, and
+                    it's already on-line - don't bother changing nicks
+Chriphil  MHT       notes2.tcl fixes: idx mistakes for multiple
+                    connected users.
+          MHT       added userlist (bubble) sorting when saving,
+                    ordered userlist by bots +h/+a/+l/others,
+                    then users +n/+m/+o/others alphabetically.
+                    now '.match *' is more readable !
+Tothwolf  BB        Someone puked write_userfile with unfinished "quick"
+                    code.   It's commented out now.
+          Kirk      implemented a config file option (sort-users) to
+                    determine whether the user wants their userlist to be
+                    bubble sorted when they save it
+          Kirk      removed the quick parameter to the write_userfile
+                    function and made the fekker just sort the list every
+                    save, that is if the user has specified they want to do
+                    this in the config file. A simple bubble sort shouldn't
+                    consume that much CPU time
+
 1.3.22
 Foundby   Fixedby   What....
 Butthead  Beldin    grab new version number from src/main.c
@@ -15,12 +52,13 @@ toot      Kirk      fixed problem where bot crashed when taking revenge
           Butthead  Made alarm timeouts for hostname/addy lookup actually work
                     rather than hang the bot.  New TCL var resolve-timeout
                     allows setting this.
-Someone-who-didnt-fill-in-updates more lang files
+          Skorpion  more lang files
 Daklop    Beldin    quickbans really need a * in case of ~'s etc
 |SKY|     Beldin    it was possibly to create arbritary directories anywhere
                     on the shell with the filesys
 |SKY|     Beldin    getting files linked to the current bot cause SEGV case
 Q         Beldin    botinfo response now includes bot uptime
+
 
 1.3.21
 Foundby   Fixedby   What....
@@ -99,7 +137,7 @@ Fasticus  Beldin    ctcp_reply had an obscure SEGV case
 Foundby   Fixedby   What....
           smok      potential error with tld's in new maskhost
 smok      beldin    private_owner was not being handled in finish_share
-          mht       notes.tcl fixes
+          mht       notes2.tcl fixes
 Daklop    Beldin    refinement of maskhost to deal with that nasty 
                     4 component hosts
           Kirk      extremely small fixes to userinfo1.0.tcl

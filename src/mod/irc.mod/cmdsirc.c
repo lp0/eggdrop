@@ -727,9 +727,9 @@ static void cmd_reset (struct userrec * u, int idx, char * par)
 
    if (par[0]) {
       chan = findchan(par);
-      if (!chan) {
-	 dprintf(idx, "I don't monitor channel %s\n", par);
-      } else {
+      if (!chan) 
+	 dprintf(idx, "%s\n", IRC_NOMONITOR);
+      else {
 	 get_user_flagrec(u,&user,par);
 	 if (!glob_master(user) && !chan_master(user)) {
 	    dprintf(idx, "You are not a master on %s.\n", chan->name);

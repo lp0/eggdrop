@@ -1076,3 +1076,16 @@ void remove_gunk(char * par) {
    *q=*p;
    strcpy(par, WBUF);
 }
+
+/* This will return a pointer to the first character after the @ in the
+ * string given it.  Possibly it's time to think about a regexp library
+ * for eggdrop... */
+char * extracthostname (char * hostmask) {
+  char * ptr = strrchr(hostmask, '@');
+    if (ptr) {
+      ptr = ptr + 1;
+      return ptr;
+    }
+  return "";
+}
+

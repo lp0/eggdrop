@@ -11,19 +11,21 @@ struct chanuserrec *get_chanrec (struct userrec * u, char * chname)
 
 static struct chanuserrec * add_chanrec (struct userrec * u, char * chname)
 {
-   struct chanuserrec *ch;
+   struct chanuserrec *ch = 0;
    
-   ch = user_malloc(sizeof(struct chanuserrec));
-   ch->next = u->chanrec;
-   u->chanrec = ch;
-   ch->info = NULL;
-   ch->flags = 0;
-   ch->flags_udef = 0;
-   ch->laston = 0;
-   strncpy(ch->channel, chname, 80);
-   ch->channel[80] = 0;
-   if (!noshare && !(u->flags & USER_UNSHARED))
-     shareout(findchan(chname),"+cr %s %s\n",u->handle,chname);
+   if (findchan(chname)) {
+      ch = user_malloc(sizeof(struct chanuserrec));
+      ch->next = u->chanrec;
+      u->chanrec = ch;
+      ch->info = NULL;
+      ch->flags = 0;
+      ch->flags_udef = 0;
+      ch->laston = 0;
+      strncpy(ch->channel, chname, 80);
+      ch->channel[80] = 0;
+      if (!noshare && !(u->flags & USER_UNSHARED))
+	shareout(findchan(chname),"+cr %s %s\n",u->handle,chname);
+   }
    return ch;
 }
 

@@ -579,7 +579,7 @@ context;
       wire_leave(w->sock);
       w = wirelist;
    }
-   rem_builtins(H_bot, wire_dcc,3);
+   rem_builtins(H_dcc, wire_dcc,3);
    H_temp = find_bind_table("filt");
    rem_builtins(H_temp, wire_filt,1);
    H_temp = find_bind_table("chof");

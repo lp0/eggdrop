@@ -33,6 +33,10 @@
 #define SHARE_FINISH       4
 #define SHARE_DUMP_RESYNC  5
 
+#ifdef HPUX_HACKS
+#include <dl.h>
+#endif
+
 typedef struct _module_entry {
    char * name;           /* name of the module (without .so) */
    int major;             /* major version number MUST match */

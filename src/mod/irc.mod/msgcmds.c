@@ -285,9 +285,12 @@ static int msg_info (char * nick, char * host, struct userrec * u, char * par)
 	 return 1;
       }
    }
-   if ((par[0] == '#') || (par[0] == '+') || (par[0] == '&'))
-      chname = newsplit(&par);
-   else
+   if ((par[0] == '#') || (par[0] == '+') || (par[0] == '&')) {
+      if (!findchan(chname = newsplit(&par))) {
+	 dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, IRC_NOMONITOR);
+	 return 1;
+      }
+   } else
       chname = 0;
    if (par[0]) {
       p = get_user(&USERENTRY_INFO,u);

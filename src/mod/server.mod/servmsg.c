@@ -671,6 +671,10 @@ static int got433 (char * from, char * msg)
 {
    char c, *oknicks = "^-_\\[]`", *p;
    /* could be futile attempt to regain nick: */
+   if (server_online) {
+      /* If we're online, dont bother changing ... (guppy:14Nov98) */
+	  return 0;
+   }
    if (newbotname[0]) {
       dprintf(DP_MODE, "NICK %s\n", newbotname);
       strcpy(botname, newbotname);

@@ -462,7 +462,7 @@ static void recheck_channel (struct chanset_t * chan, int dobans) {
 	    quickban(chan, m->userhost);
 	    p = get_user(&USERENTRY_COMMENT,m->user);
 	    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick, 
-		    p?p:  "%s\n", IRC_POLITEKICK);
+		    p ? p : IRC_POLITEKICK);
 	    /* otherwise, lets check +v stuff if the llamas want it */
 	 } else if (channel_autovoice(chan)) {
 	    /* do they not have +v or +o on the channel */
@@ -533,6 +533,8 @@ static void recheck_channel (struct chanset_t * chan, int dobans) {
       }
    } else if ((mns & CHANKEY) && (chan->channel.key))
 	add_mode(chan, '-', 'k', chan->channel.key);
+   if (dobans) /* spot on guppy, this just keeps the checking sane */
+     dprintf(DP_SERVER, "MODE %s\n", chan->name);
    stacking--;
 }
 

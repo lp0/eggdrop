@@ -413,6 +413,7 @@ Function global_table [] =
      /* 212 - ??? */
      (Function) remove_gunk,
      (Function) check_tcl_chjn,
+     (Function) sanitycheck_dcc,
 };
 
 void init_modules(void)

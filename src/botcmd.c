@@ -439,12 +439,13 @@ static void bot_infoq (int idx, char * par) {
    now2 = now - online_since;
    s2[0] = 0;
    if (now2 > 86400) {
+      int days = now2 / 86400;
       /* days */
-      sprintf(s2, "%d day", (int) (now2 / 86400));
-      if ((int) (now2 / 86400) >= 2)
+      sprintf(s2, "%d day", days);
+      if (days >= 2)
 	 strcat(s2, "s");
       strcat(s2, ", ");
-      now2 -= (((int) (now2 / 86400)) * 86400);
+      now2 -= days * 86400;
    }
    hr = (time_t) ((int) now2 / 3600);
    now2 -= (hr * 3600);

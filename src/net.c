@@ -46,6 +46,8 @@ char firewall[121] = "";
 int firewallport = 178;
 /* username of the user running the bot */
 char botuser[21] = "llama";
+/* we should do some sanity checking on dcc connections. */
+int dcc_sanitycheck = 0;
 
 sock_list * socklist = 0;	/* enough to be safe */
 int MAXSOCKS = 0;
@@ -890,3 +892,59 @@ void tell_netdebug (int idx)
    }
    dprintf(idx, " done.\n");
 }
+
+/* Security-flavoured sanity checking on DCC connections of all sorts can be
+ * done with this routine.  Feed it the proper information from your DCC
+ * before you attempt the connection, and this will make an attempt at
+ * figuring out if the connection is really that person, or someone screwing
+ * around.  It's not foolproof, but anything that fails this check probably
+ * isn't going to work anyway due to masquerading firewalls, NAT routers, 
+ * or bugs in mIRC. */
+
+int sanitycheck_dcc (char *nick, char *from, char *ipaddy, char *port) {
+    /* According to the latest RFC, the clients SHOULD be able to handle
+     * DNS names that are up to 255 characters long.  This is not broken.  */
+  char hostname[256], dnsname[256], badaddress[16]; 
+  IP ip = my_atoul(ipaddy);
+  int prt = atoi(port);
+
+  /* It is disabled HERE so we only have to check in *one* spot! */
+  if (!dcc_sanitycheck)
+    return 1;
+
+  context;  /* This should be pretty solid, but something _might_ break. */
+
+  sprintf(badaddress, "%u.%u.%u.%u", (ip >> 24) & 0xff, (ip >> 16) & 0xff,
+    (ip >> 8) & 0xff, ip & 0xff);
+
+  if (prt < 1) {
+    putlog(LOG_MISC, "*", "ALERT: (%s!%s) specified an impossible port of \
+    %u!", nick, from, prt);
+    return 0;
+  }
+
+  if (ip < (1 << 24)) {
+    putlog(LOG_MISC, "*", "ALERT: (%s!%s) specified an impossible IP of %s!",
+    nick, from, badaddress);
+    return 0;
+  }
+
+  /* These should pad like crazy with zeros, since 120 bytes or so is
+   * where the routines providing our data currently lose interest. I'm
+   * using the n-variant in case someone changes that... */
+  strncpy(hostname, extracthostname(from), 256);
+  strncpy(dnsname, hostnamefromip(my_htonl(ip)), 256);
+  if (strcasecmp(hostname, dnsname) == 0) {
+    putlog(LOG_DEBUG, "*", "DNS information for submitted IP checks out.");
+    return 1;
+  }
+  
+  if (strcmp(badaddress, dnsname) == 0) 
+    putlog(LOG_MISC, "*", "ALERT: (%s!%s) sent a DCC request with bogus IP information of %s port %u!", nick, from, badaddress, prt);
+  else 
+    putlog(LOG_MISC, "*", "ALERT: (%s!%s) sent a DCC request with bogus IP information of (%s [%s]) port %u!", nick, from, dnsname, badaddress, prt);
+  
+  /* Probably evil. */ 
+  return 0;
+}
+ 

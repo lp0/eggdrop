@@ -536,7 +536,8 @@ static int tcl_dcclist STDVAR
 {
    int i;
    char idxstr[10];
-   char *list[4], *p;
+   char *list[5], *p;
+   char other[160];
 
    context;
    BADARGS(1, 2, " ?type?");
@@ -544,11 +545,18 @@ static int tcl_dcclist STDVAR
       if ((argc == 1) || 
 	  (dcc[i].type && !strcasecmp(dcc[i].type->name,argv[1]))) {
 	 sprintf(idxstr, "%ld", dcc[i].sock);
+	 if (dcc[i].type && dcc[i].type->display)
+	    dcc[i].type->display(i,other);
+	 else {
+	    sprintf(other, "?:%lX  !! ERROR !!",(long)dcc[i].type);
+	    break;
+	 }
 	 list[0] = idxstr;
 	 list[1] = dcc[i].nick;
 	 list[2] = dcc[i].host;
 	 list[3] = dcc[i].type ? dcc[i].type->name : "*UNKNOWN*";
-	 p = Tcl_Merge(4, list);
+	 list[4] = other;
+	 p = Tcl_Merge(5, list);
 	 Tcl_AppendElement(irp, p);
 	 n_free(p, "", 0);
       }

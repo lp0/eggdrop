@@ -573,6 +573,9 @@ static void filesys_dcc_send (char * nick, char * from, struct userrec * u,
 		"Refused dcc send %s (%s): file too large", param,
 		nick);
       } else {
+	 /* This looks like a good place for a sanity check. */
+	 if (!sanitycheck_dcc(nick, from, ip, prt))
+	   return;
 	 i = new_dcc(&DCC_FORK_SEND,sizeof(struct xfer_info));
 	 if (i < 0) {
 	    dprintf(DP_HELP, "NOTICE %s :Sorry, too many DCC connections.\n",

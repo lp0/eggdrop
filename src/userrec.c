@@ -34,6 +34,8 @@ extern time_t now;
 
 /* don't send out to sharebots */
 int noshare = 1;
+/* sort the userlist when saving */
+int sort_users = 0;
 /* user records are stored here */
 struct userrec *userlist = NULL;
 /* last accessed user record */
@@ -368,6 +370,77 @@ int write_user (struct userrec * u, FILE * f, int idx)
    return 1;
 }
 
+int sort_compare(struct userrec *a, struct userrec *b)
+{
+  /* order by flags, then alphabetically
+   * first bots: +h / +a / +l / other bots
+   * then users: +n / +m / +o / other users
+   * return true if (a > b)
+   */
+  if (a->flags & b->flags & USER_BOT) {
+    if (~bot_flags(a) & bot_flags(b) & BOT_HUB)
+      return 1;
+    if (bot_flags(a) & ~bot_flags(b) & BOT_HUB)
+      return 0;
+    if (~bot_flags(a) & bot_flags(b) & BOT_ALT)
+      return 1;
+    if (bot_flags(a) & ~bot_flags(b) & BOT_ALT)
+      return 0;
+    if (~bot_flags(a) & bot_flags(b) & BOT_LEAF)
+      return 1;
+    if (bot_flags(a) & ~bot_flags(b) & BOT_LEAF)
+      return 0;
+  } else {
+    if (~a->flags & b->flags & USER_BOT)
+      return 1;
+    if (a->flags & ~b->flags & USER_BOT)
+      return 0;
+    if (~a->flags & b->flags & USER_OWNER)
+      return 1;
+    if (a->flags & ~b->flags & USER_OWNER)
+      return 0;
+    if (~a->flags & b->flags & USER_MASTER)
+      return 1;
+    if (a->flags & ~b->flags & USER_MASTER)
+      return 0;
+    if (~a->flags & b->flags & USER_OP)
+      return 1;
+    if (a->flags & ~b->flags & USER_OP)
+      return 0;
+  }
+  return (strcasecmp(a->handle, b->handle)>0);
+}
+
+void sort_userlist()
+{
+  int again;
+  struct userrec *last, *p, *c, *n;
+
+  again = 1;
+  last = NULL;
+  while ((userlist != last) && (again)) {
+    p = NULL;
+    c = userlist;
+    n = c->next;
+    again = 0;
+    while (n != last) {
+      if (sort_compare(c, n)) {
+	again = 1;
+	c->next = n->next;
+	n->next = c;
+	if (p == NULL)
+	  userlist = n;
+	else
+	  p->next = n;
+      }
+      p = c;
+      c = n;
+      n = n->next;
+    }
+    last = c;
+  }
+}
+
 /* rewrite the entire user file */
 void write_userfile(int idx)
 {
@@ -388,6 +461,8 @@ void write_userfile(int idx)
       return;
    }
    putlog(LOG_MISC, "*", USERF_WRITING);
+   if (sort_users)
+      sort_userlist();
    tt = now;
    strcpy(s1, ctime(&tt));
    fprintf(f, "#4v: %s -- %s -- written %s", ver, botnetnick, s1);

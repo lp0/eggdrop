@@ -96,18 +96,18 @@ case $system in
     DLOPEN_1=
     ;;
   BSD/OS)
-    if test x`uname -r | cut -d . -f 1` = "x3"; then
-      AC_MSG_RESULT(BSD/OS 3! ok I spose)
+    if test x`uname -r | cut -d . -f 1` = "x2"; then
+      AC_MSG_RESULT(BSD/OS 2! statically linked modules are the only choice)
+      need_dl=0
+      DEFAULT_MAKE=static
+    else
+      AC_MSG_RESULT(BSD/OS 3+! ok I spose)
       BEL_MOD_CC="shlicc"
       BEL_MOD_LD="shlicc"
       BEL_MOD_STRIP="${STRIP} -d"
       SHLIB_LD="shlicc -r"
       SHLIB_STRIP="touch"
       AC_DEFINE(MODULES_OK)
-    else
-      AC_MSG_RESULT(BSD/OS 2! statically linked modules are the only choice)
-      need_dl=0
-      DEFAULT_MAKE=static
     fi
     AC_CHECK_PROG(GMAKE,gmake,gmake)
     if test "x$GMAKE" = "x"; then
@@ -178,6 +178,7 @@ case $system in
     BEL_MOD_LD="gcc -Wl,-E"
     SHLIB_CC="gcc -fPIC"
     SHLIB_LD="ld -b"
+    need_dl=0;
     ;;
   IRIX)
     AC_MSG_RESULT(you are cursed with IRIX)
@@ -364,7 +365,7 @@ else
   # check in common places now
   AC_MSG_CHECKING(for $TCLINCFN)
   if test "$TCLINC" = ""; then
-    for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME $HOME/tcl $HOME/tcl/include;
+    for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME $HOME/tcl $HOME/tcl/include /usr/local/include/tcl8.0;
     do
       if test -r $check/$TCLINCFN; then
         if test "$TCLINC" != ""; then

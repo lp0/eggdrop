@@ -592,17 +592,21 @@ static char *tcl_eggserver (ClientData cdata, Tcl_Interp * irp, char * name1,
  * filesys */
 static int ctcp_DCC_CHAT(char * nick, char * from, char * handle, 
 		 char * object, char * keyword, char * text) {
-   char * param, * ip, * prt,buf[512],*msg = buf;
+   char *action, *param, *ip, *prt, buf[512], *msg = buf;
    int i,sock;
    struct userrec * u = get_user_by_handle(userlist,handle);
    struct flag_record fr = {FR_GLOBAL|FR_CHAN|FR_ANYWH,0,0,0,0,0};
    
-   context;
-   if (strncasecmp(text,"CHAT ",5) || !u)
-     return 0;
-   strcpy(buf,text+5);
-   get_user_flagrec(u,&fr,0);
+   strcpy(msg, text);
+   action = newsplit(&msg);
    param = newsplit(&msg);
+   ip = newsplit(&msg);
+   prt = newsplit(&msg);
+
+   context;
+   if (strcasecmp(action, "CHAT") || !u)
+     return 0;
+   get_user_flagrec(u,&fr,0);
    if (dcc_total == max_dcc) {
       if (!quiet_reject) 
 	dprintf(DP_HELP, "NOTICE %s :%s\n", nick, DCC_TOOMANYDCCS1);
@@ -617,8 +621,8 @@ static int ctcp_DCC_CHAT(char * nick, char * from, char * handle,
       dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
       putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
    } else {
-      ip = newsplit(&msg);
-      prt = newsplit(&msg);
+      if (!sanitycheck_dcc(nick, from, ip, prt))
+	 return 1;
       sock = getsock(0);
       if (open_telnet_dcc(sock, ip, prt) < 0) {
 	 neterror(buf);
