@@ -784,7 +784,8 @@ static void getmyhostname (char * s)
    }
    p = getenv("HOSTNAME");
    if (p != NULL) {
-      strcpy(s, p);
+      strncpy(s, p, 80);
+      s[80] = 0;
       if (strchr(s, '.') != NULL)
 	 return;
    }

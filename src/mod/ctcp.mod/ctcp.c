@@ -22,8 +22,7 @@ static int ctcp_FINGER(char * nick, char * uhost, char * handle,
 		 char * object, char * keyword, char * text) {
    context;
    if (ctcp_finger[0]) 
-     simple_sprintf(&ctcp_reply[strlen(ctcp_reply)],
-		    "\001FINGER %s\001", ctcp_finger);
+     simple_sprintf(ctcp_reply,"%s\001FINGER %s\001", ctcp_reply, ctcp_finger);
    return 1;
 }
 
@@ -31,8 +30,7 @@ static int ctcp_ECHOPINGERR (char * nick, char * uhost, char * handle,
 		       char * object, char * keyword, char * text) {
    context;
    if (strlen(text) <= 80) /* bitch ignores > 80 */
-     simple_sprintf(&ctcp_reply[strlen(ctcp_reply)],"\001%s %s\001",
-		    keyword,text);
+     simple_sprintf(ctcp_reply,"%s\001%s %s\001", ctcp_reply, keyword,text);
    return 1;
 }
 
@@ -40,8 +38,7 @@ static int ctcp_VERSION(char * nick, char * uhost, char * handle,
 		 char * object, char * keyword, char * text) {
    context;
    if (ctcp_version[0]) 
-     simple_sprintf(&ctcp_reply[strlen(ctcp_reply)],
-		    "\001VERSION %s\001", ctcp_version);
+     simple_sprintf(ctcp_reply, "%s\001VERSION %s\001", ctcp_reply, ctcp_version);
    return 1;
 }
 
@@ -49,8 +46,7 @@ static int ctcp_USERINFO(char * nick, char * uhost, char * handle,
 		 char * object, char * keyword, char * text) {
    context;
    if (ctcp_userinfo[0]) 
-     simple_sprintf(&ctcp_reply[strlen(ctcp_reply)],
-		    "\001USERINFO %s\001", ctcp_userinfo);
+     simple_sprintf(ctcp_reply, "%s\001USERINFO %s\001", ctcp_reply, ctcp_userinfo);
    return 1;
 }
 
@@ -86,12 +82,11 @@ static int ctcp_CLIENTINFO(char * nick, char * uhosr, char * handle,
    else if (strcasecmp(msg, "echo") == 0)
      p = CLIENTINFO_ECHO;
    if (p == NULL) {
-      simple_sprintf(&ctcp_reply[strlen(ctcp_reply)],
-		     "\001ERRMSG CLIENTINFO: %s is not a valid function\001",
-		     msg);
+      simple_sprintf(ctcp_reply,
+		     "%s\001ERRMSG CLIENTINFO: %s is not a valid function\001",
+		     ctcp_reply, msg);
       } else
-	 simple_sprintf(&ctcp_reply[strlen(ctcp_reply)],
-			"\001CLIENTINFO %s\001", p);
+	 simple_sprintf(ctcp_reply, "%s\001CLIENTINFO %s\001", ctcp_reply, p);
    return 1;
 }
 
@@ -102,7 +97,7 @@ static int ctcp_TIME (char * nick, char * uhost, char * handle, char * object,
    context;
    strcpy(tms, ctime(&now));
    tms[strlen(tms) - 1] = 0;
-   simple_sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001TIME %s\001", tms);
+   simple_sprintf(ctcp_reply, "%s\001TIME %s\001", ctcp_reply, tms);
    return 1;
 }
 
@@ -129,8 +124,8 @@ static int ctcp_CHAT (char * nick, char * uhost, char * handle, char * object,
 	 }
       }
       if (ix < 0)
-	simple_sprintf(&ctcp_reply[strlen(ctcp_reply)], 
-		       "\001ERROR no telnet port\001");
+	simple_sprintf(ctcp_reply,
+		       "%s\001ERROR no telnet port\001", ctcp_reply);
    }
    return 1;
 }

@@ -697,12 +697,15 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
    if (p != NULL) {		/* cross-bot note */
       char x[20];
       *p = 0;
-      strcpy(x,to);
+      strncpy(x,to,20);
+      x[20] = 0;
       *p = '@';
       p++;
       if (strcasecmp(p, botnetnick) == 0)	/* to me?? */
 	return add_note(x, from, msg, idx, echo);	/* start over, dimwit. */
       if (strcasecmp(from, botnetnick)) {
+	 if (strlen(from) > 40)
+	   from[40] = 0;
 	 if (strchr(from,'@')) {
 	    strcpy(botf, from);
 	 } else

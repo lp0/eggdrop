@@ -277,89 +277,116 @@ dnl where is tcl?  is it here?
 
 # ---------- begin robey's tcl thingies
 
-libnames="tcl.so tcl.so.1 tcl81.so.1.0 tcl80.so.1.0 tcl76.so.1.0 tcl75.so.1.0\
+dnl oohh new configure --variables for those with multiple tcl libs
+AC_CHECK_PROG(BASENAME,basename,basename)
+AC_CHECK_PROG(DIRNAME,dirname,dirname)
+if test $BASENAME = "" || test $DIRNAME = "" ; then
+  echo ack...no basename or dirname, we cant configure tcl without em.
+  exit 1
+fi
+
+AC_ARG_WITH(tcllib, [  --with-tcllib=PATH      full path to tcl library], tcllibname=$withval)
+AC_ARG_WITH(tclinc, [  --with-tclinc=PATH      full path to tcl header], tclincname=$withval)
+
+if test -r "$tcllibname"; then
+  TCLLIB=`$DIRNAME $tcllibname`
+  TCLLIBFN=`$BASENAME $tcllibname | cut -c4-`
+  echo "using tcllib $TCLLIB/lib$TCLLIBFN"
+else
+
+ libnames="tcl.so tcl.so.1 tcl81.so.1.0 tcl80.so.1.0 tcl76.so.1.0 tcl75.so.1.0\
           tcl81.so.1 tcl80.so.1 tcl76.so.1 tcl75.so.1\
 	  tcl8.1.so tcl8.0.so tcl7.6.so tcl7.5.so\
 	  tcl8.1.so.1 tcl8.0.so.1 tcl7.6.so.1 tcl7.5.so.1\
 	  tcl.a tcl81.a tcl80.a tcl76.a tcl75.a tcl74.a\
 	  tcl8.1.a tcl8.0.a tcl7.6.a tcl7.5.a tcl7.4.a"
 
-# look for libtcl.a: if TCLLIB is set, check there first
-if test "$TCLLIB" != ""; then
-  TCLLIBFN=notfound
-  for checkfn in $libnames;
-  do
-    if test -r $TCLLIB/lib$checkfn; then
-      if test $TCLLIBFN = notfound; then
-        TCLLIBFN=$checkfn
-      fi
-    fi
-  done
-  if test $TCLLIBFN = notfound; then
-    echo "Environment variable TCLLIB is set, but incorrect."
-    unset TCLLIB
-  fi
-fi
+ # look for libtcl.a: if TCLLIB is set, check there first
+ if test "$TCLLIB" != ""; then
+   TCLLIBFN=notfound
+   for checkfn in $libnames;
+   do
+     if test -r $TCLLIB/lib$checkfn; then
+       if test $TCLLIBFN = notfound; then
+         TCLLIBFN=$checkfn
+       fi
+     fi
+   done
+   if test $TCLLIBFN = notfound; then
+     echo "Environment variable TCLLIB is set, but incorrect."
+     unset TCLLIB
+   fi
+ fi
 
-# check in common places now
-AC_MSG_CHECKING(for libtcl)
-if test "$TCLLIB" = ""; then
-  for checkfn in $libnames;
-  do
-    if test "$TCLLIB" = ""; then
-      for check in /usr/local/lib /usr/local/lib/tcl /usr/local/pkgs/tcl/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/tcl $HOME/tcl/lib;
-      do
-        if test -r $check/lib$checkfn; then
-          if test "$TCLLIB" = ""; then
-            AC_MSG_RESULT(found in $check/lib$checkfn)
-            TCLLIB=$check
-            TCLLIBFN=$checkfn
-          fi
-        fi
-      done
-    fi
-  done
-else
-  AC_MSG_RESULT(found in $TCLLIB/lib$TCLLIBFN)
-fi
+ # check in common places now
+ AC_MSG_CHECKING(for libtcl)
+ if test "$TCLLIB" = ""; then
+   for checkfn in $libnames;
+   do
+     if test "$TCLLIB" = ""; then
+       for check in /usr/local/lib /usr/local/lib/tcl /usr/local/pkgs/tcl/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/tcl $HOME/tcl/lib;
+       do
+         if test -r $check/lib$checkfn; then
+           if test "$TCLLIB" = ""; then
+             AC_MSG_RESULT(found in $check/lib$checkfn)
+             TCLLIB=$check
+             TCLLIBFN=$checkfn
+           fi
+         fi
+       done
+     fi
+   done
+ else
+   AC_MSG_RESULT(found in $TCLLIB/lib$TCLLIBFN)
+ fi
+
+fi # option
 
 # give up if they don't even have that
 if test "$TCLLIB" = ""; then
   AC_MSG_RESULT(not found)
+fi
+
+# now look for pesky $TCLINCFN file
+if test -r "$tclincname"; then
+  TCLINC=`$DIRNAME $tclincname`
+  TCLINCFN=`$BASENAME $tclincname`
+  echo "using TCL header $TCLINC/$TCLINCFN"
 else
-# now look for pesky tcl.h file
+  TCLINCFN=tcl.h
+  	
   if test "$TCLINC" != ""; then
-    if test ! -r $TCLINC/tcl.h; then
+    if test ! -r $TCLINC/$TCLINCFN; then
       echo "Environment variable TCLINC is set, but incorrect."
       unset TCLINC
     fi
   fi
 
   # check in common places now
-  AC_MSG_CHECKING(for tcl.h)
+  AC_MSG_CHECKING(for $TCLINCFN)
   if test "$TCLINC" = ""; then
     for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME $HOME/tcl $HOME/tcl/include;
     do
-      if test -r $check/tcl.h; then
+      if test -r $check/$TCLINCFN; then
         if test "$TCLINC" != ""; then
           break
         fi
-        AC_MSG_RESULT(found in $check/tcl.h)
+        AC_MSG_RESULT(found in $check/$TCLINCFN)
         TCLINC=$check
         break
       fi
     done
   else
-    AC_MSG_RESULT(found in $TCLINC/tcl.h)
+    AC_MSG_RESULT(found in $TCLINC/$TCLINCFN)
   fi
- 
+
   # had TCLLIB but not TCLINC?  so close... :(
   if test "$TCLINC" = ""; then
     AC_MSG_RESULT(not found)
     unset TCLLIB
     unset TCLLIBFN
   fi
-fi
+fi # option
 
 # done looking, now either TCLLIB & TCLINC are both set, or neither is set
 
@@ -370,7 +397,7 @@ if test "$TCLLIB" = ""; then
   echo "Eggdrop now requires Tcl to compile.  If you already have Tcl"
   echo "installed on this system, and I just wasn't looking in the right"
   echo "place for it, set the environment variables TCLLIB and TCLINC so"
-  echo "I will know where to find 'libtcl.a' (or 'libtcl.so') and 'tcl.h'"
+  echo "I will know where to find 'libtcl.a' (or 'libtcl.so') and '$TCLINCFN'"
   echo "(respectively).  Then run 'configure' again."
   echo ""
   echo "Read the README file if you don't know what Tcl is or how to get"
@@ -380,13 +407,13 @@ if test "$TCLLIB" = ""; then
 else
   echo Checking $TCLINC directory for tcl version
   AC_MSG_CHECKING(for Tcl version)
-  tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.5" | wc -l`
+  tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "7.5" | wc -l`
   if test $tclver = 0; then
-    tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.6" | wc -l`
+    tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "7.6" | wc -l`
     if test $tclver = 0; then
-      tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
+      tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "8.0" | wc -l`
       if test $tclver = 0; then
-        tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.1" | wc -l`
+        tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "8.1" | wc -l`
         if test $tclver = 1; then
 	  AC_MSG_RESULT(8.1 found)
         else
@@ -401,6 +428,8 @@ else
   else      
     AC_MSG_RESULT(7.5 found)
   fi
+
+fi # option 
 
   if test $need_dl = 1 -a "${ac_cv_func_dlopen}" = "no"; then
     if test "$LINUX" = "yes"; then
@@ -432,6 +461,7 @@ else
   fi
 
   TCLLIBFNS=`basename $TCLLIBFN .a`
+  TCLLIBFNS=`basename $TCLLIBFNS .so.1.2`
   TCLLIBFNS=`basename $TCLLIBFNS .so.1.0`
   TCLLIBFNS=`basename $TCLLIBFNS .so.1`
   TCLLIBFNS=`basename $TCLLIBFNS .so`
@@ -446,10 +476,10 @@ else
     echo ""
     exit 1
   fi
-fi
 
 AC_SUBST(TCLINC)
 AC_SUBST(TCLLIB)
+AC_SUBST(TCLINCFN)
 AC_SUBST(TCLLIBFN)
 AC_SUBST(TCL_REQS)
 AC_SUBST(TCL_LIBS)

@@ -226,6 +226,45 @@ static int msg_ident (char * nick, char * host, struct userrec * u, char * par)
    return 1;
 }
 
+static int msg_addhost (char * nick, char * host, struct userrec * u, char * par)
+{
+   char * pass;
+   
+   if (match_my_nick(nick))
+     return 1;
+   if (!u || (u->flags & USER_BOT))
+     return 1;
+   if (u->flags & USER_COMMON) {
+      if (!quiet_reject)
+	dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, IRC_FAILCOMMON);
+      return 1;
+   }
+   pass = newsplit(&par);
+   if (!par[0]) {
+      if (!quiet_reject)
+	dprintf(DP_SERVER, "NOTICE %s :You must supply a hostmask\n", nick);
+   } else if (strcasecmp(u->handle, origbotname)) {
+      /* This could be used as detection... */
+      if (u_pass_match(u,"-")) {
+	 if (!quiet_reject) 
+	   dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, IRC_NOPASS);
+      } else if (!u_pass_match(u,pass)) {
+	 if (!quiet_reject) 
+	   dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, IRC_DENYACCESS);
+      } else if (get_user_by_host(par)) {
+	 if (!quiet_reject)
+	   dprintf(DP_SERVER, "NOTICE %s :That hostmask clashes with another already in use.\n", nick);
+      } else {
+	 putlog(LOG_CMDS, "*", "(%s!%s) !*! ADDHOST %s", nick, host, par);
+	 dprintf(DP_SERVER, "NOTICE %s :%s: %s\n", nick, IRC_ADDHOSTMASK, par);
+	 addhost_by_handle(u->handle, par);
+	 return 1;
+      }
+   }
+   putlog(LOG_CMDS, "*", "(%s!%s) !*! failed ADDHOST %s", nick, host, par);
+   return 1;
+}
+
 static int msg_info (char * nick, char * host, struct userrec * u, char * par)
 {
    char s[121], * pass, *chname, * p;
@@ -909,7 +948,8 @@ static int msg_jump (char * nick, char * host, struct userrec * u, char * par)
  *  int msg_cmd("handle","nick","user@host","params");
  *  function is responsible for any logging
  *  (return 1 if successful, 0 if not) */
-static cmd_t C_msg[18]={
+static cmd_t C_msg[19]={
+   { "addhost", "", (Function)msg_addhost, NULL },
    { "die", "n", (Function)msg_die, NULL },
    { "go", "", (Function)msg_go, NULL },
    { "hello", "", (Function)msg_hello, NULL },

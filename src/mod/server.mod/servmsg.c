@@ -213,7 +213,7 @@ static void nuke_server (char * reason) {
    }
 }
 
-static char ctcp_reply[512] = "";
+static char ctcp_reply[1024] = "";
 
 static int lastmsgs[FLOOD_GLOBAL_MAX];
 static char lastmsghost[FLOOD_GLOBAL_MAX][81];

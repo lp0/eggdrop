@@ -406,6 +406,8 @@ Function global_table [] =
      (Function) add_tcl_coups,
      (Function) rem_tcl_coups,
      (Function) botname,
+     /* 212 - ??? */
+     (Function) remove_gunk,
 };
 
 void init_modules(void)

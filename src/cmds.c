@@ -617,6 +617,9 @@ static void cmd_console (struct userrec * u, int idx, char * par) {
       strncpy(dcc[dest].u.chat->con_chan, nick, 80);
       dcc[dest].u.chat->con_chan[80] = 0;
       nick[0] = 0;
+      if ((dest == idx) && !glob_master(fr) && !chan_master(fr)) 
+	/* consoling to another channel for self */
+	dcc[dest].u.chat->con_flags &= ~(LOG_MISC | LOG_CMDS | LOG_WALL);
    }
    if (!nick[0])
       nick = newsplit(&par);
@@ -643,12 +646,10 @@ static void cmd_console (struct userrec * u, int idx, char * par) {
 			 LOG_LEV3 | LOG_LEV4 | LOG_LEV5 | LOG_LEV6 | LOG_LEV7 |
 			 LOG_LEV8 | LOG_WALL | LOG_DEBUG);
 	    }
-	    if (!glob_owner(fr) && pls) {
-	       md &= ~(LOG_RAW|LOG_SRVOUT|LOG_BOTNET|LOG_BOTSHARE);
-	    }
-	    if (!glob_botmast(fr) && pls) {
-	       md &= ~LOG_BOTS;
-	    }
+	    if (!glob_owner(fr) && pls) 
+	      md &= ~(LOG_RAW|LOG_SRVOUT|LOG_BOTNET|LOG_BOTSHARE);
+	    if (!glob_botmast(fr) && pls) 
+	      md &= ~LOG_BOTS;
 	    if (pls)
 	      dcc[dest].u.chat->con_flags |= md;
 	    else
@@ -2022,34 +2023,52 @@ static void cmd_unloadmod (struct userrec * u, int idx, char * par)
 static void cmd_pls_ignore (struct userrec * u, int idx, char * par)
 {
    char * who;
+   char s[UHOSTLEN + 1];
+
    if (!par[0]) {
       dprintf(idx, "Usage: +ignore <hostmask> [comment]\n");
       return;
    }
    who = newsplit(&par);
-   if (strlen(par) > 65)
-     par[65] =0 ;
-   if (match_ignore(who)) {
+   remove_gunk(who);
+   if (!par[0])
+     par = "requested";
+   else if (strlen(par) > 65)
+     par[65] = 0;
+   if (strlen(who) > UHOSTLEN - 4)
+     who[UHOSTLEN-4] = 0;
+   /* fix missing ! or @ BEFORE continuing - sounds familiar */
+   if (!strchr(who, '!')) {
+      if (!strchr(who, '@'))
+	simple_sprintf(s, "%s!*@*", who);
+      else
+	simple_sprintf(s, "*!%s", who);
+   } else if (!strchr(who, '@'))
+	simple_sprintf(s, "%s@*", who);
+   else
+      strcpy(s, who);
+
+   if (match_ignore(s)) {
       dprintf(idx, "That already matches an existing ignore.\n");
       return;
    }
-   dprintf(idx, "Now ignoring: %s (%s)\n", who, par);
-   addignore(who, dcc[idx].nick, par, 0L);
-   putlog(LOG_CMDS, "*", "#%s# +ignore %s %s", dcc[idx].nick, who, par);
+   dprintf(idx, "Now ignoring: %s (%s)\n", s, par);
+   addignore(s, dcc[idx].nick, par, 0L);
+   putlog(LOG_CMDS, "*", "#%s# +ignore %s %s", dcc[idx].nick, s, par);
 }
 
 static void cmd_mns_ignore (struct userrec * u, int idx, char * par) {
    char buf[UHOSTLEN+1];
    
    if (!par[0]) {
-      dprintf(idx, "Usage: -ignore <hostmask>\n");
+      dprintf(idx, "Usage: -ignore <hostmask | ignore #>\n");
       return;
    }
    strncpy(buf, par, UHOSTLEN);
    buf[UHOSTLEN] = 0;
-   if (delignore(par)) {
-      putlog(LOG_CMDS, "*", "#%s# -ignore %s", dcc[idx].nick, par);
-      dprintf(idx, "No longer ignoring: %s\n", par);
+   if (delignore(buf)) {
+      putlog(LOG_CMDS, "*", "#%s# -ignore %s", dcc[idx].nick, buf);
+      dprintf(idx, "No longer ignoring: %s\n", buf);
    } else
       dprintf(idx, "Can't find that ignore.\n");
 }

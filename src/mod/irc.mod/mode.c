@@ -609,16 +609,20 @@ static void gotmode (char * from, char * msg) {
 	 get_user_flagrec(u,&user,ch);
 	 nick = splitnick(&from);
 	 m = ismember(chan, nick);
-	 if (m && me_op(chan)) {
-	    if (chan_fakeop(m)) {
-	       putlog(LOG_MODES, ch, CHAN_FAKEMODE, ch);
-	       dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick, CHAN_FAKEMODE_KICK);
-	       reversing = 1;
-	    } else if (!chan_hasop(m)) {
+	 if (allow_desync == 0) {
+	   if (m && me_op(chan)) {
+	     if (chan_fakeop(m)) {
+	        putlog(LOG_MODES, ch, CHAN_FAKEMODE, ch);
+	        dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick,
+              CHAN_FAKEMODE_KICK);
+	        reversing = 1;
+	     } else if (!chan_hasop(m)) {
 	       putlog(LOG_MODES, ch, CHAN_DESYNCMODE, ch);
-	       dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick, CHAN_DESYNCMODE_KICK);
+	       dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick,
+             CHAN_DESYNCMODE_KICK);
 	       reversing = 1;
-	    }
+	     }
+	   }
 	 }
 	 ms2[0] = '+';
 	 ms2[2] = 0;

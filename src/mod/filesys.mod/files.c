@@ -129,7 +129,7 @@ static void cmd_sort (int idx, char * par)
 /* way.  return 1 if the change can happen, 0 if not. */
 static int resolve_dir (char * current, char * change, char * real, int idx)
 {
-   char elem[512], s[1024], new[1024], *p;
+   char elem[512], s[1024], new[1024], work[1024], *p;
    FILE *f;
    filedb fdb;
    struct flag_record user = { FR_GLOBAL|FR_CHAN, 0, 0, 0, 0, 0 };
@@ -201,7 +201,9 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
 	 if (s[0])
 	    if (s[strlen(s) - 1] != '/')
 	       strcat(s, "/");
-	 sprintf(real, "%s%s", s, elem);
+	 sprintf(work, "%s%s", s, elem);
+	 strncpy(real, work, 120);
+	 real[120] = 0;
 	 sprintf(s, "%s%s", dccdir, real);
       }
       p = strchr(new, '/');
@@ -287,7 +289,8 @@ static void cmd_chdir (int idx, char * msg)
       dprintf(idx, FILES_NOSUCHDIR);
       return;
    }
-   strcpy(dcc[idx].u.file->dir, s);
+   strncpy(dcc[idx].u.file->dir, s, 160);
+   s[160] = 0;
    set_user(&USERENTRY_DCCDIR, dcc[idx].user, dcc[idx].u.file->dir);
    putlog(LOG_FILES, "*", "files: #%s# cd /%s", dcc[idx].nick,
 	  dcc[idx].u.file->dir);
@@ -826,8 +829,11 @@ static void cmd_mkdir (int idx, char * par)
       return;
    }
    name = newsplit(&par);
-   if (name[strlen(name) - 1] == '/')
-      name[strlen(name) - 1] = 0;
+   ret = strlen(name);
+   if (ret > 60)
+     name[(ret = 60)] = 0;
+   if (name[ret] == '/')
+     name[ret] = 0;
    flags = newsplit(&par);
    chan = newsplit(&par);
    if (!chan[0] && ((flags[0] == '#') || (flags[0] == '&'))) {

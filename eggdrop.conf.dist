@@ -592,6 +592,9 @@ loadmodule irc
 # [0/1] define this if you want to bounce all server bans 
 set bounce-bans 0
 
+# [0/1] define this to allow modes from non-op users (ChanServ)
+set allow_desync 0
+
 # kick-method defines how kicks (when enforcing bans) should be made:
 #    0 = kick all nicks at once in one command
 #    X = kick X users at a time
@@ -642,6 +645,11 @@ set use-354 0
 # 'tcl-commands.doc'
 #unbind msg - hello *msg:hello
 #bind msg - myword *msg:hello
+
+# Many takeover attempts occur due to lame users blindy /msg ident'n to
+# the bot without checking if the bot is the bot.
+# We now unbind this command by default to discourage them
+unbind msg - ident *msg:ident
 
 ##### TRANSFER MODULE #####
 

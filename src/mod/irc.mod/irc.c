@@ -32,6 +32,7 @@ static int use_354 = 0;
 /* how many kicks does the irc network support at once?
    0 = as many as possible.  Ernst 18/3/98 */
 static int kick_method = 1;
+static int allow_desync = 0;
 
 #include "chan.c"
 #include "mode.c"
@@ -529,7 +530,7 @@ static void check_tcl_kickmode (char * nick, char * uhost, struct userrec * u,
    Tcl_SetVar(interp, "_kick5", dest, 0);
    Tcl_SetVar(interp, "_kick6", reason, 0);
    context;
-   check_tcl_bind(H_kick, args, &fr, " $_kick1 $_kick2 $_kick3 $_kick4 $_kick5 $_kick6",
+   check_tcl_bind(table, args, &fr, " $_kick1 $_kick2 $_kick3 $_kick4 $_kick5 $_kick6",
 		  MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
    context;
 }
@@ -598,6 +599,7 @@ static tcl_ints myints[] =
      {"use-354", &use_354, 0},
      {"kick-method", &kick_method, 0},
      {"invite-key", &invite_key, 0},
+     {"allow-desync", &allow_desync, 0},
      {0,0}
 };
 
@@ -679,7 +681,7 @@ static char *irc_close()
    context;
    rem_tcl_ints(myints);
    rem_builtins(H_dcc,irc_dcc,16);
-   rem_builtins(H_msg,C_msg,18);
+   rem_builtins(H_msg,C_msg,19);
    rem_builtins(H_raw,irc_raw,24);
    rem_tcl_commands(tclchan_cmds);
    rem_help_reference("irc.help");
@@ -750,7 +752,7 @@ char *irc_start (Function* global_funcs)
    context;
    add_tcl_ints(myints);
    add_builtins(H_dcc,irc_dcc,16);
-   add_builtins(H_msg,C_msg,18);
+   add_builtins(H_msg,C_msg,19);
    add_builtins(H_raw,irc_raw,24);
    add_tcl_commands(tclchan_cmds);
    add_help_reference("irc.help");
@@ -761,7 +763,7 @@ char *irc_start (Function* global_funcs)
    H_rejn = add_bind_table("rejn",HT_STACKABLE,channels_4char);
    H_part = add_bind_table("part",HT_STACKABLE,channels_4char);
    H_nick = add_bind_table("nick",HT_STACKABLE,channels_5char);
-   H_mode = add_bind_table("mode",HT_STACKABLE,channels_5char);
+   H_mode = add_bind_table("mode",HT_STACKABLE,channels_6char);
    H_kick = add_bind_table("kick",HT_STACKABLE,channels_6char);
    H_join = add_bind_table("join",HT_STACKABLE,channels_4char);
    H_pubm = add_bind_table("pubm",HT_STACKABLE,channels_5char);

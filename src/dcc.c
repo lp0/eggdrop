@@ -171,7 +171,8 @@ static void bot_version (int idx, char * par) {
 #ifndef NO_OLD_BOTNET
    }
 #endif
-   strcpy(dcc[idx].u.bot->version, par);
+   strncpy(dcc[idx].u.bot->version, par, 120);
+   dcc[idx].u.bot->version[120] = 0;
    putlog(LOG_BOTS, "*", "Linked to %s", dcc[idx].nick);
    chatout("*** Linked to %s\n", dcc[idx].nick);
    botnet_send_nlinked(idx, dcc[idx].nick, botnetnick, '!', 
@@ -795,6 +796,10 @@ static void dcc_chat (int idx, char * buf,int i)
 	       }
 	    }
 	 } else if (buf[0] == ',') {
+	    int me = 0;
+	    
+	    if ((buf[1] == 'm') && (buf[2] == 'e') && buf[3] == ' ')
+	      me = 1;
 	    for (i = 0; i < dcc_total; i++) {
 	       int ok = 0;
 	       if (dcc[i].type->flags & DCT_MASTER) {
@@ -807,7 +812,10 @@ static void dcc_chat (int idx, char * buf,int i)
 	       if (ok) {
 		  struct userrec * u = get_user_by_handle(userlist,dcc[i].nick);
 		  if (u && (u->flags & USER_MASTER)) 
-		    dprintf(i, "-%s- %s\n", dcc[idx].nick, buf+1);
+		    if (me)
+		      dprintf(i,"-> %s%s\n",dcc[idx].nick,buf+3);
+		  else
+		    dprintf(i,"-%s-> %s\n",dcc[idx].nick,buf+1);
 	       }
 	    }
 	 } else if (buf[0] == '\'') {

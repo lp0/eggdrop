@@ -1061,3 +1061,17 @@ void show_motd (int idx)
    }
 }
 
+/* remove :'s from ignores and bans */
+void remove_gunk(char * par) {
+   char *q, *p;
+   char WBUF[strlen(par)+1];
+
+   for (p = par, q = WBUF ; *p ; p++, q++) {
+      if (*p == ':')
+	q--;
+      else
+	*q=*p;
+   }
+   *q=*p;
+   strcpy(par, WBUF);
+}

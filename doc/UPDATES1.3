@@ -1,6 +1,27 @@
 Changes in eggdrop: (since v1.3.0)
+<<<<<<< UPDATES1.3
 ==================
 
+1.3.18
+Foundby   Fixedby   What....
+	  smok      Fix for silly programmers who forget details in mode 
+	            handling
+Toon      Kirk      +ban could be used to crash the bot in certain circumstances
+          Kirk      the +ignore command could lock the bot into a nasty loop
+Flattie   Beldin    .console could be used to get chan+m only flags if user
+                    had +m on another chan.
+ButchBub/Beldin     adduser /msg addhost command, and unbound /msg indent by
+                    default
+Hunger    Beldin    buffer overflow in cmd_setstick
+          Beldin    whoops, when you fix something (-ignore), you should really
+	            fix it.
+PaulBoehm Beldin    buffer overflows in botnet version handling, +ignore,
+                    .note, .+ban, .-ban(similar to .-ignore bug), HOSTNAME,
+		    .jump, & mkdir (to some degree)
+Fasticus  Beldin    ctcp_reply had an obscure SEGV case
+          smok      allow-desync variable added.
+	  smok      better looking for tcl libraries added to configure
+	  
 1.3.17
 Foundby   Fixedby   What....
           smok      potential error with tld's in new maskhost

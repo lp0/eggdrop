@@ -15,6 +15,7 @@
  *      1.2     1997-08-19      1.2.1		Update and bugfixes.	 BB
  *      1.3     1997-09-24      1.2.2.0		Reprogrammed for 1.2.2	 BB
  *      1.4     1997-11-25      1.2.2.0         Added language addition  Kirk
+ *      1.5     1998-07-12      1.3.0.0         Fixed ;me and updated    BB
  *
  *   This module does not support wire usage in the files area.
  *
@@ -490,8 +491,8 @@ context;
 
    if (!message[1]) return "";
 
-   if (strlen(message) > 2 && !strncmp(&message[1], "me", 2)
-                       && !message[3]) {
+   if ((strlen(message) > 3) && !strncmp(&message[1], "me", 2)
+                       && (message[3] == ' ')) {
       sprintf(wiretmp2,"!%s@%s", dcc[idx].nick, botnetnick);
       enctmp=encrypt_string(w->key, &message[3]);
       wiretype = 1;

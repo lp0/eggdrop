@@ -292,6 +292,8 @@
 #define add_tcl_coups ((void (*) (tcl_coups *))global[209])
 #define rem_tcl_coups ((void (*) (tcl_coups *))global[210])
 #define botname ((char *)(global[211]))
+/* 212 - ??? */
+#define remove_gunk ((void(*)(char *))global[212])
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */

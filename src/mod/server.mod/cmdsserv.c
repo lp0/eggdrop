@@ -55,9 +55,11 @@ static void cmd_jump (struct userrec * u, int idx, char * par)
 	port = default_port;
       putlog(LOG_CMDS, "*", "#%s# jump %s %d %s", dcc[idx].nick, other,
 	     port, par);
-      strcpy(newserver, other);
+      strncpy(newserver, other, 120);
+      newserver[120] = 0;
       newserverport = port;
-      strcpy(newserverpass, par);
+      strncpy(newserverpass, par, 120);
+      newserverpass[120] = 0;
    } else
      putlog(LOG_CMDS, "*", "#%s# jump", dcc[idx].nick);
    dprintf(idx, "%s...\n", IRC_JUMP);

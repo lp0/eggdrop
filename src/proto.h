@@ -175,6 +175,7 @@ void rem_help_reference (char * file);
 void add_help_reference (char * file);
 void debug_help(int);
 void reload_help_data(void);
+void remove_gunk(char *);
 
 /* net.c */
 void my_memcpy (char *, char *, int);

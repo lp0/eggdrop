@@ -19,11 +19,11 @@ static struct flag_record victim = {
 
 static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 {
-   char * chname, * who, s[UHOSTLEN], s1[UHOSTLEN], *p;
+   char * chname, * who, s[UHOSTLEN + 1], s1[UHOSTLEN + 1], *p;
    struct chanset_t *chan = 0;
    int bogus = 0;
-   module_entry * me;
-   
+   module_entry * me;   
+
    if (!par[0]) {
       dprintf(idx, "Usage: +ban <hostmask> [channel] [reason]\n");
    } else {
@@ -36,6 +36,7 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	 dprintf(idx, "That is a bogus ban!\n");
 	 return;
       }
+      remove_gunk(who);
       if ((par[0] == '#') || (par[0] == '&') || (par[0] == '+')) 
 	chname = newsplit(&par);
       else
@@ -53,6 +54,8 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	par = "requested";
       else if (strlen(par) > 65)
 	par[65] = 0;
+      if (strlen(who) > UHOSTLEN - 4)
+	who[UHOSTLEN - 4] = 0;
       /* fix missing ! or @ BEFORE checking against myself */
       if (!strchr(who, '!')) {
 	 if (!strchr(who, '@')) 
@@ -115,7 +118,7 @@ static void cmd_mns_ban (struct userrec * u, int idx, char * par)
 {
    int i = 0, j;
    struct chanset_t *chan = 0;
-   char s[UHOSTLEN], *ban, *chname;
+   char s[UHOSTLEN + 1], *ban, *chname;
    banlist *b;
    
    if (!par[0]) {
@@ -134,7 +137,8 @@ static void cmd_mns_ban (struct userrec * u, int idx, char * par)
       if (!((glob_op(user) && !chan_deop(user)) || chan_op(user)))
 	return;
    }
-   strcpy(s,ban);
+   strncpy(s,ban, UHOSTLEN);
+   s[UHOSTLEN] = 0;
    i = u_delban(NULL,s,(u->flags & USER_MASTER));
    if (i > 0) {
       putlog(LOG_CMDS, "*", "#%s# -ban %s", dcc[idx].nick, s);
@@ -357,12 +361,14 @@ static void cmd_stick_yn(int idx, char *par, int yn)
       dprintf(idx, "Usage: %sstick <ban>\n", yn ? "" : "un");
       return;
    }
-   i = u_setsticky_ban(NULL,par,
+   strncpy(s, par, UHOSTLEN);
+   s[UHOSTLEN] = 0;
+   i = u_setsticky_ban(NULL, s,
 		       (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
    if (i > 0) {
       putlog(LOG_CMDS, "*", "#%s# %sstick %s", 
-	     dcc[idx].nick, yn ? "" : "un", par);
-      dprintf(idx, "%stuck: %s\n", yn ? "S" : "Uns", par);
+	     dcc[idx].nick, yn ? "" : "un", s);
+      dprintf(idx, "%stuck: %s\n", yn ? "S" : "Uns", s);
       return;
    }
    /* channel-specific ban? */
@@ -373,10 +379,6 @@ static void cmd_stick_yn(int idx, char *par, int yn)
    }
    if (i)
      simple_sprintf(s, "%d", -i);
-   else {
-      strncpy(s, par, UHOSTLEN);
-      s[UHOSTLEN] = 0;
-   }
    j = u_setsticky_ban(chan, s, yn);
    if (j > 0) {
       putlog(LOG_CMDS, "*", "#%s# %sstick %s", dcc[idx].nick,
