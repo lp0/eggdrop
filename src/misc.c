@@ -178,8 +178,6 @@ char * newsplit ( char ** rest ) {
      o++;
    if (*o)
      *o++ = 0;
-   else
-     *o = 0;
    *rest = o;
    return r;
 }

@@ -427,7 +427,7 @@ static void cmd_pls_chrec (struct userrec * u, int idx, char * par)
 	      chan->name);
       return;
    }
-   chanrec = get_chanrec(u, chan->name);
+   chanrec = get_chanrec(u1, chan->name);
    if (chanrec) {
       dprintf(idx, "User %s already has a channel record for %s.\n", 
 	      nick, chan->name);

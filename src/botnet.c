@@ -1106,7 +1106,6 @@ static void cont_tandem_relay (int idx,char * buf,int i)
       lostdcc(i);
       return;
    }
-   dcc[uidx].type = &DCC_RELAYING;
    dcc[idx].type = &DCC_RELAY;
    dcc[idx].u.relay->sock = dcc[uidx].sock;
    dcc[uidx].u.relay->sock = dcc[idx].sock;
@@ -1115,6 +1114,7 @@ static void cont_tandem_relay (int idx,char * buf,int i)
    putlog(LOG_MISC, "*", "%s %s -> %s", BOT_RELAYLINK,
 				dcc[uidx].nick, dcc[idx].nick);
    ri = dcc[uidx].u.relay; /* YAEH */
+   dcc[uidx].type = &DCC_CHAT;
    dcc[uidx].u.chat = ri->chat;
    if (dcc[uidx].u.chat->channel >= 0) {
       chanout_but(-1,dcc[uidx].u.chat->channel, "*** %s %s\n",
@@ -1125,6 +1125,7 @@ static void cont_tandem_relay (int idx,char * buf,int i)
 		     dcc[uidx].u.chat->channel);
    }
    check_tcl_chof(dcc[uidx].nick, dcc[uidx].sock);
+   dcc[uidx].type = &DCC_RELAYING;
    dcc[uidx].u.relay = ri;
 }
 

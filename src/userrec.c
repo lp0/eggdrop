@@ -614,8 +614,7 @@ int delhost_by_handle (char * handle, char * host)
    return i;
 }
 
-void addhost_by_handle (char * handle, char * host)
-{
+void addhost_by_handle (char * handle, char * host) {
    struct userrec *u = get_user_by_handle(userlist, handle);
    set_user(&USERENTRY_HOSTS,u,host);
    /* u will be cached, so really no overhead, even tho this looks dumb: */

@@ -242,6 +242,7 @@ static void share_newuser (int idx, char * par) {
 	       fr.match = FR_GLOBAL;
 	       break_down_flags(par,&fr,NULL);
 	       userlist = adduser(userlist, etc, etc2, etc3, fr.global);
+	       fr.match = FR_CHAN;
 	    } else
 	      userlist = adduser(userlist, etc, etc2, etc3, 0);
 	    noshare = 0;
@@ -1256,6 +1257,7 @@ static void start_sending_users (int idx) {
 	   fr.global = u->flags;
 	   fr.udef_global = u->flags_udef;
 	   build_flags(s1,&fr,NULL);
+	   fr.match = FR_CHAN;
 	   simple_sprintf(s, "s a %s %s\n", u->handle, s1);
 	   q_tbuf(dcc[idx].nick, s, NULL);
 	   for (ch = u->chanrec; ch; ch = ch->next) {
@@ -1263,7 +1265,6 @@ static void start_sending_users (int idx) {
 	      if ((ch->flags & ~BOT_SHARE) && ((cst = findchan(ch->channel))
 					       && channel_shared(cst))) {
 		 context;
-		 fr.match = FR_CHAN;
 		 get_user_flagrec(dcc[idx].user,&fr,ch->channel);
 		 context;
 		 if (fr.chan & BOT_SHARE) {
@@ -1278,7 +1279,7 @@ static void start_sending_users (int idx) {
 		 }
 	      }
 	   }
-context;
+	   context;
 	}
       q_tbuf(dcc[idx].nick, "s !\n", NULL);
       /* wish could unlink the file here to avoid possibly leaving it lying */

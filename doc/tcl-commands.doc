@@ -100,10 +100,12 @@ specific commands, see later.
 |     PASS - use this to set a users password (no 3rd arg will clear it)
 |     HOSTS - for setting hosts, no extra info = clear, otherwise
 |             *1* hostmask is added :P
-|     LASTON - sets global laston time, will also set laston time for
-|              any channel the user has a chanrec for (if it matches)
-|              to prevent setting a channel time ALSO setting the global
-|              time use LASTON time #channel *
+|     LASTON - 2 forms:
+|              setuser <handle> laston <unixtime> <place> 
+|                 sets global laston time
+|              setuser <handle> laston <unixtime> <channel> *
+|                 will set a users laston time in a channel record 
+|                 (if it already exists)
 
   chnick <old-handle> <new-handle>
     changes a user's handle

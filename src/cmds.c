@@ -533,7 +533,7 @@ static void cmd_boot (struct userrec * u, int idx, char * par)
 	 cmd_boot(u, idx, whonick);
 	 return;
       }
-      if (remote_boots > 1) {
+      if (remote_boots > 0) {
 	 i = nextbot(who);
 	 if (i < 0) {
 	    dprintf(idx, "No such bot connected.\n");
@@ -1817,10 +1817,9 @@ static void cmd_strip (struct userrec * u, int idx, char * par)
    }
 }
 
-static void cmd_su (struct userrec * u, int idx, char * par)
-{
+static void cmd_su (struct userrec * u, int idx, char * par) {
    int atr = u ? u->flags : 0;
-
+   struct flag_record fr = {FR_ANYWH|FR_CHAN|FR_GLOBAL,0,0,0,0,0};
    context;
    u = get_user_by_handle(userlist,par);
    
@@ -1833,40 +1832,46 @@ static void cmd_su (struct userrec * u, int idx, char * par)
    else if (u_pass_match(u,"-")) 
       dprintf(idx, "No password set for user. You may not .su to them\n");
    else {
-      correct_handle(par);
-      putlog(LOG_CMDS, "*", "#%s# su %s", dcc[idx].nick, par);
-      if (!(atr & USER_OWNER) || (u->flags & USER_OWNER)) {
-	 if (dcc[idx].u.chat->channel < 100000)
-	    botnet_send_part_idx(idx, "");
-	 chanout_but(-1,dcc[idx].u.chat->channel, 
-		     "*** %s left the party line.\n",
-		     dcc[idx].nick);
-	 context;
-	 /* store the old nick in the away section, for weenies who can't get
-	  * their password right ;) */
-	 if (dcc[idx].u.chat->away != NULL)
-	   nfree(dcc[idx].u.chat->away);
-	 dcc[idx].u.chat->away = n_malloc(strlen(dcc[idx].nick) + 1,
-					  "dccutil.c", 9999); /* evil hack :) */
-	 strcpy(dcc[idx].u.chat->away, dcc[idx].nick);
-	 dcc[idx].user = u;
-	 strcpy(dcc[idx].nick, par);
-	 dprintf(idx, "Enter password for %s%s\n", par,
+      get_user_flagrec(u, &fr, NULL);
+      if ((!glob_party(fr) && (require_p || !(glob_op(fr) || chan_op(fr))))
+	  && !(atr & USER_BOTMAST))
+	dprintf(idx, "No party line access permitted for %s.\n", par);
+      else  {
+	 correct_handle(par);
+	 putlog(LOG_CMDS, "*", "#%s# su %s", dcc[idx].nick, par);
+	 if (!(atr & USER_OWNER) || (u->flags & USER_OWNER)) {
+	    if (dcc[idx].u.chat->channel < 100000)
+	      botnet_send_part_idx(idx, "");
+	    chanout_but(-1,dcc[idx].u.chat->channel, 
+			"*** %s left the party line.\n",
+			dcc[idx].nick);
+	    context;
+	    /* store the old nick in the away section, for weenies who can't get
+	     * their password right ;) */
+	    if (dcc[idx].u.chat->away != NULL)
+	      nfree(dcc[idx].u.chat->away);
+	    dcc[idx].u.chat->away = n_malloc(strlen(dcc[idx].nick) + 1,
+					     "dccutil.c", 9999); /* evil hack :) */
+	    strcpy(dcc[idx].u.chat->away, dcc[idx].nick);
+	    dcc[idx].user = u;
+	    strcpy(dcc[idx].nick, par);
+	    dprintf(idx, "Enter password for %s%s\n", par,
 		 (dcc[idx].status & STAT_TELNET) ? "\377\373\001":"");
-	 dcc[idx].type = &DCC_CHAT_PASS;
-      } else if (atr & USER_OWNER) {
-	 if (dcc[idx].u.chat->channel < 100000) 
-	   botnet_send_part_idx(idx, "");
-	 chanout_but(-1,dcc[idx].u.chat->channel,
-		     "*** %s left the party line.\n", dcc[idx].nick);
-	 context;
-	 dprintf(idx, "Setting your username to %s.\n", par);
-	 if (atr & USER_MASTER)
-	   dcc[idx].u.chat->con_flags = conmask;
-	 dcc[idx].user = u;
-	 strcpy(dcc[idx].nick, par);
-	 dcc_chatter(idx);
-	 context;
+	    dcc[idx].type = &DCC_CHAT_PASS;
+	 } else if (atr & USER_OWNER) {
+	    if (dcc[idx].u.chat->channel < 100000) 
+	      botnet_send_part_idx(idx, "");
+	    chanout_but(-1,dcc[idx].u.chat->channel,
+			"*** %s left the party line.\n", dcc[idx].nick);
+	    context;
+	    dprintf(idx, "Setting your username to %s.\n", par);
+	    if (atr & USER_MASTER)
+	      dcc[idx].u.chat->con_flags = conmask;
+	    dcc[idx].user = u;
+	    strcpy(dcc[idx].nick, par);
+	    dcc_chatter(idx);
+	    context;
+	 }
       }
    }
 }

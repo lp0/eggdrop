@@ -182,14 +182,13 @@ static int tcl_setchan STDVAR
    else {
       int oldchan = dcc[idx].u.chat->channel;
       if (dcc[idx].u.chat->channel >= 0) {
-	 if (chan >= GLOBAL_CHANS)
+	 if ((chan >= GLOBAL_CHANS) && (oldchan < GLOBAL_CHANS))
 	   botnet_send_part_idx(idx,"*script*");
-	 
 	 check_tcl_chpt(botnetnick, dcc[idx].nick, dcc[idx].sock,
 			dcc[idx].u.chat->channel);
       }
       dcc[idx].u.chat->channel = chan;
-      if (chan < 100000)
+      if (chan < GLOBAL_CHANS)
 	botnet_send_join_idx(idx,oldchan);
       check_tcl_chjn(botnetnick, dcc[idx].nick, chan, geticon(idx), dcc[idx].sock,
 		     dcc[idx].host);

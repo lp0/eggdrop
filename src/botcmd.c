@@ -1148,9 +1148,9 @@ static void bot_join (int idx, char * par)
    else
 #endif
      chan = base64_to_int(x);
-   if (chan < 0)
-     return; /* woops! pre 1.2.1's send .chat off'ers too!! */
    y = newsplit(&par);
+   if ((chan < 0) || !y[0])
+     return; /* woops! pre 1.2.1's send .chat off'ers too!! */
    if (!y[0]) {
       y[0] = '-';
       sock = 0;
@@ -1229,7 +1229,7 @@ static void bot_part (int idx, char * par)
       sprintf(TBUF,"@%s",bot);
       touch_laston(u,TBUF,now);
    }
-   if ((partyidx = getparty(bot, sock))) {
+   if ((partyidx = getparty(bot, sock)) != -1) {
       check_tcl_chpt(bot, nick, sock,party[partyidx].chan);
       if ((b_numver(idx) >= NEAT_BOTNET) && !silent) {
       register int chan = party[partyidx].chan;
@@ -1478,8 +1478,8 @@ botcmd_t C_bot[]={
   { "unlinked", (Function) bot_unlinked },
   { "update", (Function) bot_update },
   { "userfile?", (Function) bot_old_userfile },
-   { "v", (Function) bot_versions },
 #endif
+  { "v", (Function) bot_versions },
   { "w", (Function) bot_who },
 #ifndef NO_OLD_BOTNET
   { "who", (Function) bot_who },

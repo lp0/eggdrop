@@ -437,8 +437,7 @@ static void dcc_chat_pass (int idx, char * buf,int atr)
 	 }
 	 dcc[idx].type = &DCC_CHAT;
 	 dcc[idx].status &= ~STAT_CHAT;
-	 if (atr & USER_MASTER)
-	    dcc[idx].u.chat->con_flags = conmask;
+	 dcc[idx].u.chat->con_flags = (atr & USER_MASTER) ? conmask : 0;
 	 if (dcc[idx].status & STAT_TELNET)
 	    dprintf(idx, "\377\374\001\n");	/* turn echo back on */
 	 dcc_chatter(idx);
