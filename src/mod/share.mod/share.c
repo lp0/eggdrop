@@ -11,6 +11,7 @@
 
 static const int min_share = 1029900;	/* minimum version I will share with */
 static int private_owner = 1, private_global = 0, private_user = 0;
+static char private_globals[50];
 static int allow_resync = 0;
 static struct flag_record fr = {0,0,0,0,0,0};
 static int resync_time = 900;
@@ -24,6 +25,7 @@ static int can_resync (char * bot);
 static void dump_resync (int idx);
 static void q_resync (char * s, struct chanset_t * chan);
 static void cancel_user_xfer(int, void *);
+static int private_globals_bitmask();
 
 /* store info for sharebots */
 struct share_msgq {
@@ -106,8 +108,7 @@ static void share_chattr (int idx, char * par) {
    if (dcc[idx].status & STAT_SHARE) {
       hand = newsplit(&par);
       u = get_user_by_handle(userlist,hand);
-      if (u && !(u->flags & USER_UNSHARED) &&
-	  !((u->flags & USER_BOT) && (bot_flags(u) & BOT_SHARE))) {
+      if (u && !(u->flags & USER_UNSHARED)) {
 	 atr = newsplit(&par);
 	 cst = findchan(par);
 	 if (!par[0] || (cst && channel_shared(cst))) {
@@ -140,14 +141,14 @@ static void share_chattr (int idx, char * par) {
 			"Rejected flags for unshared channel %s from %s",
 			par, dcc[idx].nick);
 	    } else if (!private_global) {
+	       int pgbm = private_globals_bitmask();
 	       /* don't let bot flags be altered */
 	       fr.match= FR_GLOBAL;
 	       break_down_flags(atr,&fr,0);
 	       bfl = u->flags & USER_BOT;
 	       ofl = fr.global;
-	       if (private_owner) 
-		 fr.global = (fr.global & ~USER_OWNER) 
-		   | (u->flags & USER_OWNER);
+	       fr.global = (fr.global & ~ pgbm) 
+		  | (u->flags & pgbm);
 	       fr.global = sanity_check(fr.global | bfl);
 	       set_user_flagrec(u,&fr,0);
 	       check_dcc_attrs(u, ofl);
@@ -299,7 +300,8 @@ static void share_pls_bothost (int idx, char * par) {
    if (dcc[idx].status & STAT_SHARE) {
       hand = newsplit(&par);
       if (!(u = get_user_by_handle(userlist,hand)) ||
-	  !(u->flags & USER_UNSHARED)) {
+	  (!(u->flags & USER_UNSHARED) &&
+	   !((u->flags & USER_BOT) && (bot_flags(u) & BOT_SHARE)))) {
 	 if (!(dcc[idx].status & STAT_GETTING))
 	   shareout_but(NULL,idx, "+bh %s %s\n", hand, par);
 	 /* add bot to userlist if not there */
@@ -1168,9 +1170,11 @@ static void finish_share (int idx) {
 	       if (private_global) {
 		  u->flags = u2->flags;
 		  u->flags_udef = u2->flags_udef;
-	       } else if (private_owner) 
-		    u->flags = (u2->flags & USER_OWNER) 
-		      | (u->flags & ~ USER_OWNER);
+	       } else {
+		  int pgbm = private_globals_bitmask();
+		  u->flags = (u2->flags & pgbm) 
+		     | (u->flags & ~ pgbm);
+	       }
 	       for (cr = u2->chanrec; cr; cr = cr2) {
 		  struct chanset_t * chan = findchan (cr->channel);
 		  int ok = 0;
@@ -1210,8 +1214,8 @@ static void finish_share (int idx) {
 	    } else if (!u2 && private_global) {
 	       u->flags = 0;
 	       u->flags_udef = 0;
-	    } else if (private_owner) 
-		 u->flags = (u->flags & ~USER_OWNER);
+	    } else 
+	       u->flags = (u->flags & ~private_globals_bitmask());
 	 }
 	 clear_userlist(ou);
 	 unlink(dcc[idx].u.xfer->filename);	/* done with you! */
@@ -1362,6 +1366,11 @@ static tcl_ints my_ints [] = {
    { 0, 0 }
 };
 
+static tcl_strings my_strings [] = {
+   {"private-globals", private_globals , 50, 0 },
+   {NULL, NULL, 0, 0}
+};
+
 static void cmd_flush (struct userrec * u, int idx, char * par) {
    if (!par[0]) 
      dprintf(idx, "Usage: flush <botname>\n");
@@ -1401,6 +1410,7 @@ static char *share_close() {
    del_hook(HOOK_READ_USERFILE,hook_read_userfile);
    DCC_BOT.kill = def_dcc_bot_kill;
    rem_tcl_ints(my_ints);
+   rem_tcl_strings(my_strings);
    rem_builtins(H_dcc,my_cmds,1);
    rem_help_reference("share.help");
    return NULL;
@@ -1425,7 +1435,8 @@ static void share_report (int idx, int details) {
    if (details) {
       dprintf(idx,"    Share module, using %d bytes.\n",share_expmem());
       dprintf(idx,"    Private owners: %3s   Allow resync: %3s\n",
-	      private_owner ? "yes" : "no", allow_resync ? "yes" : "no");
+	      (private_global || (private_globals_bitmask() & USER_OWNER)) ?
+	      "yes" : "no", allow_resync ? "yes" : "no");
       for (i = 0; i < dcc_total; i++)
 	if (dcc[i].type == &DCC_BOT) {
 	   if (dcc[i].status & STAT_GETTING) {
@@ -1508,7 +1519,15 @@ char *share_start (Function * global_funcs) {
    def_dcc_bot_kill = DCC_BOT.kill;
    DCC_BOT.kill = cancel_user_xfer;
    add_tcl_ints(my_ints);
+   add_tcl_strings(my_strings);
    add_builtins(H_dcc,my_cmds,1);
    context;
    return NULL;
 }
+
+int private_globals_bitmask () {
+   struct flag_record fr = {FR_GLOBAL,0,0,0,0,0};
+   break_down_flags(private_globals,&fr,0);
+   return fr.global | (private_owner ? USER_OWNER : 0);
+}
+

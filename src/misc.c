@@ -236,7 +236,7 @@ void maskhost (char * s, char * nw)
 	   x = p;
 	 else if (strchr(x + 1, '.'))
 	   x = e;
-	 else if (strlen(x) == 2)
+	 else if (strlen(x) == 3)
 	   x = p;
 	 else 
 	   x = e;

@@ -272,7 +272,7 @@ static void bot_bye (int idx, char * par) {
    char s[1024];
   
    context;
-   simple_sprintf(s,"%s %s", BOT_DISCONNECTED, dcc[idx].nick);
+   simple_sprintf(s,"%s %s. %s", BOT_DISCONNECTED, dcc[idx].nick, par);
    putlog(LOG_BOTS, "*", "%s", s);
    chatout("*** %s\n", s);
    botnet_send_unlinked (idx, dcc[idx].nick, s);

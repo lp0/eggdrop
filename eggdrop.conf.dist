@@ -698,14 +698,25 @@ set xfer-timeout 300
 #set resync-time 900
 
 # when sharing user lists, ignore +n modes from other bots?
+#
+# PLEASE NOTE!  
+#
+# With the addition of private-globals, private-owner is now redundant,
+# and therefore deprecated.  It may be removed soon.  Put the global
+# owner flag in private-globals for the same effect.
+#
 # NOTE: every slave will need to have 'set owner ...' or
 # they will lose their owners when they download the user list
 #set private-owner 0
 
 # when sharing user lists, DONT ACCEPT global flag changes from other bots?
 # NOTE: the bot will still send changes made on the bot, it just wont accept
-# changes from other bots
+# any global flag changes from other bots
 #set private-global 0
+
+# when sharing user lists, if private-global isn't set, which global flag 
+# changes from other bots should be ignored ?
+#set private-globals "mnot"
 
 # when sharing user lists, DONT ACCEPT kill user/change handle users from
 # other bots?

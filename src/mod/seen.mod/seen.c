@@ -673,15 +673,15 @@ static int irc_seen_setup(char * mod) {
 
 static cmd_t seen_load[] = 
 { 
-     {"server", "", server_seen_setup, "seen:server"},
-     {"irc", "", irc_seen_setup, "seen:irc"},
+     {"server", "", server_seen_setup, 0},
+     {"irc", "", irc_seen_setup, 0},
 };
 
 static char *seen_close()
 {
    p_tcl_bind_list H_temp;
    
-   add_builtins(H_load, seen_load,2);
+   rem_builtins(H_load, seen_load,2);
    rem_builtins(H_dcc, seen_dcc,1);
    rem_help_reference("seen.help");
    if ((H_temp = find_bind_table("pub")))

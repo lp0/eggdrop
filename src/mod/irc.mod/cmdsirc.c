@@ -705,9 +705,9 @@ static void cmd_deluser (struct userrec * u, int idx, char * par)
       dprintf(idx, "Can't delete a channel master!\n");
    } else if (glob_bot(victim) && !glob_owner(user)) {
       dprintf(idx, "Can't delete a bot!\n");
-   } else if (deluser(nick)) {
-      dprintf(idx, "Deleted %s.\n", nick);
-      putlog(LOG_CMDS, "*", "#%s# deluser %s", dcc[idx].nick, nick);
+   } else if (deluser(u->handle)) {
+      dprintf(idx, "Deleted %s.\n", u->handle);
+      putlog(LOG_CMDS, "*", "#%s# deluser %s [%s]", dcc[idx].nick, nick, u->handle);
    } else {
       dprintf(idx, "Failed.\n");
       return;

@@ -781,7 +781,8 @@ static int msg_status (char * nick,
    dprintf(DP_HELP, "NOTICE %s :%d user%s  (mem: %uk)\n", nick, i, i == 1 ? "" : "s",
 	   (int) (expected_memory() / 1024));
    /*waiting for beldin to make it extern*/
-   dprintf(DP_HELP, "NOTICE %s :Connected for\n", nick);
+   daysdur(now, server_online, s);
+   dprintf(DP_HELP, "NOTICE %s :Connected %s\n", nick, s);
    dprintf(DP_HELP, "NOTICE %s :Online as: %s!%s\n", nick, botname,
            botuserhost);
    return 1;

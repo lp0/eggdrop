@@ -77,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.18";
-int egg_numver = 1031800;
+char egg_version[1024] = "1.3.19";
+int egg_numver = 1031900;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -219,7 +219,8 @@ void write_debug()
 #ifdef STATIC
 	dprintf(-x, "STATICALLY LINKED\n");
 #endif
-      if (interp && (Tcl_Eval(interp,"info library") == TCL_OK)) 
+      strcpy(s, "info library");
+      if (interp && (Tcl_Eval(interp, s) == TCL_OK)) 
 	dprintf(-x, "Using tcl library: %s (header version %s)\n",
 		interp->result, TCL_VERSION);
       dprintf(-x, "Compile flags: %s\n", CCFLAGS);

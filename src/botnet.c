@@ -788,6 +788,7 @@ int in_chain (char * who)
 /* break link with a tandembot */
 int botunlink (int idx, char * nick, char * reason)
 {
+   char s[20];
    int i;
    context;
    if (nick[0] == '*')
@@ -857,7 +858,8 @@ int botunlink (int idx, char * nick, char * reason)
 	 check_tcl_chpt(party[i].bot,party[i].nick,party[i].sock,
 			party[i].chan);
       }
-      Tcl_Eval(interp,"killassoc &");
+      strcpy(s, "killassoc &");
+      Tcl_Eval(interp, s);
    }
    return 0;
 }

@@ -1017,7 +1017,7 @@ char *server_start (Function * global_funcs)
    H_ctcr = add_bind_table("ctcr",HT_STACKABLE,server_6char);
    H_ctcp = add_bind_table("ctcp",HT_STACKABLE,server_6char);
    context;
-   add_builtins(H_raw,my_raw_binds,16);
+   add_builtins(H_raw,my_raw_binds,17);
    add_builtins(H_dcc,C_dcc_serv,4);
    add_builtins(H_ctcp,my_ctcps,1);
    add_help_reference("server.help");

@@ -138,7 +138,8 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
    long i = 0;
    
    context;
-   strcpy(real, current);
+   strncpy(real, current, DIRLEN);
+   real[DIRLEN] = 0;
    strcpy(new, change);
    if (!new[0])
       return 1;			/* no change? */
@@ -162,7 +163,8 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
 	 if (p == NULL) {
 	    /* can't go back from here? */
 	    if (!real[0]) {
-	       strcpy(real, current);
+	       strncpy(real, current, DIRLEN);
+	       real[DIRLEN] = 0;
 	       return 0;
 	    }
 	    real[0] = 0;
@@ -173,19 +175,22 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
 	 f = filedb_open(real,0);
 	 if (f == NULL) {
 	    /* non-existent starting point! */
-	    strcpy(real, current);
+	    strncpy(real, current, DIRLEN);
+	    real[DIRLEN] = 0;
 	    return 0;
 	 }
 	 ret = findmatch(f, elem, &i, &fdb);
 	 filedb_close(f);
 	 if (!ret) {
 	    /* non-existent */
-	    strcpy(real, current);
+	    strncpy(real, current, DIRLEN);
+	    real[DIRLEN] = 0;
 	    return 0;
 	 }
 	 if (!(fdb.stat & FILE_DIR) || fdb.sharelink[0]) {
 	    /* not a dir */
-	    strcpy(real, current);
+	    strncpy(real, current, DIRLEN);
+	    real[DIRLEN] = 0;
 	    return 0;
 	 }
 	 if (idx >= 0) 
@@ -194,7 +199,8 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
 	   user.global = USER_OWNER|USER_BOT|USER_MASTER|USER_OP|USER_FRIEND;
 	 break_down_flags(fdb.flags_req,&req,NULL);
 	 if (!flagrec_ok(&req,&user)) {
-	    strcpy(real, current);
+	    strncpy(real, current, DIRLEN);
+	    real[DIRLEN] = 0;
 	    return 0;
 	 }
 	 strcpy(s, real);
@@ -202,8 +208,8 @@ static int resolve_dir (char * current, char * change, char * real, int idx)
 	    if (s[strlen(s) - 1] != '/')
 	       strcat(s, "/");
 	 sprintf(work, "%s%s", s, elem);
-	 strncpy(real, work, 120);
-	 real[120] = 0;
+	 strncpy(real, work, DIRLEN);
+	 real[DIRLEN] = 0;
 	 sprintf(s, "%s%s", dccdir, real);
       }
       p = strchr(new, '/');
@@ -279,7 +285,7 @@ static void cmd_cancel (int idx, char * par)
 
 static void cmd_chdir (int idx, char * msg)
 {
-   char s[121];
+   char s[DIRLEN + 1];
    
    if (!msg[0]) {
       dprintf(idx, "%s: cd <new-dir>\n", USAGE);
@@ -290,16 +296,17 @@ static void cmd_chdir (int idx, char * msg)
       return;
    }
    strncpy(dcc[idx].u.file->dir, s, 160);
-   s[160] = 0;
+   dcc[idx].u.file->dir[160] = 0;
    set_user(&USERENTRY_DCCDIR, dcc[idx].user, dcc[idx].u.file->dir);
    putlog(LOG_FILES, "*", "files: #%s# cd /%s", dcc[idx].nick,
 	  dcc[idx].u.file->dir);
    dprintf(idx, "%s: /%s\n", FILES_NEWCURDIR, dcc[idx].u.file->dir);
+   context;
 }
 
 static void files_ls (int idx, char * par, int showall)
 {
-   char *p, s[DIRLEN], destdir[DIRLEN], mask[81];
+   char *p, s[DIRLEN + 1], destdir[DIRLEN + 1], mask[81];
 
    FILE *f;
 
@@ -353,7 +360,7 @@ static void cmd_lsa (int idx, char * par)
 static void cmd_get (int idx, char * par)
 {
    int ok = 0, ok2 = 1,i;
-   char *p, *what, destdir[121], s[256];
+   char *p, *what, destdir[121], s[DIRLEN + 1];
    filedb fdb;
    FILE *f;
    long where = 0;
@@ -614,7 +621,7 @@ static void cmd_unshare (int idx, char * par)
 /* link a file from another bot */
 static void cmd_ln (int idx, char * par)
 {
-   char *share, newpath[121], newfn[81], *p;
+   char *share, newpath[DIRLEN + 1], newfn[81], *p;
    FILE *f;
    filedb fdb;
    long where = 0;
@@ -940,7 +947,8 @@ static void cmd_rmdir (int idx, char * par)
 
 static void cmd_mv_cp (int idx, char * par, int copy)
 {
-   char *p, *fn, oldpath[161], s[161], s1[161], newfn[161], newpath[161];
+   char *p, *fn, oldpath[DIRLEN + 1], s[161], s1[161], newfn[161];
+   char newpath[DIRLEN + 1];
    int ok, only_first, skip_this, ret, ret2;
    FILE *f, *g;
    filedb fdb, z;
@@ -1194,7 +1202,7 @@ static cmd_t myfiles[25] =
 static int files_get (int idx, char * fn, char * nick)
 {
    int i;
-   char *p, what[512], destdir[121], s[256];
+   char *p, what[512], destdir[DIRLEN + 1], s[256];
    filedb fdb;
    FILE *f;
    long where = 0;
@@ -1260,7 +1268,7 @@ static int files_get (int idx, char * fn, char * nick)
 
 static void files_setpwd (int idx, char * where)
 {
-   char s[121];
+   char s[DIRLEN + 1];
    if (!resolve_dir(dcc[idx].u.file->dir, where, s, idx))
       return;
    strcpy(dcc[idx].u.file->dir, s);
