@@ -2,7 +2,7 @@
  * main.h
  *   include file to include most other include files
  * 
- * $Id: main.h,v 1.13 2000/03/23 23:17:55 fabian Exp $
+ * $Id: main.h,v 1.16 2000/11/03 17:06:35 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -27,7 +27,7 @@
 #define _EGG_MAIN_H
 
 #ifdef HAVE_CONFIG_H
-#  include <config.h>
+#  include "config.h"
 #endif
 
 /* UGH! Why couldn't Tcl pick a standard? */
@@ -82,31 +82,22 @@ extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,
 
 #endif
 
-
-/* Our own byte swappers
- */
-#ifdef WORDS_BIGENDIAN
-#  define swap_short(sh)	(sh)
-#  define swap_long(ln)		(ln)
-#else
-#  define swap_short(sh)	((((sh) & 0xff00) >> 8) |		 \
-				 (((sh) & 0x00ff) << 8))
-#  define swap_long(ln)		(swap_short(((ln) & 0xffff0000) >> 16) | \
-				 (swap_short((ln) & 0x0000ffff) << 16))
-#endif
-
 #define iptolong(a)		(0xffffffff & 				\
-				 (long) (swap_long((unsigned long) a)))
-#define fixcolon(x)		if ((x)[0] == ':') { 			\
-					(x)++;				\
-				} else {				\
-					(x) = newsplit(&(x));		\
-				}
+				 (long) (htonl((unsigned long) a)))
+#define fixcolon(x)		do {					\
+	if ((x)[0] == ':')			 			\
+		(x)++;							\
+	else								\
+		(x) = newsplit(&(x));					\
+} while (0)
 
-#define my_ntohs(sh)	swap_short(sh)
-#define my_htons(sh)	swap_short(sh)
-#define my_ntohl(ln)	swap_long(ln)
-#define my_htonl(ln)	swap_long(ln)
+/* This macro copies (_len - 1) bytes from _source to _target. The
+ * target string is NULL-terminated.
+ */
+#define strncpyz(_target, _source, _len)	do {			\
+	strncpy((_target), (_source), (_len) - 1);			\
+	(_target)[(_len) - 1] = 0;					\
+} while (0)
 
 #ifdef BORGCUBES
 

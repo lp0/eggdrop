@@ -1,7 +1,7 @@
 /* 
  * tclchan.c -- part of channels.mod
  * 
- * $Id: tclchan.c,v 1.31 2000/08/06 14:49:56 fabian Exp $
+ * $Id: tclchan.c,v 1.38 2000/11/03 17:15:49 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -495,7 +495,7 @@ static int tcl_newchanban STDVAR
 {
   time_t expire_time;
   struct chanset_t *chan;
-  char ban[161], cmt[66], from[HANDLEN + 1];
+  char ban[161], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
 
   BADARGS(5, 7, " channel ban creator comment ?lifetime? ?options?");
@@ -514,12 +514,9 @@ static int tcl_newchanban STDVAR
       return TCL_ERROR;
     }
   }
-  strncpy(ban, argv[2], 160);
-  ban[160] = 0;
-  strncpy(from, argv[3], HANDLEN);
-  from[HANDLEN] = 0;
-  strncpy(cmt, argv[4], 65);
-  cmt[65] = 0;
+  strncpyz(ban, argv[2], sizeof ban);
+  strncpyz(from, argv[3], sizeof from);
+  strncpyz(cmt, argv[4], sizeof cmt);
   if (argc == 5)
     expire_time = now + (60 * ban_time);
   else {
@@ -537,7 +534,7 @@ static int tcl_newban STDVAR
 {
   time_t expire_time;
   struct chanset_t *chan;
-  char ban[UHOSTLEN], cmt[66], from[HANDLEN + 1];
+  char ban[UHOSTLEN], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
 
   BADARGS(4, 6, " ban creator comment ?lifetime? ?options?");
@@ -551,12 +548,9 @@ static int tcl_newban STDVAR
       return TCL_ERROR;
     }
   }
-  strncpy(ban, argv[1], UHOSTMAX);
-  ban[UHOSTMAX] = 0;
-  strncpy(from, argv[2], HANDLEN);
-  from[HANDLEN] = 0;
-  strncpy(cmt, argv[3], 65);
-  cmt[65] = 0;
+  strncpyz(ban, argv[1], sizeof ban);
+  strncpyz(from, argv[2], sizeof from);
+  strncpyz(cmt, argv[3], sizeof cmt);
   if (argc == 4)
     expire_time = now + (60 * ban_time);
   else {
@@ -578,7 +572,7 @@ static int tcl_newchanexempt STDVAR
 {
   time_t expire_time;
   struct chanset_t *chan;
-  char exempt[161], cmt[66], from[HANDLEN+1];
+  char exempt[161], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
  
   BADARGS(5, 7, " channel exempt creator comment ?lifetime? ?options?");
@@ -597,12 +591,9 @@ static int tcl_newchanexempt STDVAR
       return TCL_ERROR;
     }
   }
-  strncpy(exempt, argv[2], 160);
-  exempt[160] = 0;
-  strncpy(from, argv[3], HANDLEN);
-  from[HANDLEN] = 0;
-  strncpy(cmt, argv[4], 65);
-  cmt[65] = 0;
+  strncpyz(exempt, argv[2], sizeof exempt);
+  strncpyz(from, argv[3], sizeof from);
+  strncpyz(cmt, argv[4], sizeof cmt);
   if (argc == 5)
     expire_time = now + (60 * exempt_time);
   else {
@@ -620,7 +611,7 @@ static int tcl_newexempt STDVAR
 {
   time_t expire_time;
   struct chanset_t *chan;
-  char exempt[UHOSTLEN], cmt[66], from[HANDLEN+1];
+  char exempt[UHOSTLEN], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
  
   BADARGS(4, 6, " exempt creator comment ?lifetime? ?options?");
@@ -634,12 +625,9 @@ static int tcl_newexempt STDVAR
       return TCL_ERROR;
     }
   }
-  strncpy(exempt, argv[1], UHOSTMAX);
-  exempt[UHOSTMAX] = 0;
-  strncpy(from, argv[2], HANDLEN);
-  from[HANDLEN] = 0;
-  strncpy(cmt, argv[3], 65);
-  cmt[65] = 0;
+  strncpyz(exempt, argv[1], sizeof exempt);
+  strncpyz(from, argv[2], sizeof from);
+  strncpyz(cmt, argv[3], sizeof cmt);
   if (argc == 4)
     expire_time = now + (60 * exempt_time);
   else {
@@ -661,7 +649,7 @@ static int tcl_newchaninvite STDVAR
 {
   time_t expire_time;
   struct chanset_t *chan;
-  char invite[161], cmt[66], from[HANDLEN+1];
+  char invite[161], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
   
   BADARGS(5, 7, " channel invite creator comment ?lifetime? ?options?");
@@ -680,12 +668,9 @@ static int tcl_newchaninvite STDVAR
       return TCL_ERROR;
     }
   }
-  strncpy(invite, argv[2], 160);
-  invite[160] = 0;
-  strncpy(from, argv[3], HANDLEN);
-  from[HANDLEN] = 0;
-  strncpy(cmt, argv[4], 65);
-  cmt[65] = 0;
+  strncpyz(invite, argv[2], sizeof invite);
+  strncpyz(from, argv[3], sizeof from);
+  strncpyz(cmt, argv[4], sizeof cmt);
   if (argc == 5)
     expire_time = now + (60 * invite_time);
   else {
@@ -703,7 +688,7 @@ static int tcl_newinvite STDVAR
 {
   time_t expire_time;
   struct chanset_t *chan;
-  char invite[UHOSTLEN], cmt[66], from[HANDLEN+1];
+  char invite[UHOSTLEN], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
 
   BADARGS(4, 6, " invite creator comment ?lifetime? ?options?");
@@ -717,12 +702,9 @@ static int tcl_newinvite STDVAR
       return TCL_ERROR;
     }
   }
-  strncpy(invite, argv[1], UHOSTMAX);
-  invite[UHOSTMAX] = 0;
-  strncpy(from, argv[2], HANDLEN);
-  from[HANDLEN] = 0;
-  strncpy(cmt, argv[3], 65);
-  cmt[65] = 0;
+  strncpyz(invite, argv[1], sizeof invite);
+  strncpyz(from, argv[2], sizeof from);
+  strncpyz(cmt, argv[3], sizeof cmt);
   if (argc == 4)
      expire_time = now + (60 * invite_time);
   else {
@@ -768,10 +750,8 @@ static int tcl_channel_info(Tcl_Interp * irp, struct chanset_t *chan)
   Tcl_AppendElement(irp, s);
   simple_sprintf(s, "%d:%d", chan->flood_nick_thr, chan->flood_nick_time);
   Tcl_AppendElement(irp, s);
-  if (chan->status & CHAN_CLEARBANS)
-    Tcl_AppendElement(irp, "+clearbans");
-  else
-    Tcl_AppendElement(irp, "-clearbans");
+  simple_sprintf(s, "%d:%d", chan->aop_min, chan->aop_max);
+  Tcl_AppendElement(irp, s);
   if (chan->status & CHAN_ENFORCEBANS)
     Tcl_AppendElement(irp, "+enforcebans");
   else
@@ -867,11 +847,11 @@ static int tcl_channel_info(Tcl_Interp * irp, struct chanset_t *chan)
   while (ul) {
     if (ul->defined && ul->name) {
       if (ul->type == UDEF_FLAG) {
-        simple_sprintf(s,"%c%s", getudef(ul->values, chan->dname) ? '+' : '-',
+        simple_sprintf(s, "%c%s", getudef(ul->values, chan->dname) ? '+' : '-',
 		       ul->name);
         Tcl_AppendElement(irp, s);
       } else if (ul->type == UDEF_INT) {
-        simple_sprintf(s,"%s %d", ul->name, getudef(ul->values, chan->dname));
+        simple_sprintf(s, "%s %d", ul->name, getudef(ul->values, chan->dname));
         Tcl_AppendElement(irp, s);
       } else
         debug1("UDEF-ERROR: unknown type %d", ul->type);
@@ -921,8 +901,6 @@ static int tcl_channel STDVAR
       Tcl_AppendResult(irp, "no such channel record", NULL);
       return TCL_ERROR;
     }
-    if (!channel_inactive(chan))
-      dprintf(DP_SERVER, "PART %s\n", chan->name);
     remove_channel(chan);
     return TCL_OK;
   }
@@ -1018,10 +996,6 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
       }
       chan->stopnethack_mode = atoi(item[i]);
     }
-    else if (!strcmp(item[i], "+clearbans"))
-      chan->status |= CHAN_CLEARBANS;
-    else if (!strcmp(item[i], "-clearbans"))
-      chan->status &= ~CHAN_CLEARBANS;
     else if (!strcmp(item[i], "+enforcebans"))
       chan->status |= CHAN_ENFORCEBANS;
     else if (!strcmp(item[i], "-enforcebans"))
@@ -1114,11 +1088,14 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
       chan->ircnet_status|= CHAN_NOUSERINVITES;
     else if (!strcmp(item[i], "+userinvites"))
       chan->ircnet_status&= ~CHAN_NOUSERINVITES;
-    /* ignore wasoptest and stopnethack in chanfile, remove these lines later */
+    /* ignore wasoptest, stopnethack and clearbans in chanfile, remove
+       this later */
     else if (!strcmp(item[i], "-stopnethack"))  ;
     else if (!strcmp(item[i], "+stopnethack"))  ;
     else if (!strcmp(item[i], "-wasoptest"))  ;
     else if (!strcmp(item[i], "+wasoptest"))  ;  /* Eule 01.2000 */
+    else if (!strcmp(item[i], "+clearbans"))  ;
+    else if (!strcmp(item[i], "-clearbans"))  ;
     else if (!strncmp(item[i], "flood-", 6)) {
       int *pthr = 0, *ptime;
       char *p;
@@ -1162,34 +1139,57 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
 	*pthr = atoi(item[i]);
 	*ptime = 1;
       }
+    } else if (!strncmp(item[i], "aop-delay", 9)) {
+      char *p;
+      i++;
+      if (i >= items) {
+	if (irp)
+	  Tcl_AppendResult(irp, item[i - 1], " needs argument", NULL);
+	return TCL_ERROR;
+      }
+      p = strchr(item[i], ':');
+      if (p) {
+	p++;
+	chan->aop_min = atoi(item[i]);
+	chan->aop_max = atoi(p);
+      } else {
+	chan->aop_min = atoi(item[i]);
+	chan->aop_max = chan->aop_min;
+      }
     } else {
-      found = 0;
       if (!strncmp(item[i] + 1, "udef-flag-", 10))
         initudef(UDEF_FLAG, item[i] + 11, 0);
       else if (!strncmp(item[i], "udef-int-", 9))
         initudef(UDEF_INT, item[i] + 9, 0);
+      found = 0;
       for (ul = udef; ul; ul = ul->next) {
-        if ((!egg_strcasecmp(item[i] + 1, ul->name) ||
-	    (!strncmp(item[i] + 1, "udef-flag-", 10) &&
-	     !egg_strcasecmp(item[i] + 11, ul->name))) &&
-	    (ul->type == UDEF_FLAG)) {
-          found = 1;
+        if (ul->type == UDEF_FLAG &&
+	     /* Direct match when set during .chanset ... */
+	    (!egg_strcasecmp(item[i] + 1, ul->name) ||
+	     /* ... or with prefix when set during chanfile load. */
+	     (!strncmp(item[i] + 1, "udef-flag-", 10) &&
+	      !egg_strcasecmp(item[i] + 11, ul->name)))) {
           if (item[i][0] == '+')
-            setudef(ul, ul->values, chan->dname, 1);
+            setudef(ul, chan->dname, 1);
           else
-            setudef(ul, ul->values, chan->dname, 0);
-        } else if ((!egg_strcasecmp(item[i], ul->name) ||
-		   (!strncmp(item[i], "udef-int-", 9) &&
-		    !egg_strcasecmp(item[i] + 9, ul->name))) &&
-		   (ul->type == UDEF_INT)) {
+            setudef(ul, chan->dname, 0);
           found = 1;
+	  break;
+        } else if (ul->type == UDEF_INT &&
+		    /* Direct match when set during .chanset ... */
+		   (!egg_strcasecmp(item[i], ul->name) ||
+		    /* ... or with prefix when set during chanfile load. */
+		    (!strncmp(item[i], "udef-int-", 9) &&
+		     !egg_strcasecmp(item[i] + 9, ul->name)))) {
           i++;
           if (i >= items) {
             if (irp)
               Tcl_AppendResult(irp, "this setting needs an argument", NULL);
             return TCL_ERROR;
           }
-          setudef(ul, ul->values, chan->dname, atoi(item[i]));
+          setudef(ul, chan->dname, atoi(item[i]));
+          found = 1;
+	  break;
         }
       }
       if (!found) {
@@ -1545,7 +1545,7 @@ static void clear_channel(struct chanset_t *chan, int reset)
 
 /* Create new channel and parse commands.
  */
-static int tcl_channel_add(Tcl_Interp * irp, char *newname, char *options)
+static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
 {
   struct chanset_t *chan;
   int items;
@@ -1590,6 +1590,8 @@ static int tcl_channel_add(Tcl_Interp * irp, char *newname, char *options)
     chan->flood_nick_time = gfld_nick_time;
     chan->stopnethack_mode = global_stopnethack_mode;
     chan->idle_kick = global_idle_kick;
+    chan->aop_min = global_aop_min;
+    chan->aop_max = global_aop_max;
     
     /* We _only_ put the dname (display name) in here so as not to confuse
      * any code later on. chan->name gets updated with the channel name as

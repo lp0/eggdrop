@@ -5,7 +5,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: botmsg.c,v 1.14 2000/08/19 14:17:27 fabian Exp $
+ * $Id: botmsg.c,v 1.17 2000/09/13 20:49:39 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -47,8 +47,8 @@ void tandout_but EGG_VARARGS_DEF(int, arg1)
   int i, x, l;
   char *format;
   char s[601];
-
   va_list va;
+
   x = EGG_VARARGS_START(int, arg1, va);
   format = va_arg(va, char *);
 
@@ -140,33 +140,29 @@ int simple_sprintf EGG_VARARGS_DEF(char *,arg1)
 {
   char *buf, *format, *s;
   int c = 0, i;
-
   va_list va;
+
   buf = EGG_VARARGS_START(char *, arg1, va);
   format = va_arg(va, char *);
 
-  while (*format && (c < 1023)) {
+  while (*format && c < 1023) {
     if (*format == '%') {
       format++;
       switch (*format) {
       case 's':
 	s = va_arg(va, char *);
-
 	break;
       case 'd':
       case 'i':
 	i = va_arg(va, int);
-
 	s = int_to_base10(i);
 	break;
       case 'D':
 	i = va_arg(va, int);
-
 	s = int_to_base64((unsigned int) i);
 	break;
       case 'u':
 	i = va_arg(va, unsigned int);
-
         s = unsigned_int_to_base10(i);
 	break;
       case '%':
@@ -174,15 +170,14 @@ int simple_sprintf EGG_VARARGS_DEF(char *,arg1)
 	continue;
       case 'c':
 	buf[c++] = (char) va_arg(va, int);
-
 	format++;
 	continue;
       default:
 	continue;
       }
       if (s)
-      while (*s && (c < 1023))
-        buf[c++] = *s++;
+	while (*s && c < 1023)
+	  buf[c++] = *s++;
       format++;
     } else
       buf[c++] = *format++;
@@ -295,8 +290,8 @@ void botnet_send_priv EGG_VARARGS_DEF(int, arg1)
   int idx, l;
   char *from, *to, *tobot, *format;
   char tbuf[1024];
-
   va_list va;
+
   idx = EGG_VARARGS_START(int, arg1, va);
   from = va_arg(va, char *);
   to = va_arg(va, char *);
@@ -880,7 +875,7 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
 	if (idx == -2 || (!egg_strcasecmp(from, botnetnick)))
 	  dprintf(i, "*** [%s] %s%s\n", fr, l ? work : "", msg);
 	else
-	  dprintf(i, "Note [%s]: %s%s\n", fr, l ? work : "", msg);
+	  dprintf(i, "%cNote [%s]: %s%s\n", 7, fr, l ? work : "", msg);
 	if ((idx >= 0) && (echo))
 	  dprintf(idx, "-> %s: %s\n", to, msg);
 	return NOTE_OK;

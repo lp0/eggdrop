@@ -1,7 +1,7 @@
 /* 
  * share.c -- part of share.mod
  * 
- * $Id: share.c,v 1.34 2000/08/06 14:47:20 fabian Exp $
+ * $Id: share.c,v 1.44 2000/11/06 04:06:44 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -127,7 +127,8 @@ static void share_stick_ban(int idx, char *par)
 
 /* Same as share_stick_ban, only for exempts.
  */
-static void share_stick_exempt(int idx, char * par) {
+static void share_stick_exempt(int idx, char *par)
+{
   char *host, *val;
   int yn;
 
@@ -137,30 +138,30 @@ static void share_stick_exempt(int idx, char * par) {
     yn = atoi(val);
     noshare = 1;
     if (!par[0]) {		/* Global exempt */
-      if (u_setsticky_exempt(NULL,host, yn) > 0) {
+      if (u_setsticky_exempt(NULL, host, yn) > 0) {
 	putlog(LOG_CMDS, "*", "%s: stick %s %c", dcc[idx].nick, host,
 	       yn ? 'y' : 'n');
-	shareout_but(NULL,idx,"se %s %d\n", host, yn);
+	shareout_but(NULL, idx, "se %s %d\n", host, yn);
       }
     } else {
       struct chanset_t *chan = findchan_by_dname(par);
       struct chanuserrec * cr;
 
-      if ((chan !=NULL) && ((channel_shared(chan) &&
+      if ((chan != NULL) && ((channel_shared(chan) &&
                              ((cr = get_chanrec(dcc[idx].user, par)) &&
                               (cr->flags & BOT_AGGRESSIVE))) ||
                             (bot_flags(dcc[idx].user) & BOT_GLOBAL)))
 	if (u_setsticky_exempt(chan, host, yn) > 0) {
 	  putlog(LOG_CMDS, "*", "%s: stick %s %c %s", dcc[idx].nick, host,
 		 yn ? 'y' : 'n', par);
-	  shareout_but(chan,idx,"se %s %d %s\n", host, yn, chan->dname);
+	  shareout_but(chan, idx, "se %s %d %s\n", host, yn, chan->dname);
 	  noshare = 0;
 	  return;
 	}
-      putlog(LOG_CMDS,"*","Rejecting invalid sticky exempt: %s on %s, %c",
-	     host,par,yn?'y':'n');
+      putlog(LOG_CMDS, "*", "Rejecting invalid sticky exempt: %s on %s, %c",
+	     host, par, yn ? 'y' : 'n');
     }
-     noshare = 0;
+    noshare = 0;
   }
 }
 
@@ -176,28 +177,28 @@ static void share_stick_invite (int idx, char * par) {
     yn = atoi(val);
     noshare = 1;
     if (!par[0]) {		/* Global invite */
-      if (u_setsticky_invite(NULL,host, yn) > 0) {
+      if (u_setsticky_invite(NULL, host, yn) > 0) {
  	    putlog(LOG_CMDS, "*", "%s: stick %s %c", dcc[idx].nick, host,
  		   yn ? 'y' : 'n');
- 	    shareout_but(NULL,idx,"sInv %s %d\n", host, yn);
+ 	    shareout_but(NULL, idx, "sInv %s %d\n", host, yn);
       }
     } else {
       struct chanset_t *chan = findchan_by_dname(par);
       struct chanuserrec * cr;
 
-      if ((chan !=NULL) && ((channel_shared(chan) &&
+      if ((chan != NULL) && ((channel_shared(chan) &&
                              ((cr = get_chanrec(dcc[idx].user, par)) &&
                               (cr->flags & BOT_AGGRESSIVE))) ||
                             (bot_flags(dcc[idx].user) & BOT_GLOBAL)))
 	if (u_setsticky_invite(chan, host, yn) > 0) {
 	  putlog(LOG_CMDS, "*", "%s: stick %s %c %s", dcc[idx].nick, host,
 		 yn ? 'y' : 'n', par);
-	  shareout_but(chan,idx,"sInv %s %d %s\n", host, yn, chan->dname);
+	  shareout_but(chan, idx, "sInv %s %d %s\n", host, yn, chan->dname);
 	  noshare = 0;
 	  return;
 	}
-      putlog(LOG_CMDS,"*","Rejecting invalid sticky invite: %s on %s, %c",
-	     host,par,yn?'y':'n');
+      putlog(LOG_CMDS, "*", "Rejecting invalid sticky invite: %s on %s, %c",
+	     host, par, yn ? 'y' : 'n');
     }
     noshare = 0;
   }
@@ -574,28 +575,33 @@ static void share_mns_ban(int idx, char *par)
   if (dcc[idx].status & STAT_SHARE) {
     shareout_but(NULL, idx, "-b %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel ban %s", dcc[idx].nick, par);
+    str_unescape(par, '\\');
     noshare = 1;
     u_delban(NULL, par, 1);
     noshare = 0;
   }
 }
 
-static void share_mns_exempt (int idx, char * par) {
+static void share_mns_exempt(int idx, char *par)
+{
   if (dcc[idx].status & STAT_SHARE) {
-    shareout_but(NULL,idx, "-e %s\n", par);
+    shareout_but(NULL, idx, "-e %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel exempt %s", dcc[idx].nick, par);
+    str_unescape(par, '\\');
     noshare = 1;
-    u_delexempt(NULL,par,1);
+    u_delexempt(NULL, par, 1);
     noshare = 0;
   }
 }
 
-static void share_mns_invite (int idx, char * par) {
+static void share_mns_invite(int idx, char *par)
+{
   if (dcc[idx].status & STAT_SHARE) {
-    shareout_but(NULL,idx, "-inv %s\n", par);
+    shareout_but(NULL, idx, "-inv %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel invite %s", dcc[idx].nick, par);
+    str_unescape(par, '\\');
     noshare = 1;
-    u_delinvite(NULL,par,1);
+    u_delinvite(NULL, par, 1);
     noshare = 0;
   }
 }
@@ -619,6 +625,7 @@ static void share_mns_banchan(int idx, char *par)
       shareout_but(chan, idx, "-bc %s %s\n", chname, par);
       putlog(LOG_CMDS, "*", "%s: cancel ban %s on %s", dcc[idx].nick,
 	     par, chname);
+      str_unescape(par, '\\');
       noshare = 1;
       u_delban(chan, par, 1);
       noshare = 0;
@@ -626,7 +633,8 @@ static void share_mns_banchan(int idx, char *par)
   }
 }
 
-static void share_mns_exemptchan (int idx, char * par) {
+static void share_mns_exemptchan(int idx, char *par)
+{
   char *chname;
   struct chanset_t *chan;
 
@@ -642,16 +650,18 @@ static void share_mns_exemptchan (int idx, char * par) {
         par, chname);
     else {
       shareout_but(chan,idx, "-ec %s %s\n", chname, par);
-	putlog(LOG_CMDS, "*", "%s: cancel exempt %s on %s", dcc[idx].nick,
-	       par, chname);
-	noshare = 1;
-	u_delexempt(chan, par,1);
-	noshare = 0;
-      }
+      putlog(LOG_CMDS, "*", "%s: cancel exempt %s on %s", dcc[idx].nick,
+	     par, chname);
+      str_unescape(par, '\\');
+      noshare = 1;
+      u_delexempt(chan, par,1);
+      noshare = 0;
     }
+  }
 }
 
-static void share_mns_invitechan (int idx, char * par) {
+static void share_mns_invitechan (int idx, char *par)
+{
   char *chname;
   struct chanset_t *chan;
 
@@ -667,12 +677,13 @@ static void share_mns_invitechan (int idx, char * par) {
         par, chname);
     else {
       shareout_but(chan,idx, "-invc %s %s\n", chname, par);
-	putlog(LOG_CMDS, "*", "%s: cancel invite %s on %s", dcc[idx].nick,
-	       par, chname);
-	noshare = 1;
- 	    u_delinvite(chan, par,1);
- 	    noshare = 0;
-      }
+      putlog(LOG_CMDS, "*", "%s: cancel invite %s on %s", dcc[idx].nick,
+	     par, chname);
+      str_unescape(par, '\\');
+      noshare = 1;
+      u_delinvite(chan, par,1);
+      noshare = 0;
+    }
   }
 }
 
@@ -681,6 +692,7 @@ static void share_mns_ignore(int idx, char *par)
   if (dcc[idx].status & STAT_SHARE) {
     shareout_but(NULL, idx, "-i %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel ignore %s", dcc[idx].nick, par);
+    str_unescape(par, '\\');
     noshare = 1;
     delignore(par);
     noshare = 0;
@@ -697,6 +709,7 @@ static void share_pls_ban(int idx, char *par)
     shareout_but(NULL, idx, "+b %s\n", par);
     noshare = 1;
     ban = newsplit(&par);
+    str_unescape(ban, '\\');
     tm = newsplit(&par);
     from = newsplit(&par);
     if (strchr(from, 's'))
@@ -735,6 +748,7 @@ static void share_pls_banchan(int idx, char *par)
 	     ban, chname);
     else {
       shareout_but(chan, idx, "+bc %s %s %s %s\n", ban, tm, chname, par);
+      str_unescape(ban, '\\');
       from = newsplit(&par);
       if (strchr(from, 's'))
 	flags |= MASKREC_STICKY;
@@ -755,7 +769,8 @@ static void share_pls_banchan(int idx, char *par)
 
 /* Same as share_pls_ban, only for exempts.
  */
-static void share_pls_exempt (int idx, char * par) {
+static void share_pls_exempt(int idx, char *par)
+{
   time_t expire_time;
   char *exempt, *tm, *from;
   int flags = 0;
@@ -764,6 +779,7 @@ static void share_pls_exempt (int idx, char * par) {
     shareout_but(NULL,idx, "+e %s\n", par);
     noshare = 1;
     exempt = newsplit(&par);
+    str_unescape(exempt, '\\');
     tm = newsplit(&par);
     from = newsplit(&par);
     if (strchr(from,'s'))
@@ -783,7 +799,8 @@ static void share_pls_exempt (int idx, char * par) {
 
 /* Same as share_pls_banchan, only for exempts.
  */
-static void share_pls_exemptchan (int idx, char * par) {
+static void share_pls_exemptchan(int idx, char *par)
+{
   time_t expire_time;
   int flags = 0;
   struct chanset_t *chan;
@@ -803,6 +820,7 @@ static void share_pls_exemptchan (int idx, char * par) {
 	     exempt, chname);
     else {
       shareout_but(chan,idx, "+ec %s %s %s %s\n", exempt, tm, chname, par);
+      str_unescape(exempt, '\\');
       from = newsplit(&par);
       if (strchr(from,'s'))
 	flags |= MASKREC_STICKY;
@@ -823,7 +841,8 @@ static void share_pls_exemptchan (int idx, char * par) {
 
 /* Same as share_pls_ban, only for invites.
  */
-static void share_pls_invite (int idx, char * par) {
+static void share_pls_invite(int idx, char *par)
+{
   time_t expire_time;
   char *invite, *tm, *from;
   int flags = 0;
@@ -831,27 +850,29 @@ static void share_pls_invite (int idx, char * par) {
   if (dcc[idx].status & STAT_SHARE) {
     shareout_but(NULL,idx, "+inv %s\n", par);
     noshare = 1;
-     invite = newsplit(&par);
-     tm = newsplit(&par);
-     from = newsplit(&par);
-     if (strchr(from,'s'))
-       flags |= MASKREC_STICKY;
-     if (strchr(from,'p'))
-       flags |= MASKREC_PERM;
-     from = newsplit(&par);
-     expire_time = (time_t) atoi(tm);
-     if (expire_time != 0L)
-       expire_time += now;
-     u_addinvite(NULL,invite, from, par, expire_time,flags);
-     putlog(LOG_CMDS, "*", "%s: global invite %s (%s:%s)", dcc[idx].nick,
-	    invite, from, par);
-     noshare = 0;
+    invite = newsplit(&par);
+    str_unescape(invite, '\\');
+    tm = newsplit(&par);
+    from = newsplit(&par);
+    if (strchr(from,'s'))
+      flags |= MASKREC_STICKY;
+    if (strchr(from,'p'))
+      flags |= MASKREC_PERM;
+    from = newsplit(&par);
+    expire_time = (time_t) atoi(tm);
+    if (expire_time != 0L)
+      expire_time += now;
+    u_addinvite(NULL,invite, from, par, expire_time,flags);
+    putlog(LOG_CMDS, "*", "%s: global invite %s (%s:%s)", dcc[idx].nick,
+	   invite, from, par);
+    noshare = 0;
   }
 }
 
 /* Same as share_pls_banchan, only for invites.
  */
-static void share_pls_invitechan (int idx, char * par) {
+static void share_pls_invitechan(int idx, char *par)
+{
   time_t expire_time;
   int flags = 0;
   struct chanset_t *chan;
@@ -861,31 +882,32 @@ static void share_pls_invitechan (int idx, char * par) {
     invite = newsplit(&par);
     tm = newsplit(&par);
     chname = newsplit(&par);
-     chan = findchan_by_dname(chname);
-     fr.match = (FR_CHAN | FR_BOT);
-     get_user_flagrec(dcc[idx].user,&fr,chname);
-     if (!chan || !channel_shared(chan) ||
-	 !(bot_chan(fr) || bot_global(fr)))
-       putlog(LOG_CMDS, "*",
-	      "Channel invite %s on %s rejected - channel not shared.",
-	      invite, chname);
-     else {
-       shareout_but(chan,idx, "+invc %s %s %s %s\n", invite, tm, chname, par);
-       from = newsplit(&par);
-       if (strchr(from,'s'))
-	 flags |= MASKREC_STICKY;
-       if (strchr(from,'p'))
-	 flags |= MASKREC_PERM;
-       from = newsplit(&par);
-       putlog(LOG_CMDS, "*", "%s: invite %s on %s (%s:%s)", dcc[idx].nick,
-	      invite, chname, from, par);
-       noshare = 1;
-       expire_time = (time_t) atoi(tm);
-       if (expire_time != 0L)
-	 expire_time += now;
-       u_addinvite(chan, invite, from, par, expire_time,flags);
-       noshare = 0;
-     }
+    chan = findchan_by_dname(chname);
+    fr.match = (FR_CHAN | FR_BOT);
+    get_user_flagrec(dcc[idx].user,&fr,chname);
+    if (!chan || !channel_shared(chan) ||
+	!(bot_chan(fr) || bot_global(fr)))
+      putlog(LOG_CMDS, "*",
+	     "Channel invite %s on %s rejected - channel not shared.",
+	     invite, chname);
+    else {
+      shareout_but(chan,idx, "+invc %s %s %s %s\n", invite, tm, chname, par);
+      str_unescape(invite, '\\');
+      from = newsplit(&par);
+      if (strchr(from,'s'))
+	flags |= MASKREC_STICKY;
+      if (strchr(from,'p'))
+	flags |= MASKREC_PERM;
+      from = newsplit(&par);
+      putlog(LOG_CMDS, "*", "%s: invite %s on %s (%s:%s)", dcc[idx].nick,
+	     invite, chname, from, par);
+      noshare = 1;
+      expire_time = (time_t) atoi(tm);
+      if (expire_time != 0L)
+	expire_time += now;
+      u_addinvite(chan, invite, from, par, expire_time,flags);
+      noshare = 0;
+    }
   }
 }
 
@@ -900,6 +922,7 @@ static void share_pls_ignore(int idx, char *par)
     shareout_but(NULL, idx, "+i %s\n", par);
     noshare = 1;
     ign = newsplit(&par);
+    str_unescape(ign, '\\');
     ts = newsplit(&par);
     if (!atoi(ts))
       expire_time = 0L;
@@ -1002,17 +1025,16 @@ static void share_ufsend(int idx, char *par)
     putlog(LOG_MISC, "*", "CAN'T WRITE USERFILE DOWNLOAD FILE!");
     zapfbot(idx);
   } else {
-    sock = getsock(SOCK_BINARY);
     ip = newsplit(&par);
     port = newsplit(&par);
-    if (open_telnet_dcc(sock, ip, port) < 0) {
+    sock = getsock(SOCK_BINARY);
+    if (sock < 0 || open_telnet_dcc(sock, ip, port) < 0) {
       killsock(sock);
       putlog(LOG_BOTS, "*", "Asynchronous connection failed!");
       dprintf(idx, "s e Can't connect to you!\n");
       zapfbot(idx);
     } else {
       i = new_dcc(&DCC_FORK_SEND, sizeof(struct xfer_info));
-
       dcc[i].addr = my_atoul(ip);
       dcc[i].port = atoi(port);
       dcc[i].sock = (-1);
@@ -1189,7 +1211,7 @@ static void sharein_mod(int idx, char *msg)
 
     if (!y)
       /* Found a match */
-      (C_share[i].func) (idx, msg);
+      (C_share[i].func)(idx, msg);
     if (y < 0)
       f = 1;
   }
@@ -1603,7 +1625,7 @@ static void finish_share(int idx)
     return;
 
   if (!uff_call_receiving(j, dcc[idx].u.xfer->filename)) {
-    putlog(LOG_BOTS, "*", "Uncompressing userfile failed!");
+    putlog(LOG_BOTS, "*", "A uff parsing function failed for the userfile!");
     unlink(dcc[idx].u.xfer->filename);
     return;
   }
@@ -1632,45 +1654,55 @@ static void finish_share(int idx)
     u_delinvite(NULL, global_invites->mask, 1);
   while (global_exempts)
     u_delexempt(NULL, global_exempts->mask, 1);
-  for (chan = chanset;chan;chan=chan->next) {
+  for (chan = chanset; chan; chan = chan->next)
     if (channel_shared(chan)) {
       get_user_flagrec(dcc[j].user, &fr, chan->dname);
       if (bot_chan(fr) || bot_global(fr)) {
 	while (chan->bans)
 	  u_delban(chan, chan->bans->mask, 1);
 	while (chan->exempts)
-	  u_delexempt(chan,chan->exempts->mask,1);
+	  u_delexempt(chan, chan->exempts->mask, 1);
 	while (chan->invites)
-	  u_delinvite(chan,chan->invites->mask,1);
+	  u_delinvite(chan, chan->invites->mask, 1);
       }
     }
-  }
   noshare = 0;
   ou = userlist;		/* Save old user list			*/
   userlist = (void *) -1;	/* Do this to prevent .user messups	*/
+
   Context;
   /* Bot user pointers are updated to point to the new list, all others
-   * are set to NULL.
+   * are set to NULL. If our userfile will be overriden, just set _all_
+   * to NULL directly.
    */
-  for (i = 0; i < dcc_total; i++)
-    dcc[i].user = get_user_by_handle(u, dcc[i].nick);
+  if (u == NULL)
+    for (i = 0; i < dcc_total; i++)
+      dcc[i].user = NULL;
+  else
+    for (i = 0; i < dcc_total; i++)
+      dcc[i].user = get_user_by_handle(u, dcc[i].nick);
 
   /* Read the transferred userfile. Add entries to u, which already holds
    * the bot entries in non-override mode.
    */
   if (!readuserfile(dcc[idx].u.xfer->filename, &u)) {
     putlog(LOG_MISC, "*", "%s", USERF_CANTREAD);
-    userlist = NULL;		/* Leaving it at -1 would make the bot
-				   crash in other places.		*/
+    clear_userlist(u);		/* Clear new, obsolete, user list.	*/
+    clear_chanlist();		/* Remove all user references from the
+				   channel lists.			*/
+    for (i = 0; i < dcc_total; i++)
+      dcc[i].user = get_user_by_handle(ou, dcc[i].nick);
+    userlist = ou;		/* Revert to old user list.		*/
+    lastuser = NULL;		/* Reset last accessed user ptr.	*/
     return;
   }
   Context;
   putlog(LOG_BOTS, "*", "%s.", USERF_XFERDONE);
 
   clear_chanlist();		/* Remove all user references from the
-				   channel lists			*/
-  userlist = u;			/* Set new user list			*/
-  lastuser = NULL;		/* Reset last accessed user ptr		*/
+				   channel lists.			*/
+  userlist = u;			/* Set new user list.			*/
+  lastuser = NULL;		/* Reset last accessed user ptr.	*/
 
   /* 
    * Migrate:
@@ -1693,7 +1725,7 @@ static void finish_share(int idx)
       set_user(&USERENTRY_BOTFL, u, NULL);
       set_user(&USERENTRY_PASS, u, NULL);
     } else if (u2 && !(u2->flags & (USER_BOT | USER_UNSHARED))) {
-      struct chanuserrec *cr, *cr2, *cr_old = NULL;
+      struct chanuserrec *cr, *cr_next, *cr_old = NULL;
       struct user_entry *ue;
 
       Context;
@@ -1705,25 +1737,26 @@ static void finish_share(int idx)
 
 	u->flags = (u2->flags & pgbm) | (u->flags & ~pgbm);
       }
-      for (cr = u2->chanrec; cr; cr = cr2) {
+      for (cr = u2->chanrec; cr; cr = cr_next) {
 	struct chanset_t *chan = findchan_by_dname(cr->channel);
-	int ok = 0;
 
-	cr2 = cr->next;
+	cr_next = cr->next;
 	if (chan) {
+	  int not_shared = 0;
+
 	  if (!channel_shared(chan))
-	    ok = 1;
+	    not_shared = 1;
 	  else {
 	    get_user_flagrec(dcc[j].user, &fr, chan->dname);
-	    if (chan && !bot_chan(fr) && !bot_global(fr))
-	      ok = 1;
+	    if (!bot_chan(fr) && !bot_global(fr))
+	      not_shared = 1;
 	  }
-	  if (ok) {
+	  if (not_shared) {
 	    del_chanrec(u, cr->channel);
 	    if (cr_old)
-	      cr_old->next = cr2;
+	      cr_old->next = cr_next;
 	    else
-	      u2->chanrec = cr2;
+	      u2->chanrec = cr_next;
 	    cr->next = u->chanrec;
 	    u->chanrec = cr;
 	  } else {
@@ -1762,40 +1795,35 @@ static void finish_share(int idx)
 static void start_sending_users(int idx)
 {
   struct userrec *u;
-  char s[1024], s1[64];
+  char share_file[1024], s1[64];
   int i = 1;
   struct chanuserrec *ch;
   struct chanset_t *cst;
 
   Context;
-  sprintf(s, ".share.%s.%lu", dcc[idx].nick, now);
-  Context;
+  egg_snprintf(share_file, sizeof share_file, ".share.%s.%lu", dcc[idx].nick,
+	       now);
   if (dcc[idx].u.bot->uff_flags & UFF_OVERRIDE) {
     debug1("NOTE: Sharing aggressively with %s, overriding its local bots.",
 	   dcc[idx].nick);
     u = dup_userlist(2);		/* All entries		*/
   } else
     u = dup_userlist(0);		/* Only non-bots	*/
-  write_tmp_userfile(s, u, idx);
-  Context;
+  write_tmp_userfile(share_file, u, idx);
   clear_userlist(u);
 
-  Context;
-  if (!uff_call_sending(idx, s)) {
-    Context;
-    unlink(s);
+  if (!uff_call_sending(idx, share_file)) {
+    unlink(share_file);
     dprintf(idx, "s e %s\n", "uff parsing failed");
     putlog(LOG_BOTS, "*", "uff parsing failed");
     dcc[idx].status &= ~(STAT_SHARE | STAT_SENDING | STAT_AGGRESSIVE);
+    Context;
     return;
   }
 
-  Context;
-  if ((i = raw_dcc_send(s, "*users", "(users)", s)) > 0) {
-    unlink(s);
-    Context;
+  if ((i = raw_dcc_send(share_file, "*users", "(users)", share_file)) > 0) {
+    unlink(share_file);
     dprintf(idx, "s e %s\n", USERF_CANTSEND);
-    Context;
     putlog(LOG_BOTS, "*", "%s -- can't send userfile",
 	   i == DCCSEND_FULL   ? "NO MORE DCC CONNECTIONS" :
 	   i == DCCSEND_NOSOCK ? "CAN'T OPEN A LISTENING SOCKET" :
@@ -1803,12 +1831,10 @@ static void start_sending_users(int idx)
 	   i == DCCSEND_FEMPTY ? "EMPTY FILE" : "UNKNOWN REASON!");
     dcc[idx].status &= ~(STAT_SHARE | STAT_SENDING | STAT_AGGRESSIVE);
   } else {
-    Context;
     updatebot(-1, dcc[idx].nick, '+', 0);
     dcc[idx].status |= STAT_SENDING;
     i = dcc_total - 1;
     strcpy(dcc[i].host, dcc[idx].nick);		/* Store bot's nick */
-    Context;
     dprintf(idx, "s us %lu %d %lu\n",
 	    iptolong(natip[0] ? (IP) inet_addr(natip) : getmyip()),
 	    dcc[i].port, dcc[i].u.xfer->length);
@@ -1823,26 +1849,26 @@ static void start_sending_users(int idx)
       for (u = userlist; u; u = u->next) {
         if ((u->flags & USER_BOT) && !(u->flags & USER_UNSHARED)) {
 	  struct bot_addr *bi = get_user(&USERENTRY_BOTADDR, u);
-	  struct list_type *t = get_user(&USERENTRY_HOSTS, u);
+	  struct list_type *t;
+	  char s2[1024];
 
 	  /* Send hostmasks */
-	  for (; t; t = t->next) {
-	    simple_sprintf(s, "s +bh %s %s\n", u->handle, t->extra);
-	    q_tbuf(dcc[idx].nick, s, NULL);
+	  for (t = get_user(&USERENTRY_HOSTS, u); t; t = t->next) {
+	    egg_snprintf(s2, sizeof s2, "s +bh %s %s\n", u->handle, t->extra);
+	    q_tbuf(dcc[idx].nick, s2, NULL);
 	  }
 	  /* Send address */
 	  if (bi)
-	    simple_sprintf(s, "s c BOTADDR %s %s %d %d\n", u->handle,
-			   bi->address, bi->telnet_port, bi->relay_port);
-	  q_tbuf(dcc[idx].nick, s, NULL);
+	    egg_snprintf(s2, sizeof s2, "s c BOTADDR %s %s %d %d\n", u->handle,
+			 bi->address, bi->telnet_port, bi->relay_port);
+	  q_tbuf(dcc[idx].nick, s2, NULL);
 	  fr.match = FR_GLOBAL;
 	  fr.global = u->flags;
 
 	  fr.udef_global = u->flags_udef;
 	  build_flags(s1, &fr, NULL);
-	  simple_sprintf(s, "s a %s %s\n", u->handle, s1);
-	  q_tbuf(dcc[idx].nick, s, NULL);
-	  Context;
+	  egg_snprintf(s2, sizeof s2, "s a %s %s\n", u->handle, s1);
+	  q_tbuf(dcc[idx].nick, s2, NULL);
 	  for (ch = u->chanrec; ch; ch = ch->next) {
 	    if ((ch->flags & ~BOT_SHARE) &&
 		((cst = findchan_by_dname(ch->channel)) &&
@@ -1854,9 +1880,9 @@ static void start_sending_users(int idx)
 	        fr.chan = ch->flags & ~BOT_SHARE;
 	        fr.udef_chan = ch->flags_udef;
 	        build_flags(s1, &fr, NULL);
-	        simple_sprintf(s, "s a %s %s %s\n", u->handle, s1, ch->channel);
-	        q_tbuf(dcc[idx].nick, s, cst);
-	        Context;
+	        egg_snprintf(s2, sizeof s2, "s a %s %s %s\n", u->handle, s1,
+			     ch->channel);
+	        q_tbuf(dcc[idx].nick, s2, cst);
 	      }
 	    }
 	  }
@@ -1864,11 +1890,12 @@ static void start_sending_users(int idx)
       }
     }
     q_tbuf(dcc[idx].nick, "s !\n", NULL);
-    /* Wish could unlink the file here to avoid possibly leaving it lying
-     * around, but that messes up NFS clients.
+    /* Unlink the file. We don't really care whether this causes problems
+     * for NFS setups. It's not worth the trouble.
      */
-    Context;
+    unlink(share_file);
   }
+  Context;
 }
 
 static void (*def_dcc_bot_kill) (int, void *) = 0;
@@ -2083,9 +2110,9 @@ char *share_start(Function *global_funcs)
 
   Context;
   module_register(MODULE_NAME, share_table, 2, 3);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+  if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);
-    return "You need an eggdrop of at least v1.5.3 to use this share module.";
+    return "You need an eggdrop of at least v1.6.0 to use this share module.";
   }
   if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0))) {
     module_undepend(MODULE_NAME);

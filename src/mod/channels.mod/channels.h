@@ -1,7 +1,7 @@
 /* 
  * channels.h -- part of channels.mod
  * 
- * $Id: channels.h,v 1.11 2000/03/19 23:56:07 fabian Exp $
+ * $Id: channels.h,v 1.15 2000/11/03 17:15:49 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -29,20 +29,33 @@
 #define UDEF_FLAG 1
 #define UDEF_INT 2
 
+#define MASKREASON_MAX	160	/* Max length of ban/invite/exempt/etc.
+				   reasons.				*/
+#define MASKREASON_LEN	(MASKREASON_MAX + 1)
+
+
 #ifdef MAKING_CHANNELS
 
+/* Structure for udef channel values. Udef setting have one such
+ * structure for each channel where they have a defined value.
+ */
 struct udef_chans {
-  struct udef_chans *next;
-  char *chan;
-  int value;
+  struct udef_chans *next;	/* Ptr to next value.			*/
+  char *chan;			/* Dname of channel name.		*/
+  int value;			/* Actual value.			*/
 };
 
+/* Structure for user defined channel settings.
+ */
 struct udef_struct {
-  struct udef_struct *next;
-  char *name;
-  int defined;
-  int type;
-  struct udef_chans *values;
+  struct udef_struct *next;	/* Ptr to next setting.			*/
+  char *name;			/* Name of setting.			*/
+  int defined;			/* Boolean that specifies whether this
+				   flag was defined by, e.g. a Tcl
+				   script yet.				*/
+  int type;			/* Type of setting: UDEF_FLAG, UDEF_INT	*/
+  struct udef_chans *values;	/* Ptr to linked list of udef channel
+				   structures.				*/
 };
 
 static void del_chanrec(struct userrec *u, char *);
@@ -79,7 +92,6 @@ static int write_invites (FILE * f, int idx);
 static void check_expired_invites(void);
 static void write_channels(void);
 static void read_channels(int);
-static int killchanset(struct chanset_t *);
 static void clear_channel(struct chanset_t *, int);
 static void get_mode_protect(struct chanset_t *chan, char *s);
 static void set_mode_protect(struct chanset_t *chan, char *set);
@@ -95,9 +107,11 @@ static void free_udef(struct udef_struct *);
 static void free_udef_chans(struct udef_chans *);
 static int getudef(struct udef_chans *, char *);
 static void initudef(int type, char *, int);
-static void setudef(struct udef_struct *, struct udef_chans *, char *, int);
+static void setudef(struct udef_struct *, char *, int);
 static void remove_channel(struct chanset_t *);
 static int ngetudef(char *, char *);
+static int expired_mask(struct chanset_t *chan, char *who);
+inline static int chanset_unlink(struct chanset_t *chan);
 
 #else
 
@@ -139,7 +153,7 @@ static int ngetudef(char *, char *);
 /* 32 - 35 */
 /* *HOLE* channels_funcs[32] used to be u_sticky_exempt() <cybah> */
 /* *HOLE* channels_funcs[33] used to be u_match_invite() <cybah> */
-#define killchanset ((int (*)(struct chanset_t *))channels_funcs[354)
+/* *HOLE* channels_funcs[34] used to be killchanset().			*/
 #define u_delinvite ((int (*)(struct chanset_t *, char *, int))channels_funcs[35])
 /* 36 - 39 */
 #define u_addinvite ((int (*)(struct chanset_t *, char *, char *, char *, time_t, int))channels_funcs[36])
@@ -152,6 +166,7 @@ static int ngetudef(char *, char *);
 #define initudef ((void(*)(int, char *,int))channels_funcs[42])
 #define ngetudef ((int(*)(char *, char *))channels_funcs[43])
 /* 44 - 47 */
+#define expired_mask ((int (*)(struct chanset_t *, char *))channels_funcs[44])
 
 #endif				/* MAKING_CHANNELS */
 

@@ -60,7 +60,7 @@ set use-info 1
 
 
 channel add #channel { SETTINGS }
-    Add each static channel you want your bot to sit in using this command. 
+    Add each static channel you want your bot to sit in using this command.
     There are many different possible settings you can insert into this
     command.
     A complete list of them:
@@ -82,7 +82,7 @@ channel add #channel { SETTINGS }
      with serverops.
      There're seven different modes for this settings:
       0 turn off,
-      1 isoptest (allow serverop if registered op), 
+      1 isoptest (allow serverop if registered op),
       2 wasoptest (allow serverop if op before split)
       3 allow serverop if isop or wasop
       4 allow serverop if isop and wasop
@@ -178,10 +178,6 @@ channel set <chan> +/-<setting>
     A complete list of all available channel settings:
 
 
-     clearbans
-      clear all channel bans when the bot joins?  (ie, force the
-      channel's ban list to match the bot's internal list)
-
      enforcebans
       when a ban is set, kick people who are on the channel and match
       the new ban?  (ie, they were on the channel before the ban)
@@ -240,7 +236,7 @@ channel set <chan> +/-<setting>
       it's annoying; i think it's neat)
 
      revenge
-      remember people who deop/kick/ban the bot, valid ops or friends, and 
+      remember people who deop/kick/ban the bot, valid ops or friends, and
       punish them? Users with +f (friend) flag are exempt from revenge
 
      revengebot
@@ -295,18 +291,18 @@ set global-flood-ctcp 3:60
 set global-flood-nick 5:60
 
 set global-chanset {
-        -clearbans      -enforcebans
-        +dynamicbans    +userbans
-        -autoop         -bitch
-        +greet          +protectops
-        +statuslog      -revenge
-        -secret         -autovoice
-        +cycle          +dontkickops
-        -inactive       -protectfriends
-        +shared         -seen
-	+userexempts	+dynamicexempts
-	+userinvites	+dynamicinvites
-	-nodesynch
+        -autoop         -autovoice
+        -bitch          +cycle
+        +dontkickops    +dynamicbans
+        +dynamicexempts +dynamicinvites
+        -enforcebans    +greet
+        -inactive       -nodesynch
+        -protectfriends +protectops
+        -revenge        -revengebot
+        -secret         -seen
+        +shared         +statuslog
+        +userbans       +userexempts
+        +userinvites
 }
 
 set global-chanmode "nt-likm"

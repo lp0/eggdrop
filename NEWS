@@ -1,4 +1,4 @@
-News - Updated 18 August 2000
+News - Updated 08 November 2000
   ------------------------------------------------------------------------
 
 Whats new, first read the following documents:
@@ -6,14 +6,14 @@ Whats new, first read the following documents:
      INSTALL
      README
      BOTNET
-     UPDATES1.5
+     UPDATES 1.5/1.6
      tcl-commands
 
 All of these documents combined will fill you in on the latest changes to
-eggdrop in version 1.5.xx. All files are also available in html in doc/html/.
+eggdrop in version 1.6.x. All files are also available in html in doc/html/.
 
 A lot of things have changed in this version so at a minimum read the
-UPDATES1.5 text file. UPDATES shows whats been added and fixed
+UPDATES1.5 and UPDATES1.6 text file. UPDATES shows whats been added and fixed
 along the way.
 
 
@@ -24,7 +24,7 @@ CAUTION:
 
      2. DON'T USE YOUR OLD CONFIG FILE.. MAKE A NEW ONE.........
 
-Changes made to Eggdrop 1.5.xx from Eggdrop1.4.xx
+Changes made to Eggdrop 1.6.x from Eggdrop1.4.x
 
 !CHANNELS
 
@@ -41,7 +41,7 @@ Changes made to Eggdrop 1.5.xx from Eggdrop1.4.xx
 
 ASYNCHRONOUS DNS MODULE
 
-     Eggdrop 1.5 is shipped with a new module, the dns module. It
+     Eggdrop 1.6 is shipped with a new module, the dns module. It
      replaces those old dns-lookups performed by eggdrop which could
      halt the whole bot during a time-out. We also added a new tcl
      command 'dnslookup', so scripts can look up IP's and hostname now
@@ -50,7 +50,7 @@ ASYNCHRONOUS DNS MODULE
 COMPRESS MODULE
 
      A new module called compress was introduced to eggdrop now. It
-     provides gzip support to eggdrop (via tcl commands) and enables 
+     provides gzip support to eggdrop (via tcl commands) and enables
      compressed userfile transfer.
 
 DCC COMMANDS
@@ -71,7 +71,7 @@ DOCUMENTATION
 
 EGGDROP.CONF.DIST
 
-     eggdrop.conf.dist was replaced with three files, eggdrop.simple.conf, 
+     eggdrop.conf.dist was replaced with three files, eggdrop.simple.conf,
      eggdrop.advanced.conf and eggdrop.complete.conf. This allows users to
      choose how detailed they want to configure their bot. eggdrop.simple.conf
      just contains the simplest configuration options, where

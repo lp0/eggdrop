@@ -5,7 +5,7 @@
  * 
  * Modified/written by Fabian Knittel <fknittel@gmx.de>
  * 
- * $Id: coredns.c,v 1.12 2000/03/23 23:17:57 fabian Exp $
+ * $Id: coredns.c,v 1.17 2000/11/05 10:31:10 fabian Exp $
  */
 /* 
  * Portions copyright (C) 1999, 2000  Eggheads
@@ -49,8 +49,9 @@
 #define HOSTNAMELEN 	  255		/* From RFC */
 #define RES_RETRYDELAY      3
 #define RES_MAXSENDS        4
-#define RES_FAILEDDELAY  3600		/* Keep failed record for 1 hour */
-#define RES_MAX_TTL     86400		/* Maximum TTL is 1d */
+#define RES_FAILEDDELAY   600		/* TTL for failed records (in
+					   seconds). */
+#define RES_MAX_TTL     86400		/* Maximum TTL (in seconds). */
 
 #define RES_ERR "DNS Resolver error: "
 #define RES_MSG "DNS Resolver: "
@@ -66,16 +67,9 @@
 
 /* Non-blocking nameserver interface routines */
 
-#define OPCODES_COUNT 3
-char *opcodes[OPCODES_COUNT + 1] = {
-    "standard query",
-    "inverse query",
-    "server status request",
-    "unknown",
-};
-
-#define RESPONSECODES_COUNT 6
-char *responsecodes[RESPONSECODES_COUNT + 1] = {
+#ifdef DEBUG_DNS
+#  define RESPONSECODES_COUNT 6
+static char *responsecodes[RESPONSECODES_COUNT + 1] = {
     "no error",
     "format error in query",
     "server failure",
@@ -84,9 +78,11 @@ char *responsecodes[RESPONSECODES_COUNT + 1] = {
     "refused by name server",
     "unknown error",
 };
+#endif /* DEBUG_DNS */
 
-#define RESOURCETYPES_COUNT 17
-char *resourcetypes[RESOURCETYPES_COUNT + 1] = {
+#ifdef DEBUG_DNS
+#  define RESOURCETYPES_COUNT 17
+static const char *resourcetypes[RESOURCETYPES_COUNT + 1] = {
     "unknown type",
     "A: host address",
     "NS: authoritative name server",
@@ -106,9 +102,11 @@ char *resourcetypes[RESOURCETYPES_COUNT + 1] = {
     "TXT: text string",
     "unknown type",
 };
+#endif /* DEBUG_DNS */
 
-#define CLASSTYPES_COUNT 5
-char *classtypes[CLASSTYPES_COUNT + 1] = {
+#ifdef DEBUG_DNS
+#  define CLASSTYPES_COUNT 5
+static const char *classtypes[CLASSTYPES_COUNT + 1] = {
     "unknown class",
     "IN: the Internet",
     "CS: CSNET (OBSOLETE)",
@@ -116,42 +114,27 @@ char *classtypes[CLASSTYPES_COUNT + 1] = {
     "HS: Hesoid [Dyer 87]",
     "unknown class"
 };
-
-char *rrtypes[] = {
-    "Unknown",
-    "Query",
-    "Answer",
-    "Authority reference",
-    "Resource reference",
-};
-
-enum {
-    RR_UNKNOWN,
-    RR_QUERY,
-    RR_ANSWER,
-    RR_AUTHORITY,
-    RR_RESOURCE
-};
+#endif /* DEBUG_DNS */
 
 typedef struct {
-    word id;			/* Packet id */
-    byte databyte_a;
-    /* rd:1           recursion desired
-     * tc:1           truncated message
-     * aa:1           authoritive answer
-     * opcode:4       purpose of message
-     * qr:1           response flag
+    u_16bit_t	id;			/* Packet id */
+    u_8bit_t	databyte_a;
+    /* rd:1				recursion desired
+     * tc:1				truncated message
+     * aa:1				authoritive answer
+     * opcode:4				purpose of message
+     * qr:1				response flag
      */
-    byte databyte_b;
-    /* rcode:4        response code
-     * unassigned:2   unassigned bits
-     * pr:1           primary server required (non standard)
-     * ra:1           recursion available
+    u_8bit_t	databyte_b;
+    /* rcode:4				response code
+     * unassigned:2			unassigned bits
+     * pr:1				primary server required (non standard)
+     * ra:1				recursion available
      */
-    word qdcount;		/* Query record count */
-    word ancount;		/* Answer record count */
-    word nscount;		/* Authority reference record count */
-    word arcount;		/* Resource reference record count */
+    u_16bit_t	qdcount;		/* Query record count */
+    u_16bit_t	ancount;		/* Answer record count */
+    u_16bit_t	nscount;		/* Authority reference record count */
+    u_16bit_t	arcount;		/* Resource reference record count */
 } packetheader;
 
 #ifndef HFIXEDSZ
@@ -170,7 +153,7 @@ typedef struct {
 #define getheader_pr(x) ((x->databyte_b >> 6) & 1)
 #define getheader_ra(x) (x->databyte_b >> 7)
 
-#define sucknetword(x)  ((x)+=2,((word)  (((x)[-2] <<  8) | ((x)[-1] <<  0))))
+#define sucknetword(x)  ((x)+=2,((u_16bit_t)  (((x)[-2] <<  8) | ((x)[-1] <<  0))))
 #define sucknetshort(x) ((x)+=2,((short) (((x)[-2] <<  8) | ((x)[-1] <<  0))))
 #define sucknetdword(x) ((x)+=4,((dword) (((x)[-4] << 24) | ((x)[-3] << 16) | \
                                           ((x)[-2] <<  8) | ((x)[-1] <<  0))))
@@ -178,27 +161,29 @@ typedef struct {
                                           ((x)[-2] <<  8) | ((x)[-1] <<  0))))
 
 
-dword resrecvbuf[(MAX_PACKETSIZE + 7) >> 2];	/* MUST BE DWORD ALIGNED */
+static u_32bit_t resrecvbuf[(MAX_PACKETSIZE + 7) >> 2];	/* MUST BE DWORD ALIGNED */
 
-struct resolve *idbash[BASH_SIZE];
-struct resolve *ipbash[BASH_SIZE];
-struct resolve *hostbash[BASH_SIZE];
-struct resolve *expireresolves = NULL;
+static struct resolve *idbash[BASH_SIZE];
+static struct resolve *ipbash[BASH_SIZE];
+static struct resolve *hostbash[BASH_SIZE];
+static struct resolve *expireresolves = NULL;
 
-IP alignedip;
-IP localhost;
+static IP localhost;
 
-long idseed = 0xdeadbeef;
-long aseed;
+static long idseed = 0xdeadbeef;
+static long aseed;
 
-int resfd;
+static int resfd;
 
-char tempstring[16384 + 1 + 1];
-char sendstring[1024 + 1];
-char namestring[1024 + 1];
-char stackstring[1024 + 1];
+static char tempstring[16384 + 1 + 1];
+static char namestring[1024 + 1];
+static char stackstring[1024 + 1];
 
-char nullstring[] = "";
+#ifdef DEBUG_DNS
+static char sendstring[1024 + 1];
+#endif /* DEBUG_DNS */
+
+static const char nullstring[] = "";
 
 
 /* 
@@ -210,8 +195,8 @@ char nullstring[] = "";
  */
 static char *strtdiff(char *d, long signeddiff)
 {
-    dword diff;
-    dword seconds, minutes, hours;
+    u_32bit_t diff;
+    u_32bit_t seconds, minutes, hours;
     long day;
 
     Context;
@@ -256,23 +241,23 @@ static struct resolve *allocresolve()
 
 /* Return the hash bucket number for id.
  */
-inline static dword getidbash(word id)
+inline static u_32bit_t getidbash(u_16bit_t id)
 {
-    return (dword) BASH_MODULO(id);
+    return (u_32bit_t) BASH_MODULO(id);
 }
 
 /* Return the hash bucket number for ip.
  */
-inline static dword getipbash(IP ip)
+inline static u_32bit_t getipbash(IP ip)
 {
-    return (dword) BASH_MODULO(ip);
+    return (u_32bit_t) BASH_MODULO(ip);
 }
 
 /* Return the hash bucket number for host.
  */
-static dword gethostbash(char *host)
+static u_32bit_t gethostbash(char *host)
 {
-    dword bashvalue = 0;
+    u_32bit_t bashvalue = 0;
 
     for (; *host; host++) {
 	bashvalue ^= *host;
@@ -286,7 +271,7 @@ static dword gethostbash(char *host)
 static void linkresolveid(struct resolve *addrp)
 {
     struct resolve *rp;
-    dword bashnum;
+    u_32bit_t bashnum;
 
     Context;
     bashnum = getidbash(addrp->id);
@@ -319,7 +304,7 @@ static void linkresolveid(struct resolve *addrp)
  */
 static void unlinkresolveid(struct resolve *rp)
 {
-    dword bashnum;
+    u_32bit_t bashnum;
 
     Context;
     bashnum = getidbash(rp->id);
@@ -340,7 +325,7 @@ static void unlinkresolveid(struct resolve *rp)
 static void linkresolvehost(struct resolve *addrp)
 {
     struct resolve *rp;
-    dword bashnum;
+    u_32bit_t bashnum;
     int ret;
 
     Context;
@@ -377,7 +362,7 @@ static void linkresolvehost(struct resolve *addrp)
  */
 static void unlinkresolvehost(struct resolve *rp)
 {
-    dword bashnum;
+    u_32bit_t bashnum;
 
     Context;
     bashnum = gethostbash(rp->hostn);
@@ -399,7 +384,7 @@ static void unlinkresolvehost(struct resolve *rp)
 static void linkresolveip(struct resolve *addrp)
 {
     struct resolve *rp;
-    dword bashnum;
+    u_32bit_t bashnum;
 
     Context;
     bashnum = getipbash(addrp->ip);
@@ -432,7 +417,7 @@ static void linkresolveip(struct resolve *addrp)
  */
 static void unlinkresolveip(struct resolve *rp)
 {
-    dword bashnum;
+    u_32bit_t bashnum;
 
     Context;
     bashnum = getipbash(rp->ip);
@@ -499,7 +484,8 @@ static void untieresolve(struct resolve *rp)
 static void unlinkresolve(struct resolve *rp)
 {
     Context;
-    untieresolve(rp);
+    untieresolve(rp);		/* Not really needed. Left in to be on the
+				   safe side. */
     unlinkresolveid(rp);
     unlinkresolveip(rp);
     if (rp->hostn)
@@ -510,7 +496,7 @@ static void unlinkresolve(struct resolve *rp)
 
 /* Find request structure using the id.
  */
-static struct resolve *findid(word id)
+static struct resolve *findid(u_16bit_t id)
 {
     struct resolve *rp;
     int bashnum;
@@ -564,7 +550,7 @@ static struct resolve *findhost(char *hostn)
 static struct resolve *findip(IP ip)
 {
     struct resolve *rp;
-    dword bashnum;
+    u_32bit_t bashnum;
 
     Context;
     bashnum = getipbash(ip);
@@ -590,7 +576,7 @@ static struct resolve *findip(IP ip)
 
 /* Create packet for the request and send it to all available nameservers.
  */
-static void dorequest(char *s, int type, word id)
+static void dorequest(char *s, int type, u_16bit_t id)
 {
     packetheader *hp;
     int r, i;
@@ -604,7 +590,7 @@ static void dorequest(char *s, int type, word id)
 	return;
     }
     hp = (packetheader *) buf;
-    hp->id = id;	/* my_htons() deliberately left out (redundant) */
+    hp->id = id;	/* htons() deliberately left out (redundant) */
     for (i = 0; i < _res.nscount; i++)
 	(void) sendto(resfd, buf, r, 0,
 		      (struct sockaddr *) &_res.nsaddr_list[i],
@@ -628,9 +614,9 @@ static void resendrequest(struct resolve *rp, int type)
 		rp->hostn);
     } else if (type == T_PTR) {
 	sprintf(tempstring, "%u.%u.%u.%u.in-addr.arpa",
-		((byte *) & rp->ip)[3],
-		((byte *) & rp->ip)[2],
-		((byte *) & rp->ip)[1], ((byte *) & rp->ip)[0]);
+		((u_8bit_t *) & rp->ip)[3],
+		((u_8bit_t *) & rp->ip)[2],
+		((u_8bit_t *) & rp->ip)[1], ((u_8bit_t *) & rp->ip)[0]);
 	dorequest(tempstring, type, rp->id);
 	ddebug1(RES_MSG "Sent domain lookup request for \"%s\".",
 		iptostr(rp->ip));
@@ -647,7 +633,7 @@ static void sendrequest(struct resolve *rp, int type)
 	idseed = (((idseed + idseed) | (long) time(NULL))
 		  + idseed - 0x54bad4a) ^ aseed;
 	aseed ^= idseed;
-	rp->id = (word) idseed;
+	rp->id = (u_16bit_t) idseed;
     } while (findid(rp->id));
     linkresolveid(rp);		/* Add id to id hash table */
     resendrequest(rp, type);	/* Send request */
@@ -656,7 +642,7 @@ static void sendrequest(struct resolve *rp, int type)
 /* Gets called as soon as the request turns out to have failed. Calls
  * the eggdrop hook.
  */
-static void failrp(struct resolve *rp)
+static void failrp(struct resolve *rp, int type)
 {
     Context;
     if (rp->state == STATE_FINISHED)
@@ -669,7 +655,7 @@ static void failrp(struct resolve *rp)
     linkresolve(rp);
 
     ddebug0(RES_MSG "Lookup failed.");
-    dns_event_failure(rp);
+    dns_event_failure(rp, type);
 }
 
 /* Gets called as soon as the request turns out to be successful. Calls
@@ -696,16 +682,16 @@ static void passrp(struct resolve *rp, long ttl, int type)
 
 /* Parses the response packets received.
  */
-static void parserespacket(byte *s, int l)
+static void parserespacket(u_8bit_t *s, int l)
 {
     struct resolve *rp;
     packetheader *hp;
-    byte *eob;
-    byte *c;
+    u_8bit_t *eob;
+    u_8bit_t *c;
     long ttl;
     int r, usefulanswer;
-    word rr, datatype, class, qdatatype, qclass;
-    byte rdatalength;
+    u_16bit_t rr, datatype, class, qdatatype, qclass;
+    u_8bit_t rdatalength;
 
     Context;
     if (l < sizeof(packetheader)) {
@@ -727,10 +713,10 @@ static void parserespacket(byte *s, int l)
 	return;
     if ((rp->state == STATE_FINISHED) || (rp->state == STATE_FAILED))
 	return;
-    hp->qdcount = my_ntohs(hp->qdcount);
-    hp->ancount = my_ntohs(hp->ancount);
-    hp->nscount = my_ntohs(hp->nscount);
-    hp->arcount = my_ntohs(hp->arcount);
+    hp->qdcount = ntohs(hp->qdcount);
+    hp->ancount = ntohs(hp->ancount);
+    hp->nscount = ntohs(hp->nscount);
+    hp->arcount = ntohs(hp->arcount);
     if (getheader_tc(hp)) {	/* Packet truncated */
 	ddebug0(RES_ERR "Nameserver packet truncated.");
 	return;
@@ -765,9 +751,9 @@ static void parserespacket(byte *s, int l)
 	    case STATE_PTRREQ:
 		sprintf(stackstring,
 			"%u.%u.%u.%u.in-addr.arpa",
-			((byte *) & rp->ip)[3],
-			((byte *) & rp->ip)[2],
-			((byte *) & rp->ip)[1], ((byte *) & rp->ip)[0]);
+			((u_8bit_t *) & rp->ip)[3],
+			((u_8bit_t *) & rp->ip)[2],
+			((u_8bit_t *) & rp->ip)[1], ((u_8bit_t *) & rp->ip)[0]);
 		break;
 	    case STATE_AREQ:
 		strncpy(stackstring, rp->hostn, 1024);
@@ -846,14 +832,14 @@ static void parserespacket(byte *s, int l)
 		rdatalength = sucknetword(c);
 		if (class != qclass) {
 		    ddebug2(RES_MSG "query class: %u (%s)",
-			   qclass,
-			   qclass < CLASSTYPES_COUNT ?
-				   classtypes[qclass] :
-				   classtypes[CLASSTYPES_COUNT]);
+			    qclass,
+			    qclass < CLASSTYPES_COUNT ?
+				classtypes[qclass] :
+				classtypes[CLASSTYPES_COUNT]);
 		    ddebug2(RES_MSG "rr class: %u (%s)", class,
-			   class < CLASSTYPES_COUNT ?
-				   classtypes[class] :
-				   classtypes[CLASSTYPES_COUNT]);
+			    class < CLASSTYPES_COUNT ?
+				classtypes[class] :
+				classtypes[CLASSTYPES_COUNT]);
 		    ddebug0(RES_ERR "Answered class does not match queried class.");
 		    return;
 		}
@@ -869,8 +855,8 @@ static void parserespacket(byte *s, int l)
 		if (datatype == qdatatype) {
 		    ddebug1(RES_MSG "TTL: %s", strtdiff(sendstring, ttl));
 		    ddebug1(RES_MSG "TYPE: %s", datatype < RESOURCETYPES_COUNT ?
-			   resourcetypes[datatype] :
-			   resourcetypes[RESOURCETYPES_COUNT]);
+			    resourcetypes[datatype] :
+			    resourcetypes[RESOURCETYPES_COUNT]);
 		    if (usefulanswer)
 			switch (datatype) {
 			case T_A:
@@ -893,7 +879,7 @@ static void parserespacket(byte *s, int l)
 				   namestring);
 			    if (r > HOSTNAMELEN) {
 				ddebug0(RES_ERR "Domain name too long.");
-				failrp(rp);
+				failrp(rp, T_PTR);
 				return;
 			    }
 			    if (!rp->hostn) {
@@ -906,8 +892,8 @@ static void parserespacket(byte *s, int l)
 			    break;
 			default:
 			    ddebug2(RES_ERR "Received unimplemented data type: %u (%s)",
-				   datatype,
-				   datatype < RESOURCETYPES_COUNT ?
+				    datatype,
+				    datatype < RESOURCETYPES_COUNT ?
 					resourcetypes[datatype] :
 					resourcetypes[RESOURCETYPES_COUNT]);
 			}
@@ -939,7 +925,17 @@ static void parserespacket(byte *s, int l)
     case NXDOMAIN:
 	Context;
 	ddebug0(RES_MSG "Host not found.");
-	failrp(rp);
+	switch (rp->state) {
+	case STATE_PTRREQ:
+		failrp(rp, T_PTR);
+		break;
+	case STATE_AREQ:
+		failrp(rp, T_A);
+		break;
+	default:
+		failrp(rp, 0);
+		break;
+	}
 	break;
     default:
 	Context;
@@ -962,7 +958,7 @@ static void dns_ack(void)
     int r, i;
 
     Context;
-    r =	recvfrom(resfd, (byte *) resrecvbuf, MAX_PACKETSIZE, 0,
+    r =	recvfrom(resfd, (u_8bit_t *) resrecvbuf, MAX_PACKETSIZE, 0,
 		 (struct sockaddr *) &from, &fromlen);
     if (r <= 0) {
 	ddebug1(RES_MSG "Socket error: %s", strerror(errno));
@@ -984,7 +980,7 @@ static void dns_ack(void)
         ddebug1(RES_ERR "Received reply from unknown source: %s",
 	       iptostr(from.sin_addr.s_addr));
     } else
-        parserespacket((byte *) resrecvbuf, r);
+        parserespacket((u_8bit_t *) resrecvbuf, r);
     Context;
 }
 
@@ -1016,7 +1012,7 @@ static void dns_check_expires(void)
 	      resendrequest(rp, T_PTR);
 	    } else {
 	      ddebug0(RES_MSG "\"PTR\" query timed out.");
-	      failrp(rp);
+	      failrp(rp, T_PTR);
 	    }
 	    break;
 	case STATE_AREQ:	/* T_A send timed out */
@@ -1026,13 +1022,13 @@ static void dns_check_expires(void)
 	      resendrequest(rp, T_A);
 	    } else {
 	      ddebug0(RES_MSG "\"A\" query timed out.");
-	      failrp(rp);
+	      failrp(rp, T_A);
 	    }
 	    break;
 	default:		/* Unknown state, let it expire */
 	    ddebug1(RES_WRN "Unknown request state %d. Request expired.",
 		   rp->state);
-	    failrp(rp);
+	    failrp(rp, 0);
 	}
     }
     Context;
@@ -1045,17 +1041,16 @@ static void dns_lookup(IP ip)
     struct resolve *rp;
     
     Context;
-    ip = my_htonl(ip);
+    ip = htonl(ip);
     if ((rp = findip(ip))) {
-	if ((rp->state == STATE_FINISHED)
-	    || (rp->state == STATE_FAILED)) {
-	    if ((rp->state == STATE_FINISHED) && (rp->hostn)) {
+	if (rp->state == STATE_FINISHED || rp->state == STATE_FAILED) {
+	    if (rp->state == STATE_FINISHED && rp->hostn) {
 		ddebug2(RES_MSG "Used cached record: %s == \"%s\".",
 			    iptostr(ip), rp->hostn);
 		dns_event_success(rp, T_PTR);
 	    } else {
 		ddebug1(RES_MSG "Used failed record: %s == ???", iptostr(ip));
-		dns_event_failure(rp);
+		dns_event_failure(rp, T_PTR);
 	    }
 	}
 	return;
@@ -1084,20 +1079,19 @@ static void dns_forward(char *hostn)
      * and return it straight away.
      */
     if (egg_inet_aton(hostn, &inaddr)) {
-      call_ipbyhost(hostn, my_ntohl(inaddr.s_addr), 1);
+      call_ipbyhost(hostn, ntohl(inaddr.s_addr), 1);
       return;
     }
     Context;
     if ((rp = findhost(hostn))) {
-	if ((rp->state == STATE_FINISHED)
-	    || (rp->state == STATE_FAILED)) {
-	    if ((rp->state == STATE_FINISHED) && (rp->ip)) {
+	if (rp->state == STATE_FINISHED || rp->state == STATE_FAILED) {
+	    if (rp->state == STATE_FINISHED && rp->ip) {
 		ddebug2(RES_MSG "Used cached record: %s == \"%s\".", hostn,
 		       iptostr(rp->ip));
 		dns_event_success(rp, T_A);
 	    } else {
 		ddebug1(RES_MSG "Used failed record: %s == ???", hostn);
-		dns_event_failure(rp);
+		dns_event_failure(rp, T_A);
 	    }
 	}
 	return;
@@ -1167,7 +1161,7 @@ static int init_dns_core(void)
 	return 0;
 
     /* Initialise the hash tables. */
-    aseed = time(NULL) ^ (time(NULL) << 3) ^ (dword) getpid();
+    aseed = time(NULL) ^ (time(NULL) << 3) ^ (u_32bit_t) getpid();
     for (i = 0; i < BASH_SIZE; i++) {
 	idbash[i] = NULL;
 	ipbash[i] = NULL;

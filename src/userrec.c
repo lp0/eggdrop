@@ -4,7 +4,7 @@
  *   a bunch of functions to find and change user records
  *   change and check user (and channel-specific) flags
  * 
- * $Id: userrec.c,v 1.22 2000/08/07 10:09:53 fabian Exp $
+ * $Id: userrec.c,v 1.28 2000/11/10 19:43:30 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -49,40 +49,38 @@ maskrec		*global_bans = NULL,
 struct igrec	*global_ign = NULL;
 int		cache_hit = 0,
 		cache_miss = 0;		/* temporary cache accounting	    */
-int		strict_host = 1;
+int		strict_host = 0;
 int		userfile_perm = 0600;	/* Userfile permissions,
 					   default rw-------		    */
 
 
-#ifdef DEBUG_MEM
-void *_user_malloc(int size, char *file, int line)
+void *_user_malloc(int size, const char *file, int line)
 {
-  char x[1024], *p;
+#ifdef DEBUG_MEM
+  char		 x[1024];
+  const char	*p;
 
   p = strrchr(file, '/');
   simple_sprintf(x, "userrec.c:%s", p ? p + 1 : file);
   return n_malloc(size, x, line);
+#else
+  return nmalloc(size);
+#endif
 }
 
-void *_user_realloc(void *ptr, int size, char *file, int line)
+void *_user_realloc(void *ptr, int size, const char *file, int line)
 {
-  char x[1024], *p;
+#ifdef DEBUG_MEM
+  char		 x[1024];
+  const char	*p;
 
   p = strrchr(file, '/');
   simple_sprintf(x, "userrec.c:%s", p ? p + 1 : file);
   return n_realloc(ptr, size, x, line);
-}
 #else
-void *_user_malloc(int size, char *file, int line)
-{
-  return nmalloc(size);
-}
-
-void *_user_realloc(void *ptr, int size, char *file, int line)
-{
   return nrealloc(ptr, size);
-}
 #endif
+}
 
 inline int expmem_mask(struct maskrec *m)
 {
@@ -222,6 +220,7 @@ struct userrec *get_user_by_handle(struct userrec *bu, char *handle)
 
   if (!handle)
     return NULL;
+  /* FIXME: This should be done outside of this function. */
   rmspace(handle);
   if (!handle[0] || (handle[0] == '*'))
     return NULL;
@@ -333,9 +332,10 @@ void clear_userlist(struct userrec *bu)
  */
 struct userrec *get_user_by_host(char *host)
 {
-  struct userrec *u = userlist, *ret;
+  struct userrec *u, *ret;
   struct list_type *q;
   int cnt, i;
+  char host2[UHOSTLEN];
 
   if (host == NULL)
     return NULL;
@@ -349,22 +349,21 @@ struct userrec *get_user_by_host(char *host)
     return ret;
   }
   cache_miss++;
+  strcpy(host2, host);
   host = fixfrom(host);
-  while (u != NULL) {
+  for (u = userlist; u; u = u->next) {
     q = get_user(&USERENTRY_HOSTS, u);
-    while (q != NULL) {
+    for (; q; q = q->next) {
       i = wild_match(q->extra, host);
       if (i > cnt) {
 	ret = u;
 	cnt = i;
       }
-      q = q->next;
     }
-    u = u->next;
   }
   if (ret != NULL) {
     lastuser = ret;
-    set_chanlist(host, ret);
+    set_chanlist(host2, ret);
   }
   return ret;
 }
@@ -534,12 +533,14 @@ void sort_userlist()
   }
 }
 
-/* Rewrite the entire user file. Also write the channel file at the same time
+/* Rewrite the entire user file. Call USERFILE hook as well, probably
+ * causing the channel file to be rewritten as well.
  */
 void write_userfile(int idx)
 {
   FILE *f;
-  char s[121], s1[81];
+  char *new_userfile;
+  char s1[81];
   time_t tt;
   struct userrec *u;
   int ok;
@@ -547,11 +548,15 @@ void write_userfile(int idx)
   Context;
   if (userlist == NULL)
     return;			/* No point in saving userfile */
-  sprintf(s, "%s~new", userfile);
-  f = fopen(s, "w");
-  chmod(s, userfile_perm);
+
+  new_userfile = nmalloc(strlen(userfile) + 5);
+  sprintf(new_userfile, "%s~new", userfile);
+
+  f = fopen(new_userfile, "w");
+  chmod(new_userfile, userfile_perm);
   if (f == NULL) {
     putlog(LOG_MISC, "*", USERF_ERRWRITE);
+    nfree(new_userfile);
     return;
   }
   if (!quiet_save)
@@ -564,7 +569,7 @@ void write_userfile(int idx)
   Context;
   ok = 1;
   u = userlist;
-  while ((u != NULL) && (ok)) {
+  while (u != NULL && ok) {
     ok = write_user(u, f, idx);
     u = u->next;
   }
@@ -572,15 +577,16 @@ void write_userfile(int idx)
   if (!ok || fflush(f)) {
     putlog(LOG_MISC, "*", "%s (%s)", USERF_ERRWRITE, strerror(ferror(f)));
     fclose(f);
+    nfree(new_userfile);
     return;
   }
   fclose(f);
   Context;
   call_hook(HOOK_USERFILE);
   Context;
-  unlink(userfile);
-  sprintf(s, "%s~new", userfile);
-  movefile(s, userfile);
+  movefile(new_userfile, userfile);
+  nfree(new_userfile);
+  Context;
 }
 
 int change_handle(struct userrec *u, char *newh)
@@ -634,8 +640,8 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
   u->chanrec = NULL;
   u->entries = NULL;
   if (flags != USER_DEFAULT) { /* drummer */
-  u->flags = flags;
-  u->flags_udef = 0;
+    u->flags = flags;
+    u->flags_udef = 0;
   } else {
     u->flags = default_flags;
     u->flags_udef = default_uflags;
@@ -643,7 +649,6 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
   set_user(&USERENTRY_PASS, u, pass);
   if (!noxtra) {
     xk = nmalloc(sizeof(struct xtra_key));
-
     xk->key = nmalloc(8);
     strcpy(xk->key, "created");
     xk->data = nmalloc(10);

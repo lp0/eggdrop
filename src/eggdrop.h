@@ -4,7 +4,7 @@
  * 
  *   IF YOU ALTER THIS FILE, YOU NEED TO RECOMPILE THE BOT.
  * 
- * $Id: eggdrop.h,v 1.31 2000/07/12 21:50:35 fabian Exp $
+ * $Id: eggdrop.h,v 1.36 2000/10/27 19:35:51 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -183,9 +183,12 @@
 #endif
 
 #ifdef DEBUG_ASSERT
-#  define Assert(expr)	eggAssert(__FILE__, __LINE__, NULL, (int)(expr))
+#  define Assert(expr)	do {						\
+	if (!(expr))							\
+		eggAssert(__FILE__, __LINE__, NULL);			\
+} while (0)
 #else
-#  define Assert(expr)	{}
+#  define Assert(expr)	do {	} while (0)
 #endif
 
 #ifndef COMPILING_MEM
@@ -197,33 +200,20 @@
 
 /* 32 bit type */
 #if (SIZEOF_INT == 4)
-typedef unsigned int u_32bit_t;
+typedef unsigned int		u_32bit_t;
 #else
 #  if (SIZEOF_LONG == 4)
-typedef unsigned long u_32bit_t;
+typedef unsigned long		u_32bit_t;
 #  else
 #    include "cant/find/32bit/type"
 #  endif
 #endif
 
-#if (SIZEOF_SHORT_INT == 2)
-typedef unsigned short int u_16bit_t;
-#else
-#  include "cant/find/16bit/type"
-#endif
-
-#if (SIZEOF_CHAR == 1)
-typedef unsigned char u_8bit_t;
-#else
-#  include "cant/find/8bit/type"
-#endif
-
-typedef u_8bit_t	byte;
-typedef u_16bit_t	word;
-typedef u_32bit_t	dword;
+typedef unsigned short int	u_16bit_t;
+typedef unsigned char		u_8bit_t;
 
 /* IP type */
-typedef u_32bit_t	IP;
+typedef u_32bit_t		IP;
 
 #define debug0(x)		putlog(LOG_DEBUG,"*",x)
 #define debug1(x,a1)		putlog(LOG_DEBUG,"*",x,a1)
@@ -322,6 +312,8 @@ struct xfer_info {
   unsigned short ack_type;	/* type of ack				   */
   unsigned long offset;		/* offset from beginning of file, during
 				   resend.				   */
+  unsigned long block_pending;	/* bytes of this DCC block which weren't
+				   sent yet.				   */
   time_t start_time;		/* Time when a xfer was started.	   */
 };
 
@@ -367,8 +359,8 @@ struct script_info {
 };
 
 struct dns_info {
-  Function dns_success;		/* is called if the dns request succeeds   */
-  Function dns_failure;		/* is called if it fails		   */
+  void (*dns_success)(int);	/* is called if the dns request succeeds   */
+  void (*dns_failure)(int);	/* is called if it fails		   */
   char *host;			/* hostname				   */
   char *cbuf;			/* temporary buffer. Memory will be free'd
 				   as soon as dns_info is free'd	   */
@@ -527,12 +519,13 @@ typedef struct {
 #define SOCK_PASS	0x0100	/* passed on; only notify in case
 				   of traffic				*/
 #define SOCK_VIRTUAL	0x0200	/* not-connected socket (dont read it!)	*/
+#define SOCK_BUFFER	0x0400	/* buffer data; don't notify dcc funcs	*/
 
 /* Flags to sock_has_data
  */
 enum {
-  SOCK_DATA_OUTGOING,		/* Data in in-queue?			*/
-  SOCK_DATA_INCOMING		/* Data in out-queue?			*/
+  SOCK_DATA_OUTGOING,		/* Data in out-queue?			*/
+  SOCK_DATA_INCOMING		/* Data in in-queue?			*/
 };
 
 /* Fake idx's for dprintf - these should be ridiculously large +ve nums
@@ -575,9 +568,14 @@ typedef struct {
   short		 flags;
   char		*inbuf;
   char		*outbuf;
-  unsigned long  outbuflen;	/* Outbuf could be binary data */
+  unsigned long  outbuflen;	/* Outbuf could be binary data	*/
+  unsigned long	 inbuflen;	/* Inbuf could be binary data	*/
 } sock_list;
 
+enum {
+  EGG_OPTION_SET	= 1,	/* Set option(s).		*/
+  EGG_OPTION_UNSET	= 2	/* Unset option(s).		*/
+};
 
 /* Telnet codes.  See "TELNET Protocol Specification" (RFC 854) and
  * "TELNET Echo Option" (RFC 875) for details.

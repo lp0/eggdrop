@@ -6,7 +6,7 @@
  *   user kickban, kick, op, deop
  *   idle kicking
  * 
- * $Id: chan.c,v 1.45 2000/08/18 01:05:30 fabian Exp $
+ * $Id: chan.c,v 1.58 2000/11/08 22:55:06 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -109,6 +109,23 @@ static char *getchanmode(struct chanset_t *chan)
   if (chan->channel.maxmembers > -1)
     sprintf(s + i, " %d", chan->channel.maxmembers);
   return s;
+}
+
+static void check_exemptlist(struct chanset_t *chan, char *from)
+{
+  masklist *e;
+  int ok = 0;
+
+  if (!use_exempts)
+    return;
+
+  for (e = chan->channel.exempt; e->mask[0]; e = e->next)
+    if (wild_match(e->mask, from)) {
+      add_mode(chan, '-', 'e', e->mask);
+      ok = 1;
+    }
+  if (prevent_mixing && ok)
+    flush_mode(chan, QUICK);
 }
 
 /* Check a channel and clean-out any more-specific matching masks.
@@ -256,9 +273,15 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
       return 1;
     case FLOOD_JOIN:
     case FLOOD_NICK:
+      if (use_exempts &&
+	  (u_match_mask(global_exempts, from) ||
+	   u_match_mask(chan->exempts, from)))
+	return 1;
       simple_sprintf(h, "*!*@%s", p);
-      if (!isbanned(chan, h) && me_op(chan))
-        do_mask(chan, chan->channel.ban, h, 'b');
+      if (!isbanned(chan, h) && me_op(chan)) {
+	check_exemptlist(chan, from);
+	do_mask(chan, chan->channel.ban, h, 'b');
+      }
       if ((u_match_mask(global_bans, from))
 	  || (u_match_mask(chan->bans, from)))
 	return 1;		/* Already banned */
@@ -269,8 +292,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
       strcpy(ftype + 4, " flood");
       u_addban(chan, h, origbotname, ftype, now + (60 * ban_time), 0);
       Context;
-      /* Don't kick user if exempted */
-      if (!channel_enforcebans(chan) && me_op(chan) && !isexempted(chan, h)) {
+      if (!channel_enforcebans(chan) && me_op(chan)) {
 	  char s[UHOSTLEN];
 	  m = chan->channel.member;
 	  
@@ -302,7 +324,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
     case FLOOD_DEOP:
       if (me_op(chan) && !chan_sentkick(m)) {
 	putlog(LOG_MODES, chan->dname,
-	       CHAN_MASSDEOP, CHAN_MASSDEOP_ARGS); 
+	       CHAN_MASSDEOP, chan->dname, from); 
 	dprintf(DP_MODE, "KICK %s %s :%s\n",
 		chan->name, floodnick, CHAN_MASSDEOP_KICK);
 	m->flags |= SENTKICK;
@@ -330,7 +352,7 @@ static char *quickban(struct chanset_t *chan, char *uhost)
 /* Kick any user (except friends/masters) with certain mask from channel
  * with a specified comment.  Ernst 18/3/1998
  */
-static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
+static void kick_all(struct chanset_t *chan, char *hostmask, char *comment, int bantype)
 {
   memberlist *m;
   char kicknick[512], s[UHOSTLEN];
@@ -345,12 +367,15 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
   kicknick[0] = 0;
   m = chan->channel.member;
   while (m && m->nick[0]) {
-    get_user_flagrec(m->user, &fr, chan->dname);
     sprintf(s, "%s!%s", m->nick, m->userhost);
-    if (!chan_sentkick(m) && wild_match(hostmask, s) &&
+    get_user_flagrec(m->user ? m->user : get_user_by_host(s), &fr, chan->dname);
+    if (wild_match(hostmask, s) && !chan_sentkick(m) &&
 	!match_my_nick(m->nick) && !chan_issplit(m) &&
 	!glob_friend(fr) && !chan_friend(fr) &&
-	!isexempted(chan, s) &&	/* Crotale - don't kick +e users */
+	!(use_exempts &&
+	  ((bantype && isexempted(chan, s)) ||
+	   (u_match_mask(global_exempts,s) ||
+	    u_match_mask(chan->exempts, s)))) &&
 	!(channel_dontkickops(chan) &&
 	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) {	/* arthur2 */
       if (!flushed) {
@@ -382,36 +407,36 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
  */
 static void refresh_ban_kick(struct chanset_t *chan, char *user, char *nick)
 {
-  maskrec *u;
-  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
-  memberlist *m;
-  char c[512];			/* The ban comment */
-  int cycle;
+  register maskrec	*b;
+  memberlist		*m;
+  int			 cycle;
 
+  m = ismember(chan, nick);
+  if (!m)
+    return;
+  /* Check channel bans in first cycle and global bans
+     in second cycle. */
   for (cycle = 0; cycle < 2; cycle++) {
-    if (cycle)
-      u = chan->bans;
-    else
-      u = global_bans;
-    for (; u; u = u->next) {
-      if (wild_match(u->mask, user)) {
-	m = ismember(chan, nick);
-	if (!m)
-	  continue;				/* Skip non-existant nick */
-	get_user_flagrec(m->user, &fr, chan->dname);
+    for (b = cycle ? chan->bans : global_bans; b; b = b->next) {
+      if (wild_match(b->mask, user)) {
+	struct flag_record	fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+	char			c[512];		/* The ban comment.	*/
+	char			s[UHOSTLEN];
+
+	sprintf(s, "%s!%s", m->nick, m->userhost);
+	get_user_flagrec(m->user ? m->user : get_user_by_host(s), &fr,
+			 chan->dname);
 	if (!glob_friend(fr) && !chan_friend(fr))
-	  add_mode(chan, '-', 'o', nick);	/* Guess it can't hurt */
-        do_mask(chan, chan->channel.ban, u->mask, 'b');
-        u->lastactive = now;
-	c[0] = 0;
-	if (u->desc && (u->desc[0] != '@')) {
-	  if (strcmp(IRC_PREBANNED, ""))
-	    sprintf(c, "%s%s", IRC_PREBANNED, u->desc);
-	  else
-	    sprintf(c, "%s", u->desc);
-	}
-	kick_all(chan, u->mask, c[0] ? c : IRC_YOUREBANNED);
-	return;		/* Drop out on 1st ban */
+	  add_mode(chan, '-', 'o', nick);	/* Guess it can't hurt.	*/
+	check_exemptlist(chan, user);
+	do_mask(chan, chan->channel.ban, b->mask, 'b');
+	b->lastactive = now;
+	if (b->desc && b->desc[0] != '@')
+	  egg_snprintf(c, sizeof c, "%s%s", IRC_PREBANNED, b->desc);
+	else
+	  c[0] = 0;
+	kick_all(chan, b->mask, c[0] ? c : IRC_YOUREBANNED, 0);
+	return;					/* Drop out on 1st ban.	*/
       }
     }
   }
@@ -422,47 +447,45 @@ static void refresh_ban_kick(struct chanset_t *chan, char *user, char *nick)
  */
 static void refresh_exempt(struct chanset_t *chan, char *user)
 {
-  maskrec *e;
-  masklist *b;
-  int cycle;
+  maskrec	*e;
+  masklist	*b;
+  int		 cycle;
   
+  /* Check channel exempts in first cycle and global exempts
+     in second cycle. */
   for (cycle = 0; cycle < 2; cycle++) {
-    e = (cycle) ? chan->exempts : global_exempts;
-    while (e) {
+    for (e = cycle ? chan->exempts : global_exempts; e; e = e->next) {
       if (wild_match(user, e->mask) || wild_match(e->mask,user)) {
-        b = chan->channel.ban;
-        while (b && b->mask[0]) {
+        for (b = chan->channel.ban; b && b->mask[0]; b = b->next) {
           if (wild_match(b->mask, user) || wild_match(user, b->mask)) {
             if (e->lastactive < now - 60 && !isexempted(chan, e->mask)) {
               do_mask(chan, chan->channel.exempt, e->mask, 'e');
               e->lastactive = now;
             }
           }
-          b = b->next;
         }
       }
-      e = e->next;
     }
   }
 }
 
 static void refresh_invite(struct chanset_t *chan, char *user)
 {
-  maskrec *i;
-  int cycle;
+  maskrec	*i;
+  int		 cycle;
 
+  /* Check channel invites in first cycle and global invites
+     in second cycle. */
   for (cycle = 0; cycle < 2; cycle++) {
-    i = (cycle) ? chan->invites : global_invites;
-    while (i) {
+    for (i = cycle ? chan->invites : global_invites; i; i = i->next) {
       if (wild_match(i->mask, user) &&
-	  (i->flags & MASKREC_STICKY || (chan->channel.mode & CHANINV))) {
+	  ((i->flags & MASKREC_STICKY) || (chan->channel.mode & CHANINV))) {
         if (i->lastactive < now - 60 && !isinvited(chan, i->mask)) {
           do_mask(chan, chan->channel.invite, i->mask, 'I');
 	  i->lastactive = now;
 	  return;
 	}
       }
-      i = i->next;
     }
   }
 }
@@ -471,19 +494,17 @@ static void refresh_invite(struct chanset_t *chan, char *user)
  */
 static void enforce_bans(struct chanset_t *chan)
 {
-  char me[UHOSTLEN];
-  masklist *b = chan->channel.ban;
+  char		 me[UHOSTLEN];
+  masklist	*b;
 
-  Context;
   if (!me_op(chan))
     return;			/* Can't do it :( */
   simple_sprintf(me, "%s!%s", botname, botuserhost);
   /* Go through all bans, kicking the users. */
-  while (b && b->mask[0]) {
+  for (b = chan->channel.ban; b && b->mask[0]; b = b->next) {
     if (!wild_match(b->mask, me))
       if (!isexempted(chan, b->mask))
-	kick_all(chan, b->mask, IRC_YOUREBANNED);
-    b = b->next;
+	kick_all(chan, b->mask, IRC_YOUREBANNED, 1);
   }
 }
 
@@ -494,14 +515,17 @@ static void enforce_bans(struct chanset_t *chan)
  */
 static void recheck_bans(struct chanset_t *chan)
 {
-  maskrec *u;
-  int i;
+  maskrec	*u;
+  int		 cycle;
 
-  for (i = 0; i < 2; i++)
-    for (u = i ? chan->bans : global_bans; u; u = u->next)
+  /* Check channel bans in first cycle and global bans
+     in second cycle. */
+  for (cycle = 0; cycle < 2; cycle++) {
+    for (u = cycle ? chan->bans : global_bans; u; u = u->next)
       if (!isbanned(chan, u->mask) && (!channel_dynamicbans(chan) ||
 				       (u->flags & MASKREC_STICKY)))
 	add_mode(chan, '+', 'b', u->mask);
+  }
 }
 
 /* Make sure that all who are exempted on the userlist are actually in fact
@@ -509,24 +533,24 @@ static void recheck_bans(struct chanset_t *chan)
  *
  * Note: Since i was getting an excempt list, i assume i'm chop.
  */
-static void recheck_exempts(struct chanset_t * chan)
+static void recheck_exempts(struct chanset_t *chan)
 {
-  maskrec *e;
-  masklist *b;
-  int i;
+  maskrec	*e;
+  masklist	*b;
+  int		 cycle;
   
-  for (i = 0; i < 2; i++) {
-    for (e = i ? chan->exempts : global_exempts; e; e = e->next) {
+  /* Check channel exempts in first cycle and global exempts
+     in second cycle. */
+  for (cycle = 0; cycle < 2; cycle++) {
+    for (e = cycle ? chan->exempts : global_exempts; e; e = e->next) {
       if (!isexempted(chan, e->mask) && 
-          (!channel_dynamicexempts(chan) || e->flags & MASKREC_STICKY))
+          (!channel_dynamicexempts(chan) || (e->flags & MASKREC_STICKY)))
         add_mode(chan, '+', 'e', e->mask);
-      b = chan->channel.ban;
-      while (b && b->mask[0]) {
+      for (b = chan->channel.ban; b && b->mask[0]; b = b->next) {
         if ((wild_match(b->mask, e->mask) || wild_match(e->mask, b->mask)) &&
             !isexempted(chan, e->mask))
 	  add_mode(chan,'+','e',e->mask);
 	/* do_mask(chan, chan->channel.exempt, e->mask, 'e');*/
-        b = b->next;
       }
     }
   }
@@ -537,12 +561,15 @@ static void recheck_exempts(struct chanset_t * chan)
  *
  * Note: Since i was getting an invite list, i assume i'm chop.
  */
-static void recheck_invites(struct chanset_t * chan) {
-  maskrec *ir;
-  int i;
+static void recheck_invites(struct chanset_t *chan)
+{
+  maskrec	*ir;
+  int		 cycle;
   
-  for (i = 0; i < 2; i++)  {
-    for (ir = i ? chan->invites : global_invites; ir; ir = ir->next) {
+  /* Check channel invites in first cycle and global invites
+     in second cycle. */
+  for (cycle = 0; cycle < 2; cycle++)  {
+    for (ir = cycle ? chan->invites : global_invites; ir; ir = ir->next) {
       /* If invite isn't set and (channel is not dynamic invites and not invite
        * only) or invite is sticky.
        */
@@ -554,8 +581,7 @@ static void recheck_invites(struct chanset_t * chan) {
   }
 }
 
-/* Resets the masks on the channel. This is resetbans(), resetexempts() and
- * resetinvites() all merged together for less bloat. <cybah>
+/* Resets the masks on the channel.
  */
 static void resetmasks(struct chanset_t *chan, masklist *m, maskrec *mrec,
 		       maskrec *global_masks, char mode)
@@ -564,14 +590,13 @@ static void resetmasks(struct chanset_t *chan, masklist *m, maskrec *mrec,
     return;                     /* Can't do it */
     
   /* Remove masks we didn't put there */
-  while (m && m->mask[0]) {
+  for (; m && m->mask[0]; m = m->next) {
     if (!u_equals_mask(global_masks, m->mask) && !u_equals_mask(mrec, m->mask))
       add_mode(chan, '-', mode, m->mask);
-    m = m->next;
   }
   
   /* Make sure the intended masks are still there */
-  switch(mode) {
+  switch (mode) {
     case 'b':
       recheck_bans(chan);
       break;
@@ -582,7 +607,7 @@ static void resetmasks(struct chanset_t *chan, masklist *m, maskrec *mrec,
       recheck_invites(chan);
       break;
     default:
-      putlog(LOG_MISC, "*", "Invalid mode '%c' in resetmasks()", mode);
+      putlog(LOG_MISC, "*", "(!) Invalid mode '%c' in resetmasks()", mode);
       break;
   }
 }
@@ -634,7 +659,7 @@ static void recheck_channel_modes(struct chanset_t *chan)
       add_mode(chan, '+', 'q', "");
     else if ((mns & CHANQUIET) && (cur & CHANQUIET))
       add_mode(chan, '-', 'q', "");
-    if ((chan->limit_prot != (-1)) && (chan->channel.maxmembers == -1)) {
+    if ((chan->limit_prot != -1) && (chan->channel.maxmembers == -1)) {
       char s[50];
 
       sprintf(s, "%d", chan->limit_prot);
@@ -647,7 +672,7 @@ static void recheck_channel_modes(struct chanset_t *chan)
 	  add_mode(chan, '-', 'k', chan->channel.key);
         add_mode(chan, '+', 'k', chan->key_prot);
       }
-    } else if ((mns & CHANKEY) && (chan->channel.key))
+    } else if ((mns & CHANKEY) && (chan->channel.key[0]))
       add_mode(chan, '-', 'k', chan->channel.key);
   }
 }
@@ -660,6 +685,7 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
   char s[UHOSTLEN], *p;
   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   static int stacking = 0;
+  int stop_reset = 0;
 
   if (stacking)
     return;			/* wewps */
@@ -678,6 +704,8 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
     if (!match_my_nick(m->nick)) {
       /* if channel user is current a chanop */
       if (chan_hasop(m)) {
+	if (glob_bot(fr))
+	  stop_reset = 1;
 	/* if user is channel deop */
 	if (chan_deop(fr) ||
 	/* OR global deop and NOT channel op */
@@ -694,41 +722,46 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
 	  add_mode(chan, '-', 'o', m->nick);
 	}
       }
+      /* check vs invites */
+      if (use_invites &&
+	  (u_match_mask(global_invites,s) ||
+	   u_match_mask(chan->invites, s)))
+	refresh_invite(chan, s);
+      /* don't kickban if permanent exempted */
+      if (!(use_exempts &&
+	    (u_match_mask(global_exempts,s) ||
+	     u_match_mask(chan->exempts, s)))) {
+	/* if we're enforcing bans */
+	if (channel_enforcebans(chan) &&
+	/* & they match a ban */
+	    (u_match_mask(global_bans, s) ||
+	     u_match_mask(chan->bans, s))) {
+	  /* bewm */
+	  refresh_ban_kick(chan, s, m->nick);
+	/* ^ will use the ban comment */
+	}
+	/* are they +k ? */
+	if (chan_kick(fr) || glob_kick(fr)) {
+	  check_exemptlist(chan, s);
+	  quickban(chan, m->userhost);
+	  p = get_user(&USERENTRY_COMMENT, m->user);
+	  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
+		  p ? p : IRC_POLITEKICK);
+	  m->flags |= SENTKICK;
+	} 
+      }
       /* now lets look at de-op'd ppl */
       if (!chan_hasop(m) &&
-      /* if they're an op, channel or global (without channel +d) */
+	  /* if they're an op, channel or global (without channel +d) */
 	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) &&
-      /* and the channel is op on join, or they are auto-opped */
+	  /* and the channel is op on join, or they are auto-opped */
 	  (channel_autoop(chan) || (glob_autoop(fr) || chan_autoop(fr)))) {
 	/* op them! */
 	add_mode(chan, '+', 'o', m->nick);
-      }
-      /* now lets check 'em vs bans */
-      /* if we're enforcing bans */
-      if (channel_enforcebans(chan) &&
-      /* & they match a ban */
-	  (u_match_mask(global_bans, s) || u_match_mask(chan->bans, s))) {
-	/* bewm */
-	refresh_ban_kick(chan, s, m->nick);
-      }
-      /* ^ will use the ban comment */
-      if (use_exempts && (u_match_mask(global_exempts,s) || u_match_mask(chan->exempts, s))){
-	refresh_exempt(chan, s);
-      }      
-      /* check vs invites */
-      if (use_invites && (u_match_mask(global_invites,s) || u_match_mask(chan->invites, s)))
-	refresh_invite(chan, s);
-      /* are they +k ? */
-      if (chan_kick(fr) || glob_kick(fr)) {
-	quickban(chan, m->userhost);
-	p = get_user(&USERENTRY_COMMENT, m->user);
-	dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
-		p ? p : IRC_POLITEKICK);
-	m->flags |= SENTKICK;
-	/* otherwise, lets check +v stuff if the llamas want it */
+	  /* otherwise, lets check +v stuff if the llamas want it */
       } else if (!chan_hasvoice(m) && !chan_hasop(m)) {
 	if ((channel_autovoice(chan) && !chan_quiet(fr) && 
-	    (chan_voice(fr) || glob_voice(fr))) || 
+	     (chan_voice(fr) || glob_voice(fr))) || 
 	    (!chan_quiet(fr) && (glob_gvoice(fr) || chan_gvoice(fr)))) {
 	  add_mode(chan, '+', 'v', m->nick);
 	}
@@ -743,19 +776,30 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
     m = m->next;
   }
   if (dobans) {
-    recheck_bans(chan);
-    if (use_invites)
-      recheck_invites(chan);
-    if (use_exempts)
-      recheck_exempts(chan);
+    if (channel_nouserbans(chan) && !stop_reset)
+      resetbans(chan);
+    else
+      recheck_bans(chan);
+    if (use_invites) {
+      if (channel_nouserinvites(chan) && !stop_reset)
+	resetinvites(chan);
+      else
+	recheck_invites(chan);
+    }
+    if (use_exempts) {
+      if (channel_nouserexempts(chan) && !stop_reset)
+	resetexempts(chan);
+      else
+	recheck_exempts(chan);
+    }
+    if (channel_enforcebans(chan))
+      enforce_bans(chan);
+    if ((chan->status & CHAN_ASKEDMODES) &&
+	!channel_inactive(chan)) /* Spot on guppy, this just keeps the
+	                          * checking sane */
+      dprintf(DP_SERVER, "MODE %s\n", chan->name);
+    recheck_channel_modes(chan);
   }
-  if (dobans && channel_enforcebans(chan))
-    enforce_bans(chan);
-  recheck_channel_modes(chan);
-  if ((chan->status & CHAN_ASKEDMODES) && dobans &&
-     !channel_inactive(chan)) /* Spot on guppy, this just keeps the
- 	                       * checking sane */
-    dprintf(DP_SERVER, "MODE %s\n", chan->name);
   stacking--;
 }
 
@@ -837,7 +881,7 @@ static int got324(char *from, char *msg)
     i++;
   }
   if (ok)
-    recheck_channel(chan, 0);
+    recheck_channel_modes(chan);
   return 0;
 }
 
@@ -1013,11 +1057,8 @@ static int got368(char *from, char *msg)
   newsplit(&msg);
   chname = newsplit(&msg);
   chan = findchan(chname);
-  if (chan) {
+  if (chan)
     chan->status &= ~CHAN_ASKEDBANS;
-    if (channel_clearbans(chan))
-      resetbans(chan);
-  }
   /* If i sent a mode -b on myself (deban) in got367, either
    * resetbans() or recheck_bans() will flush that.
    */
@@ -1032,11 +1073,12 @@ static int got348(char *from, char *origmsg)
   char *exempt, *who, *chname, buf[511], *msg;
   struct chanset_t *chan;
 
+  if (use_exempts == 0)
+    return 0;
+
   strncpy(buf, origmsg, 510);
   buf[510] = 0;
   msg = buf;
-  if (use_exempts == 0)
-    return 0;
   newsplit(&msg);
   chname = newsplit(&msg);
   chan = findchan(chname);
@@ -1064,11 +1106,8 @@ static int got349(char *from, char *msg)
     newsplit(&msg);
     chname = newsplit(&msg);
     chan = findchan(chname);
-    if (chan) {
+    if (chan)
       chan->ircnet_status &= ~CHAN_ASKED_EXEMPTS;
-      if (channel_clearbans(chan))
-	resetexempts(chan);
-    }  
   }
   return 0;
 }
@@ -1113,11 +1152,8 @@ static int got347(char *from, char *msg)
     newsplit(&msg);
     chname = newsplit(&msg);
     chan = findchan(chname);
-    if (chan) {
+    if (chan)
       chan->ircnet_status &= ~CHAN_ASKED_INVITED;
-      if (channel_clearbans(chan))
-	resetinvites(chan);
-    }
   }
   return 0;
 }
@@ -1406,60 +1442,53 @@ static int got332(char *from, char *msg)
   return 0;
 }
 
-static void do_embedded_mode(struct chanset_t *chan, char *nick,
-			     memberlist *m, char *mode)
-{
-  struct flag_record fr = {0, 0, 0, 0, 0, 0};
-  int servidx = findanyidx(serv);
-
-  while (*mode) {
-    switch (*mode) {
-    case 'o':
-      check_tcl_mode(dcc[servidx].host, "", NULL, chan->dname, "+o", nick);
-      got_op(chan, "", dcc[servidx].host, nick, NULL, &fr);
-      break;
-    case 'v':
-      check_tcl_mode(dcc[servidx].host, "", NULL, chan->dname, "+v", nick);
-      m->flags |= CHANVOICE;
-      break;
-    }
-    mode++;
-  }
-}
-
 /* Got a join
  */
 static int gotjoin(char *from, char *chname)
 {
-  char *nick, *p, *newmode, buf[UHOSTLEN], *uhost = buf;
-  int ok = 1;
+  char *nick, *p, buf[UHOSTLEN], *uhost = buf;
+  char *ch_dname = NULL;
   struct chanset_t *chan;
   memberlist *m;
-  masklist *b, *e;
+  masklist *b;
   struct userrec *u;
   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   Context;
   fixcolon(chname);
-  newmode = NULL;
-  /* ircd 2.9 sometimes does '#chname^Gmodes' when returning from splits,
-   * filter out the modes if we find a ^G.
-   */
-  p = strchr(chname, 7);
-  if (p != NULL) {
-    *p = 0;
-    newmode = (++p);
-  }
-
   chan = findchan(chname);
   if (!chan && chname[0] == '!') {
     /* As this is a !channel, we need to search for it by display (short)
      * name now. This will happen when we initially join the channel, as we
      * dont know the unique channel name that the server has made up. <cybah>
      */  
-    if (strlen(chname) > (CHANNEL_ID_LEN + 1)) {
-      egg_snprintf(buf, UHOSTLEN, "!%s", chname + (CHANNEL_ID_LEN + 1));
-      chan = findchan_by_dname(buf);
+    int	l_chname = strlen(chname);
+
+    if (l_chname > (CHANNEL_ID_LEN + 1)) {
+      ch_dname = nmalloc(l_chname + 1);
+      if (ch_dname) {
+	egg_snprintf(ch_dname, l_chname + 2, "!%s",
+		     chname + (CHANNEL_ID_LEN + 1));
+	chan = findchan_by_dname(ch_dname);
+	if (!chan) {
+	  /* Hmm.. okay. Maybe the admin's a genius and doesn't know the
+	   * difference between id and descriptive channel names. Search
+	   * the channel name in the dname list using the id-name.
+	   */
+	   chan = findchan_by_dname(chname);
+	   if (chan) {
+	     /* Duh, I was right. Mark this channel as inactive and log
+	      * the incident.
+	      */
+	     chan->status |= CHAN_INACTIVE;
+	     putlog(LOG_MISC, "*", "Deactivated channel %s, because it uses "
+		    "an ID channel-name. Use the descriptive name instead.",
+		    chname);
+	     dprintf(DP_SERVER, "PART %s\n", chname);
+	     goto exit;
+	   }
+	}
+      }
     }
   } else if (!chan) {
     /* As this is not a !chan, we need to search for it by display name now.
@@ -1499,13 +1528,8 @@ static int gotjoin(char *from, char *chname)
 	m->user = u;
 	set_handle_laston(chan->dname, u, now);
 	m->flags |= STOPWHO;
-	if (newmode) {
-	  putlog(LOG_JOIN, chan->dname, "%s (%s) returned to %s (with +%s).",
-		 nick, uhost, chan->dname, newmode);
-	  do_embedded_mode(chan, nick, m, newmode);
-	} else
-	  putlog(LOG_JOIN, chan->dname, "%s (%s) returned to %s.", nick, uhost,
-		 chan->dname);
+	putlog(LOG_JOIN, chan->dname, "%s (%s) returned to %s.", nick, uhost,
+	       chan->dname);
       } else {
 	if (m)
 	  killmember(chan, nick);
@@ -1519,13 +1543,28 @@ static int gotjoin(char *from, char *chname)
 	strcpy(m->userhost, uhost);
 	m->user = u;
 	m->flags |= STOPWHO;
+
 	check_tcl_join(nick, uhost, u, chan->dname);
-	/* The tcl binding might have deleted the current user. Use the record
-	 * saved in the channel record as that always gets updated.
-	 */
+
+	/* The tcl binding might have deleted the current user and the
+	 * current channel, so we'll now have to re-check whether they
+	 * both still exist.
+	 */ 
+	chan = findchan(chname);
+	if (!chan) {
+	  if (ch_dname)
+	    chan = findchan_by_dname(ch_dname);
+	  else
+	    chan = findchan_by_dname(chname);
+	}
+	if (!chan)
+	  /* The channel doesn't exist anymore, so get out of here. */
+	  goto exit;
+
+	/* The record saved in the channel record always gets updated,
+	   so we can use that. */
 	u = m->user;
-	if (newmode)
-	  do_embedded_mode(chan, nick, m, newmode);
+
 	if (match_my_nick(nick)) {
 	  /* It was me joining! Need to update the channel record with the
 	   * unique name for the channel (as the server see's it). <cybah>
@@ -1538,33 +1577,18 @@ static int gotjoin(char *from, char *chname)
 	   * important in this case. As the config file will never contain
 	   * logs with the unique name.
            */
-	  if (newmode) {
-	    if (chname[0] == '!')
-	      putlog(LOG_JOIN | LOG_MISC, chan->dname,
-	             "%s joined %s (%s), with +%s.",
-	             nick, chan->dname, chname, newmode);
-	    else
-	      putlog(LOG_JOIN | LOG_MISC, chan->dname,
-	             "%s joined %s (with +%s).", nick, chname, newmode);
-	  } else {
-	    if (chname[0] == '!')
-	      putlog(LOG_JOIN | LOG_MISC, chan->dname, "%s joined %s (%s)",
-	             nick, chan->dname, chname);
-	    else
-	      putlog(LOG_JOIN | LOG_MISC, chan->dname, "%s joined %s.", nick,
-	             chname);
-	  }
+	  if (chname[0] == '!')
+	    putlog(LOG_JOIN | LOG_MISC, chan->dname, "%s joined %s (%s)",
+	           nick, chan->dname, chname);
+	  else
+	    putlog(LOG_JOIN | LOG_MISC, chan->dname, "%s joined %s.", nick,
+	           chname);
 	  reset_chan_info(chan);
 	} else {
 	  struct chanuserrec *cr;
 
-	  if (newmode)
-	    putlog(LOG_JOIN, chan->dname,
-		   "%s (%s) joined %s (with +%s).", nick,
-		   uhost, chan->dname, newmode);
-	  else
-	    putlog(LOG_JOIN, chan->dname,
-		   "%s (%s) joined %s.", nick, uhost, chan->dname);
+	  putlog(LOG_JOIN, chan->dname,
+		 "%s (%s) joined %s.", nick, uhost, chan->dname);
 	  /* Don't re-display greeting if they've been on the channel
 	   * recently.
 	   */
@@ -1601,23 +1625,6 @@ static int gotjoin(char *from, char *chname)
       }
       /* ok, the op-on-join,etc, tests...first only both if Im opped */
       if (me_op(chan)) {
-	if (channel_enforcebans(chan) && !chan_op(fr) && !glob_op(fr) &&
-	    !glob_friend(fr) && !chan_friend(fr)) {
-	  for (b = chan->channel.ban; b->mask[0]; b = b->next) { 
-	    if (wild_match(b->mask, from)) {
-	      if (use_exempts)
-		for (e = chan->channel.exempt; e->mask[0]; e = e->next)
-		  if (wild_match(e->mask, from))
-		    ok = 0;
-		  if (ok && !chan_sentkick(m)) {
-		    dprintf(DP_SERVER, "KICK %s %s :%s\n", chname, m->nick,
-			    IRC_YOUREBANNED);
-		    m->flags |= SENTKICK;
-		    return 0;
-		  }
-	    }
-	  }
-	}
 	/* Check for and reset exempts and invites.
 	 *
 	 * This will require further checking to account for when to use the
@@ -1626,34 +1633,73 @@ static int gotjoin(char *from, char *chname)
 	if (u_match_mask(global_invites,from) ||
 	    u_match_mask(chan->invites, from))
 	  refresh_invite(chan, from);
+	if (!(use_exempts &&
+	      (u_match_mask(global_exempts,from) ||
+	       u_match_mask(chan->exempts, from)))) {
+          if (channel_enforcebans(chan) && !chan_op(fr) && !glob_op(fr) &&
+              !glob_friend(fr) && !chan_friend(fr) && !chan_sentkick(m) && 
+              !(use_exempts && isexempted(chan, from))) {
+            for (b = chan->channel.ban; b->mask[0]; b = b->next) {
+              if (wild_match(b->mask, from)) {
+                dprintf(DP_SERVER, "KICK %s %s :%s\n", chname, m->nick,
+                        IRC_YOUREBANNED);
+                m->flags |= SENTKICK;
+                goto exit;
+              }
+            }
+          }
+	  /* If it matches a ban, dispose of them. */
+	  if (u_match_mask(global_bans, from) ||
+	      u_match_mask(chan->bans, from)) {
+	    refresh_ban_kick(chan, from, nick);
+	  /* Likewise for kick'ees */
+	  } else if (glob_kick(fr) || chan_kick(fr)) {
+	    check_exemptlist(chan, from);
+	    quickban(chan, from);
+	    p = get_user(&USERENTRY_COMMENT, m->user);
+	    dprintf(DP_MODE, "KICK %s %s :%s\n", chname, nick,
+		    (p && (p[0] != '@')) ? p : IRC_COMMENTKICK);
+	    m->flags |= SENTKICK;
+	  } 
+	}
 	/* Are they a chan op, or global op without chan deop? */
 	if ((chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) &&
 	   /* ... and is it op-on-join or is the use marked auto-op? */
 	    (channel_autoop(chan) || glob_autoop(fr) || chan_autoop(fr))) {
 	  /* Yes! do the honors. */
-	  m->delay = now;
-	} else {
-	  /* If it matches a ban, dispose of them. */
-	  if (u_match_mask(global_bans, from) ||
-	      u_match_mask(chan->bans, from)) {
-	    refresh_ban_kick(chan, from, nick);
-	    refresh_exempt(chan, from);
-	  /* Likewise for kick'ees */
-	  } else if (glob_kick(fr) || chan_kick(fr)) {
-	    quickban(chan, from);
-	    refresh_exempt(chan, from);
-	    p = get_user(&USERENTRY_COMMENT, m->user);
-	    dprintf(DP_MODE, "KICK %s %s :%s\n", chname, nick,
-		    (p && (p[0] != '@')) ? p : IRC_COMMENTKICK);
-	    m->flags |= SENTKICK;
-	  } else if ((channel_autovoice(chan) &&
-		     (chan_voice(fr) || (glob_voice(fr) && !chan_quiet(fr)))) ||
-		     ((glob_gvoice(fr) || chan_gvoice(fr)) && !chan_quiet(fr)))
-	    add_mode(chan, '+', 'v', nick);
-	}
+	  if (!chan->aop_min)
+	    add_mode(chan, '+', 'o', nick);
+	  else {
+	    time_t a_delay;
+	    int aop_min = chan->aop_min, aop_max = chan->aop_max, count = 0;
+	    memberlist *m2;
+	    if (aop_min >= aop_max)
+	      a_delay = now + aop_min;
+	    else
+	      a_delay = now + (random() % (aop_max - aop_min)) + aop_min + 1;
+	    for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
+	      if (m2->delay && !(m2->flags & FULL_DELAY))
+		count++;
+	    if (count)
+	      for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
+		if (m2->delay && !(m2->flags & FULL_DELAY)) {
+		  m2->delay = a_delay;
+		  if (count + 1 >=  modesperline)
+		    m2->flags |= FULL_DELAY;
+		}
+	    m->delay = a_delay;
+	  }
+	} else if ((channel_autovoice(chan) &&
+		    (chan_voice(fr) || (glob_voice(fr) && !chan_quiet(fr)))) ||
+		   ((glob_gvoice(fr) || chan_gvoice(fr)) && !chan_quiet(fr)))
+	  add_mode(chan, '+', 'v', nick);
       }
     }
   }
+
+exit:
+  if (ch_dname)
+    nfree(ch_dname);
   return 0;
 }
 
@@ -1800,7 +1846,11 @@ static int gotnick(char *from, char *msg)
       sprintf(s1, "%s!%s", msg, uhost);
       /* Enforcing bans & haven't already kicked them? */
       if (channel_enforcebans(chan) && chan_sentkick(m) &&
-	  (u_match_mask(global_bans, s1) || u_match_mask(chan->bans, s1)))
+	  (u_match_mask(global_bans, s1) ||
+	   u_match_mask(chan->bans, s1)) &&
+	  !(use_exempts &&
+	   (u_match_mask(global_exempts,s1) ||
+	    u_match_mask(chan->exempts, s1))))
 	refresh_ban_kick(chan, s1, msg);
       strcpy(m->nick, msg);
       detect_chan_flood(msg, uhost, from, chan, FLOOD_NICK, NULL);
@@ -1811,7 +1861,7 @@ static int gotnick(char *from, char *msg)
     }
     chan = chan->next;
   }
-  clear_chanlist();		/* Cache is meaningless now. */
+  clear_chanlist_member(msg);	/* Cache for nick 'msg' is meaningless now. */
   return 0;
 }
 
@@ -1912,22 +1962,26 @@ static int gotmsg(char *from, char *msg)
   if (flud_ctcp_thr && detect_avalanche(msg)) {
     u = get_user_by_host(from);
     get_user_flagrec(u, &fr, chan->dname);
+    m = ismember(chan, nick);
     /* Discard -- kick user if it was to the channel */
-    if (me_op(chan) &&
+    if (me_op(chan) && m && !chan_sentkick(m) &&
 	!chan_friend(fr) && !glob_friend(fr) &&
 	!(channel_dontkickops(chan) &&
-	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) {	/* arthur2 */
-      m = ismember(chan, nick);
-      if (m && !chan_sentkick(m)) {
-	if (ban_fun)
-	  u_addban(chan, quickban(chan, uhost), origbotname,
-		   IRC_FUNKICK, now + (60 * ban_time), 0);
-	if (kick_fun) {
-	  /* This can induce kickflood - arthur2 */
-	  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick,
-		  IRC_FUNKICK);
-	  m->flags |= SENTKICK;
-	}
+	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))) &&	/* arthur2 */
+	!(use_exempts && ban_fun &&
+	  /* don't kickban if permanent exempted -- Eule */
+	  (u_match_mask(global_exempts, from) ||
+	   u_match_mask(chan->exempts, from)))) {
+      if (ban_fun) {
+	check_exemptlist(chan, from);
+	u_addban(chan, quickban(chan, uhost), origbotname,
+		IRC_FUNKICK, now + (60 * ban_time), 0);
+      }
+      if (kick_fun) {
+	/* This can induce kickflood - arthur2 */
+	dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick,
+		IRC_FUNKICK);
+	m->flags |= SENTKICK;
       }
     }
     if (!ignoring) {
@@ -2041,25 +2095,29 @@ static int gotnotice(char *from, char *msg)
   fixcolon(msg);
   strcpy(uhost, from);
   nick = splitnick(&uhost);
-    u = get_user_by_host(from);
+  u = get_user_by_host(from);
   if (flud_ctcp_thr && detect_avalanche(msg)) {
     get_user_flagrec(u, &fr, chan->dname);
+    m = ismember(chan, nick);
     /* Discard -- kick user if it was to the channel */
-    if (me_op(chan) &&
+    if (me_op(chan) && m && !chan_sentkick(m) &&
 	!chan_friend(fr) && !glob_friend(fr) &&
 	!(channel_dontkickops(chan) &&
-	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) {	/* arthur2 */
-      m = ismember(chan, nick);
-      if (m || !chan_sentkick(m)) {
-	if (ban_fun)
-	  u_addban(chan, quickban(chan, uhost), origbotname,
-		   IRC_FUNKICK, now + (60 * ban_time), 0);
-	if (kick_fun) {
-	  /* This can induce kickflood - arthur2 */
-	  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick,
-		  IRC_FUNKICK);
-	  m->flags |= SENTKICK;
-	}
+	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))) &&	/* arthur2 */
+	!(use_exempts && ban_fun &&
+	  /* don't kickban if permanent exempted -- Eule */
+	  (u_match_mask(global_exempts,from) ||
+	   u_match_mask(chan->exempts, from)))) {
+      if (ban_fun) {
+	check_exemptlist(chan, from);
+	u_addban(chan, quickban(chan, uhost), origbotname,
+		IRC_FUNKICK, now + (60 * ban_time), 0);
+      }
+      if (kick_fun) {
+	/* This can induce kickflood - arthur2 */
+	dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick,
+		IRC_FUNKICK);
+	m->flags |= SENTKICK;
       }
     }
     if (!ignoring)

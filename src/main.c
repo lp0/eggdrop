@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  * 
- * $Id: main.c,v 1.40 2000/06/10 01:00:22 fabian Exp $
+ * $Id: main.c,v 1.46 2000/11/06 04:06:41 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -49,6 +49,7 @@
 #include "chan.h"
 #include "modules.h"
 #include "tandem.h"
+#include "bg.h"
 
 #ifdef CYGWIN_HACKS
 #include <windows.h>
@@ -79,8 +80,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.5.4";
-int	egg_numver = 1050400;
+char	egg_version[1024] = "1.6.0";
+int	egg_numver = 1060000;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -153,7 +154,7 @@ int	cx_ptr = 0;
 #endif
 
 
-void fatal(char *s, int recoverable)
+void fatal(const char *s, int recoverable)
 {
   int i;
 
@@ -163,8 +164,10 @@ void fatal(char *s, int recoverable)
     if (dcc[i].sock >= 0)
       killsock(dcc[i].sock);
   unlink(pid_file);
-  if (!recoverable)
+  if (!recoverable) {
+    bg_send_quit(BG_ABORT);
     exit(1);
+  }
 }
 
 
@@ -174,7 +177,7 @@ int expmem_chanprog(), expmem_users(), expmem_misc(), expmem_dccutil(),
 
 /* For mem.c : calculate memory we SHOULD be using
  */
-int expected_memory()
+int expected_memory(void)
 {
   int tot;
 
@@ -235,6 +238,7 @@ void write_debug()
       killsock(x);
       close(x);
     }
+    bg_send_quit(BG_ABORT);
     exit(1);			/* Dont even try & tell people about, that may
 				   have caused the fault last time. */
   } else
@@ -287,6 +291,7 @@ static void got_bus(int z)
 #ifdef SA_RESETHAND
   kill(getpid(), SIGBUS);
 #else
+  bg_send_quit(BG_ABORT);
   exit(1);
 #endif
 }
@@ -300,6 +305,7 @@ static void got_segv(int z)
 #ifdef SA_RESETHAND
   kill(getpid(), SIGSEGV);
 #else
+  bg_send_quit(BG_ABORT);
   exit(1);
 #endif
 }
@@ -365,7 +371,7 @@ static void got_ill(int z)
 
 #ifdef DEBUG_CONTEXT
 /* Context */
-void eggContext(char *file, int line, char *module)
+void eggContext(const char *file, int line, const char *module)
 {
   char x[31], *p;
 
@@ -383,7 +389,8 @@ void eggContext(char *file, int line, char *module)
 
 /* Called from the ContextNote macro.
  */
-void eggContextNote(char *file, int line, char *module, char *note)
+void eggContextNote(const char *file, int line, const char *module,
+		    const char *note)
 {
   char x[31], *p;
 
@@ -404,19 +411,16 @@ void eggContextNote(char *file, int line, char *module, char *note)
 #ifdef DEBUG_ASSERT
 /* Called from the Assert macro.
  */
-void eggAssert(char *file, int line, char *module, int expr)
+void eggAssert(const char *file, int line, const char *module)
 {
-  if (!(expr)) {
 #ifdef DEBUG_CONTEXT
-    write_debug();
+  write_debug();
 #endif
-    if (!module) {
-      putlog(LOG_MISC, "*", "* In file %s, line %u", file, line);
-    } else {
-      putlog(LOG_MISC, "*", "* In file %s:%s, line %u", module, file, line);
-    }
-    fatal("ASSERT FAILED -- CRASHING!", 1);
-  }
+  if (!module)
+    putlog(LOG_MISC, "*", "* In file %s, line %u", file, line);
+  else
+    putlog(LOG_MISC, "*", "* In file %s:%s, line %u", module, file, line);
+  fatal("ASSERT FAILED -- CRASHING!", 1);
 }
 #endif
 
@@ -447,19 +451,21 @@ static void do_arg(char *s)
 	printf("%s\n", version);
 	if (z[0])
 	  printf("  (patches: %s)\n", z);
+	bg_send_quit(BG_ABORT);
 	exit(0);
       }
       if (s[i] == 'h') {
 	printf("\n%s\n\n", version);
 	printf(EGG_USAGE);
 	printf("\n");
+	bg_send_quit(BG_ABORT);
 	exit(0);
       }
   } else
     strcpy(configfile, s);
 }
 
-void backup_userfile()
+void backup_userfile(void)
 {
   char s[150];
 
@@ -637,7 +643,7 @@ int init_mem(), init_dcc_max(), init_userent(), init_misc(), init_bots(),
  init_net(), init_modules(), init_tcl(int, char **),
  init_language(int);
 
-void patch(char *str)
+void patch(const char *str)
 {
   char *p = strchr(egg_version, '+');
 
@@ -646,6 +652,16 @@ void patch(char *str)
   sprintf(p, "+%s", str);
   egg_numver++;
   sprintf(&egg_xtra[strlen(egg_xtra)], " %s", str);
+}
+
+static inline void garbage_collect(void)
+{
+  static u_8bit_t	run_cnt = 0;
+
+  if (run_cnt == 3)
+    garbage_collect_tclhash();
+  else
+    run_cnt++;
 }
 
 int main(int argc, char **argv)
@@ -740,6 +756,8 @@ int main(int argc, char **argv)
   init_bots();
   init_net();
   init_modules();
+  if (backgrd)
+    bg_prepare_split();
   init_tcl(argc, argv);
   init_language(0);
 #ifdef STATIC
@@ -754,6 +772,7 @@ int main(int argc, char **argv)
   Context;
   if (encrypt_pass == 0) {
     printf(MOD_NOCRYPT);
+    bg_send_quit(BG_ABORT);
     exit(1);
   }
   i = 0;
@@ -776,6 +795,7 @@ int main(int argc, char **argv)
     if (errno != ESRCH) {
       printf(EGG_RUNNING1, origbotname);
       printf(EGG_RUNNING2, pid_file);
+      bg_send_quit(BG_ABORT);
       exit(1);
     }
   }
@@ -784,34 +804,7 @@ int main(int argc, char **argv)
   /* Move into background? */
   if (backgrd) {
 #ifndef CYGWIN_HACKS
-    xx = fork();
-    if (xx == -1)
-      fatal("CANNOT FORK PROCESS.", 0);
-    if (xx != 0) {
-      FILE *fp;
-
-      /* Need to attempt to write pid now, not later */
-      unlink(pid_file);
-      fp = fopen(pid_file, "w");
-      if (fp != NULL) {
-	fprintf(fp, "%u\n", xx);
-	if (fflush(fp)) {
-	  /* Kill bot incase a botchk is run from crond */
-	  printf(EGG_NOWRITE, pid_file);
-	  printf("  Try freeing some disk space\n");
-	  fclose(fp);
-	  unlink(pid_file);
-	  exit(1);
-	}
-	fclose(fp);
-      } else
-	printf(EGG_NOWRITE, pid_file);
-      printf("Launched into the background  (pid: %d)\n\n", xx);
-#if HAVE_SETPGID
-      setpgid(xx, xx);
-#endif
-      exit(0);
-    }
+    bg_do_split();
   } else {			/* !backgrd */
 #endif
     xx = getpid();
@@ -854,7 +847,7 @@ int main(int argc, char **argv)
   }
 
   /* Terminal emulating dcc chat */
-  if ((!backgrd) && (term_z)) {
+  if (!backgrd && term_z) {
     int n = new_dcc(&DCC_CHAT, sizeof(struct chat_info));
 
     dcc[n].addr = iptolong(getmyip());
@@ -896,10 +889,11 @@ int main(int argc, char **argv)
     int socket_cleanup = 0;
 
     Context;
-#if !defined(HAVE_PRE7_5_TCL) && !defined(HAVE_TCL_THREADS)
+#if !defined(HAVE_PRE7_5_TCL)
     /* Process a single tcl event */
     Tcl_DoOneEvent(TCL_ALL_EVENTS | TCL_DONT_WAIT);
 #endif
+
     /* Lets move some of this here, reducing the numer of actual
      * calls to periodic_timers
      */
@@ -909,20 +903,27 @@ int main(int argc, char **argv)
       call_hook(HOOK_SECONDLY);
       then = now;
     }
+
     Context;
-    /* Only do this every so often */
+    /* Only do this every so often. */
     if (!socket_cleanup) {
-      dcc_remove_lost();
-      /* Check for server or dcc activity */
-      dequeue_sockets();
       socket_cleanup = 5;
+
+      /* Remove dead dcc entries. */
+      dcc_remove_lost();
+
+      /* Check for server or dcc activity. */
+      dequeue_sockets();
     } else
       socket_cleanup--;
+
+    /* Free unused structures. */
+    garbage_collect();
+
     xx = sockgets(buf, &i);
     if (xx >= 0) {		/* Non-error */
       int idx;
 
-      Context;
       for (idx = 0; idx < dcc_total; idx++)
 	if (dcc[idx].sock == xx) {
 	  if (dcc[idx].type && dcc[idx].type->activity) {
@@ -953,7 +954,7 @@ int main(int argc, char **argv)
     } else if (xx == -1) {	/* EOF from someone */
       int idx;
 
-      if ((i == STDOUT) && !backgrd)
+      if (i == STDOUT && !backgrd)
 	fatal("END OF FILE ON TERMINAL", 0);
       Context;
       for (idx = 0; idx < dcc_total; idx++)
@@ -975,7 +976,7 @@ int main(int argc, char **argv)
 	close(i);
 	killsock(i);
       }
-    } else if ((xx == -2) && (errno != EINTR)) {	/* select() error */
+    } else if (xx == -2 && errno != EINTR) {	/* select() error */
       Context;
       putlog(LOG_MISC, "*", "* Socket error #%d; recovering.", errno);
       for (i = 0; i < dcc_total; i++) {
@@ -988,7 +989,7 @@ int main(int argc, char **argv)
 	  i--;
 	}
       }
-    } else if (xx == (-3)) {
+    } else if (xx == -3) {
       call_hook(HOOK_IDLE);
       socket_cleanup = 0;	/* If we've been idle, cleanup & flush */
     }
@@ -1025,9 +1026,8 @@ int main(int argc, char **argv)
 	}
 	p = module_list;
 	if (p && p->next && p->next->next)
-	  /* Should be only 2 modules now -
-	   * blowfish & eggdrop
-	   */
+	  /* Should be only 2 modules now - blowfish (or some other
+	     encryption module) and eggdrop. */
 	  putlog(LOG_MISC, "*", MOD_STAGNANT);
 	Context;
 	flushlogs();

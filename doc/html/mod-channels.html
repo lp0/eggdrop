@@ -1,5 +1,5 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: mod-channels.html,v 1.2 2000/04/13 11:21:24 tothwolf Exp $ -->
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!-- $Id: mod-channels.html,v 1.5 2000/10/19 16:30:31 fabian Exp $ -->
 
 <html>
   <head>
@@ -307,14 +307,6 @@
 
           <blockquote>
             <dl>
-              <dt><strong>clearbans</strong></dt>
-
-              <dd>
-                <p>clear all channel bans when the bot joins? (ie, force the
-                channel&#39;s ban list to match the bot&#39;s internal
-                list)</p>
-              </dd>
-
               <dt><strong>enforcebans</strong></dt>
 
               <dd>
@@ -506,7 +498,7 @@
        <strong><em>set global-flood-nick 5:60</em></strong></p>
 
       <p><strong><em>set global-chanset {</em></strong><br>
-       <strong><em>&nbsp; -clearbans -enforcebans</em></strong><br>
+       <strong><em>&nbsp; -nodesynch -enforcebans</em></strong><br>
        <strong><em>&nbsp; +dynamicbans +userbans</em></strong><br>
        <strong><em>&nbsp; -autoop -bitch</em></strong><br>
        <strong><em>&nbsp; +greet +protectops</em></strong><br>
@@ -517,7 +509,6 @@
        <strong><em>&nbsp; +shared -seen</em></strong><br>
        <strong><em>&nbsp; +userexempts +dynamicexempts</em></strong><br>
        <strong><em>&nbsp; +userinvites +dynamicinvites</em></strong><br>
-       <strong><em>&nbsp; -nodesynch</em></strong><br>
        <strong><em>}</em></strong></p>
 
       <p><strong><em>set global-chanmode
@@ -1012,7 +1003,6 @@
     <hr>
 
     <p><em>© 1997 Robey Pointer<br>
-     © 1999,2000 Eggheads Development Team</em></p>
+     © 1999,2000 <a href="http://www.eggheads.org/">Eggheads</a></em></p>
   </body>
 </html>
-

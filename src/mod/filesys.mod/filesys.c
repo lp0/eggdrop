@@ -2,7 +2,7 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  * 
- * $Id: filesys.c,v 1.30 2000/08/06 14:50:45 fabian Exp $
+ * $Id: filesys.c,v 1.38 2000/11/06 04:06:43 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -361,8 +361,8 @@ static int _dcc_send(int idx, char *filename, char *nick, char *dir,
   char *nfn, *buf = NULL;
 
   Context;
-  if (strlen(nick) > HANDLEN)
-    nick[HANDLEN] = 0;
+  if (strlen(nick) > NICKMAX)
+    nick[NICKMAX] = 0;
   if (resend)
     x = raw_dcc_resend(filename, nick, dcc[idx].nick, dir);
   else
@@ -416,8 +416,6 @@ static int _dcc_send(int idx, char *filename, char *nick, char *dir,
   if (egg_strcasecmp(nick, dcc[idx].nick))
     dprintf(DP_HELP, "NOTICE %s :Here is %s file from %s %s...\n", nick,
 	    resend ? "the" : "a", dcc[idx].nick, resend ? "again " : "");
-  dprintf(idx, "Type '/DCC %sGET %s %s' to receive.\n", resend ? "RE" : "",
-	  botname, nfn);
   dprintf(idx, "%sending: %s to %s\n", resend ? "Res" : "S", nfn, nick);
   my_free(buf);
   return 1;
@@ -430,7 +428,7 @@ static int do_dcc_send(int idx, char *dir, char *fn, char *nick, int resend)
   int x;
 
   Context;
-  if (nick && (strlen(nick) > NICKMAX))
+  if (nick && strlen(nick) > NICKMAX)
     nick[NICKMAX] = 0;
   if (dccdir[0] == 0) {
     dprintf(idx, "DCC file transfers not supported.\n");
@@ -504,14 +502,15 @@ static int do_dcc_send(int idx, char *dir, char *fn, char *nick, int resend)
   return x;
 }
 
-static int builtin_fil STDVAR {
+static int builtin_fil STDVAR
+{
   int idx;
   Function F = (Function) cd;
 
   Context;
   BADARGS(4, 4, " hand idx param");
   idx = findanyidx(atoi(argv[2]));
-  if ((idx < 0) && (dcc[idx].type != &DCC_FILES)) {
+  if (idx < 0 && dcc[idx].type != &DCC_FILES) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
     return TCL_ERROR;
   }
@@ -519,7 +518,7 @@ static int builtin_fil STDVAR {
     Tcl_AppendResult(irp, "break", NULL);
     return TCL_OK;
   }
-  (F) (idx, argv[3]);
+  (F)(idx, argv[3]);
   Tcl_ResetResult(irp);
   return TCL_OK;
 }
@@ -679,7 +678,6 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
 	return;
       }
       i = new_dcc(&DCC_DNSWAIT, sizeof(struct dns_info));
-
       if (i < 0) {
 	dprintf(DP_HELP, "NOTICE %s :Sorry, too many DCC connections.\n",
 		nick);
@@ -698,8 +696,8 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
       dcc[i].u.dns->ibuf = atoi(msg);
       dcc[i].u.dns->ip = dcc[i].addr;
       dcc[i].u.dns->dns_type = RES_HOSTBYIP;
-      dcc[i].u.dns->dns_success = (Function) filesys_dcc_send_hostresolved;
-      dcc[i].u.dns->dns_failure = (Function) filesys_dcc_send_hostresolved;
+      dcc[i].u.dns->dns_success = filesys_dcc_send_hostresolved;
+      dcc[i].u.dns->dns_failure = filesys_dcc_send_hostresolved;
       dcc[i].u.dns->type = &DCC_FORK_SEND;
       dcc_dnshostbyip(dcc[i].addr);
     }
@@ -744,7 +742,7 @@ static void filesys_dcc_send_hostresolved(int i)
   int len = dcc[i].u.dns->ibuf, j;
 
   sprintf(prt, "%d", dcc[i].port);
-  sprintf(ip, "%lu", iptolong(my_htonl(dcc[i].addr)));
+  sprintf(ip, "%lu", iptolong(htonl(dcc[i].addr)));
   if (!hostsanitycheck_dcc(dcc[i].nick, dcc[i].u.dns->host, dcc[i].addr,
                            dcc[i].u.dns->host, prt)) {
     lostdcc(i);
@@ -814,7 +812,7 @@ static void filesys_dcc_send_hostresolved(int i)
     } else {
       dcc[i].timeval = now;
       dcc[i].sock = getsock(SOCK_BINARY);
-      if (open_telnet_dcc(dcc[i].sock, ip, prt) < 0)
+      if (dcc[i].sock < 0 || open_telnet_dcc(dcc[i].sock, ip, prt) < 0)
 	dcc[i].type->eof(i);
     }
   }
@@ -831,6 +829,8 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
   struct flag_record fr = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
   Context;
+  if (egg_strcasecmp(object, botname))
+    return 0;
   if (!egg_strncasecmp(text, "SEND ", 5)) {
     filesys_dcc_send(nick, from, u, text + 5);
     return 1;
@@ -858,7 +858,7 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
     ip = newsplit(&msg);
     prt = newsplit(&msg);
     sock = getsock(0);
-    if (open_telnet_dcc(sock, ip, prt) < 0) {
+    if (sock < 0 || open_telnet_dcc(sock, ip, prt) < 0) {
       neterror(buf);
       if (!quiet_reject)
         dprintf(DP_HELP, "NOTICE %s :%s (%s)\n", nick,
@@ -876,7 +876,6 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
 
     } else {
       i = new_dcc(&DCC_FILES_PASS, sizeof(struct file_info));
-
       dcc[i].addr = my_atoul(ip);
       dcc[i].port = atoi(prt);
       dcc[i].sock = sock;
@@ -997,9 +996,9 @@ char *filesys_start(Function * global_funcs)
 
   Context;
   module_register(MODULE_NAME, filesys_table, 2, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+  if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);
-    return "You need at least eggdrop1.5.3 to run this module.";
+    return "You need at least eggdrop1.6.0 to run this module.";
   }
   if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0))) {
     module_undepend(MODULE_NAME);

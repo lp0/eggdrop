@@ -6,7 +6,7 @@
  * Written by Fabian Knittel <fknittel@gmx.de>. Based on zlib examples
  * by Jean-loup Gailly and Miguel Albrecht.
  * 
- * $Id: compress.c,v 1.4 2000/04/05 19:51:54 fabian Exp $
+ * $Id: compress.c,v 1.7 2000/11/06 04:06:42 guppy Exp $
  */
 /* 
  * Copyright (C) 2000  Eggheads
@@ -228,7 +228,7 @@ static int compress_to_file(char *f_src, char *f_target, int mode_num)
 
   Context;
   adjust_mode_num(&mode_num);
-  sprintf(mode, "wb%d", mode_num);
+  egg_snprintf(mode, sizeof mode, "wb%d", mode_num);
 
   if (!is_file(f_src)) {
     putlog(LOG_MISC, "*", "Failed to compress file `%s': not a file.",
@@ -311,7 +311,7 @@ static int compress_file(char *filename, int mode_num)
     movefile(temp_fn, filename);
 
   nfree(temp_fn);
-  return COMPF_SUCCESS;
+  return ret;
 }
 
 /* Uncompresses a file `filename' and saves it as `filename'.
@@ -338,7 +338,7 @@ static int uncompress_file(char *filename)
     movefile(temp_fn, filename);
 
   nfree(temp_fn);
-  return COMPF_SUCCESS;
+  return ret;
 }
 
 
@@ -437,9 +437,9 @@ char *compress_start(Function *global_funcs)
 
   Context;
   module_register(MODULE_NAME, compress_table, 1, 1);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+  if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);
-    return "This module needs eggdrop1.5.3 or later";
+    return "This module needs eggdrop1.6.0 or later";
   }
   share_funcs = module_depend(MODULE_NAME, "share", 2, 3);
   if (!share_funcs) {

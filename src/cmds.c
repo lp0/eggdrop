@@ -3,7 +3,7 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  * 
- * $Id: cmds.c,v 1.38 2000/08/18 16:45:51 fabian Exp $
+ * $Id: cmds.c,v 1.43 2000/11/08 19:43:46 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -34,7 +34,8 @@ extern struct dcc_t	*dcc;
 extern struct userrec	*userlist;
 extern tcl_timer_t	*timer, *utimer;
 extern int		 dcc_total, remote_boots, backgrd, make_userfile,
-			 do_restart, conmask, require_p, must_be_owner;
+			 do_restart, conmask, require_p, must_be_owner,
+			 strict_host;
 extern unsigned long	 otraffic_irc, otraffic_irc_today,
 			 itraffic_irc, itraffic_irc_today,
 			 otraffic_bn, otraffic_bn_today,
@@ -65,19 +66,22 @@ static int add_bot_hostmask(int idx, char *nick)
       memberlist *m = ismember(chan, nick);
 
       if (m) {
-	char s[UHOSTLEN], s1[UHOSTLEN];
+	char s[UHOSTLEN];
 	struct userrec *u;
 
 	egg_snprintf(s, sizeof s, "%s!%s", m->nick, m->userhost);
 	u = get_user_by_host(s);
 	if (u) {
-	  dprintf(idx, "(Can't add userhost for %s because it matches %s)\n",
+	  dprintf(idx, "(Can't add hostmask for %s because it matches %s)\n",
 		  nick, u->handle);
 	  return 0;
 	}
-	maskhost(s, s1);
+	if (strchr("~^+=-", m->userhost[0]))
+	  egg_snprintf(s, sizeof s, "*!%s%s", strict_host ? "?" : "", m->userhost+1);
+	else
+	  egg_snprintf(s, sizeof s, "*!%s", m->userhost);
 	dprintf(idx, "(Added hostmask for %s from %s)\n", nick, chan->dname);
-	addhost_by_handle(nick, s1);
+	addhost_by_handle(nick, s);
 	return 1;
       }
     }
@@ -144,7 +148,7 @@ static void tell_who(struct userrec *u, int idx, int chan)
 	ok = 1;
 	dprintf(idx, "Bots connected:\n");
       }
-      strftime(s, 14, "%d %b %H:%M", localtime(&dcc[i].timeval));
+      egg_strftime(s, 14, "%d %b %H:%M", localtime(&dcc[i].timeval));
       spaces[len = HANDLEN - strlen(dcc[i].nick)] = 0;
       if (atr & USER_OWNER) {
 	dprintf(idx, "  [%.2lu]  %s%c%s%s (%s) %s\n",
@@ -585,10 +589,9 @@ static void cmd_boot(struct userrec *u, int idx, char *par)
   }
   who = newsplit(&par);
   if (strchr(who, '@') != NULL) {
-    char whonick[512];
+    char whonick[HANDLEN + 1];
 
-    splitc(whonick, who, '@');
-    whonick[20] = 0;
+    splitcn(whonick, who, '@', HANDLEN);
     if (!egg_strcasecmp(who, botnetnick)) {
       cmd_boot(u, idx, whonick);
       return;
@@ -596,8 +599,8 @@ static void cmd_boot(struct userrec *u, int idx, char *par)
     if (remote_boots > 0) {
       i = nextbot(who);
       if (i < 0) {
-	dprintf(idx, "No such bot connected.\n");
-	return;
+        dprintf(idx, "No such bot connected.\n");
+        return;
       }
       botnet_send_reject(i, dcc[idx].nick, botnetnick, whonick,
 			 who, par[0] ? par : dcc[idx].nick);
@@ -608,24 +611,23 @@ static void cmd_boot(struct userrec *u, int idx, char *par)
     return;
   }
   for (i = 0; i < dcc_total; i++)
-    if (!egg_strcasecmp(dcc[i].nick, who) && !ok &&
-	(dcc[i].type->flags & DCT_CANBOOT)) {
+    if (!egg_strcasecmp(dcc[i].nick, who)
+        && !ok && (dcc[i].type->flags & DCT_CANBOOT)) {
       u2 = get_user_by_handle(userlist, dcc[i].nick);
-      if (u2 && (u2->flags & USER_OWNER) &&
-	  egg_strcasecmp(dcc[idx].nick, who)) {
-	dprintf(idx, "Can't boot the bot owner.\n");
-	return;
+      if (u2 && (u2->flags & USER_OWNER)
+          && egg_strcasecmp(dcc[idx].nick, who)) {
+        dprintf(idx, "Can't boot the bot owner.\n");
+        return;
       }
-      if (u2 && (u2->flags & USER_MASTER) &&
-	  !(u && (u->flags & USER_MASTER))) {
-	dprintf(idx, "Can't boot a bot master.\n");
-	return;
+      if (u2 && (u2->flags & USER_MASTER) && !(u && (u->flags & USER_MASTER))) {
+        dprintf(idx, "Can't boot a bot master.\n");
+        return;
       }
       files = (dcc[i].type->flags & DCT_FILES);
       if (files)
-	dprintf(idx, "Booted %s from the file section.\n", dcc[i].nick);
+        dprintf(idx, "Booted %s from the file section.\n", dcc[i].nick);
       else
-	dprintf(idx, "Booted %s from the bot.\n", dcc[i].nick);
+        dprintf(idx, "Booted %s from the bot.\n", dcc[i].nick);
       putlog(LOG_CMDS, "*", "#%s# boot %s %s", dcc[idx].nick, who, par);
       do_boot(i, dcc[idx].nick, par);
       ok = 1;
@@ -2315,7 +2317,6 @@ static void cmd_pls_ignore(struct userrec *u, int idx, char *par)
   }
 
   who = newsplit(&par);
-  remove_gunk(who);
   if (par[0] == '%') {
     char		*p, *p_expire;
     unsigned long int	 expire_foo;
@@ -2427,6 +2428,7 @@ static void cmd_pls_user(struct userrec *u, int idx, char *par)
 
 static void cmd_mns_user(struct userrec *u, int idx, char *par)
 {
+  int idx2;
   char *handle;
   struct userrec *u2;
 
@@ -2448,10 +2450,19 @@ static void cmd_mns_user(struct userrec *u, int idx, char *par)
     dprintf(idx, "Can't remove the bot owner!\n");
     return;
   }
-  if ((u2->flags & USER_BOT) && (bot_flags(u2) & BOT_SHARE) &&
-      !(u->flags & USER_OWNER)) {
-    dprintf(idx, "You can't remove shared bots.\n");
-    return;
+  if (u2->flags & USER_BOT) {
+    if ((bot_flags(u2) & BOT_SHARE) && !(u->flags & USER_OWNER)) {
+      dprintf(idx, "You can't remove shared bots.\n");
+      return;
+    }
+    for (idx2 = 0; idx2 < dcc_total; idx2++)
+      if (dcc[idx2].type != &DCC_RELAY && dcc[idx2].type != &DCC_FORK_BOT &&
+          !egg_strcasecmp(dcc[idx2].nick, handle))
+        break;
+    if (idx2 != dcc_total) {
+      dprintf(idx, "You can't remove a directly linked bot.\n");
+      return;
+    }     
   }
   if ((u->flags & USER_BOTMAST) && !(u->flags & USER_MASTER) &&
       !(u2->flags & USER_BOT)) {

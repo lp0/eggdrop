@@ -2,7 +2,7 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  * 
- * $Id: channels.c,v 1.32 2000/08/07 10:09:16 fabian Exp $
+ * $Id: channels.c,v 1.42 2000/11/06 04:06:42 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -30,29 +30,25 @@
 
 static Function *global		= NULL;
 
-static int  setstatic		= 0;
-static int  use_info		= 1;
-static int  ban_time		= 60;
-static int  exempt_time		= 0;	/* If exempt_time = 0, never remove 
+static int  setstatic;
+static int  use_info;
+static int  ban_time;
+static int  exempt_time;		/* If exempt_time = 0, never remove 
 					   them */
-static int  invite_time		= 0;	/* If invite_time = 0, never remove
+static int  invite_time;		/* If invite_time = 0, never remove
 					   them */
-static char chanfile[121]	= "chanfile";
-static int  chan_hack		= 0;
-static int  quiet_save		= 0;
-static char glob_chanmode[64]	= "nt";	/* Default chanmode (drummer,990731) */
-static struct udef_struct *udef	= NULL;
-static int global_stopnethack_mode = 0;
+static char chanfile[121];
+static int  chan_hack;
+static int  quiet_save;
+static char glob_chanmode[64];		/* Default chanmode (drummer,990731) */
+static struct udef_struct *udef;
+static int global_stopnethack_mode;
 static int global_idle_kick;		/* Default idle-kick setting. */
+static int global_aop_min;
+static int global_aop_max;
 
 /* Global channel settings (drummer/dw) */
-static char glob_chanset[512]	= "\
--clearbans -enforcebans +dynamicbans +userbans -autoop -bitch +greet \
-+protectops +statuslog -revenge -secret -autovoice +cycle \
-+dontkickops -inactive -protectfriends +shared -seen \
-+userexempts +dynamicexempts +userinvites +dynamicinvites -revengebot \
--nodesynch ";
-/* DO NOT remove the extra space at the end of the string! */
+static char glob_chanset[512];
 
 /* Global flood settings */
 static int gfld_chan_thr;
@@ -75,7 +71,7 @@ static int gfld_nick_time;
 #include "udefchan.c"
 
 
-void *channel_malloc(int size, char *file, int line)
+static void *channel_malloc(int size, char *file, int line)
 {
   char *p;
 
@@ -252,26 +248,20 @@ static int ismasked(masklist *m, char *user)
   return 0;
 }
 
-/* Destroy a chanset in the list
- * 
- * Note: does NOT free up memory associated with channel data inside
- *       the chanset!
+/* Unlink chanset element from chanset list.
  */
-static int killchanset(struct chanset_t *chan)
+inline static int chanset_unlink(struct chanset_t *chan)
 {
-  struct chanset_t *c = chanset, *old = NULL;
+  struct chanset_t	*c, *c_old = NULL;
 
-  while (c) {
+  for (c = chanset; c; c_old = c, c = c->next) {
     if (c == chan) {
-      if (old)
-	old->next = c->next;
+      if (c_old)
+	c_old->next = c->next;
       else
 	chanset = c->next;
-      nfree(c);
       return 1;
     }
-    old = c;
-    c = c->next;
   }
   return 0;
 }
@@ -283,6 +273,16 @@ static int killchanset(struct chanset_t *chan)
  */
 static void remove_channel(struct chanset_t *chan)
 {
+   int		 i;
+   module_entry	*me;
+   
+   /* Remove the channel from the list, so that noone can pull it
+      away from under our feet during the check_tcl_part() call. */
+   (void) chanset_unlink(chan);
+
+   if ((me = module_find("irc", 1, 3)) != NULL)
+     (me->funcs[IRC_DO_CHANNEL_PART])(chan);
+
    clear_channel(chan, 0);
    noshare = 1;
    /* Remove channel-bans */
@@ -297,7 +297,14 @@ static void remove_channel(struct chanset_t *chan)
    /* Remove channel specific user flags */
    user_del_chan(chan->dname);
    noshare = 0;
-   killchanset(chan);
+   nfree(chan->channel.key);
+   for (i = 0; i < 6 && chan->cmode[i].op; i++)
+     nfree(chan->cmode[i].op);
+   if (chan->key)
+     nfree(chan->key);
+   if (chan->rmkey)
+     nfree(chan->rmkey);
+   nfree(chan);
 }
 
 /* Bind this to chon and *if* the users console channel == ***
@@ -392,8 +399,8 @@ static void write_channels()
     fprintf(f, "channel %s %s%schanmode %s idle-kick %d stopnethack-mode %d \
 need-op %s need-invite %s need-key %s need-unban %s need-limit %s \
 flood-chan %d:%d flood-ctcp %d:%d flood-join %d:%d \
-flood-kick %d:%d flood-deop %d:%d flood-nick %d:%d \
-%cclearbans %cenforcebans %cdynamicbans %cuserbans %cautoop %cbitch \
+flood-kick %d:%d flood-deop %d:%d flood-nick %d:%d aop-delay %d:%d \
+%cenforcebans %cdynamicbans %cuserbans %cautoop %cbitch \
 %cgreet %cprotectops %cprotectfriends %cdontkickops \
 %cstatuslog %crevenge %crevengebot %cautovoice %csecret \
 %cshared %ccycle %cseen %cinactive %cdynamicexempts %cuserexempts \
@@ -411,7 +418,7 @@ flood-kick %d:%d flood-deop %d:%d flood-nick %d:%d \
         chan->flood_kick_thr, chan->flood_kick_time,
         chan->flood_deop_thr, chan->flood_deop_time,
 	chan->flood_nick_thr, chan->flood_nick_time,
-	PLSMNS(channel_clearbans(chan)),
+	chan->aop_min, chan->aop_max,
 	PLSMNS(channel_enforcebans(chan)),
 	PLSMNS(channel_dynamicbans(chan)),
 	PLSMNS(!channel_nouserbans(chan)),
@@ -461,7 +468,7 @@ flood-kick %d:%d flood-deop %d:%d flood-nick %d:%d \
 
 static void read_channels(int create)
 {
-  struct chanset_t *chan, *chan2;
+  struct chanset_t *chan, *chan_next;
 
   if (!chanfile[0])
     return;
@@ -478,21 +485,16 @@ static void read_channels(int create)
     if (!f)
       putlog(LOG_MISC, "*", "Couldn't create channel file: %s.  Dropping",
 	     chanfile);
-    else fclose(f);
+    else
+      fclose(f);
   }
   chan_hack = 0;
-  chan = chanset;
-  while (chan != NULL) {
+  for (chan = chanset; chan; chan = chan_next) {
+    chan_next = chan->next;
     if (chan->status & CHAN_FLAGGED) {
-      nfree(chan->channel.key);
       putlog(LOG_MISC, "*", "No longer supporting channel %s", chan->dname);
-      if (chan->name[0] && !channel_inactive(chan))
-        dprintf(DP_SERVER, "PART %s\n", chan->name);
-      chan2 = chan->next;
       remove_channel(chan);
-      chan = chan2;
-    } else
-      chan = chan->next;
+    }
   }
 }
 
@@ -520,11 +522,9 @@ static void channels_rehash()
   read_channels(1);
   /* Remove any extra channels, by checking the flag. */
   chan = chanset;
-  while (chan) {
+  for (chan = chanset; chan;) {
     if (chan->status & CHAN_FLAGGED) {
       putlog(LOG_MISC, "*", "No longer supporting channel %s", chan->dname);
-      if (chan->name[0] && !channel_inactive(chan))
-        dprintf(DP_SERVER, "PART %s\n", chan->name);
       remove_channel(chan);
       chan = chanset;
     } else
@@ -585,8 +585,6 @@ static void channels_report(int idx, int details)
       if (details) {
 	s[0] = 0;
 	i = 0;
-	if (channel_clearbans(chan))
-	  i += my_strcpy(s + i, "clear-bans ");
 	if (channel_enforcebans(chan))
 	  i += my_strcpy(s + i, "enforce-bans ");
 	if (channel_dynamicbans(chan))
@@ -766,6 +764,7 @@ static tcl_coups mychan_tcl_coups[] =
   {"global-flood-join",		&gfld_join_thr,		&gfld_join_time},
   {"global-flood-ctcp",		&gfld_ctcp_thr,		&gfld_ctcp_time},
   {"global-flood-nick",		&gfld_nick_thr, 	&gfld_nick_time},
+  {"global-aop-delay",		&global_aop_min,	&global_aop_max},
   {NULL,			NULL,			NULL}
 };
 
@@ -849,7 +848,7 @@ static Function channels_table[] =
   /* 32 - 35 */
   (Function) NULL,/* [32] used to be u_sticky_exempt() <cybah> */
   (Function) NULL,
-  (Function) killchanset,
+  (Function) NULL,	/* [34] used to be killchanset().	*/
   (Function) u_delinvite,
   /* 36 - 39 */
   (Function) u_addinvite,
@@ -862,6 +861,7 @@ static Function channels_table[] =
   (Function) initudef,
   (Function) ngetudef,
   /* 44 - 47 */
+  (Function) expired_mask,
 };
 
 char *channels_start(Function * global_funcs)
@@ -879,11 +879,30 @@ char *channels_start(Function * global_funcs)
   gfld_ctcp_thr = 5;
   gfld_ctcp_time = 60;
   global_idle_kick = 0;
+  global_aop_min = 5;
+  global_aop_max = 30;
+  setstatic = 0;
+  use_info = 1;
+  ban_time = 60;
+  exempt_time = 0;
+  invite_time = 0;
+  strcpy(chanfile, "chanfile");
+  chan_hack = 0;
+  quiet_save = 0;
+  strcpy(glob_chanmode, "nt");
+  udef = NULL;
+  global_stopnethack_mode = 0;
+  strcpy(glob_chanset, "\
+-enforcebans +dynamicbans +userbans -autoop -bitch +greet \
++protectops +statuslog -revenge -secret -autovoice +cycle \
++dontkickops -inactive -protectfriends +shared -seen \
++userexempts +dynamicexempts +userinvites +dynamicinvites -revengebot \
+-nodesynch" /* Do not remove this extra space: */ " ");
   Context;
   module_register(MODULE_NAME, channels_table, 1, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+  if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
     module_undepend(MODULE_NAME);
-    return "This module needs eggdrop1.5.3 or later";
+    return "This module needs eggdrop1.6.0 or later";
   }
   add_hook(HOOK_MINUTELY, (Function) check_expired_bans);
   add_hook(HOOK_MINUTELY, (Function) check_expired_exempts);

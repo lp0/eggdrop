@@ -7,7 +7,7 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  * 
- * $Id: proto.h,v 1.27 2000/08/18 00:25:10 fabian Exp $
+ * $Id: proto.h,v 1.35 2000/10/27 19:35:52 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -111,10 +111,11 @@ void reload();
 void chanprog();
 void check_timers();
 void check_utimers();
-void rmspace(char *);
+void rmspace(char *s);
 void check_timers();
-void set_chanlist(char *host, struct userrec *rec);
-void clear_chanlist();
+void set_chanlist(const char *host, struct userrec *rec);
+void clear_chanlist(void);
+void clear_chanlist_member(const char *nick);
 
 /* cmds.c */
 int check_dcc_attrs(struct userrec *, int);
@@ -173,34 +174,36 @@ int del_lang_section(char *);
 int exist_lang_section(char *);
 
 /* main.c */
-void fatal(char *, int);
-int expected_memory();
-void patch(char *);
-void eggContext(char *, int, char *);
-void eggContextNote(char *, int, char *, char *);
-void eggAssert(char *, int, char *, int);
-void backup_userfile();
+void fatal(const char *, int);
+int expected_memory(void);
+void patch(const char *);
+void eggContext(const char *, int, const char *);
+void eggContextNote(const char *, int, const char *, const char *);
+void eggAssert(const char *, int, const char *);
+void backup_userfile(void);
 
 /* match.c */
 int _wild_match(register unsigned char *, register unsigned char *);
 #define wild_match(a,b) _wild_match((unsigned char *)(a),(unsigned char *)(b))
 
 /* mem.c */
-void *n_malloc(int, char *, int);
-void *n_realloc(void *, int, char *, int);
-void n_free(void *, char *, int);
+void *n_malloc(int, const char *, int);
+void *n_realloc(void *, int, const char *, int);
+void n_free(void *, const char *, int);
 void tell_mem_status(char *);
 void tell_mem_status_dcc(int);
 void debug_mem_to_dcc(int);
 
 /* misc.c */
+int egg_strcatn(char *dst, const char *src, size_t max);
 int my_strcpy(char *, char *);
 void putlog EGG_VARARGS(int, arg1);
 void flushlogs();
 void check_logsize();
-void maskhost(char *, char *);
+void maskhost(const char *, char *);
 char *stristr(char *, char *);
 void splitc(char *, char *, char);
+void splitcn(char *, char *, char, size_t);
 char *newsplit(char **);
 char *splitnick(char **);
 void stridx(char *, char *, int);
@@ -226,6 +229,9 @@ void make_rand_str(char *, int);
 int oatoi(const char *);
 int is_file(const char *);
 void logsuffix_change(char *);
+char *str_escape(const char *str, const char div, const char mask);
+char *strchr_unescape(char *str, const char div, register const char esc_char);
+void str_unescape(char *str, register const char esc_char);
 
 /* net.c */
 IP my_atoul(char *);
@@ -251,6 +257,7 @@ int sanitycheck_dcc(char *, char *, char *, char *);
 int hostsanitycheck_dcc(char *, char *, IP, char *, char *);
 char *iptostr(IP);
 int sock_has_data(int, int);
+int sockoptions(int sock, int operation, int sock_options);
 
 /* tcl.c */
 void protect_tcl();

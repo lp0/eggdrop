@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  * 
- * $Id: dcc.c,v 1.31 2000/07/12 21:45:29 fabian Exp $
+ * $Id: dcc.c,v 1.40 2000/10/30 20:50:41 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -32,7 +32,6 @@
 #include "tandem.h"
 
 /* Includes for botnet md5 challenge/response code <cybah> */
-#include "md5/global.h"
 #include "md5/md5.h"
 
 extern struct userrec	*userlist;
@@ -238,8 +237,9 @@ void failed_link(int idx)
   dcc[idx].sock = getsock(SOCK_STRONGCONN);
   dcc[idx].port++;
   dcc[idx].timeval = now;
-  if (open_telnet_raw(dcc[idx].sock, dcc[idx].addr ?
-		      iptostr(my_htonl(dcc[idx].addr)) : dcc[idx].host,
+  if (dcc[idx].sock < 0 ||
+      open_telnet_raw(dcc[idx].sock, dcc[idx].addr ?
+		      iptostr(htonl(dcc[idx].addr)) : dcc[idx].host,
 		      dcc[idx].port) < 0) {
     failed_link(idx);
   }
@@ -421,18 +421,15 @@ static void dcc_bot(int idx, char *code, int i)
     msg++;
   } else
     msg = "";
-  f = 0;
-  i = 0;
-  while ((C_bot[i].name != NULL) && (!f)) {
+  for (f = i = 0; C_bot[i].name && !f; i++) {
     int y = egg_strcasecmp(code, C_bot[i].name);
 
     if (y == 0) {
       /* Found a match */
-      (C_bot[i].func) (idx, msg);
+      (C_bot[i].func)(idx, msg);
       f = 1;
     } else if (y < 0)
       return;
-    i++;
   }
 }
 
@@ -1127,6 +1124,9 @@ static void dcc_telnet(int idx, char *buf, int i)
     putlog(LOG_MISC, "*", DCC_FAILED, s);
     return;
   }
+  /* Buffer data received on this socket.  */
+  sockoptions(sock, EGG_OPTION_SET, SOCK_BUFFER);
+
   /* <bindle> [09:37] Telnet connection: 168.246.255.191/0
    * <bindle> [09:37] Lost connection while identing [168.246.255.191/0]
    */
@@ -1151,8 +1151,8 @@ static void dcc_telnet(int idx, char *buf, int i)
   dcc[i].timeval = now;
   strcpy(dcc[i].nick, "*");
   dcc[i].u.dns->ip = ip;
-  dcc[i].u.dns->dns_success = (Function) dcc_telnet_hostresolved;
-  dcc[i].u.dns->dns_failure = (Function) dcc_telnet_hostresolved;
+  dcc[i].u.dns->dns_success = dcc_telnet_hostresolved;
+  dcc[i].u.dns->dns_failure = dcc_telnet_hostresolved;
   dcc[i].u.dns->dns_type = RES_HOSTBYIP;
   dcc[i].u.dns->ibuf = dcc[idx].sock;
   dcc[i].u.dns->type = &DCC_IDENTWAIT;
@@ -1190,7 +1190,7 @@ static void dcc_telnet_hostresolved(int i)
     }
   }
   Context;
-  sprintf(s2, "telnet!telnet@%s", dcc[i].host);
+  sprintf(s2, "-telnet!telnet@%s", dcc[i].host);
   if (match_ignore(s2) || detect_telnet_flood(s2)) {
     killsock(dcc[i].sock);
     lostdcc(i);
@@ -1201,7 +1201,7 @@ static void dcc_telnet_hostresolved(int i)
   changeover_dcc(i, &DCC_IDENTWAIT, 0);
   dcc[i].timeval = now;
   dcc[i].u.ident_sock = dcc[idx].sock;
-  sock = open_telnet(iptostr(my_htonl(dcc[i].addr)), 113);
+  sock = open_telnet(iptostr(htonl(dcc[i].addr)), 113);
   putlog(LOG_MISC, "*", DCC_TELCONN, dcc[i].host, dcc[i].port);
   s[0] = 0;
   Context;
@@ -1393,7 +1393,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
     dcc[idx].type = &DCC_TELNET_NEW;
     dcc[idx].timeval = now;
     dprintf(idx, "\n");
-    dprintf(idx, IRC_TELNET, IRC_TELNET_ARGS);
+    dprintf(idx, IRC_TELNET, botnetnick);
     dprintf(idx, IRC_TELNET1);
     dprintf(idx, "\nEnter the nickname you would like to use.\n");
     return;
@@ -1402,12 +1402,12 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
     if (!require_p)
       ok = 1;
   }
-  if (glob_party(fr) || glob_bot(fr))
+  if (!ok && (glob_party(fr) || glob_bot(fr)))
     ok = 1;
-  if (glob_xfer(fr)) {
+  if (!ok && glob_xfer(fr)) {
     module_entry *me = module_find("filesys", 0, 0);
 
-    if (me && me->funcs[FILESYS_ISVALID] && (me->funcs[FILESYS_ISVALID]) ())
+    if (me && me->funcs[FILESYS_ISVALID] && (me->funcs[FILESYS_ISVALID])())
       ok = 1;
   }
   if (!ok) {
@@ -1592,7 +1592,7 @@ static void dcc_telnet_new(int idx, char *buf, int x)
     dprintf(idx, "Sorry, can't use my name for a nick.\n");
   } else {
     if (make_userfile)
-      userlist = adduser(userlist, buf, "telnet!*@*", "-",
+      userlist = adduser(userlist, buf, "-telnet!*@*", "-",
 			 sanity_check(default_flags | USER_PARTY |
 				      USER_MASTER | USER_OWNER));
     else {
@@ -1603,12 +1603,12 @@ static void dcc_telnet_new(int idx, char *buf, int x)
 	p++;
 	r = strchr(p, '.');
 	if (!r)
-	  simple_sprintf(work, "telnet!%s@%s", dcc[idx].host, p);
+	  simple_sprintf(work, "-telnet!%s@%s", dcc[idx].host, p);
 	else
-	  simple_sprintf(work, "telnet!%s@*%s", dcc[idx].host, r);
+	  simple_sprintf(work, "-telnet!%s@*%s", dcc[idx].host, r);
 	*q = '@';
       } else
-	simple_sprintf(work, "telnet!*@*%s", dcc[idx].host);
+	simple_sprintf(work, "-telnet!*@*%s", dcc[idx].host);
       userlist = adduser(userlist, buf, work, "-",
 			 sanity_check(USER_PARTY | default_flags));
     }
@@ -1765,21 +1765,27 @@ static int call_tcl_func(char *name, int idx, char *args)
 
 static void dcc_script(int idx, char *buf, int len)
 {
-  void *old = NULL;
-  long oldsock = dcc[idx].sock;
+  long oldsock;
 
   strip_telnet(dcc[idx].sock, buf, &len);
-  if (!len)
+  if (len == 0)
     return;
+
   dcc[idx].timeval = now;
+  oldsock = dcc[idx].sock;	/* Remember the socket number.	*/
   if (call_tcl_func(dcc[idx].u.script->command, dcc[idx].sock, buf)) {
+    void *old_other = NULL;
+
     Context;
-    if ((dcc[idx].sock != oldsock) || (idx>max_dcc))
-      return; /* drummer: this happen after killdcc */
-    old = dcc[idx].u.script->u.other;
+    /* Check whether the socket and dcc entry are still valid. They
+       might have been killed by `killdcc'. */
+    if (dcc[idx].sock != oldsock || idx > max_dcc)
+      return;
+
+    old_other = dcc[idx].u.script->u.other;
     dcc[idx].type = dcc[idx].u.script->type;
     nfree(dcc[idx].u.script);
-    dcc[idx].u.other = old;
+    dcc[idx].u.other = old_other;
     if (dcc[idx].type == &DCC_SOCKET) {
       /* Kill the whole thing off */
       killsock(dcc[idx].sock);
@@ -1788,7 +1794,7 @@ static void dcc_script(int idx, char *buf, int len)
     }
     if (dcc[idx].type == &DCC_CHAT) {
       if (dcc[idx].u.chat->channel >= 0) {
-	chanout_but(-1, dcc[idx].u.chat->channel,DCC_JOIN, dcc[idx].nick);
+	chanout_but(-1, dcc[idx].u.chat->channel, DCC_JOIN, dcc[idx].nick);
 	Context;
 	if (dcc[idx].u.chat->channel < 10000)
 	  botnet_send_join_idx(idx, -1);
@@ -2049,7 +2055,7 @@ void dcc_telnet_got_ident(int i, char *host)
   }
   strncpy(dcc[i].host, host, UHOSTMAX);
   dcc[i].host[UHOSTMAX] = 0;
-  simple_sprintf(x, "telnet!%s", dcc[i].host);
+  simple_sprintf(x, "-telnet!%s", dcc[i].host);
   if (protect_telnet && !make_userfile) {
     struct userrec *u;
     int ok = 1;
@@ -2088,6 +2094,10 @@ void dcc_telnet_got_ident(int i, char *host)
     check_tcl_listen(dcc[idx].host, dcc[i].sock);
     return;
   }
+  /* Do not buffer data anymore. All received and stored data is passed
+     over to the dcc functions from now on.  */
+  sockoptions(dcc[i].sock, EGG_OPTION_UNSET, SOCK_BUFFER);
+
   dcc[i].type = &DCC_TELNET_ID;
   dcc[i].u.chat = get_data_ptr(sizeof(struct chat_info));
   egg_bzero(dcc[i].u.chat, sizeof(struct chat_info));

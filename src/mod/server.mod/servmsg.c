@@ -1,7 +1,7 @@
 /* 
  * servmsg.c -- part of server.mod
  * 
- * $Id: servmsg.c,v 1.43 2000/08/20 11:16:43 fabian Exp $
+ * $Id: servmsg.c,v 1.49 2000/10/27 19:32:42 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -326,15 +326,6 @@ static int got442(char *from, char *msg)
 	      chan->channel.key[0] ? chan->channel.key : chan->key_prot);
     }
 
-  /* If there was a lagcheck in progress, it probably failed now. */
-  if (lagged) {
-    lagged = 0;
-    if (lagcheckstring)
-      free_null(lagcheckstring);
-    if (lagcheckstring2)
-      free_null(lagcheckstring2);
-    debug0("got 442(not on chan) reply, guess I'm not lagged");
-  }
   return 0;
 }
 
@@ -705,7 +696,6 @@ static int gotwall(char *from, char *msg)
   int r;
 
   Context;
-
   fixcolon(msg);
   p = strchr(from, '!');
   if (p && (p == strrchr(from, '!'))) {
@@ -756,12 +746,11 @@ static void minutely_checks()
   }
   if (min_servs == 0)
     return;
-  chan = chanset;
-  while (chan != NULL) {
-    if (channel_active(chan) && (chan->channel.members == 1))
+  for (chan = chanset; chan; chan = chan->next)
+    if (channel_active(chan) && chan->channel.members == 1) {
       ok = 1;
-    chan = chan->next;
-  }
+      break;
+    }
   if (!ok)
     return;
   count++;
@@ -861,7 +850,7 @@ static int got432(char *from, char *msg)
 static int got433(char *from, char *msg)
 {
   char *tmp;
-  Context;
+
   if (server_online) {
     /* We are online and have a nickname, we'll keep it */
     newsplit(&msg);
@@ -870,7 +859,6 @@ static int got433(char *from, char *msg)
     nick_juped = 0;
     return 0;
   }
-  Context;
   gotfake433(from);
   return 0;
 }
@@ -912,7 +900,6 @@ static int got437(char *from, char *msg)
  */
 static int got438(char *from, char *msg)
 {
-  Context;
   newsplit(&msg);
   newsplit(&msg);
   fixcolon(msg);
@@ -927,8 +914,8 @@ static int got451(char *from, char *msg)
    * hoping the next server will work :) -poptix
    */
   /* Um, this does occur on a lagged anti-spoof server connection if the
-   * (minutely) sending of joins occurs before the bot does its ping reply
-   * probably should do something about it some time - beldin
+   * (minutely) sending of joins occurs before the bot does its ping reply.
+   * Probably should do something about it some time - beldin
    */
   putlog(LOG_MISC, "*", IRC_NOTREGISTERED1, from);
   nuke_server(IRC_NOTREGISTERED2);
@@ -1055,7 +1042,8 @@ static void kill_server(int idx, void *x)
     for (chan = chanset; chan; chan = chan->next)
       (me->funcs[CHANNEL_CLEAR]) (chan, 1);
   }
-  connect_server();
+  /* A new server connection will be automatically initiated in
+     about 2 seconds. */
 }
 
 static void timeout_server(int idx)
@@ -1122,7 +1110,7 @@ static int gotping(char *from, char *msg)
 
 static int gotkick(char *from, char *msg)
 {
-  char *nick, buf2[511], *pbuf, *victim;
+  char *nick;
 
   nick = from;
   if (rfc_casecmp(nick, botname))
@@ -1132,19 +1120,6 @@ static int gotkick(char *from, char *msg)
     last_time += 2;
     if (debug_output)
       putlog(LOG_SRVOUT, "*", "adding 2secs penalty (successful kick)");
-  }
-  if (!lagged)
-    return 0;
-  strncpyz(buf2, msg, sizeof buf2);
-  pbuf = buf2;
-  newsplit(&pbuf);
-  victim = newsplit(&pbuf);
-  check_notlagged(victim);
-  if (!rfc_casecmp(victim, lagcheckstring)) {
-    debug1("I kicked %s, so I think I'm not lagged", victim);
-    lagged = 0;
-    free_null(lagcheckstring);
-    free_null(lagcheckstring2);
   }
   return 0;
 }
@@ -1192,103 +1167,6 @@ static int whoispenalty(char *from, char *msg)
   return 0;
 }
 
-static int lagcheck_left(char *from, char *msg)
-{
-  check_notlagged(from);
-  return 0;
-}
-
-static int lagcheck_notop(char *from, char *msg)
-{
-  if (!lagged)
-    return 0;
-  debug0("Got 482 (notopped) reply, I guess I'm not lagged.");
-  if (lagcheckstring)
-    free_null(lagcheckstring);
-  lagged = 0;
-  return 0;
-}
-
-static int lagcheck_367(char *from, char *msg)
-{
-  char buf[511], *mask;
-
-  if (!lagged || (lagchecktype != LC_BEIMODE))
-    return 0;
-  strncpyz(buf, msg, sizeof buf);
-  mask = buf;
-  newsplit(&mask);
-  newsplit(&mask);
-  if (lagcheckstring)
-    if (!wild_match(mask, lagcheckstring + 3) &&
-    	!wild_match(lagcheckstring + 3, mask))
-      return 0;
-  lagged = 0;
-  if (lagcheckstring)
-    free_null(lagcheckstring);
-  debug0("mask already set, I guess I'm not lagged");
-  return 0;
-}
-
-static int lagcheck_mode (char *from, char *origmsg)
-{
-  char *modes, pm, buf[511], *msg;
-
-  if (rfc_casecmp(from, botname))
-    /* That wasn't my modechange... */
-    return 0;
-  strncpyz(buf, origmsg, sizeof buf);
-  msg = buf;
-  newsplit(&msg);
-  modes = newsplit(&msg);
-  if (strlen(msg) < 1)
-    return 0;
-  pm = '+';
-  while (modes[0]) {
-    if (strchr("+-", modes[0]))
-      pm = modes[0];
-    else if (strchr("ovbeI", modes[0])) {
-      egg_snprintf(buf, sizeof buf, "%c%c %s", pm, modes[0], newsplit(&msg));
-      check_notlagged(buf);
-    } else if ((modes[0] == 'l') && (pm = '+'))
-      newsplit(&msg);
-    else if (modes[0] == 'k')
-      newsplit(&msg);
-    modes++;
-  }
-  return 0;
-}
-
-static int lagcheck_401(char *from, char *origmsg)
-{
-  char buf[511], *msg;
-
-  if (!lagged || lagchecktype != LC_KICK)
-    return 0;
-  strncpyz(buf, origmsg, sizeof buf);
-  msg = buf;
-  lagged = 0;
-  if (lagcheckstring)
-    free_null(lagcheckstring);
-  if (lagcheckstring2)
-    free_null(lagcheckstring2);
-  debug0("got 401/441 reply, guess I'm not lagged");
-  return 0;
-}
-
-static int lagcheck_478(char *from, char *origmsg)
-{
-  if (!lagged || lagchecktype == LC_KICK)
-    return 0;
-  if (lagcheckstring)
-    free_null(lagcheckstring);
-  if (lagcheckstring2)
-    free_null(lagcheckstring2);
-  lagged = 0;
-  debug0("Channel ban list is full, guess I'm not lagged");
-  return 0;
-}
-
 static cmd_t my_raw_binds[] =
 {
   {"PRIVMSG",	"",	(Function) gotmsg,		NULL},
@@ -1314,16 +1192,6 @@ static cmd_t my_raw_binds[] =
   {"KICK",	"",	(Function) gotkick,		NULL},
   {"200",	"",	(Function) tracepenalty,	NULL},
   {"318",	"",	(Function) whoispenalty,	NULL},
-  {"PART",	"",	(Function) lagcheck_left,	NULL},
-  {"QUIT",	"",	(Function) lagcheck_left,	NULL},
-  {"482",	"",	(Function) lagcheck_notop,	NULL},
-  {"367",	"",	(Function) lagcheck_367,	NULL},
-  {"348",	"",	(Function) lagcheck_367,	NULL},
-  {"346",	"",	(Function) lagcheck_367,	NULL},
-  {"MODE",	"",	(Function) lagcheck_mode,	"lagcheck:MODE"},
-  {"401",	"",	(Function) lagcheck_401,	"lagcheck:401"},
-  {"441",	"",	(Function) lagcheck_401,	"lagcheck:441"},
-  {"478",	"",	(Function) lagcheck_478,	"lagcheck:478"},
   {NULL,	NULL,	NULL,				NULL}
 };
 
@@ -1359,13 +1227,19 @@ static void connect_server(void)
   if (!cycle_time) {
     struct chanset_t *chan;
 
+    servidx = new_dcc(&DCC_DNSWAIT, sizeof(struct dns_info));
+    if (servidx < 0) {
+      putlog(LOG_SERV, "*",
+	     "NO MORE DCC CONNECTIONS -- Can't create server connection.");
+      return;
+    }
+
     if (connectserver[0])	/* drummer */
       do_tcl("connect-server", connectserver);
     check_tcl_event("connect-server");
     next_server(&curserv, botserver, &botserverport, pass);
     putlog(LOG_SERV, "*", "%s %s:%d", IRC_SERVERTRY, botserver, botserverport);
 
-    servidx = new_dcc(&DCC_DNSWAIT, sizeof(struct dns_info));
     dcc[servidx].port = botserverport;
     strcpy(dcc[servidx].nick, "(server)");
     strncpyz(dcc[servidx].host, botserver, UHOSTLEN);
@@ -1380,8 +1254,8 @@ static void connect_server(void)
     strcpy(dcc[servidx].u.dns->host, dcc[servidx].host);
     dcc[servidx].u.dns->cbuf = get_data_ptr(strlen(pass) + 1);
     strcpy(dcc[servidx].u.dns->cbuf, pass);
-    dcc[servidx].u.dns->dns_success = (Function) server_resolve_success;
-    dcc[servidx].u.dns->dns_failure = (Function) server_resolve_failure;
+    dcc[servidx].u.dns->dns_success = server_resolve_success;
+    dcc[servidx].u.dns->dns_failure = server_resolve_failure;
     dcc[servidx].u.dns->dns_type = RES_IPBYHOST;
     dcc[servidx].u.dns->type = &SERVER_SOCKET;
 
@@ -1418,14 +1292,14 @@ static void server_resolve_success(int servidx)
   dcc[servidx].addr = dcc[servidx].u.dns->ip;
   strcpy(pass, dcc[servidx].u.dns->cbuf);
   changeover_dcc(servidx, &SERVER_SOCKET, 0);
-  serv = open_telnet(iptostr(my_htonl(dcc[servidx].addr)), dcc[servidx].port);
+  serv = open_telnet(iptostr(htonl(dcc[servidx].addr)), dcc[servidx].port);
   if (serv < 0) {
     neterror(s);
     putlog(LOG_SERV, "*", "%s %s (%s)", IRC_FAILEDCONNECT, dcc[servidx].host,
 	   s);
     lostdcc(servidx);
-      if ((oldserv == curserv) && !(never_give_up))
-	fatal("NO SERVERS WILL ACCEPT MY CONNECTION.", 0);
+    if (oldserv == curserv && !never_give_up)
+      fatal("NO SERVERS WILL ACCEPT MY CONNECTION.", 0);
   } else {
     dcc[servidx].sock = serv;
     /* Queue standard login */
@@ -1435,9 +1309,9 @@ static void server_resolve_success(int servidx)
     strcpy(botname, origbotname);
     /* Start alternate nicks from the beginning */
     altnick_char = 0;
-    dprintf(DP_MODE, "NICK %s\n", botname);
     if (pass[0])
       dprintf(DP_MODE, "PASS %s\n", pass);
+    dprintf(DP_MODE, "NICK %s\n", botname);
     dprintf(DP_MODE, "USER %s %s %s :%s\n",
 	    botuser, bothost, dcc[servidx].host, botrealname);
     /* Wait for async result now */

@@ -2,7 +2,7 @@
  * flags.c -- handles:
  *   all the flag matching/conversion functions in one neat package :)
  * 
- * $Id: flags.c,v 1.13 2000/03/23 23:17:55 fabian Exp $
+ * $Id: flags.c,v 1.16 2000/11/10 19:39:38 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -265,9 +265,9 @@ int sanity_check(int atr)
   /* Can't be owner without also being master */
   if (atr & USER_OWNER)
     atr |= USER_MASTER;
-  /* Master implies botmaster, op, friend and janitor */
+  /* Master implies botmaster, op and janitor */
   if (atr & USER_MASTER)
-    atr |= USER_BOTMAST | USER_OP | USER_FRIEND | USER_JANITOR;
+    atr |= USER_BOTMAST | USER_OP | USER_JANITOR;
   /* Can't be botnet master without party-line access */
   if (atr & USER_BOTMAST)
     atr |= USER_PARTY;
@@ -292,9 +292,9 @@ int chan_sanity_check(int chatr, int atr)
   /* Can't be channel owner without also being channel master */
   if (chatr & USER_OWNER)
     chatr |= USER_MASTER;
-  /* Master implies friend & op */
+  /* Master implies op */
   if (chatr & USER_MASTER)
-    chatr |= USER_OP | USER_FRIEND;
+    chatr |= USER_OP ;
   /* Can't be +s on chan unless you're a bot */
   if (!(atr & USER_BOT))
     chatr &= ~BOT_SHARE;
@@ -327,12 +327,12 @@ char geticon(int idx)
   return '-';
 }
 
-void break_down_flags(char *string, struct flag_record *plus,
+void break_down_flags(const char *string, struct flag_record *plus,
 		      struct flag_record *minus)
 {
-  struct flag_record *which = plus;
-  int mode = 0;			/* 0 = glob, 1 = chan, 2 = bot */
-  int flags = plus->match;
+  struct flag_record	*which = plus;
+  int			 mode = 0;	/* 0 = glob, 1 = chan, 2 = bot */
+  int			 flags = plus->match;
 
   if (!(flags & FR_GLOBAL)) {
     if (flags & FR_BOT)
@@ -604,7 +604,7 @@ int flagrec_eq(struct flag_record *req, struct flag_record *have)
 }
 
 void set_user_flagrec(struct userrec *u, struct flag_record *fr,
-		      char *chname)
+		      const char *chname)
 {
   struct chanuserrec *cr = NULL;
   int oldflags = fr->match;
@@ -656,22 +656,19 @@ void set_user_flagrec(struct userrec *u, struct flag_record *fr,
 /* Always pass the dname (display name) to this function for chname <cybah>
  */
 void get_user_flagrec(struct userrec *u, struct flag_record *fr,
-		      char *chname)
+		      const char *chname)
 {
   struct chanuserrec *cr = NULL;
 
   if (!u) {
     fr->global = fr->udef_global = fr->chan = fr->udef_chan = fr->bot = 0;
-
     return;
   }
   if (fr->match & FR_GLOBAL) {
     fr->global = u->flags;
-
     fr->udef_global = u->flags_udef;
   } else {
     fr->global = 0;
-
     fr->udef_global = 0;
   }
   if (fr->match & FR_BOT) {

@@ -4,7 +4,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.38 2000/08/18 00:25:09 fabian Exp $
+ * $Id: modules.c,v 1.42 2000/10/27 19:32:41 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -334,7 +334,7 @@ Function global_table[] =
   (Function) admin,		 /* char *				*/
   (Function) userfile,		 /* char *				*/
   (Function) ver,		 /* char *				*/
-     /* 120 - 123 */
+  /* 120 - 123 */
   (Function) notify_new,	 /* char *				*/
   (Function) helpdir,		 /* char *				*/
   (Function) version,		 /* char *				*/
@@ -520,6 +520,12 @@ Function global_table[] =
   /* 260 - 263 */
   (Function) & party,		/* party_t *				*/
   (Function) open_address_listen,
+  (Function) str_escape,
+  (Function) strchr_unescape,
+  /* 264 - 267 */
+  (Function) str_unescape,
+  (Function) egg_strcatn,
+  (Function) clear_chanlist_member
 };
 
 void init_modules(void)
@@ -869,27 +875,36 @@ int module_undepend(char *name1)
   return ok;
 }
 
-void *mod_malloc(int size, char *modname, char *filename, int line)
+void *mod_malloc(int size, const char *modname, const char *filename, int line)
 {
+#ifdef DEBUG_MEM
   char x[100], *p;
 
   p = strrchr(filename, '/');
   sprintf(x, "%s:%s", modname, p ? p + 1 : filename);
   x[19] = 0;
   return n_malloc(size, x, line);
+#else
+  return nmalloc(size);
+#endif
 }
 
-void *mod_realloc(void *ptr, int size, char *modname, char *filename, int line)
+void *mod_realloc(void *ptr, int size, const char *modname,
+		  const char *filename, int line)
 {
+#ifdef DEBUG_MEM
   char x[100], *p;
 
   p = strrchr(filename, '/');
   sprintf(x, "%s:%s", modname, p ? p + 1 : filename);
   x[19] = 0;
   return n_realloc(ptr, size, x, line);
+#else
+  return nrealloc(ptr, size);
+#endif
 }
 
-void mod_free(void *ptr, char *modname, char *filename, int line)
+void mod_free(void *ptr, const char *modname, const char *filename, int line)
 {
   char x[100], *p;
 
