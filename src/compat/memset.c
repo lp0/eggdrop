@@ -1,11 +1,11 @@
 /*
  * memset.c -- provides memset() if necessary.
  *
- * $Id: memset.c,v 1.8 2006-03-28 02:35:50 wcc Exp $
+ * $Id: memset.c,v 1.10 2008-02-16 21:41:05 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 2000 - 2006 Eggheads Development Team
+ * Copyright (C) 2000 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

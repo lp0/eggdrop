@@ -1,4 +1,4 @@
-$Id: UPDATES1.6,v 1.630 2006-07-09 22:14:07 wcc Exp $
+$Id: UPDATES1.6,v 1.642 2008-02-18 22:25:33 guppy Exp $
 
 Eggdrop Changes (since v1.6.0)
     _____________________________________________________________________
@@ -11,13 +11,51 @@ Eggdrop Changes (since v1.6.0)
     ftp://ftp.eggheads.org/pub/eggdrop/UPDATES/
 
 
-  1.6.18 (09 July 2006)
-    * Look for Tcl in /lib64 and /usr/lib64.
+  1.6.19 (18 April 2008):
+    - Update the recommended TCL version to 8.5
+    * Patch by: guppy
+
+    - Updated Copyright dates
+    - added [sL] and thommey to the AUTHORS file
+    * Patch by: guppy
+
+    - load blowfish by default
+    * Patch by: guppy
+
+    - added a TCL to handle the PONG :<cookie> junk on some EFnet servers
+    * Patch by: [sL], guppy
+
+    - add a simple TCL to handle the PASS <numbers> junk on some Undernet
+      servers
+    * Patch by: guppy
+
+    - add support for chanmode +T
+    * Patch by: Thomas "thommey" Sader
+
+    - CTCP parsing was broken by the servmsg.c buffer overflow patch
+    * Patch by: Thomas "thommey" Sader
+
+    - Fixed a couple of typos in the FEATURES file.
+    * Patch by: Tomas Szaniszlo
+
+    - Fixed two buffer overflows in servmsg.c (CVE-2007-2807).
+    * Found by: Bow Sineath - Patch by: Nico Golde / Wcc
+
+    - Fixed compatibility problems with certain time_t implementations.
+    * Found by: various - Patch by: Tothwolf
+
+    - Complete raw traffic wasn't getting logged in some cases; only the raw
+      command itself was. Fixed.
+    * Patch by: mrBuG
+
+
+  1.6.18 (09 July 2006):
+    - Look for Tcl in /lib64 and /usr/lib64.
     * Patch by: Kuja
 
     + RC1 released on April 3rd, 2006.
 
-    * Fixed a type conversion problem in snprintf.c causing Eggdrop to not
+    - Fixed a type conversion problem in snprintf.c causing Eggdrop to not
       compile on OSF1.
     * Found by: Joker - Patch by: Wcc
 

@@ -5,11 +5,11 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.118 2006-03-28 02:35:50 wcc Exp $
+ * $Id: main.c,v 1.121 2008-02-16 21:41:03 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999 - 2006 Eggheads Development Team
+ * Copyright (C) 1999 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -90,7 +90,7 @@ time_t now;
  * modified versions of this bot.
  */
 
-char egg_version[1024] = "1.6.18";
+char egg_version[1024] = "1.6.19";
 int egg_numver = 1061800;
 
 char notify_new[121] = "";      /* Person to send a note to for new users */
@@ -734,7 +734,7 @@ int main(int argc, char **argv)
   /* Version info! */
   egg_snprintf(ver, sizeof ver, "eggdrop v%s", egg_version);
   egg_snprintf(version, sizeof version,
-               "Eggdrop v%s (C) 1997 Robey Pointer (C) 2006 Eggheads",
+               "Eggdrop v%s (C) 1997 Robey Pointer (C) 2008 Eggheads",
                egg_version);
   /* Now add on the patchlevel (for Tcl) */
   sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);

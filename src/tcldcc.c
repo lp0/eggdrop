@@ -2,11 +2,11 @@
  * tcldcc.c -- handles:
  *   Tcl stubs for the dcc commands
  *
- * $Id: tcldcc.c,v 1.57 2006-03-28 02:35:50 wcc Exp $
+ * $Id: tcldcc.c,v 1.61 2008-02-16 21:41:04 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999 - 2006 Eggheads Development Team
+ * Copyright (C) 1999 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -613,6 +613,7 @@ static int tcl_dcclist STDVAR
 {
   int i;
   char *p, idxstr[10], timestamp[11], other[160];
+  long tv;
   EGG_CONST char *list[6];
 
   BADARGS(1, 2, " ?type?");
@@ -621,7 +622,8 @@ static int tcl_dcclist STDVAR
     if (argc == 1 || ((argc == 2) && (dcc[i].type &&
         !egg_strcasecmp(dcc[i].type->name, argv[1])))) {
       egg_snprintf(idxstr, sizeof idxstr, "%ld", dcc[i].sock);
-      egg_snprintf(timestamp, sizeof timestamp, "%ld", dcc[i].timeval);
+      tv = dcc[i].timeval;
+      egg_snprintf(timestamp, sizeof timestamp, "%ld", tv);
       if (dcc[i].type && dcc[i].type->display)
         dcc[i].type->display(i, other);
       else {
@@ -647,6 +649,7 @@ static int tcl_whom STDVAR
 {
   int chan, i;
   char c[2], idle[11], work[20], *p;
+  long tv = 0;
   EGG_CONST char *list[7];
 
   BADARGS(2, 2, " chan");
@@ -675,7 +678,8 @@ static int tcl_whom STDVAR
       if (dcc[i].u.chat->channel == chan || chan == -1) {
         c[0] = geticon(i);
         c[1] = 0;
-        egg_snprintf(idle, sizeof idle, "%li", (now - dcc[i].timeval) / 60);
+        tv = (now - dcc[i].timeval) / 60;
+        egg_snprintf(idle, sizeof idle, "%li", tv);
         list[0] = dcc[i].nick;
         list[1] = botnetnick;
         list[2] = dcc[i].host;
@@ -697,8 +701,10 @@ static int tcl_whom STDVAR
       c[1] = 0;
       if (party[i].timer == 0L)
         strcpy(idle, "0");
-      else
-        egg_snprintf(idle, sizeof idle, "%li", (now - party[i].timer) / 60);
+      else {
+        tv = (now - party[i].timer) / 60;
+        egg_snprintf(idle, sizeof idle, "%li", tv);
+      }
       list[0] = party[i].nick;
       list[1] = party[i].bot;
       list[2] = party[i].from ? party[i].from : "";

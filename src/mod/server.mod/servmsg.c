@@ -1,11 +1,11 @@
 /*
  * servmsg.c -- part of server.mod
  *
- * $Id: servmsg.c,v 1.91 2006-03-28 02:35:51 wcc Exp $
+ * $Id: servmsg.c,v 1.95 2008-02-16 21:41:10 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999 - 2006 Eggheads Development Team
+ * Copyright (C) 1999 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -461,7 +461,7 @@ static int gotmsg(char *from, char *msg)
   to = newsplit(&msg);
   fixcolon(msg);
   /* Only check if flood-ctcp is active */
-  strcpy(uhost, from);
+  strncpyz(uhost, from, sizeof(buf));
   nick = splitnick(&uhost);
   if (flud_ctcp_thr && detect_avalanche(msg)) {
     if (!ignoring) {
@@ -471,7 +471,7 @@ static int gotmsg(char *from, char *msg)
         p++;
       else
         p = uhost;
-      simple_sprintf(ctcpbuf, "*!*@%s", p);
+      egg_snprintf(ctcpbuf, sizeof(ctcpbuf), "*!*@%s", p);
       addignore(ctcpbuf, botnetnick, "ctcp avalanche",
                 now + (60 * ignore_time));
     }
@@ -486,8 +486,12 @@ static int gotmsg(char *from, char *msg)
       p++;
     if (*p == 1) {
       *p = 0;
-      ctcp = strcpy(ctcpbuf, p1);
-      strcpy(p1 - 1, p + 1);
+      strncpyz(ctcpbuf, p1, sizeof(ctcpbuf));
+      ctcp = ctcpbuf;
+      /* copy the part after the second : in front of it after
+       * the first :, this is temporary copied to ctcpbuf */
+      strncpy(p1 - 1, p + 1, strlen(ctcpbuf) - 1);
+
       if (!ignoring)
         detect_flood(nick, uhost, from,
                      strncmp(ctcp, "ACTION ", 7) ? FLOOD_CTCP : FLOOD_PRIVMSG);

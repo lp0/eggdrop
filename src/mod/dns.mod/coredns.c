@@ -5,10 +5,10 @@
  *
  * Modified/written by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: coredns.c,v 1.30 2006-03-28 02:35:51 wcc Exp $
+ * $Id: coredns.c,v 1.32 2008-02-16 21:41:08 guppy Exp $
  */
 /*
- * Portions Copyright (C) 1999 - 2006 Eggheads Development Team
+ * Portions Copyright (C) 1999 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

@@ -4,11 +4,11 @@
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  *
- * $Id: mode.c,v 1.80 2006-03-28 02:35:51 wcc Exp $
+ * $Id: mode.c,v 1.83 2008-02-16 21:41:09 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999 - 2006 Eggheads Development Team
+ * Copyright (C) 1999 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1048,6 +1048,11 @@ static int gotmode(char *from, char *origmsg)
           break;
         case 'N':
           todo = CHANNONOTC;
+          if (!nick[0] && bounce_modes)
+            reversing = 1;
+          break;
+        case 'T':
+          todo = CHANNOAMSG;
           if (!nick[0] && bounce_modes)
             reversing = 1;
           break;

@@ -3,11 +3,11 @@
  *   stuff common to chan.c and mode.c
  *   users.h needs to be loaded too
  *
- * $Id: chan.h,v 1.42 2006-03-28 02:35:49 wcc Exp $
+ * $Id: chan.h,v 1.45 2008-02-16 21:41:03 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999 - 2006 Eggheads Development Team
+ * Copyright (C) 1999 - 2008 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -149,6 +149,7 @@ struct chan_t {
 #define CHANSTRIP  0x10000 /* u - QuakeNet's asuka     */
 #define CHANNONOTC 0x20000 /* N - QuakeNet's asuka     */
 #define CHANINVIS  0x40000 /* d - QuakeNet's asuka     */
+#define CHANNOAMSG 0x80000 /* T - QuakeNet's snircd    */
 
 struct chanset_t {
   struct chanset_t *next;
