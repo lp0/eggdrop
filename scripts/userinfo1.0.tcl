@@ -58,7 +58,7 @@ set userinfover "Userinfo v1.01"
 
 # This script is NOT for pre-1.3.0 versions.
 
-if {![info exists numversion] || $numversion < 01030000} {
+if {![info exists numversion] || ($numversion < 1030000)} {
   putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
   return 0
 }
@@ -95,7 +95,7 @@ foreach field [split ${userinfo-fields}] {
 # This is the `/msg <info>' procedure
 
 proc msg_setuserinfo {nick uhost hand arg} {
-  global lastbind
+  global lastbind quiet-reject
 
   set userinfo [string toupper $lastbind]
 
@@ -126,9 +126,9 @@ proc msg_setuserinfo {nick uhost hand arg} {
          }
       }
    } else {
-      if (quiet-reject != 1) {
+      if {${quiet-reject} != 1} {
         putserv 
-          "NOTICE $nick :You must be a registered user to use this feature."
+          "NOTICE $nick :Ymust be a registered user to use this feature."
       }
    }
    return 1

@@ -591,19 +591,21 @@ struct user_entry * ue;
 struct xtra_key * xk;
 
    urec = get_user_by_handle(userlist, hand);
-   ue = find_user_entry(&USERENTRY_XTRA,urec);
-
-   if (ue) 
-     for (xk = ue->u.extra; xk; xk=xk->next) 
+   if (urec) {
+      ue = find_user_entry(&USERENTRY_XTRA,urec);
+      
+      if (ue) 
+	for (xk = ue->u.extra; xk; xk=xk->next) 
        if (xk->key && !strcasecmp(xk->key,field)) 
-	 if (xk->data[0] == '{' && xk->data[strlen(xk->data)-1] == '}'
-	     && strlen(xk->data) > 2) {
-	    strncpy(fixit, &xk->data[1], strlen(xk->data - 9));
-	    fixit[strlen(xk->data) - 2] = 0;
-	    return fixit;
-	 } else {
-	    return xk->data;
-	 }
+	    if (xk->data[0] == '{' && xk->data[strlen(xk->data)-1] == '}'
+		&& strlen(xk->data) > 2) {
+	       strncpy(fixit, &xk->data[1], strlen(xk->data - 9));
+	       fixit[strlen(xk->data) - 2] = 0;
+	       return fixit;
+	    } else {
+	       return xk->data;
+	    }
+   }
    return "";
 }
 

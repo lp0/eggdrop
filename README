@@ -310,7 +310,7 @@ before. PLEASE! READ IT!
 (8) MAILING LIST
 
     To subscribe, send email to:
-       majordomo@sodre.net
+       majordomo@tacorp.net
     In the body of the message, put "subscribe eggdrop".
 
     ### DO NOT SEND ROBEY EMAIL ABOUT EGGDROP ###
@@ -342,6 +342,16 @@ before. PLEASE! READ IT!
     I have seven sections written so far, and I'm not sure how helpful
     they are, but you can find them in "eggdrop.doc" for now.  Comments and
     suggestions would be welcome!
+
+
+(10) OBTAINING HELP
+    
+		There exists no uniform channel currently in existance to support
+		eggdrop.  At one time, such channels did exist, but they most
+		often esculate into a vanity channel, where no one is willing to help.
+		Maybe in the future, a bot will be put up in a channel to offer
+		answers to commonly asked questions, but until then, your best bet is
+		the eggdrop mailing list.
 
 
 This is the end.  Good.  You actually read all the way down here.  If you

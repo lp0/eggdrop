@@ -312,6 +312,8 @@ static void write_channels()
 	      channel_autovoice(chan) ? '+' : '-');
       fprintf(f, "%csecret ", 
 	      channel_secret(chan) ? '+' : '-');
+      fprintf(f, "%ccycle ", 
+	      channel_cycle(chan) ? '+' : '-');
       if (fprintf(f, "%c\n", channel_static(chan) ? ' ' : '}') == EOF) {
 	 putlog(LOG_MISC, "*", "ERROR writing channel file.");
 	 fclose(f);
@@ -467,6 +469,8 @@ static void channels_report (int idx, int details)
 	      i += my_strcpy(s + i, "dynamic ");
 	    if (channel_autovoice(chan))
 	      i += my_strcpy(s + i, "autovoice ");
+	    if (channel_cycle(chan))
+	      i += my_strcpy(s + i, "cycle ");
 	    dprintf(idx, "      Options: %s\n", s);
 	    if (chan->need_op[0])
 	      dprintf(idx, "      To get ops I do: %s\n", chan->need_op);

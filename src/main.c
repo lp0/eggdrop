@@ -45,6 +45,7 @@
 /* decide it's not bsd compatable.  oh well. */
 #include "chan.h"
 #include "modules.h"
+#include "tandem.h"
 
 #ifndef _POSIX_SOURCE
 /* solaris needs this */
@@ -76,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.5";
-int egg_numver = 1030500;
+char egg_version[1024] = "1.3.8";
+int egg_numver = 1030800;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -268,6 +269,7 @@ static void got_term (int z)
 {
    write_userfile(-1);
    if (die_on_sigterm) {
+      botnet_send_chat(-1,botnetnick,"ACK, I've been terminated!");
       fatal("TERMINATE SIGNAL -- SIGNING OFF", 0);
    } else {
       putlog(LOG_MISC, "*", "RECEIVED TERMINATE SIGNAL (IGNORING)");
@@ -734,7 +736,7 @@ int main (int argc, char ** argv)
 		       dcc[idx].type->name, dcc[idx].sock);
 	      idx = dcc_total;
 	   }
-      } else if (xx == -1) {	/* EOF from someone */
+      } else if ( xx == -1) {	/* EOF from someone */
 	 int idx;
 	 if ((i == STDOUT) && !backgrd)
 	    fatal("END OF FILE ON TERMINAL", 0);

@@ -507,13 +507,9 @@ static int botaddr_tcl_get (Tcl_Interp * interp, struct userrec * u,
    char number[20];
    context;
    sprintf(number," %d",bi->telnet_port);
-   context;
    Tcl_AppendResult(interp, bi->address, number, NULL);
-   context;
    sprintf(number," %d",bi->relay_port);
-   context;
    Tcl_AppendResult(interp, number, NULL);
-   context;
    return TCL_OK;
 }
 
@@ -521,14 +517,20 @@ static int botaddr_tcl_set (Tcl_Interp * irp, struct userrec * u,
 			    struct user_entry * e, int argc, char ** argv) {
    register struct bot_addr * bi = (struct bot_addr *)e->u.extra;
    BADARGS(4,6," handle type address ?telnetport ?relayport??");
-   nfree(bi->address);
-   bi->address = user_malloc(strlen(argv[3])+1);
-   strcpy(bi->address,argv[3]);
-   if (argc > 4) 
-     bi->telnet_port = atoi(argv[4]);
-   if (argc > 5)
-     bi->relay_port = atoi(argv[5]);
-   botaddr_set(u,e,bi);
+   if (u->flags & USER_BOT) {
+      /* silently ignore for users */
+      if (!bi)
+	bi = user_malloc(sizeof(struct bot_addr));
+      else if (bi->address)
+	nfree(bi->address);
+      bi->address = user_malloc(strlen(argv[3])+1);
+      strcpy(bi->address,argv[3]);
+      if (argc > 4) 
+	bi->telnet_port = atoi(argv[4]);
+      if (argc > 5)
+	bi->relay_port = atoi(argv[5]);
+      botaddr_set(u,e,bi);
+   }
    return TCL_OK;
 }
 
@@ -639,12 +641,21 @@ static int xtra_tcl_set (Tcl_Interp * irp, struct userrec * u,
       xtra_set(u,e,&xk);
       return TCL_OK;
    } else {
-      struct xtra_key * y;
-      y = user_malloc(sizeof(struct xtra_key));
-      y->key = user_malloc(strlen(argv[3])+1);
-      strcpy(y->key,argv[3]);
-      y->data = user_malloc(strlen(argv[4])+1);
-      strcpy(y->data,argv[4]);
+      struct xtra_key * y = user_malloc(sizeof(struct xtra_key));
+      int l = strlen(argv[3]), k = strlen(4);
+      
+      if (l > 500) {
+	 l = 500;
+	 k = 0;
+      }
+      y->key = user_malloc(l + 1);
+      strncpy(y->key,argv[3],l);
+      y->key[l] = 0;
+      if (k > 500 - l)
+	k = 500 - l;
+      y->data = user_malloc(k + 1);
+      strncpy(y->data, argv[4], k);
+      y->data[k] = 0;
       xtra_set(u,e,y);
    }
    return TCL_OK;
@@ -728,13 +739,21 @@ static int xtra_gotshare (struct userrec * u, struct user_entry * e,
    struct xtra_key * xk, *y = 0;
    
    if (x) {
+      int l = x - buf, k = strlen(++x);
+      
       xk = user_malloc(sizeof(struct xtra_key));
-      xk->key = user_malloc(x - buf + 1);
-      strncpy(xk->key,buf,x-buf);
-      xk->key[x-buf] = 0;
-      x++;
-      xk->data = user_malloc(strlen(x)+1);
-      strcpy(xk->data,x);
+      if (l > 500) {
+	 l = 500;
+	 k = 0;
+      }
+      xk->key = user_malloc(l + 1);
+      strncpy(xk->key, buf, l);
+      xk->key[l] = 0;
+      if (k > 500 - l)
+	k = 500;
+      xk->data = user_malloc(k + 1);
+      strncpy(xk->data, x, k);
+      xk->data[k] = 0;
       return xtra_set(u,e,xk);
    } else {
       for (xk = e->u.extra;xk;xk = xk->next) {
@@ -797,7 +816,7 @@ static int xtra_tcl_get (Tcl_Interp * irp, struct userrec * u,
 			 struct user_entry * e, int argc, char ** argv) {
    struct xtra_key * x;
    
-   BADARGS(3,4," handle XTRA");
+   BADARGS(3,4," handle XTRA ?key?");
    if (argc == 4) {
       for (x = e->u.extra;x;x=x->next) 
 	if (!strcasecmp(argv[3],x->key)) {
@@ -960,9 +979,15 @@ static int hosts_tcl_set (Tcl_Interp * irp, struct userrec * u,
    return TCL_OK;
 }
 
+static int hosts_gotshare (struct userrec * u, struct user_entry * e,
+			  char * buf, int idx) {
+   /* doh, try to be too clever and it bites your butt */
+   return 0;
+}
+
 struct user_entry_type USERENTRY_HOSTS = {
    0,
-   0,
+   hosts_gotshare,
    hosts_dupuser,
    hosts_null,
    hosts_null,

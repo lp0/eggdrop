@@ -1,3 +1,4 @@
+#!/bin/sh
 rm -f static.h
 for x in *.mod
 do

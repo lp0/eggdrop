@@ -32,30 +32,22 @@ extern time_t now;
 
 /***********************************************************************/
 
-static int tcl_countusers STDVAR
-{
-   char s[40];
-
+static int tcl_countusers STDVAR {
    context;
    BADARGS(1, 1, "");
-   sprintf(s, "%d", count_users(userlist));
-   Tcl_AppendResult(irp, s, NULL);
+   Tcl_AppendResult(irp, int_to_base10(count_users(userlist)), NULL);
    return TCL_OK;
 }
 
-static int tcl_validuser STDVAR
-{
+static int tcl_validuser STDVAR {
    context;
    BADARGS(2, 2, " handle");
-   if (get_user_by_handle(userlist,argv[1]))
-      Tcl_AppendResult(irp, "1", NULL);
-   else
-      Tcl_AppendResult(irp, "0", NULL);
+   Tcl_AppendResult(irp, get_user_by_handle(userlist,argv[1]) ? "1" : "0",
+		    NULL);
    return TCL_OK;
 }
 
-static int tcl_finduser STDVAR
-{
+static int tcl_finduser STDVAR {
    struct userrec * u;
    
    context;
@@ -65,22 +57,17 @@ static int tcl_finduser STDVAR
    return TCL_OK;
 }
 
-static int tcl_passwdOk STDVAR
-{
+static int tcl_passwdOk STDVAR {
    struct userrec * u;
    
    context;
    BADARGS(3, 3, " handle passwd");
-   u = get_user_by_handle(userlist,argv[1]);
-   if (u && u_pass_match(u,argv[2]))
-     Tcl_AppendResult(irp, "1", NULL);
-   else
-     Tcl_AppendResult(irp, "0", NULL);
+   Tcl_AppendResult(irp, ((u = get_user_by_handle(userlist,argv[1])) 
+			  && u_pass_match(u,argv[2])) ? "1" : "0", NULL);
    return TCL_OK;
 }
 
-static int tcl_chattr STDVAR
-{
+static int tcl_chattr STDVAR {
    char * chan,*chg,work[100];
    struct flag_record pls,mns,user;
    struct userrec * u;
@@ -136,8 +123,7 @@ static int tcl_chattr STDVAR
    return TCL_OK;
 }
 
-static int tcl_botattr STDVAR
-{
+static int tcl_botattr STDVAR {
    char * chan,*chg,work[100];
    struct flag_record pls,mns,user;
    struct userrec * u;
@@ -190,8 +176,7 @@ static int tcl_botattr STDVAR
    return TCL_OK;
 }
 
-static int tcl_matchattr STDVAR
-{
+static int tcl_matchattr STDVAR {
    struct userrec * u;
    struct flag_record plus,minus,user;
    int ok = 0,f;
@@ -220,78 +205,79 @@ static int tcl_matchattr STDVAR
    return TCL_OK;
 }
 
-static int tcl_adduser STDVAR
-{
+static int tcl_adduser STDVAR {
    context;
    BADARGS(3, 3, " handle hostmask");
    if (strlen(argv[1]) > HANDLEN)
       argv[1][HANDLEN] = 0;
-   if (get_user_by_handle(userlist,argv[1])) {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
+   if ((argv[1][0] == '*') || get_user_by_handle(userlist,argv[1]))
+     Tcl_AppendResult(irp, "0", NULL);
+   else {
+      userlist = adduser(userlist, argv[1], argv[2], "-", default_flags);
+      Tcl_AppendResult(irp, "1", NULL);
    }
-   if (argv[1][0] == '*') {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
-   }
-   userlist = adduser(userlist, argv[1], argv[2], "-", default_flags);
-   Tcl_AppendResult(irp, "1", NULL);
    return TCL_OK;
 }
 
-static int tcl_addbot STDVAR
-{
+static int tcl_addbot STDVAR {
+   struct bot_addr * bi;
+   char * p, *q;
    context;
    BADARGS(3, 3, " handle address");
    if (strlen(argv[1]) > HANDLEN)
       argv[1][HANDLEN] = 0;
-   if (get_user_by_handle(userlist,argv[1])) {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
+   if (get_user_by_handle(userlist,argv[1])) 
+     Tcl_AppendResult(irp, "0", NULL);
+   else if (argv[1][0] == '*') 
+     Tcl_AppendResult(irp, "0", NULL);
+   else {
+      userlist = adduser(userlist, argv[1], "none", "-", USER_BOT);
+      bi = user_malloc(sizeof(struct bot_addr));
+      q = strchr(argv[2],':');
+      if (!q) {
+	 bi->address = user_malloc(strlen(argv[2])+1);
+	 strcpy(bi->address,argv[2]);
+	 bi->telnet_port = 3333;
+	 bi->relay_port = 3333;
+      } else {
+	 bi->address = user_malloc(q - argv[2] + 1);
+	 strncpy(bi->address,argv[2],q - argv[2]);
+	 bi->address[q-argv[2]] = 0;
+	 p = q+1;
+	 bi->telnet_port = atoi(p);
+	 q = strchr(p, '/');
+	 if (!q) 
+	   bi->relay_port = bi->telnet_port;
+	 else 
+	   bi->relay_port = atoi(q+1);
+      }
+      set_user(&USERENTRY_BOTADDR,get_user_by_handle(userlist,argv[1]),bi);
+      Tcl_AppendResult(irp, "1", NULL);
    }
-   if (argv[1][0] == '*') {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
-   }
-   userlist = adduser(userlist, argv[1], "none", "-", USER_BOT);
-   set_user(&USERENTRY_INFO,get_user_by_handle(userlist,argv[1]),argv[2]);
-   Tcl_AppendResult(irp, "1", NULL);
    return TCL_OK;
 }
 
-static int tcl_deluser STDVAR
-{
-   char s[10];
-
+static int tcl_deluser STDVAR {
    context;
    BADARGS(2, 2, " handle");
-   if (argv[1][0] == '*') {
-      Tcl_AppendResult(irp, "0", NULL);
-      return TCL_OK;
-   }
-   sprintf(s, "%d", deluser(argv[1]));
-   Tcl_AppendResult(irp, s, NULL);
+   Tcl_AppendResult (irp, (argv[1][0] == '*') ? "0" :
+		     int_to_base10(deluser(argv[1])), NULL);
    return TCL_OK;
 }
 
-static int tcl_delhost STDVAR
-{
+static int tcl_delhost STDVAR {
    context;
    BADARGS(3, 3, " handle hostmask");
    if ((!get_user_by_handle(userlist,argv[1])) || (argv[1][0] == '*')) {
       Tcl_AppendResult(irp, "non-existent user", NULL);
       return TCL_ERROR;
-   }
-   if (delhost_by_handle(argv[1], argv[2])) {
-      Tcl_AppendResult(irp, "1", NULL);
-      return TCL_OK;
-   }
-   Tcl_AppendResult(irp, "0", NULL);
+   } 
+   Tcl_AppendResult(irp, delhost_by_handle(argv[1], argv[2]) ? "1" : "0",
+		    NULL);
    return TCL_OK;
 }
 
-static int tcl_userlist STDVAR
-{
+static int tcl_userlist STDVAR {
    struct userrec *u = userlist;
    struct flag_record user,plus,minus;
    int ok = 1, f = 0;
@@ -325,22 +311,19 @@ static int tcl_userlist STDVAR
    return TCL_OK;
 }
 
-static int tcl_save STDVAR
-{
+static int tcl_save STDVAR {
    context;
    write_userfile(-1);
    return TCL_OK;
 }
 
-static int tcl_reload STDVAR
-{
+static int tcl_reload STDVAR {
    context;
    reload();
    return TCL_OK;
 }
 
-static int tcl_chnick STDVAR
-{
+static int tcl_chnick STDVAR {
    struct userrec * u;
    char hand[HANDLEN+1];
    int x = 1, i;
@@ -367,16 +350,13 @@ static int tcl_chnick STDVAR
       else if (hand[0] == '*')
 	x = 0;
    }
-   if (x) {
-      x = change_handle(u, hand);
-   }
-   sprintf(hand, "%d", x);
-   Tcl_AppendResult(irp, hand, NULL);
+   if (x) 
+     x = change_handle(u, hand);
+   Tcl_AppendResult(irp, x ? "1" : "0", NULL);
    return TCL_OK;
 }
 
-static int tcl_getting_users STDVAR
-{
+static int tcl_getting_users STDVAR {
    int i;
 
    context;
@@ -387,26 +367,19 @@ static int tcl_getting_users STDVAR
 	 Tcl_AppendResult(irp, "1", NULL);
 	 return TCL_OK;
       }
-   } Tcl_AppendResult(irp, "0", NULL);
+   }
+   Tcl_AppendResult(irp, "0", NULL);
    return TCL_OK;
 }
 
-static int tcl_isignore STDVAR
-{
-   int x;
-
+static int tcl_isignore STDVAR {
    context;
    BADARGS(2, 2, " nick!user@host");
-   x = match_ignore(argv[1]);
-   if (x)
-       Tcl_AppendResult(irp, "1", NULL);
-   else
-       Tcl_AppendResult(irp, "0", NULL);
-    return TCL_OK;
+   Tcl_AppendResult(irp, match_ignore(argv[1]) ? "1" : "0", NULL);
+   return TCL_OK;
 }
 
-static int tcl_newignore STDVAR
-{
+static int tcl_newignore STDVAR {
    time_t expire_time;
    char ign[UHOSTLEN], cmt[66], from[HANDLEN+1];
    
@@ -430,23 +403,15 @@ static int tcl_newignore STDVAR
    return TCL_OK;
 }
 
-static int tcl_killignore STDVAR
-{
-   int x;
-
+static int tcl_killignore STDVAR {
    context;
    BADARGS(2, 2, " hostmask");
-   x = delignore(argv[1]);
-   if (x)
-       Tcl_AppendResult(irp, "1", NULL);
-   else
-       Tcl_AppendResult(irp, "0", NULL);
-    return TCL_OK;
+   Tcl_AppendResult(irp,  delignore(argv[1]) ? "1" : "0", NULL);
+   return TCL_OK;
 }
 
 /* { hostmask note expire-time create-time creator } */
-static int tcl_ignorelist STDVAR
-{
+static int tcl_ignorelist STDVAR {
    struct igrec * i;
    char ts[21], ts1[21], *list[5], *p;
    
@@ -467,8 +432,7 @@ static int tcl_ignorelist STDVAR
    return TCL_OK;
 }
 
-static int tcl_getuser STDVAR 
-{
+static int tcl_getuser STDVAR  {
    struct user_entry_type * et;
    struct userrec * u;
    struct user_entry * e;
@@ -495,8 +459,7 @@ static int tcl_getuser STDVAR
 }
 
 
-static int tcl_setuser STDVAR 
-{
+static int tcl_setuser STDVAR {
    struct user_entry_type * et;
    struct userrec * u;
    struct user_entry * e;

@@ -20,8 +20,7 @@ extern int allow_dk_cmds;
 /* allow users to set their console +r */
 int use_console_r = 0;
 
-int logmodes (char * s)
-{
+int logmodes (char * s) {
    int i;
    int res = 0;
    for (i = 0; i < strlen(s); i++)
@@ -118,8 +117,7 @@ int logmodes (char * s)
    return res;
 }
 
-char *masktype (int x)
-{
+char *masktype (int x) {
    static char s[20];
    char *p = s;
    if (x & LOG_MSGS)
@@ -168,12 +166,13 @@ char *masktype (int x)
       *p++ = '7';
    if (x & LOG_LEV8)
       *p++ = '8';
+   if (p == s)
+     *p++ = '-';
    *p = 0;
    return s;
 }
 
-char *maskname (int x)
-{
+char *maskname (int x) {
    static char s[161];
    int i = 0;
    
@@ -232,12 +231,10 @@ char *maskname (int x)
 }
 
 /* some flags are mutually exclusive -- this roots them out */
-int sanity_check(int atr)
-{
-   if (atr & USER_BOT) {
-      if (atr & (USER_PARTY | USER_MASTER | USER_COMMON | USER_OWNER))
-	 atr &= ~(USER_PARTY | USER_MASTER | USER_COMMON | USER_OWNER);
-   }
+int sanity_check(int atr) {
+   if ((atr & USER_BOT) 
+       && (atr & (USER_PARTY | USER_MASTER | USER_COMMON | USER_OWNER)))
+     atr &= ~(USER_PARTY | USER_MASTER | USER_COMMON | USER_OWNER);
    if ((atr & USER_OP) && (atr & USER_DEOP))
      atr &= ~(USER_OP | USER_DEOP);
    if ((atr & USER_VOICE) && (atr & USER_QUIET))
@@ -258,8 +255,7 @@ int sanity_check(int atr)
 }
 
 /* sanity check on channel attributes */
-int chan_sanity_check(int chatr, int atr)
-{
+int chan_sanity_check(int chatr, int atr) {
    if ((chatr & USER_OP) && (chatr & USER_DEOP))
       chatr &= ~(USER_OP | USER_DEOP);
    if ((chatr & USER_VOICE) && (chatr & USER_QUIET))
@@ -279,8 +275,7 @@ int chan_sanity_check(int chatr, int atr)
 /* get icon symbol for a user (depending on access level) */
 /* (*)owner on any channel  (+)master on any channel (%) botnet master */
 /* (@)op on any channel  (-)other  */
-char geticon (int idx)
-{
+char geticon (int idx) {
    struct flag_record fr = {FR_GLOBAL|FR_CHAN|FR_ANYWH,0,0,0,0,0};
    
    if (!dcc[idx].user)
@@ -481,15 +476,15 @@ int build_flags (char * string, struct flag_record * plus,
 }
 
 int flagrec_ok (struct flag_record * req,
-		struct flag_record * have)
-{
+		struct flag_record * have) {
    if (req->match & FR_AND) {
       return flagrec_eq(req,have);
    } else if (req->match & FR_OR) {
       int hav = have->global;
 
       /* exception 1 - global +d/+k cant use -|-, unless they are +p */
-      if (!req->chan && !req->global) {
+      if (!req->chan && !req->global && !req->udef_global && 
+	  !req->udef_chan) {
 	 if (!allow_dk_cmds) {
 	    if (glob_party(*have))
 	      return 1;
@@ -517,8 +512,7 @@ int flagrec_ok (struct flag_record * req,
    return 0; /* fr0k3 binding, dont pass it */
 }
 
-int flagrec_eq (struct flag_record * req, struct flag_record * have)
-{
+int flagrec_eq (struct flag_record * req, struct flag_record * have) {
    if (req->match & FR_AND) {
       if (req->match & FR_GLOBAL) {
 	 if ((req->global & have->global) != req->global)
@@ -745,8 +739,11 @@ static int botfl_tcl_set (Tcl_Interp * irp, struct userrec * u,
    struct flag_record fr = {FR_BOT,0,0,0,0,0};
    
    BADARGS(4,4," handle BOTFL flags");
-   break_down_flags(argv[3],&fr,NULL);
-   def_set(u,e,(void *)fr.bot);
+   if (u->flags & USER_BOT) {
+      /* silently ignore for users */
+      break_down_flags(argv[3],&fr,NULL);
+      def_set(u,e,(void *)fr.bot);
+   }
    return TCL_OK;
 }
 

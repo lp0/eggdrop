@@ -354,7 +354,7 @@ static void eof_dcc_send (int idx)
 	       dcc[idx].u.xfer->filename, tempdir);
       else {
 	 /* add to file database */
-	 module_entry *fs = module_find("filesys", 1, 1);
+	 module_entry *fs = module_find("filesys", 0, 0);
 	 if (fs != NULL) {
 	    Function f = fs->funcs[FILESYS_ADDFILE];
 	    f(dcc[idx].u.xfer->dir, dcc[idx].u.xfer->filename, hand);
@@ -476,7 +476,7 @@ static void dcc_get (int idx, char * buf, int len)
 	   ((me->funcs)[SHARE_DUMP_RESYNC])(y);
 	 xnick[0] = 0;
       } else {
-	 module_entry *fs = module_find("filesys", 1, 1);
+	 module_entry *fs = module_find("filesys", 0, 0);
 	 struct userrec * u = get_user_by_handle(userlist,
 						 dcc[idx].u.xfer->from);
 	 

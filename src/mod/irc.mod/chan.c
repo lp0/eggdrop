@@ -198,13 +198,15 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
        case FLOOD_NOTICE:
        case FLOOD_CTCP:
 	 /* flooding chan! either by public or notice */
-	 putlog(LOG_MODES, chan->name, IRC_FLOODKICK, floodnick);
-	 dprintf(DP_MODE, "KICK %s %s :flood\n", chan->name, floodnick);
+	 if (me_op(chan)) {
+	    putlog(LOG_MODES, chan->name, IRC_FLOODKICK, floodnick);
+	    dprintf(DP_MODE, "KICK %s %s :flood\n", chan->name, floodnick);
+	 }
 	 return 1;	 
        case FLOOD_JOIN:
        case FLOOD_NICK:
 	 simple_sprintf(h, "*!*@%s", p);
-	 if (!isbanned(chan, h)) {
+	 if (!isbanned(chan, h) && me_op(chan)) {
 	    add_mode(chan, '-', 'o', from);
 	    add_mode(chan, '+', 'b', h);
 	    flush_mode(chan, QUICK);
@@ -215,7 +217,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	 putlog(LOG_MISC | LOG_JOIN, chan->name, IRC_FLOODIGNORE3, p);
 	 strcpy(ftype+4," flood");
 	 u_addban(chan, h, origbotname, ftype, now + (60 * ban_time),0);
-	 if (!channel_enforcebans(chan)) {
+	 if (!channel_enforcebans(chan) && me_op(chan)) {
 	    char s[UHOSTLEN];
 	    memberlist *m = chan->channel.member;
 	    
@@ -229,15 +231,19 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	 }
 	 return 1;
        case FLOOD_KICK:
-	 putlog(LOG_MODES, chan->name, "Kicking %s, for mass kick.", floodnick);
-	 dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, floodnick,
+	 if (me_op(chan)) {
+	    putlog(LOG_MODES, chan->name, "Kicking %s, for mass kick.", floodnick);
+	    dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, floodnick,
 					IRC_MASSKICK);
+	 }
 	 return 1;
        case FLOOD_DEOP:
-	 putlog(LOG_MODES, chan->name, 
-		CHAN_MASSDEOP, CHAN_MASSDEOP_ARGS);
-	 dprintf(DP_MODE, "KICK %s %s :%s\n",
-		 chan->name, floodnick, CHAN_MASSDEOP_KICK);
+	 if (me_op(chan)) {
+	    putlog(LOG_MODES, chan->name, 
+		   CHAN_MASSDEOP, CHAN_MASSDEOP_ARGS);
+	    dprintf(DP_MODE, "KICK %s %s :%s\n",
+		    chan->name, floodnick, CHAN_MASSDEOP_KICK);
+	 }
 	 return 1;
       }
    }
@@ -579,8 +585,11 @@ static int got352or4 (struct chanset_t * chan, char * user, char * host,
    simple_sprintf(userhost, "%s!%s", nick, m->userhost);
                                                 /* Combine n!u@h */
    m->user = NULL;				/* No handle match (yet) */
-   if (strcasecmp(nick, botname) == 0)		/* Is it me? */
-     strcpy(botuserhost, m->userhost);		/* Yes, save my own userhost */
+   if (match_my_nick(nick)) {		/* Is it me? */
+      strcpy(botuserhost, m->userhost);		/* Yes, save my own userhost */
+      m->joined = now;                          /* set this to keep the whining
+						 * masses happy */
+   }
    waschanop = me_op(chan);			/* Am I opped here? */
    if (strchr(flags, '@') != NULL)		/* Flags say he's opped? */
      m->flags |= CHANOP;			/* Yes, so flag in my table */
@@ -1027,7 +1036,7 @@ static int gotjoin (char * from, char * chname)
 	    check_tcl_rejn(nick, uhost, u, chan->name);
 	    m->split = 0;
 	    m->last = now;
-	    m->flags = 0;		/* clean slate, let server refresh */
+	    m->flags = 0;	/* clean slate, let server refresh */
 	    m->user = u;
 	    set_handle_laston(chname, u, now);
 	    /* had ops before split, Im an op */
@@ -1061,7 +1070,7 @@ static int gotjoin (char * from, char * chname)
 	      do_embedded_mode(chan, nick, m, newmode);
 	    if (match_my_nick(nick)) {
 	       /* it was me joining! */
-	       if (newmode)
+	      if (newmode)
 		 putlog(LOG_JOIN | LOG_MISC, chname,
 			"%s joined %s (with +%s).",
 			nick, chname, newmode);
@@ -1080,7 +1089,7 @@ static int gotjoin (char * from, char * chname)
 	       else
 		 putlog(LOG_JOIN, chname, 
 			"%s (%s) joined %s.", nick, uhost, chname);
-	       for (p = m->nick; *p; p++)
+	       if (me_op(chan)) for (p = m->nick; *p; p++)
 		 if (((unsigned char )*p) < 32) {
 		    dprintf(DP_MODE, "KICK %s %s :bogus username\n",
 			    chname, nick);
@@ -1217,11 +1226,13 @@ static int gotkick (char * from, char * msg)
 	     /* wasnt *me* kicking them ? */
 	     && !match_my_nick(whodid)
 	     /* not kicking themselves? */
-	     && strcasecmp(whodid,nick)) 
-			  dprintf(DP_MODE, "KICK %s %s :don't kick my friends, bud\n", chname,
-				  whodid);
-			putlog(LOG_MODES, chname, "%s kicked from %s by %s: %s", s1, chname,
-					 from, msg);
+	     && strcasecmp(whodid,nick) 
+	     /* and Im opped ? */
+             && me_op(chan))
+	   dprintf(DP_MODE, "KICK %s %s :don't kick my friends, bud\n", chname,
+		   whodid);
+	 putlog(LOG_MODES, chname, "%s kicked from %s by %s: %s", s1, chname,
+		from, msg);
       }
       /* kicked ME?!? the sods! */
       if (match_my_nick(nick)) {
@@ -1231,7 +1242,9 @@ static int gotkick (char * from, char * msg)
 	 /* revenge channel? */
 	 if (channel_revenge(chan) &&
 	     !(chan_friend(fr) || glob_friend(fr)))  {
-	    take_revenge(chan, from, "kicked me off the channel");
+	    char x[1024];
+	    simple_sprintf(x, "kicked %s off %s", botname, chan->name);
+	    take_revenge(chan, from, x);
 	    /* ^put the kicker on the deop list : revenge */
 	 }
       } else {
@@ -1365,7 +1378,8 @@ static int gotmsg (char * from, char * msg)
    /* only check if flood-ctcp is active */
    if (flud_ctcp_thr && detect_avalanche(msg)) {
       /* discard -- kick user if it was to the channel */
-      dprintf(DP_SERVER, "KICK %s %s :that was fun, let's do it again!\n",
+      if (me_op(chan)) 
+	dprintf(DP_SERVER, "KICK %s %s :that was fun, let's do it again!\n",
 	      realto, nick);
       if (!ignoring) {
 	 putlog(LOG_MODES, "*", "Avalanche from %s!%s - ignoring",
@@ -1427,9 +1441,9 @@ static int gotmsg (char * from, char * msg)
       if (!ignoring)
 	detect_chan_flood(nick, uhost, from, chan, FLOOD_PRIVMSG, NULL);
       if (!ignoring || trigger_on_ignore) {
-	 if (check_tcl_pub(nick, from, realto, msg))
+	 if (check_tcl_pub(nick, uhost, realto, msg))
 	   return 0;
-	 check_tcl_pubm(nick, from, realto, msg);
+	 check_tcl_pubm(nick, uhost, realto, msg);
       }
       if (!ignoring) {
 	 if (to[0] == '@') 
@@ -1462,7 +1476,7 @@ static int gotnotice (char * from, char * msg)
    nick = splitnick(&uhost);
    if (flud_ctcp_thr && detect_avalanche(msg)) {
       /* discard -- kick user if it was to the channel */
-      dprintf(DP_SERVER, "KICK %s %s :%s\n", 
+      if (me_op(chan)) dprintf(DP_SERVER, "KICK %s %s :%s\n", 
 	      realto, nick, IRC_FUNKICK);
       if (!ignoring)
 	putlog(LOG_MODES, "*", "Avalanche from %s", from);

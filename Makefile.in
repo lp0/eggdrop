@@ -70,7 +70,7 @@ dist: clean
 
 eggdrop: modegg modules
 
-debugmem: memegg modules
+debugmem: memegg debmodules
 
 eggdrop.h:
 	@echo You do not have the eggdrop source!
@@ -94,9 +94,12 @@ GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS}'\
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
 DMAKE_MEM = ${MAKE} 'CC=${MOD_CC} -DEBUG_MEM' 'LD=${MOD_LD} -g' \
-'OBJS=${OBJS}' 'CFLAGS=${CFLAGS} -g' 'XREQ=${XREQ}' \
+'OBJS=${OBJS}' 'CFLAGS=-g ${CFLAGS}' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
+
+DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD} -g' \
+'STRIP=touch' 'CFLAGS=-g ${CFLAGS}'
 
 static: eggtest
 	@echo ""
@@ -120,7 +123,13 @@ modules:  modtest
 	@echo
 	@echo "modules made:"
 	@ls -la *.so
-  
+
+debmodules:  modtest
+	@cd src/mod;${DMAKE_SHLIB} modules
+	@echo
+	@echo "modules made:"
+	@ls -la *.so
+
 memegg:  modtest
 	@cd src;${DMAKE_MEM} eggdrop
 	@echo

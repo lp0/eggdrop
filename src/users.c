@@ -492,8 +492,15 @@ void tell_users_match (int idx, char * mtch, int start, int limit,
       break_down_flags(mtch,&pls,&mns);
       mns.match = pls.match ^ (FR_AND|FR_OR);
       if (!mns.global && !mns.udef_global && !mns.chan && !mns.udef_chan
-	  && !mns.bot)
-	nomns = 1;
+	  && !mns.bot) {
+	 nomns = 1;
+	 if (!pls.global && !pls.udef_global && !pls.chan && !pls.udef_chan
+	     && !pls.bot) {
+	    /* happy now BB you weenie :P */
+	    dprintf(idx,"Unknown flag specified for matching!!\n");
+	    return;
+	 }
+      }
       if (!chname || !chname[0])
 	chname = dcc[idx].u.chat->con_chan;
       flags = 1;
@@ -559,9 +566,8 @@ void tell_users_match (int idx, char * mtch, int start, int limit,
  */
 
 int noxtra = 0;
-int readuserfile (char * file, struct userrec ** ret, int private_owner)
-{
-   char *p, buf[181], lasthand[181], *attr, *pass, * code,s1[181],*s;
+int readuserfile (char * file, struct userrec ** ret, int private_owner) {
+   char *p, buf[512], lasthand[512], *attr, *pass, * code,s1[512],*s;
    FILE *f;
    struct userrec *bu, *u = NULL;
    struct chanset_t * cst = NULL;
@@ -596,7 +602,7 @@ int readuserfile (char * file, struct userrec ** ret, int private_owner)
    gban_total = 0;
    while (!feof(f)) {
       s = buf;
-      fgets(s, 180, f);
+      fgets(s, 511, f);
       if (!feof(f)) {
 	 if ((s[0] != '#') && (s[0] != ';') && (s[0])) {
 	    code = newsplit(&s);

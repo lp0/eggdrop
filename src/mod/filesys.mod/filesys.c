@@ -812,6 +812,7 @@ char *filesys_start (Function * global_funcs)
    init_server_ctcps(0);
    my_memcpy(&USERENTRY_DCCDIR,&USERENTRY_INFO,
 	      sizeof(struct user_entry_type) - sizeof(char *));
+   USERENTRY_DCCDIR.got_share = 0; /* we dont want it shared tho */
    add_entry_type ( &USERENTRY_DCCDIR );
    DCC_FILES_PASS.timeout_val = &password_timeout;
    cmd_loadlanguage(0,DP_LOG,"files.english");

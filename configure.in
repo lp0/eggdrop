@@ -86,7 +86,7 @@ DLOPEN_1=1
 case $system in
   Linux)
     CFLAGS="${CFLAGS} -Wall"
-    AC_MSG_RESULT(Linux! It's what all good llama's use)
+    AC_MSG_RESULT(Linux! The choice of the GNU generation)
     SHLIB_LD="${CC} -shared -nostartfiles"
     BEL_MOD_LD="${CC}"
     AC_DEFINE(MODULES_OK)
@@ -353,7 +353,6 @@ fi
 if test "$TCLLIB" = ""; then
   echo ""
   echo "I can't find Tcl on this system."
-  echo "*** Note: tcl8.0 thru b2 is --NOT-- useable...  Eggdrop WILL crash."
   echo ""
   echo "Eggdrop now requires Tcl to compile.  If you already have Tcl"
   echo "installed on this system, and I just wasn't looking in the right"
@@ -376,7 +375,7 @@ else
       if test $tclver = 0; then
         tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
         if test $tclver = 1; then
-	  AC_MSG_RESULT(8.0 found -- USE AT YOUR OWN RISK ********)
+	  AC_MSG_RESULT(8.0 found -- We think this works now)
           need_dl=1
         else
           AC_MSG_RESULT(hmm... unknown version)

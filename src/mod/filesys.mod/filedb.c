@@ -191,8 +191,7 @@ static int convert_old_db (char * path, char * newfiledb)
    return 1;
 }
 
-static void filedb_update (char * path, FILE * f, int sort)
-{
+static void filedb_update (char * path, FILE * f, int sort) {
    struct dirent *dd;
    DIR *dir;
    filedb fdb[2];
@@ -339,16 +338,14 @@ static void filedb_update (char * path, FILE * f, int sort)
 
 static int count = 0;
 
-static FILE *filedb_open (char * path, int sort)
-{
+static FILE *filedb_open (char * path, int sort) {
    char s[DIRLEN], npath[DIRLEN];
    FILE *f;
    filedb fdb;
    struct stat st;
    
-   if (count >= 2) {
-      putlog(LOG_MISC, "*", "(@) warning: %d open filedb's", count);
-   }
+   if (count >= 2) 
+     putlog(LOG_MISC, "*", "(@) warning: %d open filedb's", count);
    simple_sprintf(npath, "%s%s", dccdir, path);
    /* use alternate filename if requested */
    if (filedb_path[0]) {
@@ -398,16 +395,14 @@ static FILE *filedb_open (char * path, int sort)
    if (sort || ((now - fdb.timestamp) > (6 * 3600)) 
        || (fdb.timestamp < st.st_mtime) ||
        (fdb.timestamp < st.st_ctime)
-       || (fdb.version <= FILEVERSION_OLD)) {
-      /* file database isn't up-to-date! */
-      filedb_update(npath, f, sort);
-   }
+       || (fdb.version <= FILEVERSION_OLD)) 
+     /* file database isn't up-to-date! */
+     filedb_update(npath, f, sort & 1);
    count++;
    return f;
 }
 
-static void filedb_close (FILE * f)
-{
+static void filedb_close (FILE * f) {
    filedb_timestamp(f);
    fseek(f, 0L, SEEK_END);
    count--;
@@ -415,8 +410,7 @@ static void filedb_close (FILE * f)
    fclose(f);
 }
 
-static void filedb_add (FILE * f, char * filename, char * nick)
-{
+static void filedb_add (FILE * f, char * filename, char * nick) {
    long where;
    filedb fdb;
    

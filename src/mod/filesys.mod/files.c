@@ -54,18 +54,15 @@ static int too_many_filers()
 }
 
 /* someone uploaded a file -- add it */
-static void add_file (char * dir, char * file, char * nick)
-{
+static void add_file (char * dir, char * file, char * nick) {
    FILE *f;
    /* gave me a full pathname */
    /* only continue if the destination is within the visible file system */
-   if (strncmp(dccdir, dir, strlen(dccdir)) != 0)
-      return;
-   f = filedb_open(&dir[strlen(dccdir)],0);
-   if (f == NULL)
-      return;
-   filedb_add(f, file, nick);
-   filedb_close(f);
+   if (!strncmp(dccdir, dir, strlen(dccdir))
+       && (f = filedb_open(&dir[strlen(dccdir)],2))) {
+      filedb_add(f, file, nick);
+      filedb_close(f);
+   }
 }
 
 static int welcome_to_files (int idx)

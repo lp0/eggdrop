@@ -400,8 +400,7 @@ static int msg_who (char * nick, char * host, struct userrec * u, char * par)
    return 1;
 }
 
-static int msg_whois (char * nick, char * host, struct userrec * u, char * par)
-{
+static int msg_whois (char * nick, char * host, struct userrec * u, char * par) {
    char s[161], s1[81], * s2;
    int ok;
    struct chanset_t *chan;
@@ -431,7 +430,7 @@ static int msg_whois (char * nick, char * host, struct userrec * u, char * par)
 	    if (u2) {
 	       ok = 1;
 	       dprintf(DP_HELP, "NOTICE %s :[%s] AKA '%s':\n", nick, 
-		       par, u->handle);
+		       par, u2->handle);
 	    }
 	 }
 	 chan = chan->next;
@@ -803,8 +802,8 @@ static int msg_go (char * nick, char * host, struct userrec * u, char * par)
 	       ok = 1;
 	    }
 	 }
-	 chan = chan->next;
       }
+      chan = chan->next;
    }
    if (ok) {
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! GO", nick, host, u->handle);

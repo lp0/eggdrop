@@ -1,6 +1,59 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.8
+Foundby   Fixedby   What....
+          Beldin    kicks were not being logged all the time
+          Beldin    -host on yourself still got checked for permissions
+Daklop    Beldin    SEGV on +ban from a sharebot
+Daklop    Beldin    a bit more info on revenge taking helps sometimes
+Q         Kirk      extern CR when switching notes
+Toblerone Kirk      sillyness in filedb.c
+Melvan/Daklop Beldin console still not saving correctly (masktype changed)
+????????? Beldin    seen module getxtra was looking up null user
+????????? Beldin    xtra lines now have a 500 byte limit per key/data combo
+          Rufus     /msg go infinite loop
+
+1.3.7
+Foundby   Fixedby   What....
+toblerone Kirk      pub & pubm messages were being passed n!u@h not u@h
+Ernest B. Kirk      +/-cycle added
+Daklop    Beldin    lastons were back-the-front
+          Ernest B. buildstatic failure to execute bug
+Daklop    Beldin    glad I didnt release 1.3.6 public (no sharing at all :/)
+TheGhost  Beldin    channels should default to +cycle, and +/-cycle should
+                    only effect cycling
+          Kirk      .su fix
+	  
+1.3.6 (patch released for testing only)
+Foundby   Fixedby   What....
+tdmarti   Beldin    tcl_addbot was still using old bot address storage method
+tdmarti   Beldin    botaddr_tcl_set wasnt handling empty bot address info well
+          Beldin    sped up language idx lookup a little
+tdmarti   Beldin    failed .su wast changing back the .nick of dcc_
+          aXs       checks if bot is opped before sending some kicks/bans
+          Beldin    general cleanup of tclusers.c while I was in there
+BB        Beldin    .match +<unknown flag> will tell you that now :P
+deadgrrrl Beldin    filedb's were not being updated correctly when files were
+                    dcc sent, this was do to module version # mismatches, 
+		    several other cases of this found & fixed
+          Darkdruid new getops-2.0 
+wheely    Beldin    tcl_setchan wasnt broadcasting a part for localbot chans
+reaper    Beldin    dcc & pub binds were triggering always with udef flags
+Q         Beldin    /msg whois AKA was giving wrong user
+tdmarti?  Beldin    setuser botaddr & botfl could be used on users
+Warmage   Raistlin  fixed halfway broken support for + channels on dalnet
+                    this breaks several commands which will be fixed, and
+                    the bot also needs to know that the channel may be
+                    modeless
+Daklop    Beldin    irc module report chopped off some channels.
+Daklop    Beldin    sharing of channel info make sharebots go bewm
+      Daklop/Beldin laston should be copied from current data during a
+	            userfile download
+      Daklop/Beldin support for private-global, private-user sharebot variable
+Daklop    Beldin    unshared userents were still being set/processed in the 
+                    userfile
+		    
 1.3.5
 Foundby   Fixedby   What....
 mrbond    Beldin    remote boots were working

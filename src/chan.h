@@ -128,6 +128,7 @@ struct chanset_t {
 #define CHAN_REVENGE        0x0400    /* get revenge on bad people */
 #define CHAN_SECRET         0x0800    /* don't advertise channel on botnet */
 #define CHAN_AUTOVOICE      0x1000    /* dish out voice stuff automatically */
+#define CHAN_CYCLE	    0x2000    /* cycle the channel if possible */
 #define CHAN_ACTIVE          0x1000000    /* like i'm actually on the channel and
                                        * stuff */
 #define CHAN_PEND            0x2000000    /* just joined; waiting for end of 
@@ -162,6 +163,7 @@ struct chanset_t *findchan();
 #define channel_secret(chan) (chan->status & CHAN_SECRET)
 #define channel_shared(chan) (chan->status & CHAN_SHARED)
 #define channel_static(chan) (chan->status & CHAN_STATIC)
+#define channel_cycle(chan) (chan->status & CHAN_CYCLE)
 
 struct server_list {
    struct server_list * next;

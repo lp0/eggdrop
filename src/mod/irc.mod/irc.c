@@ -292,9 +292,8 @@ static void check_lonely_channel (struct chanset_t * chan)
    static int whined = 0;
    
    context;
-   if (channel_pending(chan))
-      return;
-   if (!channel_active(chan) || me_op(chan))
+   if (channel_pending(chan)
+       || !channel_active(chan) || me_op(chan))
      return;
    m = chan->channel.member;
    /* count non-split channel members */
@@ -303,11 +302,13 @@ static void check_lonely_channel (struct chanset_t * chan)
 	i++;
       m = m->next;
    }
-   if (i == 1) {
-      putlog(LOG_MISC, "*", "Trying to cycle %s to regain ops.", chan->name);
-      dprintf(DP_MODE, "PART %s\n", chan->name);
-      dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
-      whined = 0;
+   if ((i == 1) && channel_cycle(chan)) {
+      if (chan->name[0] != '+') { /* Its pointless to cycle + chans for ops */
+		    putlog(LOG_MISC, "*", "Trying to cycle %s to regain ops.", chan->name);
+        dprintf(DP_MODE, "PART %s\n", chan->name);
+        dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
+        whined = 0;
+      }
    } else if (any_ops(chan)) {
       whined = 0;
       if (chan->need_op[0])
@@ -317,7 +318,12 @@ static void check_lonely_channel (struct chanset_t * chan)
       /* are there other bots?  make them LEAVE. */
       int ok = 1;
       if (!whined) {
-	 putlog(LOG_MISC, "*", "%s is active but has no ops :(", chan->name);
+	 if (chan->name[0] != '+') /* Once again, + is opless.
+				    * complaining about no ops when without
+				    * special help(services), we cant get
+				    * them - Raist
+				    */ 
+	   putlog(LOG_MISC, "*", "%s is active but has no ops :(", chan->name);
 	 whined = 1;
       }
       m = chan->channel.member;
@@ -625,8 +631,8 @@ static void irc_report (int idx, int details)
 	    dprintf(idx,"   %s\n",q);
 	    strcpy(q,"          ");
 	    k = 10;
-	 } else 
-	   k += my_strcpy(q+k,ch);
+	 }  
+	 k += my_strcpy(q+k,ch);
       }
    }
    if (k > 10) {

@@ -36,7 +36,7 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	 dprintf(idx, "That is a bogus ban!\n");
 	 return;
       }
-      if ((par[0] == '#') || (par[0] == '&')) 
+      if ((par[0] == '#') || (par[0] == '&') || (par[0] == '+')) 
 	chname = newsplit(&par);
       else
 	chname = 0;
@@ -109,7 +109,7 @@ static void cmd_mns_ban (struct userrec * u, int idx, char * par)
       return;
    }
    ban = newsplit(&par);
-   if ((par[0] == '#') || (par[0] == '&')) 
+   if ((par[0] == '#') || (par[0] == '&') || (par[0] == '+')) 
      chname = newsplit(&par);
    else
      chname = dcc[idx].u.chat->con_chan;
@@ -527,8 +527,7 @@ static void cmd_mns_chan (struct userrec * u, int idx, char * par)
      }
 }
 
-static void cmd_chaninfo (struct userrec * u, int idx, char * par)
-{
+static void cmd_chaninfo (struct userrec * u, int idx, char * par) {
    char *chname, work[512];
    struct chanset_t *chan;
    
@@ -546,122 +545,131 @@ static void cmd_chaninfo (struct userrec * u, int idx, char * par)
 	 return;
       }
    }
-   chan = findchan(chname);
-   if (!chan) {
+   if (!(chan = findchan(chname))) 
       dprintf(idx, "No such channel defined.\n");
-      return;
+   else {
+      dprintf(idx, "Settings for %s channel %s\n", 
+	      channel_static(chan) ? "static" : "dynamic", chname);
+      get_mode_protect(chan, work);
+      dprintf(idx, "Protect modes (chanmode): %s\n", work[0] ? work : "None");
+      if (chan->idle_kick)
+	dprintf(idx, "Idle Kick after (idle-kick): %d\n", chan->idle_kick);
+      else
+	dprintf(idx, "Idle Kick after (idle-kick): DONT!\n");
+      /* only bot owners can see/change these (they're TCL commands) */
+      if (u->flags & USER_OWNER) {
+	 if (chan->need_op[0])
+	   dprintf(idx, "To regain op's (need-op):\n%s\n", chan->need_op);
+	 if (chan->need_invite[0])
+	   dprintf(idx, "To get invite (need-invite):\n%s\n", chan->need_invite);
+	 if (chan->need_key[0])
+	   dprintf(idx, "To get key (need-key):\n%s\n", chan->need_key);
+	 if (chan->need_unban[0])
+	   dprintf(idx, "If Im banned (need-unban):\n%s\n", chan->need_unban);
+	 if (chan->need_limit[0])
+	   dprintf(idx, "When channel full (need-limit):\n%s\n", chan->need_limit);
+      }
+      dprintf(idx, "Other modes:\n");
+      dprintf(idx, "     %cclearbans  %cenforcebans  %cdynamicbans  %cuserbans\n",
+	      (chan->status & CHAN_CLEARBANS) ? '+' : '-',
+	      (chan->status & CHAN_ENFORCEBANS) ? '+' : '-',
+	      (chan->status & CHAN_DYNAMICBANS) ? '+' : '-',
+	      (chan->status & CHAN_NOUSERBANS) ? '-' : '+');
+      dprintf(idx, "     %cautoop     %cbitch        %cgreet        %cprotectops\n",
+	      (chan->status & CHAN_OPONJOIN) ? '+' : '-',
+	      (chan->status & CHAN_BITCH) ? '+' : '-',
+	      (chan->status & CHAN_GREET) ? '+' : '-',
+	      (chan->status & CHAN_PROTECTOPS) ? '+' : '-');
+      dprintf(idx, "     %cstatuslog  %cstopnethack  %crevenge      %csecret\n",
+	      (chan->status & CHAN_LOGSTATUS) ? '+' : '-',
+	      (chan->status & CHAN_STOPNETHACK) ? '+' : '-',
+	      (chan->status & CHAN_REVENGE) ? '+' : '-',
+	      (chan->status & CHAN_SECRET) ? '+' : '-');
+      dprintf(idx, "     %cshared     %cautovoice    %ccycle\n", 
+	      (chan->status & CHAN_SHARED) ? '+' : '-',
+	      channel_autovoice(chan) ? '+' : '-',
+	      channel_cycle(chan) ? '+' : '-');
+      dprintf(idx, "flood settings: chan ctcp join kick deop\n");
+      dprintf(idx, "number:          %3d  %3d  %3d  %3d  %3d\n",
+	      chan->flood_pub_thr, chan->flood_ctcp_thr, chan->flood_join_thr,
+	      chan->flood_kick_thr, chan->flood_deop_thr);
+      dprintf(idx, "time  :          %3d  %3d  %3d  %3d  %3d\n",
+	      chan->flood_pub_time, chan->flood_ctcp_time, chan->flood_join_time,
+	      chan->flood_kick_time, chan->flood_deop_time);
+      putlog(LOG_CMDS, "*", "#%s# chaninfo %s", dcc[idx].nick, chname);
    }
-   dprintf(idx, "Settings for %s channel %s\n", 
-	   channel_static(chan) ? "static" : "dynamic", chname);
-   get_mode_protect(chan, work);
-   dprintf(idx, "Protect modes (chanmode): %s\n", work[0] ? work : "None");
-   if (chan->idle_kick)
-      dprintf(idx, "Idle Kick after (idle-kick): %d\n", chan->idle_kick);
-   else
-      dprintf(idx, "Idle Kick after (idle-kick): DONT!\n");
-   /* only bot owners can see/change these (they're TCL commands) */
-   if (u->flags & USER_OWNER) {
-      if (chan->need_op[0])
-	dprintf(idx, "To regain op's (need-op):\n%s\n", chan->need_op);
-      if (chan->need_invite[0])
-	dprintf(idx, "To get invite (need-invite):\n%s\n", chan->need_invite);
-      if (chan->need_key[0])
-	dprintf(idx, "To get key (need-key):\n%s\n", chan->need_key);
-      if (chan->need_unban[0])
-	dprintf(idx, "If Im banned (need-unban):\n%s\n", chan->need_unban);
-      if (chan->need_limit[0])
-	dprintf(idx, "When channel full (need-limit):\n%s\n", chan->need_limit);
-   }
-   dprintf(idx, "Other modes:\n");
-   dprintf(idx, "     %cclearbans  %cenforcebans  %cdynamicbans  %cuserbans\n",
-	   (chan->status & CHAN_CLEARBANS) ? '+' : '-',
-	   (chan->status & CHAN_ENFORCEBANS) ? '+' : '-',
-	   (chan->status & CHAN_DYNAMICBANS) ? '+' : '-',
-	   (chan->status & CHAN_NOUSERBANS) ? '-' : '+');
-   dprintf(idx, "     %cautoop     %cbitch        %cgreet        %cprotectops\n",
-	   (chan->status & CHAN_OPONJOIN) ? '+' : '-',
-	   (chan->status & CHAN_BITCH) ? '+' : '-',
-	   (chan->status & CHAN_GREET) ? '+' : '-',
-	   (chan->status & CHAN_PROTECTOPS) ? '+' : '-');
-   dprintf(idx, "     %cstatuslog  %cstopnethack  %crevenge      %csecret\n",
-	   (chan->status & CHAN_LOGSTATUS) ? '+' : '-',
-	   (chan->status & CHAN_STOPNETHACK) ? '+' : '-',
-	   (chan->status & CHAN_REVENGE) ? '+' : '-',
-	   (chan->status & CHAN_SECRET) ? '+' : '-');
-   dprintf(idx, "     %cshared     %cautovoice\n", 
-	   (chan->status & CHAN_SHARED) ? '+' : '-',
-	   channel_autovoice(chan) ? '+' : '-');
-   dprintf(idx, "flood settings: chan ctcp join kick deop\n");
-   dprintf(idx, "number:          %3d  %3d  %3d  %3d  %3d\n",
-	   chan->flood_pub_thr, chan->flood_ctcp_thr, chan->flood_join_thr,
-	   chan->flood_kick_thr, chan->flood_deop_thr);
-   dprintf(idx, "time  :          %3d  %3d  %3d  %3d  %3d\n",
-	   chan->flood_pub_time, chan->flood_ctcp_time, chan->flood_join_time,
-	   chan->flood_kick_time, chan->flood_deop_time);
-   putlog(LOG_CMDS, "*", "#%s# chaninfo %s", dcc[idx].nick, chname);
 }
 
-static void cmd_chanset (struct userrec * u, int idx, char * par)
-{
-   char *chname, answers[512];
+static void cmd_chanset (struct userrec * u, int idx, char * par) {
+   char *chname = NULL, answers[512];
    char *list[2];
-   struct chanset_t *chan;
+   struct chanset_t *chan = NULL;
    
-   if (!par[0]) {
-      dprintf(idx, "Usage: chanset [#channel] <settings>\n");
-      return;
-   }
-   if ((par[0] == '&') || (par[0] == '#')) 
-     chname = newsplit(&par);
-   else
-     chname = dcc[idx].u.chat->con_chan;
-   chan = findchan(chname);
-   if (!chan) {
-      dprintf(idx, "That channel doesnt exist!\n");
-      return;
-   }
-   list[0] = newsplit(&par);
-   answers[0] = 0;
-   while (list[0][0]) {
-      if (list[0][0] == '+' || list[0][0] == '-' ||
-	  (strcmp(list[0], "dont-idle-kick") == 0)) {
-	 if (strcmp(list[0]+1, "shared") == 0) {
-	    dprintf(idx, "You can't change shared settings on the fly\n");
-	 } else if (tcl_channel_modify(0, chan, 1, list) == TCL_OK) {
-	    strcat(answers, list[0]);
-	    strcat(answers, " ");
-	 } else
-	   dprintf(idx, "Error trying to set %s for %s, invalid mode\n",
-		   list[0], chname);
+   if (!par[0]) 
+     dprintf(idx, "Usage: chanset [#channel] <settings>\n");
+   else {
+      if ((par[0] == '&') || (par[0] == '#') || (par[0] == '+')) {
+	 chname = newsplit(&par);
+	 get_user_flagrec(u,&user,chname);
+	 if (!glob_master(user) && !chan_master(user)) {
+	    dprintf(idx,"You dont have access to %s.",chname);
+	    return;
+	 }  else if (!(chan = findchan(chname)) && (chname[0] != '+')) {
+	    dprintf(idx, "That channel doesnt exist!\n");
+	    return;
+	 } 
+	 if (!chan) {
+	    if (par[0])
+	      *--par = ' ';
+	    par = chname;
+	 }
+      } 
+      if (!chan && !(chan = findchan(chname = dcc[idx].u.chat->con_chan))) 
+	dprintf(idx, "Invalid console channel.\n");
+      else {
 	 list[0] = newsplit(&par);
-	 continue;
+	 answers[0] = 0;
+	 while (list[0][0]) {
+	    if (list[0][0] == '+' || list[0][0] == '-' ||
+		(strcmp(list[0], "dont-idle-kick") == 0)) {
+	       if (strcmp(list[0]+1, "shared") == 0) {
+		  dprintf(idx, "You can't change shared settings on the fly\n");
+	       } else if (tcl_channel_modify(0, chan, 1, list) == TCL_OK) {
+		  strcat(answers, list[0]);
+		  strcat(answers, " ");
+	       } else
+		 dprintf(idx, "Error trying to set %s for %s, invalid mode\n",
+			 list[0], chname);
+	       list[0] = newsplit(&par);
+	       continue;
+	    }
+	    /* the rest have an unknow amount of args, so assume the rest of the *
+	     * line is args. Woops nearly made a nasty little hole here :) we'll *
+	     * just ignore any non global +n's trying to set the need-commands   */
+	    if (strncmp(list[0], "need-", 5) || (u->flags & USER_OWNER)) {
+	       list[1] = par;
+	       if (tcl_channel_modify(0, chan, 2, list) == TCL_OK) {
+		  strcat(answers, list[0]);
+		  strcat(answers, " { ");
+		  strcat(answers, par);
+		  strcat(answers, " }");
+	       } else
+		 dprintf(idx, "Error trying to set %s for %s, invalid option\n",
+			 list[0], chname);
+	    }
+	    break;
+	 }
+	 if (answers[0]) {
+	    dprintf(idx, "Successfully set modes { %s } on %s.\n",
+		    answers, chname);
+	    putlog(LOG_CMDS, "*", "#%s# chanset %s %s", dcc[idx].nick, chname,
+		   answers);
+	 }
       }
-      /* the rest have an unknow amount of args, so assume the rest of the *
-       * line is args. Woops nearly made a nasty little hole here :) we'll *
-       * just ignore any non global +n's trying to set the need-commands   */
-      if (strncmp(list[0], "need-", 5) || (u->flags & USER_OWNER)) {
-	 list[1] = par;
-	 if (tcl_channel_modify(0, chan, 2, list) == TCL_OK) {
-	    strcat(answers, list[0]);
-	    strcat(answers, " { ");
-	    strcat(answers, par);
-	    strcat(answers, " }");
-	 } else
-	    dprintf(idx, "Error trying to set %s for %s, invalid option\n",
-		    list[0], chname);
-      }
-      break;
-   }
-   if (answers[0]) {
-      dprintf(idx, "Successfully set modes { %s } on %s.\n",
-	      answers, chname);
-      putlog(LOG_CMDS, "*", "#%s# chanset %s %s", dcc[idx].nick, chname,
-	     answers);
    }
 }
 
-static void cmd_chansave (struct userrec * u, int idx, char * par)
-{
+static void cmd_chansave (struct userrec * u, int idx, char * par) {
    if (!chanfile[0])
       dprintf(idx, "No channel saving file defined.\n");
    else {
@@ -671,8 +679,7 @@ static void cmd_chansave (struct userrec * u, int idx, char * par)
    }
 }
 
-static void cmd_chanload (struct userrec * u, int idx, char * par)
-{
+static void cmd_chanload (struct userrec * u, int idx, char * par) {
    if (!chanfile[0])
      dprintf(idx, "No channel saving file defined.\n");
    else {

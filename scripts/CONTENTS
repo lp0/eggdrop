@@ -17,6 +17,10 @@ alltools.tcl
 botchk
    A shell script which can be used for auto-starting the bot via 'cron'.
 
+compat.tcl
+   maps old tcl functions to new ones, for lazy people who can't be bothered
+   updating their scripts
+   
 getops-1.8.tcl
    a way to get ops from other bots on the botnet (if they're on the
    same channel)

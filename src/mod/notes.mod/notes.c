@@ -124,7 +124,7 @@ static void notes_change (char * oldnick, char * newnick)
    unlink(notefile);
    sprintf(s, "%s~new", notefile);
    movefile(s, notefile);
-   putlog(LOG_MISC, "*", "Switched %d note%s from %s to %s.\n", tot,
+   putlog(LOG_MISC, "*", "Switched %d note%s from %s to %s.", tot,
 	  tot == 1 ? "" : "s", oldnick, newnick);
 }
 

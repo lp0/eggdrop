@@ -440,6 +440,9 @@ channel set #lamest -secret
 #   share user channel info for this channel?
 channel set #lamest -shared
 
+#   cycle the channel when it becomes op-less?
+channel set #lamest -cycle
+
 # here's a shorter example:
 channel add #botcentral {
   chanmode "+mntisl 1"
@@ -523,9 +526,9 @@ set flood-ctcp 3:60
 # connect?
 set never-give-up 1
 
-# If this setting is 1 then the eggdrop keeps a seperate list of the names
+# If this setting is 0 then the eggdrop keeps a seperate list of the names
 # irc servers call themselves, retaining what you entered in the config file.
-# setting it to 0 will cause the bot to replace your entry with what
+# setting it to 1 will cause the bot to replace your entry with what
 # the server actually calls itself
 set strict-servernames 0
 
@@ -680,7 +683,16 @@ set xfer-timeout 300
 # they will lose their owners when they download the user list
 #set private-owner 0
 
+# when sharing user lists, DONT ACCEPT global flag changes from other bots?
+# NOTE: the bot will still send changes made on the bot, it just wont accept
+# changes from other bots
+#set private-global 0
 
+# when sharing user lists, DONT ACCEPT kill user/change handle users from
+# other bots?
+# NOTE: you could desync your usefiles by defining this, it's only for the
+# seriously paranoid
+#set private-user 0
 
 ##### FILESYSTEM MODULE #####
 

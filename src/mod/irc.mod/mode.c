@@ -381,7 +381,8 @@ static void got_deop (struct chanset_t * chan, char * nick, char * from,
       /* deopped ME!  take revenge */
       if (!glob_friend(user) && !chan_friend(user) && nick[0] &&
 	  !match_my_nick(nick)) {
-	take_revenge(chan, s1, "deopped me");
+	 simple_sprintf(s2, "deopped %s", botname);
+	take_revenge(chan, s1, s2);
       }
       if (!nick[0])
 	putlog(LOG_MODES, chan->name, "TS resync deopped me on %s :(",

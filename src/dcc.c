@@ -431,9 +431,7 @@ static void dcc_chat_pass (int idx, char * buf,int atr)
 	 dprintf(idx, "*hello!\n");
 	 greet_new_bot(idx);
       } else {
-	 if (dcc[idx].u.chat->away != NULL) {
-	    /* su-er so reset dcc[idx].user */
-	    dcc[idx].user = get_user_by_handle(userlist,dcc[idx].nick);
+	 if (dcc[idx].u.chat->away) {
 	    nfree(dcc[idx].u.chat->away);
 	    dcc[idx].u.chat->away = NULL;
 	 }
@@ -452,14 +450,16 @@ static void dcc_chat_pass (int idx, char * buf,int atr)
 	 dprintf(idx, "Negative on that, Houston.\n");
       putlog(LOG_MISC, "*", "Bad password: [%s]%s/%d", dcc[idx].nick,
 	     dcc[idx].host, dcc[idx].port);
-      if (dcc[idx].u.chat->away != NULL) {	/* su from a dumb user */
+      if (dcc[idx].u.chat->away) {	/* su from a dumb user */
+	 if (dcc[idx].status & STAT_TELNET)
+	   dprintf(idx, "\377\374\001\n");	/* turn echo back on */
+	 dcc[idx].user = get_user_by_handle(userlist,dcc[idx].u.chat->away);
 	 strcpy(dcc[idx].nick, dcc[idx].u.chat->away);
 	 nfree(dcc[idx].u.chat->away);
 	 dcc[idx].u.chat->away = NULL;
 	 dcc[idx].type = &DCC_CHAT;
-	 if (dcc[idx].u.chat->channel < 100000) {
-	    botnet_send_join_idx( idx, -1);
-	 }
+	 if (dcc[idx].u.chat->channel < 100000)
+	   botnet_send_join_idx( idx, -1);
 	 chanout_but(-1,dcc[idx].u.chat->channel,
 		     "*** %s has joined the party line.\n", dcc[idx].nick);
       } else {
@@ -874,6 +874,7 @@ static void dcc_telnet (int idx, char * buf,int i)
    int j = 0,sock;
    char s[UHOSTLEN], s2[UHOSTLEN+20];
    
+   context;
    if (dcc_total + 1 > max_dcc) {
       j = answer(dcc[idx].sock, s, &ip, &port, 0);
       if (j != -1) {
@@ -882,6 +883,7 @@ static void dcc_telnet (int idx, char * buf,int i)
       }
       return;
    }
+   context;
    sock = answer(dcc[idx].sock, s, &ip, &port, 0);
    while ((sock == -1) && (errno == EAGAIN))
       sock = answer(sock, s, &ip, &port, 0);
@@ -891,6 +893,7 @@ static void dcc_telnet (int idx, char * buf,int i)
       killsock(sock);
       return;
    }
+   context;
    if (dcc[idx].host[0] == '@') {
       /* restrict by hostname */
       if (!wild_match(dcc[idx].host+1, s)) {
@@ -899,11 +902,13 @@ static void dcc_telnet (int idx, char * buf,int i)
 	 return;
       }
    }
+   context;
    sprintf(s2,"telnet!telnet@%s",s);
    if (match_ignore(s2)) {
       killsock(sock);
       return;
    }
+   context;
    i = new_dcc(&DCC_IDENTWAIT,0);
    dcc[i].sock = sock;
    dcc[i].addr = ip;
@@ -916,6 +921,7 @@ static void dcc_telnet (int idx, char * buf,int i)
    sock = open_telnet(s,113);
    putlog(LOG_MISC, "*", "Telnet connection: %s/%d", s, port);
    s[0] = 0;
+   context;
    if (sock < 0) {
       if (sock==-2)
 	strcpy(s,"DNS lookup failed for ident");
@@ -928,12 +934,14 @@ static void dcc_telnet (int idx, char * buf,int i)
 	 strcpy(s,"No Free DCC's");
       }
    }
+   context;
    if (s[0]) {
       putlog(LOG_MISC,"*","Ident failed for %s: %s",dcc[i].host,s);
       sprintf(s,"telnet@%s",dcc[i].host);
       dcc_telnet_got_ident(i,s);
       return;
    }   
+   context;
    dcc[j].sock = sock;
    dcc[j].port = 113;
    dcc[j].addr = ip;
@@ -1018,7 +1026,7 @@ static void dcc_telnet_id (int idx, char * buf,int atr)
    if (glob_party(fr) || glob_bot(fr)) 
       ok = 1;
    if (glob_xfer(fr)) {
-      module_entry * me = module_find("filesys", 1, 0);
+      module_entry * me = module_find("filesys", 0, 0);
       if (me && me->funcs[FILESYS_ISVALID] && (me->funcs[FILESYS_ISVALID])())
 	ok = 1;
    }

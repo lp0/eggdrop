@@ -1028,7 +1028,7 @@ static void bot_filereq (int idx, char * tobot)
    
       if (!strcasecmp(tobot, botnetnick)) {	/* for me! */
 	 /* process this */
-	 module_entry *fs = module_find("filesys", 1, 1);
+	 module_entry *fs = module_find("filesys", 0, 0);
 	 if (fs == NULL)
 	   botnet_send_priv(idx, botnetnick, from, NULL, MOD_NOFILESYSMOD);
 	 else {

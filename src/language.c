@@ -40,11 +40,11 @@ typedef struct lang_t {
    struct lang_t *next;
 } lang_tab;
 
-static lang_tab langtab = { 0, "MSG%.3x", 0};
+static lang_tab * langtab[64];
 
 static int add_message(int lidx, char *ltext)
 {
-   lang_tab *l = &langtab;
+   lang_tab *l = langtab[lidx & 63];
 
    while (l) {
       if (l->idx && (l->idx == lidx)) {
@@ -57,8 +57,11 @@ static int add_message(int lidx, char *ltext)
 	break;
       l = l->next;
    }
-   l->next = nmalloc(sizeof(lang_tab));
-   l = l->next;
+   if (l) {
+      l->next = nmalloc(sizeof(lang_tab));
+      l = l->next;
+   } else 
+     l = langtab[lidx & 63] = nmalloc(sizeof(lang_tab));
    l->idx = lidx;
    l->text = nmalloc(strlen(ltext) + 1);
    strcpy(l->text, ltext);
@@ -167,9 +170,9 @@ char	*ctmp, *ctmp1;
 
 static int cmd_languagedump (struct userrec * u,int idx, char *par)
 {
-lang_tab *l = &langtab;
+lang_tab *l;
 char	ltext2[512];
-int	idx2;
+int	idx2,i;
 
    context;
    putlog(LOG_CMDS, "*", "#%s# ldump %s", dcc[idx].nick, par);
@@ -186,17 +189,16 @@ int	idx2;
    }
    
    dprintf(idx, " LANGIDX TEXT\n");
-   while(l) {
-      dprintf(idx, "0x%x   %s\n", l->idx, l->text);
-      l = l->next;
-   }
+   for (i = 0; i < 64; i++)
+     for (l = langtab[i]; l; l = l->next)
+       dprintf(idx, "0x%x   %s\n", l->idx, l->text);
    return 0;
 }
 
 static char	text[512];
 char * get_language (int idx)
 {
-lang_tab *l = &langtab;
+lang_tab *l = langtab[idx & 63];
    
    if(!idx) 
       return "MSG-0-";
@@ -204,21 +206,20 @@ lang_tab *l = &langtab;
       if (idx == l->idx) return l->text;
       l = l->next;
    }
-   sprintf(text, langtab.text, idx);
+   sprintf(text, "MSG%03X", idx);
    return text;
 }
 
 int expmem_language()
 {
-lang_tab *l = langtab.next;
+lang_tab *l;
+int i, size = 0;
 
-int size = 0;
-
-   while (l) {
-      size += sizeof(lang_tab);
-      size += (strlen(l->text) + 1);
-      l = l->next;
-   }
+   for (i = 0; i < 64; i++)
+      for (l = langtab[i]; l; l = l->next) {
+	 size += sizeof(lang_tab);
+	 size += (strlen(l->text) + 1);
+      }
    return size;
 }
 
@@ -226,11 +227,27 @@ int size = 0;
 static int cmd_languagestatus (struct userrec * u,int idx,char * par)
 {
 int ltexts = 0;
-
+int maxdepth = 0, used = 0, empty = 0, i, c;
+lang_tab * l;
+   
+   for (i = 0; i < 64; i++) { 
+      c = 0;
+      for (l = langtab[i]; l; l = l->next) 
+	c++;
+      if (c > maxdepth)
+	maxdepth = c;
+      if (c)
+	used++;
+      else
+	empty++;
+      ltexts += c;
+   }
    context;
    dprintf(idx, "language code report:\n");
    dprintf(idx, "   Table size: %d bytes\n", expmem_language());
    dprintf(idx, "   Text messages: %d\n", ltexts);
+   dprintf(idx, "   %d used, %d unused, maxdepth %d, avg %f\n",
+	   used, empty, maxdepth, (float)ltexts/64.0);
    return 0;
 }
 
@@ -260,11 +277,14 @@ static tcl_cmds langtcls[] =
 
 void init_language (char * default_lang)
 {
+   int i;
    context;
-   if (default_lang) 
-     cmd_loadlanguage(0,DP_LOG,default_lang); /* and robey said super-dprintf
+   if (default_lang) {
+      for (i = 0; i < 32; i++)
+	langtab[i] = 0;
+      cmd_loadlanguage(0,DP_LOG,default_lang); /* and robey said super-dprintf
 					* was silly :) */
-   else {
+   } else {
       add_tcl_commands(langtcls);
       add_builtins(H_dcc, langdcc,3);
    }

@@ -262,6 +262,10 @@ static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan)
       Tcl_AppendElement(irp, "+autovoice");
    else
       Tcl_AppendElement(irp, "-autovoice");
+   if (chan->status& CHAN_CYCLE)
+      Tcl_AppendElement(irp, "+cycle");
+   else
+      Tcl_AppendElement(irp, "-cycle");
    return TCL_OK;
 }
 
@@ -442,6 +446,10 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
 	 chan->status|= CHAN_AUTOVOICE;
       else if (strcmp(item[i], "-autovoice") == 0)
 	 chan->status&= ~CHAN_AUTOVOICE;
+      else if (strcmp(item[i], "+cycle") == 0)
+	 chan->status|= CHAN_CYCLE;
+      else if (strcmp(item[i], "-cycle") == 0)
+	 chan->status&= ~CHAN_CYCLE;
       else if (strncmp(item[i], "flood-", 6) == 0) {
 	 int * pthr = 0, * ptime;
 	 char * p;
@@ -734,7 +742,7 @@ static int tcl_channel_add (Tcl_Interp * irp, char * newname, char * options)
    int items;
    char **item;
    
-   if ((newname[0] != '#') && (newname[0] != '&'))
+   if ((newname[0] != '#') && (newname[0] != '&') && (newname[0] != '+'))
       return TCL_ERROR;
    if (irp)
       if (Tcl_SplitList(irp, options, &items, &item) != TCL_OK)
@@ -748,7 +756,7 @@ static int tcl_channel_add (Tcl_Interp * irp, char * newname, char * options)
       bzero(chan,sizeof(struct chanset_t));
       chan->limit_prot = (-1);
       chan->status= CHAN_DYNAMICBANS | CHAN_GREET | CHAN_PROTECTOPS |
-	CHAN_LOGSTATUS | CHAN_STOPNETHACK;
+	CHAN_LOGSTATUS | CHAN_STOPNETHACK | CHAN_CYCLE;
       chan->limit = (-1);
       strncpy(chan->name, newname, 80);
       chan->name[80] = 0;

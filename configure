@@ -1026,7 +1026,7 @@ DLOPEN_1=1
 case $system in
   Linux)
     CFLAGS="${CFLAGS} -Wall"
-    echo "$ac_t""Linux! It's what all good llama's use" 1>&6
+    echo "$ac_t""Linux! The choice of the GNU generation" 1>&6
     SHLIB_LD="${CC} -shared -nostartfiles"
     BEL_MOD_LD="${CC}"
     cat >> confdefs.h <<\EOF
@@ -2329,7 +2329,6 @@ fi
 if test "$TCLLIB" = ""; then
   echo ""
   echo "I can't find Tcl on this system."
-  echo "*** Note: tcl8.0 thru b2 is --NOT-- useable...  Eggdrop WILL crash."
   echo ""
   echo "Eggdrop now requires Tcl to compile.  If you already have Tcl"
   echo "installed on this system, and I just wasn't looking in the right"
@@ -2344,7 +2343,7 @@ if test "$TCLLIB" = ""; then
 else
   echo Checking $TCLINC directory for tcl version
   echo $ac_n "checking for Tcl version""... $ac_c" 1>&6
-echo "configure:2348: checking for Tcl version" >&5
+echo "configure:2347: checking for Tcl version" >&5
   tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.4" | wc -l`
   if test $tclver = 0; then
     tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.5" | wc -l`
@@ -2353,7 +2352,7 @@ echo "configure:2348: checking for Tcl version" >&5
       if test $tclver = 0; then
         tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
         if test $tclver = 1; then
-	  echo "$ac_t""8.0 found -- USE AT YOUR OWN RISK ********" 1>&6
+	  echo "$ac_t""8.0 found -- We think this works now" 1>&6
           need_dl=1
         else
           echo "$ac_t""hmm... unknown version" 1>&6

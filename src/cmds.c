@@ -233,7 +233,7 @@ static void cmd_botinfo (struct userrec * u, int idx, char * par)
 static void cmd_whom (struct userrec * u, int idx, char * par)
 {
    if (dcc[idx].u.chat->channel < 0) {
-      dprintf(idx, "You have chat turned off.m\n");
+      dprintf(idx, "You have chat turned off.\n");
       return;
    }
    putlog(LOG_CMDS, "*", "#%s# whom %s", dcc[idx].nick, par);
@@ -681,52 +681,52 @@ static void cmd_pls_bot (struct userrec * u, int idx, char * par)
    struct userrec * u1;
    struct bot_addr * bi;
    
-   if (!par[0]) {
-      dprintf(idx, "Usage: +bot <handle> <address[:telnet-port[/relay-port]]> [host]\n");
-      return;
-   }
-   handle = newsplit(&par);
-   addr = newsplit(&par);
-   if (strlen(handle) > HANDLEN)
-      handle[HANDLEN] = 0;		/* max len = XX .. for the moment :) */
-   if (get_user_by_handle(userlist,handle)) {
-      dprintf(idx, "Someone already exists by that name.\n");
-      return;
-   }
-   if (strlen(addr) > 60)
-     addr[60] = 0;
-   putlog(LOG_CMDS, "*", "#%s# +bot %s %s", dcc[idx].nick, handle, addr);
-   userlist = adduser(userlist, handle, "none", "-", USER_BOT);
-   u1 = get_user_by_handle(userlist, handle);
-   bi = user_malloc(sizeof(struct bot_addr));
-   q = strchr(addr,':');
-   if (!q) {
-      bi->address = user_malloc(strlen(addr)+1);
-      strcpy(bi->address,addr);
-      bi->telnet_port = 3333;
-      bi->relay_port = 3333;
-   } else {
-      bi->address = user_malloc(q - addr + 1);
-      strncpy(bi->address,addr,q - addr);
-      bi->address[q-addr] = 0;
-      p = q+1;
-      bi->telnet_port = atoi(p);
-      q = strchr(p, '/');
-      if (!q) {
-	 bi->relay_port = bi->telnet_port;
-      } else {
-	 bi->relay_port = atoi(q+1);
+   if (!par[0]) 
+     dprintf(idx, "Usage: +bot <handle> <address[:telnet-port[/relay-port]]> [host]\n");
+   else {
+      handle = newsplit(&par);
+      addr = newsplit(&par);
+      if (strlen(handle) > HANDLEN)
+	handle[HANDLEN] = 0;		/* max len = XX .. for the moment :) */
+      if (get_user_by_handle(userlist,handle)) 
+	dprintf(idx, "Someone already exists by that name.\n");
+      else {
+	 if (strlen(addr) > 60)
+	   addr[60] = 0;
+	 putlog(LOG_CMDS, "*", "#%s# +bot %s %s", dcc[idx].nick, handle, addr);
+	 userlist = adduser(userlist, handle, "none", "-", USER_BOT);
+	 u1 = get_user_by_handle(userlist, handle);
+	 bi = user_malloc(sizeof(struct bot_addr));
+	 q = strchr(addr,':');
+	 if (!q) {
+	    bi->address = user_malloc(strlen(addr)+1);
+	    strcpy(bi->address,addr);
+	    bi->telnet_port = 3333;
+	    bi->relay_port = 3333;
+	 } else {
+	    bi->address = user_malloc(q - addr + 1);
+	    strncpy(bi->address,addr,q - addr);
+	    bi->address[q-addr] = 0;
+	    p = q+1;
+	    bi->telnet_port = atoi(p);
+	    q = strchr(p, '/');
+	    if (!q) {
+	       bi->relay_port = bi->telnet_port;
+	    } else {
+	       bi->relay_port = atoi(q+1);
+	    }
+	 }
+	 set_user(&USERENTRY_BOTADDR,u1,bi);
+	 dprintf(idx, "Added bot '%s' with address '%s' and no password.\n",
+		 handle, addr);
+	 host = newsplit(&par);
+	 if (host[0])
+	   addhost_by_handle(handle,host);
+	 else if (!add_bot_hostmask(idx, handle))
+	   dprintf(idx, "You'll want to add a hostmask if this bot will ever %s",
+		   "be on any channels that I'm on.\n");
       }
    }
-   set_user(&USERENTRY_BOTADDR,u1,bi);
-   dprintf(idx, "Added bot '%s' with address '%s' and no password.\n",
-	   handle, addr);
-   host = newsplit(&par);
-   if (host[0])
-     addhost_by_handle(handle,host);
-   else if (!add_bot_hostmask(idx, handle))
-     dprintf(idx, "You'll want to add a hostmask if this bot will ever %s",
-	     "be on any channels that I'm on.\n");
 }
 
 static void cmd_chnick (struct userrec * u, int idx, char * par)
@@ -736,51 +736,45 @@ static void cmd_chnick (struct userrec * u, int idx, char * par)
    struct userrec * u2;
    
    hand = newsplit(&par);
-   if (!hand[0] || !par[0]) {
-      dprintf(idx, "Usage: chnick <oldnick> <newnick>\n");
-      return;
+   if (!hand[0] || !par[0]) 
+     dprintf(idx, "Usage: chnick <oldnick> <newnick>\n");
+   else {
+      newhand = newsplit(&par);
+      if (strlen(newhand) > HANDLEN)
+	newhand[HANDLEN] = 0;
+      for (i = 0; i < strlen(newhand); i++)
+	if ((newhand[i] <= 32) || (newhand[i] >= 127) || (newhand[i] == '@'))
+	  newhand[i] = '?';
+      if (strchr("-,+*=:!.@#;$", newhand[0]) != NULL) 
+	 dprintf(idx, 
+		 "Bizarre quantum forces prevent nicknames from starting with %c\n", newhand[0]);
+      else if (get_user_by_handle(userlist,newhand) 
+	       && strcasecmp(hand, newhand)) 
+	dprintf(idx, "Already a user %s.\n", newhand);
+      else if (!strcasecmp(newhand, origbotname) || 
+	       !strcasecmp(newhand, botnetnick)) 
+	 dprintf(idx, "Hey! That's MY name!\n", newhand);
+      else {
+	 u2 = get_user_by_handle(userlist,hand);
+	 atr2 = u2 ? u2->flags : 0;
+	 if ((atr & USER_BOTMAST) && !(atr & USER_MASTER)
+	     && !(atr2 & USER_BOT)) 
+	    dprintf(idx, "You can't change nick for non-bots.\n");
+	 else if ((bot_flags(u2) & BOT_SHARE) && !(atr & USER_OWNER)) 
+	   dprintf(idx, "You can't change shared bot's nick.\n");
+	 else if ((atr2 & USER_OWNER) && !(atr & USER_OWNER)
+		  && strcasecmp(dcc[idx].nick, hand)) 
+	   dprintf(idx, "Can't change the bot owner's handle.\n");
+	 else if (change_handle(u2, newhand)) {
+	    putlog(LOG_CMDS, "*", "#%s# chnick %s %s", dcc[idx].nick, 
+		   hand, newhand);
+	    dprintf(idx, "Changed.\n");
+	 } else
+	   dprintf(idx, "Failed.\n");
+      }
    }
-   newhand = newsplit(&par);
-   if (strlen(newhand) > HANDLEN)
-     newhand[HANDLEN] = 0;
-   for (i = 0; i < strlen(newhand); i++)
-     if ((newhand[i] <= 32) || (newhand[i] >= 127) || (newhand[i] == '@'))
-       newhand[i] = '?';
-   if (strchr("-,+*=:!.@#;$", newhand[0]) != NULL) {
-      dprintf(idx, "Bizarre quantum forces prevent nicknames from starting with %c\n", newhand[0]);
-      return;
-   }
-   if (get_user_by_handle(userlist,newhand) && strcasecmp(hand, newhand)) {
-      dprintf(idx, "Already a user %s.\n", newhand);
-      return;
-   }
-   if (!strcasecmp(newhand, origbotname) || !strcasecmp(newhand, botnetnick)) {
-      dprintf(idx, "Hey! That's MY name!\n", newhand);
-      return;
-   }
-   u2 = get_user_by_handle(userlist,hand);
-   atr2 = u2 ? u2->flags : 0;
-   if ((atr & USER_BOTMAST) && !(atr & USER_MASTER)
-       && !(atr2 & USER_BOT)) {
-      dprintf(idx, "You can't change nick for non-bots.\n");
-      return;
-   }
-   if ((bot_flags(u2) & BOT_SHARE) && !(atr & USER_OWNER)) {
-      dprintf(idx, "You can't change shared bot's nick.\n");
-      return;
-   }
-   if ((atr2 & USER_OWNER) && !(atr & USER_OWNER)
-       && strcasecmp(dcc[idx].nick, hand)) {
-      dprintf(idx, "Can't change the bot owner's handle.\n");
-      return;
-   }
-   if (change_handle(u2, newhand)) {
-      putlog(LOG_CMDS, "*", "#%s# chnick %s %s", dcc[idx].nick, hand, newhand);
-      dprintf(idx, "Changed.\n");
-   } else
-      dprintf(idx, "Failed.\n");
 }
-
+           
 static void cmd_nick (struct userrec * u, int idx, char * par)
 {
    int i, len = strlen(par);
@@ -816,49 +810,45 @@ static void cmd_nick (struct userrec * u, int idx, char * par)
 static void cmd_chpass (struct userrec * u, int idx, char * par)
 {
    char * handle, * new;
-   struct userrec * u2;
    int atr = u ? u->flags : 0, l;
    
-   if (!par[0]) {
-      dprintf(idx, "Usage: chpass <handle> [password]\n");
-      return;
+   if (!par[0]) 
+     dprintf(idx, "Usage: chpass <handle> [password]\n");
+   else {
+      handle = newsplit(&par);
+      u = get_user_by_handle(userlist,handle);
+      if (!u) 
+	dprintf(idx, "No such user.\n");
+      else if ((atr & USER_BOTMAST) 
+	       && !(atr & USER_MASTER) &&
+	       !(u->flags & USER_BOT)) 
+	dprintf(idx, "You can't change password for non-bots.\n");
+      else if ((bot_flags(u) & BOT_SHARE) 
+	       && !(atr & USER_OWNER)) 
+	dprintf(idx, "You can't change shared bot's password.\n");
+      else if ((u->flags & USER_OWNER) 
+	       && !(atr & USER_OWNER)
+	       && strcasecmp(handle, dcc[idx].nick)) 
+	dprintf(idx, "Can't change the bot owner's password.\n");
+      else if (!par[0]) {
+	 putlog(LOG_CMDS, "*", "#%s# chpass %s [nothing]", dcc[idx].nick,
+		handle);
+	 set_user(&USERENTRY_PASS,u,NULL);
+	 dprintf(idx, "Removed password.\n");
+      } else {
+	 l = strlen(new = newsplit(&par));
+	 if (l > 16)
+	   new[16] = 0;
+	 if (l < 6) 
+	   dprintf(idx, "Please use at least 6 characters.\n");
+	 else {
+	    set_user(&USERENTRY_PASS,u,new);
+	    putlog(LOG_CMDS, "*", "#%s# chpass %s [something]", 
+		   dcc[idx].nick, handle);
+	    dprintf(idx, "Changed password.\n");
+	 }
+      }
    }
-   handle = newsplit(&par);
-   u2 = get_user_by_handle(userlist,handle);
-   if (!u2) {
-      dprintf(idx, "No such user.\n");
-      return;
-   }
-   if ((atr & USER_BOTMAST) && !(atr & USER_MASTER) &&
-       !(u2->flags & USER_BOT)) {
-      dprintf(idx, "You can't change password for non-bots.\n");
-      return;
-   }
-   if ((bot_flags(u2) & BOT_SHARE) && !(atr & USER_OWNER)) {
-      dprintf(idx, "You can't change shared bot's password.\n");
-      return;
-   }
-   if ((u2->flags & USER_OWNER) && !(atr & USER_OWNER)
-       && strcasecmp(handle, dcc[idx].nick)) {
-      dprintf(idx, "Can't change the bot owner's password.\n");
-      return;
-   }
-   if (!par[0]) {
-      putlog(LOG_CMDS, "*", "#%s# chpass %s [nothing]", dcc[idx].nick, handle);
-      set_user(&USERENTRY_PASS,u2,NULL);
-      dprintf(idx, "Removed password.\n");
-      return;
-   }
-   l = strlen(new = newsplit(&par));
-   if (l > 16)
-     new[16] = 0;
-   if (l < 6) {
-      dprintf(idx, "Please use at least 6 characters.\n");
-      return;
-   }
-   set_user(&USERENTRY_PASS,u2,new);
-   putlog(LOG_CMDS, "*", "#%s# chpass %s [something]", dcc[idx].nick, handle);
-   dprintf(idx, "Changed password.\n");
 }
 
 static void cmd_chaddr (struct userrec * u, int idx, char * par)
@@ -1457,7 +1447,7 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
 		chan->name, work);
       else
 	dprintf(idx, "No flags for %s on %s.\n", hand, chan->name);
-      if ((me = module_find("irc",1,1))) {
+      if ((me = module_find("irc",0,0))) {
 	 Function * func = me->funcs;
 	 if (chan) 
 	   (func[15])(chan,0);
@@ -1485,11 +1475,10 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
    }
    if ((par[0] != '#') && (par[0] != '&')) {
       chg = newsplit(&par);
-      if (!par[0])
+      if (!par[0] && strpbrk(chg, "|&"))
 	par = dcc[idx].u.chat->con_chan;
    }
-   chan = findchan(par);
-   if (!chan && par[0] && (par[0] != '*')) {
+   if (!(chan = findchan(par)) && par[0]) {
       dprintf(idx, "No channel record for %s.\n", par);
       return;
    }
@@ -1524,9 +1513,8 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
 	user.bot &= ~BOT_ALT;
       if ((user.bot & BOT_SHARE) == BOT_SHARE)
 	user.bot &= ~BOT_SHARE;
-      if (chan) {
-	 user.chan = (user.chan | pls.chan) & ~mns.chan;
-      }
+      if (chan)
+	user.chan = (user.chan | pls.chan) & ~mns.chan;
       set_user_flagrec(u2,&user,par);
    }
    if (chg)
@@ -1544,7 +1532,7 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
       else
 	dprintf(idx, "No bot flags for %s.\n", hand);
    }
-   if (chan || (par[0] != '*')) {      
+   if (chan) {      
       user.match = FR_CHAN;
       get_user_flagrec(u2, &user, par);
       user.chan &= BOT_SHARE;
@@ -1834,62 +1822,53 @@ static void cmd_su (struct userrec * u, int idx, char * par)
    context;
    u = get_user_by_handle(userlist,par);
    
-   if (!par[0]) {
-      dprintf(idx, "Usage: su <user>\n");
-      return;
-   }
-   if (!u) {
+   if (!par[0]) 
+     dprintf(idx, "Usage: su <user>\n");
+   else if (!u) 
       dprintf(idx, "No such user.\n");
-      return;
-   }
-   if (u->flags & USER_BOT) {
+   else if (u->flags & USER_BOT) 
       dprintf(idx, "Can't su to a bot... then again, why would you wanna?\n");
-      return;
-   }
-   if (u_pass_match(u,"-")) {
+   else if (u_pass_match(u,"-")) 
       dprintf(idx, "No password set for user. You may not .su to them\n");
-      return;
-   }
-   correct_handle(par);
-   putlog(LOG_CMDS, "*", "#%s# su %s", dcc[idx].nick, par);
-   if (!(atr & USER_OWNER) || (u->flags & USER_OWNER)) {
-      if (dcc[idx].u.chat->channel < 100000) {
-	 botnet_send_part_idx(idx, "");
+   else {
+      correct_handle(par);
+      putlog(LOG_CMDS, "*", "#%s# su %s", dcc[idx].nick, par);
+      if (!(atr & USER_OWNER) || (u->flags & USER_OWNER)) {
+	 if (dcc[idx].u.chat->channel < 100000)
+	    botnet_send_part_idx(idx, "");
+	 chanout_but(-1,dcc[idx].u.chat->channel, 
+		     "*** %s left the party line.\n",
+		     dcc[idx].nick);
+	 context;
+	 /* store the old nick in the away section, for weenies who can't get
+	  * their password right ;) */
+	 if (dcc[idx].u.chat->away != NULL)
+	   nfree(dcc[idx].u.chat->away);
+	 dcc[idx].u.chat->away = n_malloc(strlen(dcc[idx].nick) + 1,
+					  "dccutil.c", 9999); /* evil hack :) */
+	 strcpy(dcc[idx].u.chat->away, dcc[idx].nick);
+	 dcc[idx].user = u;
+	 strcpy(dcc[idx].nick, par);
+	 dprintf(idx, "Enter password for %s%s\n", par,
+		 (dcc[idx].status & STAT_TELNET) ? "\377\373\001":"");
+	 dcc[idx].type = &DCC_CHAT_PASS;
+      } else if (atr & USER_OWNER) {
+	 if (dcc[idx].u.chat->channel < 100000) 
+	   botnet_send_part_idx(idx, "");
+	 chanout_but(-1,dcc[idx].u.chat->channel,
+		     "*** %s left the party line.\n", dcc[idx].nick);
+	 context;
+	 dprintf(idx, "Setting your username to %s.\n", par);
+	 if (atr & USER_MASTER)
+	   dcc[idx].u.chat->con_flags = conmask;
+	 dcc[idx].user = u;
+	 strcpy(dcc[idx].nick, par);
+	 dcc_chatter(idx);
+	 context;
       }
-      chanout_but(-1,dcc[idx].u.chat->channel, "*** %s left the party line.\n",
-	      dcc[idx].nick);
-      context;
-      /* store the old nick in the away section, for weenies who can't get
-       * their password right ;) */
-      if (dcc[idx].u.chat->away != NULL)
-	 nfree(dcc[idx].u.chat->away);
-      dcc[idx].u.chat->away = n_malloc(strlen(dcc[idx].nick) + 1,
-				       "dccutil.c", 9999); /* evil hack :) */
-      strcpy(dcc[idx].u.chat->away, dcc[idx].nick);
-      dcc[idx].user = get_user_by_handle(userlist,par);
-      strcpy(dcc[idx].nick, par);
-      dprintf(idx, "Enter password for %s%s\n", par,
-	      (dcc[idx].status & STAT_TELNET) ? "\377\373\001":"");
-      dcc[idx].type = &DCC_CHAT_PASS;
-      return;
-   }
-   if (atr & USER_OWNER) {
-      if (dcc[idx].u.chat->channel < 100000) 
-	botnet_send_part_idx(idx, "");
-      chanout_but(-1,dcc[idx].u.chat->channel,
-		  "*** %s left the party line.\n", dcc[idx].nick);
-      context;
-      dprintf(idx, "Setting your username to %s.\n", par);
-      if (atr & USER_MASTER)
-	dcc[idx].u.chat->con_flags = conmask;
-      dcc[idx].user = get_user_by_handle(userlist,par);
-      strcpy(dcc[idx].nick, par);
-      dcc_chatter(idx);
-      context;
-      return;
    }
 }
-
+   
 static void cmd_fixcodes (struct userrec * u, int idx, char * par)
 {
    if (dcc[idx].status & STAT_ECHO) {
@@ -2184,18 +2163,20 @@ static void cmd_mns_host (struct userrec * u, int idx, char * par)
       dprintf(idx, "No such user.\n");
       return;
    }
-   if (!(u2->flags & USER_BOT) && (u->flags & USER_BOTMAST) &&
-       !(u->flags & USER_MASTER)) {
-      dprintf(idx, "You can't remove hostmasks from non-bots.\n");
-      return;
-   } else if ((u2->flags & USER_BOT) && (bot_flags(u2) & BOT_SHARE)
-	      && !(u->flags & USER_OWNER)) {
-      dprintf(idx, "You can't remove hostmask from a shared bot.\n");
-      return;
-   } else if ((u2->flags & USER_OWNER) && !(u->flags & USER_OWNER)
-	      && (u2 != u)) {
-      dprintf(idx, "Can't remove hostmasks from the bot owner.\n");
-      return;
+   if (strcasecmp(handle, dcc[idx].nick)) {
+      if (!(u2->flags & USER_BOT) && (u->flags & USER_BOTMAST) &&
+	  !(u->flags & USER_MASTER)) {
+	 dprintf(idx, "You can't remove hostmasks from non-bots.\n");
+	 return;
+      } else if ((u2->flags & USER_BOT) && (bot_flags(u2) & BOT_SHARE)
+		 && !(u->flags & USER_OWNER)) {
+	 dprintf(idx, "You can't remove hostmask from a shared bot.\n");
+	 return;
+      } else if ((u2->flags & USER_OWNER) && !(u->flags & USER_OWNER)
+		 && (u2 != u)) {
+	 dprintf(idx, "Can't remove hostmasks from the bot owner.\n");
+	 return;
+      }
    }
    if (delhost_by_handle(handle, host)) {
       putlog(LOG_CMDS, "*", "#%s# -host %s %s", dcc[idx].nick, handle, host);

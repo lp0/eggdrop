@@ -1,6 +1,6 @@
 /* 
    misc.c -- handles:
-   stristr() split() maskhost() copyfile() movefile() fixfrom()
+   split() maskhost() copyfile() movefile() fixfrom()
    dumplots() daysago() days() daysdur()
    logging things
    queueing output for the bot (msg and help)
@@ -116,29 +116,6 @@ static int is_file (char * s)
 }
 
 #define upcase(c) (((c)>='a' && (c)<='z') ? (c)-'a'+'A' : (c))
-
-/* determine if littles is contained in bigs (ignoring case) */
-/* if so: return pointer to the littles in bigs */
-/* if not: return NULL */
-char *stristr (char * bigs, char * littles)
-{
-   char *st = bigs, *p, *q;
-   while (1) {
-      if (!*st)
-	 return NULL;
-      p = littles;
-      q = st;
-      while ((*p) && (*q) && (upcase(*p) == upcase(*q))) {
-	 p++;
-	 q++;
-      }
-      if ((!*q) && (*p))
-	 return NULL;		/* premature end of bigs */
-      if (!*p)
-	 return st;		/* found it! */
-      st++;			/* try again */
-   }
-}
 
 #if !HAVE_STRCASECMP
 /* unixware has no strcasecmp() without linking in a hefty library */
