@@ -3,7 +3,7 @@
  *   saved console settings based on console.tcl
  *   by cmwagner/billyjoe/D. Senso
  * 
- * $Id: console.c,v 1.11 2000/01/17 22:36:08 fabian Exp $
+ * $Id: console.c,v 1.14 2000/03/23 23:17:57 fabian Exp $
  */
 /* 
  * Copyright (C) 1999, 2000  Eggheads
@@ -25,7 +25,7 @@
 
 #define MODULE_NAME "console"
 #define MAKING_CONSOLE
-#include "../module.h"
+#include "src/mod/module.h"
 #include <stdlib.h>
 
 static Function *global = NULL;
@@ -41,6 +41,9 @@ struct console_info {
   int page;
   int conchan;
 };
+
+static struct user_entry_type USERENTRY_CONSOLE;
+
 
 static int console_unpack(struct userrec *u, struct user_entry *e)
 {
@@ -166,7 +169,7 @@ int console_tcl_set(Tcl_Interp *irp, struct userrec *u,
   BADARGS(4, 9, " handle CONSOLE channel flags strip echo page conchan");
   if (!i) {
     i = user_malloc(sizeof(struct console_info));
-    bzero(i, sizeof(struct console_info));
+    egg_bzero(i, sizeof(struct console_info));
   }
   if (i->channel)
     nfree(i->channel);
@@ -190,6 +193,7 @@ int console_tcl_set(Tcl_Interp *irp, struct userrec *u,
       }
     }
   }
+  set_user(&USERENTRY_CONSOLE, u, i);
   return TCL_OK;
 }
 
@@ -302,7 +306,7 @@ static int console_store(struct userrec *u, int idx, char *par)
 
   if (!i) {
     i = user_malloc(sizeof(struct console_info));
-    bzero(i, sizeof(struct console_info));
+    egg_bzero(i, sizeof(struct console_info));
   }
   if (i->channel)
     nfree(i->channel);
@@ -386,8 +390,10 @@ char *console_start(Function * global_funcs)
 
   Context;
   module_register(MODULE_NAME, console_table, 1, 1);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
-    return "This module requires eggdrop1.5.0 or later";
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+    module_undepend(MODULE_NAME);
+    return "This module requires eggdrop1.5.3 or later";
+  }
   add_builtins(H_chon, mychon);
   add_builtins(H_dcc, mydcc);
   add_tcl_ints(myints);

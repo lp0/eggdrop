@@ -2,7 +2,7 @@
  * tcldcc.c -- handles:
  *   Tcl stubs for the dcc commands
  * 
- * $Id: tcldcc.c,v 1.13 2000/01/30 19:26:21 fabian Exp $
+ * $Id: tcldcc.c,v 1.16 2000/04/05 19:22:33 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -152,7 +152,7 @@ static int tcl_hand2idx STDVAR
   Context;
   BADARGS(2, 2, " nickname");
   for (i = 0; i < dcc_total; i++)
-    if ((!strcasecmp(argv[1], dcc[i].nick)) &&
+    if ((!egg_strcasecmp(argv[1], dcc[i].nick)) &&
 	 (dcc[i].type->flags & DCT_SIMUL)) {
       simple_sprintf(s, "%d", dcc[i].sock);
       Tcl_AppendResult(irp, s, NULL);
@@ -206,7 +206,7 @@ static int tcl_setchan STDVAR
     return TCL_ERROR;
   }
   if ((argv[2][0] < '0') || (argv[2][0] > '9')) {
-    if ((!strcmp(argv[2], "-1")) || (!strcasecmp(argv[2], "off")))
+    if ((!strcmp(argv[2], "-1")) || (!egg_strcasecmp(argv[2], "off")))
       chan = (-1);
     else {
       Tcl_SetVar(irp, "chan", argv[2], 0);
@@ -655,7 +655,7 @@ static int tcl_dcclist STDVAR
   BADARGS(1, 2, " ?type?");
   for (i = 0; i < dcc_total; i++) {
     if ((argc == 1) ||
-	(dcc[i].type && !strcasecmp(dcc[i].type->name, argv[1]))) {
+	(dcc[i].type && !egg_strcasecmp(dcc[i].type->name, argv[1]))) {
       sprintf(idxstr, "%ld", dcc[i].sock);
       sprintf(timestamp, "%ld", dcc[i].timeval);
       if (dcc[i].type && dcc[i].type->display)
@@ -773,7 +773,7 @@ static int tcl_getdccidle STDVAR
   BADARGS(2, 2, " idx");
   i = atoi(argv[1]);
   idx = findidx(i);
-  if ((idx < 0) || (dcc[idx].type == &DCC_SCRIPT)) {
+  if (idx < 0) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
     return TCL_ERROR;
   }
@@ -791,11 +791,7 @@ static int tcl_getdccaway STDVAR
   BADARGS(2, 2, " idx");
   i = atol(argv[1]);
   idx = findidx(i);
-  if (idx < 0) {
-    Tcl_AppendResult(irp, "invalid idx", NULL);
-    return TCL_ERROR;
-  }
-  if (dcc[idx].type != &DCC_CHAT) {
+  if ((idx < 0) || (dcc[idx].type != &DCC_CHAT)) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
     return TCL_ERROR;
   }
@@ -813,11 +809,7 @@ static int tcl_setdccaway STDVAR
   BADARGS(3, 3, " idx message");
   i = atol(argv[1]);
   idx = findidx(i);
-  if (idx < 0) {
-    Tcl_AppendResult(irp, "invalid idx", NULL);
-    return TCL_ERROR;
-  }
-  if (dcc[idx].type != &DCC_CHAT) {
+  if ((idx < 0) || (dcc[idx].type != &DCC_CHAT)) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
     return TCL_ERROR;
   }
@@ -872,7 +864,7 @@ static int tcl_unlink STDVAR
      x = 0;
   else {
     x = 1;
-    if (!strcasecmp(bot, dcc[i].nick))
+    if (!egg_strcasecmp(bot, dcc[i].nick))
       x = botunlink(-2, bot, argv[2]);
     else
       botnet_send_unlink(i, botnetnick, lastbot(bot), bot, argv[2]);
@@ -940,7 +932,7 @@ static int tcl_listen STDVAR
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type == &DCC_TELNET) && (dcc[i].port == port))
       idx = i;
-  if (!strcasecmp(argv[2], "off")) {
+  if (!egg_strcasecmp(argv[2], "off")) {
     if (pmap) {
       if (pold)
 	pold->next = pmap->next;
@@ -982,7 +974,7 @@ static int tcl_listen STDVAR
     dcc[idx].timeval = now;
   }
   /* script? */
-  if (!strcasecmp(argv[2], "script")) {
+  if (!egg_strcasecmp(argv[2], "script")) {
     strcpy(dcc[idx].nick, "(script)");
     if (argc < 4) {
       Tcl_AppendResult(irp, "must give proc name for script listen", NULL);
@@ -991,7 +983,7 @@ static int tcl_listen STDVAR
       return TCL_ERROR;
     }
     if (argc == 5) {
-      if (strcasecmp(argv[4], "pub")) {
+      if (egg_strcasecmp(argv[4], "pub")) {
 	Tcl_AppendResult(irp, "unknown flag: ", argv[4], ". allowed flags: pub",
 		         NULL);
 	killsock(dcc[idx].sock);
@@ -1007,11 +999,11 @@ static int tcl_listen STDVAR
     return TCL_OK;
   }
   /* bots/users/all */
-  if (!strcasecmp(argv[2], "bots"))
+  if (!egg_strcasecmp(argv[2], "bots"))
     strcpy(dcc[idx].nick, "(bots)");
-  else if (!strcasecmp(argv[2], "users"))
+  else if (!egg_strcasecmp(argv[2], "users"))
     strcpy(dcc[idx].nick, "(users)");
-  else if (!strcasecmp(argv[2], "all"))
+  else if (!egg_strcasecmp(argv[2], "all"))
     strcpy(dcc[idx].nick, "(telnet)");
   if (!dcc[idx].nick[0]) {
     Tcl_AppendResult(irp, "illegal listen type: must be one of ",
@@ -1041,17 +1033,19 @@ static int tcl_listen STDVAR
 
 static int tcl_boot STDVAR
 {
-  char who[512];
+  char who[NOTENAMELEN + 1];
   int i, ok = 0;
 
   Context;
   BADARGS(2, 3, " user@bot ?reason?");
-  strcpy(who, argv[1]);
+  strncpy(who, argv[1], NOTENAMELEN);
+  who[NOTENAMELEN] = 0;
   if (strchr(who, '@') != NULL) {
-    char whonick[161];
-     splitc(whonick, who, '@');
-     whonick[161] = 0;
-    if (!strcasecmp(who, botnetnick))
+    char whonick[HANDLEN + 1];
+
+    splitc(whonick, who, '@');
+    whonick[HANDLEN] = 0;
+    if (!egg_strcasecmp(who, botnetnick))
        strcpy(who, whonick);
     else if (remote_boots > 1) {
       i = nextbot(who);
@@ -1063,7 +1057,7 @@ static int tcl_boot STDVAR
     }
   }
   for (i = 0; i < dcc_total; i++)
-    if ((!strcasecmp(dcc[i].nick, who)) && !ok &&
+    if ((!egg_strcasecmp(dcc[i].nick, who)) && !ok &&
 	(dcc[i].type->flags & DCT_CANBOOT)) {
       do_boot(i, botnetnick, argv[2] ? argv[2] : "");
       ok = 1;

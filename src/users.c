@@ -10,7 +10,7 @@
  * 
  * dprintf'ized, 9nov1995
  * 
- * $Id: users.c,v 1.12 2000/01/22 23:30:54 fabian Exp $
+ * $Id: users.c,v 1.15 2000/05/06 22:02:27 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -755,7 +755,7 @@ int readuserfile(char *file, struct userrec **ret)
 	      }
 	    }
 	  }
-	} else if (strcmp(code, "%") == 0) { /* exemptmasks */
+	} else if (!strcmp(code, "%")) { /* exemptmasks */
 	  if (lasthand[0]) {
 	    if (s[0]) {
 	      if ((lasthand[0] == '#') || (lasthand[0] == '+')) {
@@ -769,7 +769,7 @@ int readuserfile(char *file, struct userrec **ret)
 	      }
 	    }
 	  }
-	} else if (strcmp(code, "@") == 0) { /* Invitemasks */
+	} else if (!strcmp(code, "@")) { /* Invitemasks */
 	  if (lasthand[0]) {
 	    if (s[0]) {
 	      if ((lasthand[0] == '#') || (lasthand[0] == '+')) {
@@ -820,6 +820,7 @@ int readuserfile(char *file, struct userrec **ret)
 	} else if (!strncmp(code, "::", 2)) {
 	  /* channel-specific bans */
 	  strcpy(lasthand, &code[2]);
+	  u = NULL;
 	  if (!findchan_by_dname(lasthand)) {
 	    strcpy(s1, lasthand);
 	    strcat(s1, " ");
@@ -828,7 +829,6 @@ int readuserfile(char *file, struct userrec **ret)
 	      strcat(ignored, " ");
 	    }
 	    lasthand[0] = 0;
-	    u = 0;
 	  } else {
 	    /* Remove all bans for this channel to avoid dupes */
 	    /* NOTE only remove bans for when getting a userfile
@@ -843,9 +843,10 @@ int readuserfile(char *file, struct userrec **ret)
 	      lasthand[0] = 0;
 	    }
 	  }
-	} else if (strncmp(code, "&&", 2) == 0) {
+	} else if (!strncmp(code, "&&", 2)) {
 	  /* channel-specific exempts */
 	  strcpy(lasthand, &code[2]);
+	  u = NULL;
 	  if (!findchan_by_dname(lasthand)) {
 	    strcpy(s1, lasthand);
 	    strcat(s1, " ");
@@ -854,7 +855,6 @@ int readuserfile(char *file, struct userrec **ret)
 	      strcat(ignored, " ");
 	    }
 	    lasthand[0] = 0;
-	    u = 0;
 	  } else {
 	    /* Remove all exempts for this channel to avoid dupes */
 	    /* NOTE only remove exempts for when getting a userfile
@@ -869,9 +869,10 @@ int readuserfile(char *file, struct userrec **ret)
 	      lasthand[0] = 0;
 	    }
 	  }
-	} else if (strncmp(code, "$$", 2) == 0) {  
+	} else if (!strncmp(code, "$$", 2)) {
 	  /* channel-specific invites */
 	  strcpy(lasthand, &code[2]);
+	  u = NULL;
 	  if (!findchan_by_dname(lasthand)) {   
 	    strcpy(s1, lasthand);
 	    strcat(s1, " ");
@@ -880,7 +881,6 @@ int readuserfile(char *file, struct userrec **ret)
 	      strcat(ignored, " ");
 	    }
 	    lasthand[0] = 0;
-	    u = 0;
 	  } else {
 	    /* Remove all invites for this channel to avoid dupes */
 	    /* NOTE only remove invites for when getting a userfile
@@ -904,7 +904,7 @@ int readuserfile(char *file, struct userrec **ret)
 	  if (u) {
 	    ue = u->entries;
 	    for (; ue && !ok; ue = ue->next)
-	      if (ue->name && !strcasecmp(code + 2, ue->name)) {
+	      if (ue->name && !egg_strcasecmp(code + 2, ue->name)) {
 		struct list_type *list;
 
 		list = user_malloc(sizeof(struct list_type));
@@ -976,7 +976,7 @@ int readuserfile(char *file, struct userrec **ret)
 
 	      u = get_user_by_handle(bu, code);
 	      for (i = 0; i < dcc_total; i++)
-		if (!strcasecmp(code, dcc[i].nick))
+		if (!egg_strcasecmp(code, dcc[i].nick))
 		  dcc[i].user = u;
 	      u->flags_udef = fr.udef_global;
 	      /* if s starts with '/' it's got file info */
@@ -997,7 +997,7 @@ int readuserfile(char *file, struct userrec **ret)
   for (u = bu; u; u = u->next) {
     struct user_entry *e;
 
-    if (!(u->flags & USER_BOT) && !strcasecmp (u->handle, botnetnick)) {
+    if (!(u->flags & USER_BOT) && !egg_strcasecmp (u->handle, botnetnick)) {
       putlog(LOG_MISC, "*", "(!) I have an user record, but without +b");
       /* u->flags |= USER_BOT; */
     }
@@ -1082,7 +1082,7 @@ void autolink_cycle(char *start)
 	  }
 	  /* did we make it where we're supposed to start?  yay! */
 	  if (!ready)
-	    if (!strcasecmp(u->handle, start)) {
+	    if (!egg_strcasecmp(u->handle, start)) {
 	      ready = 1;
 	      autc = NULL;
 	      /* if starting point is a +h bot, must be in 2nd cycle */
@@ -1100,7 +1100,7 @@ void autolink_cycle(char *start)
 	  int i;
 
 	  i = nextbot(u->handle);
-	  if ((i >= 0) && !strcasecmp(dcc[i].nick, u->handle)) {
+	  if ((i >= 0) && !egg_strcasecmp(dcc[i].nick, u->handle)) {
 	    char *p = MISC_REJECTED;
 
 	    /* we're directly connected to the offending bot?! (shudder!) */

@@ -2,7 +2,7 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot 
  * 
- * $Id: irc.c,v 1.16 2000/02/03 22:54:17 fabian Exp $
+ * $Id: irc.c,v 1.22 2000/03/23 23:17:58 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -25,10 +25,10 @@
 
 #define MODULE_NAME "irc"
 #define MAKING_IRC
-#include "../module.h"
+#include "src/mod/module.h"
 #include "irc.h"
-#include "../server.mod/server.h"
-#include "../channels.mod/channels.h"
+#include "server.mod/server.h"
+#include "channels.mod/channels.h"
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
@@ -612,7 +612,7 @@ static void check_expired_chanstuff()
 	  snick = splitnick(&sfrom);
 	  
 	  if (force_expire || channel_clearbans(chan) ||
-	      !(snick[0] && strcasecmp(sfrom, botuserhost) &&
+	      !(snick[0] && egg_strcasecmp(sfrom, botuserhost) &&
 		(m = ismember(chan, snick)) &&
 		m->user && (m->user->flags & USER_BOT) && chan_hasop(m))) {
 	    putlog(LOG_MODES, chan->dname,
@@ -635,7 +635,7 @@ static void check_expired_chanstuff()
 	    sfrom = s;
 	    snick = splitnick(&sfrom);
 	    if (force_expire || channel_clearbans(chan) ||
-		!(snick[0] && strcasecmp(sfrom, botuserhost) &&
+		!(snick[0] && egg_strcasecmp(sfrom, botuserhost) &&
 		  (m = ismember(chan, snick)) &&
 		  m->user && (m->user->flags & USER_BOT) && chan_hasop(m))) {
 	      /* Check to see if it matches a ban */
@@ -653,7 +653,7 @@ static void check_expired_chanstuff()
 	       */
 	      if (match) {
 	        putlog(LOG_MODES, chan->dname,
-		       "(%s) Channel exemption %s NOT expired. Ban still set!",
+		       "(%s) Channel exemption %s NOT expired. Exempt still set!",
 		       chan->dname, e->mask);
 	      } else {
 	        putlog(LOG_MODES, chan->dname,
@@ -680,7 +680,7 @@ static void check_expired_chanstuff()
 	    snick = splitnick(&sfrom);
 
 	    if (force_expire || channel_clearbans(chan) ||
-		!(snick[0] && strcasecmp(sfrom, botuserhost) &&
+		!(snick[0] && egg_strcasecmp(sfrom, botuserhost) &&
 		  (m = ismember(chan, snick)) &&
 		  m->user && (m->user->flags & USER_BOT) && chan_hasop(m))) {
 	      if ((chan->channel.mode & CHANINV) &&
@@ -689,7 +689,7 @@ static void check_expired_chanstuff()
 	         * Jason
 		 */
 	        putlog(LOG_MODES, chan->dname,
-                   "(%s) Channel invitation %s NOT expired. i mode still set!",
+                   "(%s) Channel invitation %s NOT expired. Invite still set!",
 		       chan->dname, b->mask);
 	      } else {
 	        putlog(LOG_MODES, chan->dname,
@@ -727,7 +727,7 @@ static void check_expired_chanstuff()
       m = chan->channel.member;
       while (m && m->nick[0]) {
 	if ((now - m->last) >= (chan->idle_kick * 60) &&
-	    !match_my_nick(m->nick)) {
+	    !match_my_nick(m->nick) && !chan_issplit(m)) {
 	  sprintf(s, "%s!%s", m->nick, m->userhost);
 	  m->user = get_user_by_host(s);
 	  get_user_flagrec(m->user, &fr, chan->dname);
@@ -821,7 +821,7 @@ static void check_tcl_part(char *nick, char *uhost, struct userrec *u,
   Tcl_SetVar(interp, "_p2", uhost, 0);
   Tcl_SetVar(interp, "_p3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_p4", chname, 0);
-  Tcl_SetVar(interp, "_p5", text[0] ? text : "", 0);
+  Tcl_SetVar(interp, "_p5", text ? text : "", 0);
   Context;
   check_tcl_bind(H_part, args, &fr, " $_p1 $_p2 $_p3 $_p4 $_p5",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
@@ -1069,13 +1069,13 @@ static void do_nettype()
     use_invites = 0;
     rfc_compliant = 0;
     break;
-  case 4:		/* new +e/+I Efnet hybrid */
+  case 4:		/* hybrid-6+ */
     kick_method = 1;
     modesperline = 4;
     use_354 = 0;
     use_silence = 0;
     use_exempts = 1;
-    use_invites = 1;
+    use_invites = 0;
     rfc_compliant = 1;
     break;
   default:
@@ -1189,8 +1189,14 @@ char *irc_start(Function * global_funcs)
 
   Context;
   module_register(MODULE_NAME, irc_table, 1, 1);
-  if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0)))
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+    module_undepend(MODULE_NAME);
+    return "This module needs eggdrop1.5.3 or later";
+  }
+  if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0))) {
+    module_undepend(MODULE_NAME);
     return "You need the server module to use the irc module.";
+  }
   if (!(channels_funcs = module_depend(MODULE_NAME, "channels", 1, 0))) {
     module_undepend(MODULE_NAME);
     return "You need the channels module to use the irc module.";

@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  * 
- * $Id: dcc.c,v 1.23 2000/01/31 23:03:01 fabian Exp $
+ * $Id: dcc.c,v 1.28 2000/05/06 22:00:31 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -262,9 +262,10 @@ static void cont_link(int idx, char *buf, int i)
       if (i > 0) {
 	bots = bots_in_subtree(findbot(dcc[idx].nick));
 	users = users_in_subtree(findbot(dcc[idx].nick));
-	simple_sprintf(x, "Unlinked %s (restructure) (lost %d bot%s and %d \
-	               user%s)", dcc[i].nick, bots, (bots != 1) ? "s" : "",
-		       users, (users != 1) ? "s" : "");
+	simple_sprintf(x,
+		      "Unlinked %s (restructure) (lost %d bot%s and %d user%s)",
+		      dcc[i].nick, bots, (bots != 1) ? "s" : "",
+		      users, (users != 1) ? "s" : "");
 	chatout("*** %s\n", x);
 	botnet_send_unlinked(i, dcc[i].nick, x);
 	dprintf(i, "bye %s\n", "restructure");
@@ -313,14 +314,14 @@ static void dcc_bot_new(int idx, char *buf, int x)
 
   strip_telnet(dcc[idx].sock, buf, &x);
   code = newsplit(&buf);
-  if (!strcasecmp(code, "*hello!")) {
+  if (!egg_strcasecmp(code, "*hello!")) {
     greet_new_bot(idx);
-  } else if (!strcasecmp(code, "version") || !strcasecmp(code, "v")) {
+  } else if (!egg_strcasecmp(code, "version") || !egg_strcasecmp(code, "v")) {
     bot_version(idx, buf);
-  } else if (!strcasecmp(code, "badpass")) {
+  } else if (!egg_strcasecmp(code, "badpass")) {
     /* We entered the wrong password */
     putlog(LOG_BOTS, "*", DCC_BADPASS, dcc[idx].nick);
-  } else if (!strcasecmp(code, "passreq")) {
+  } else if (!egg_strcasecmp(code, "passreq")) {
     char *pass = get_user(&USERENTRY_PASS, u);
 
     if (!pass || !strcmp(pass, "-")) {
@@ -336,7 +337,7 @@ static void dcc_bot_new(int idx, char *buf, int x)
         dprintf(idx, "%s\n", pass);
       }
     }
-  } else if (!strcasecmp(code, "error")) {
+  } else if (!egg_strcasecmp(code, "error")) {
     putlog(LOG_BOTS, "*", DCC_LINKERROR, dcc[idx].nick, buf);
   }
   /* Ignore otherwise */
@@ -416,7 +417,7 @@ static void dcc_bot(int idx, char *code, int i)
   f = 0;
   i = 0;
   while ((C_bot[i].name != NULL) && (!f)) {
-    int y = strcasecmp(code, C_bot[i].name);
+    int y = egg_strcasecmp(code, C_bot[i].name);
 
     if (y == 0) {
       /* Found a match */
@@ -512,14 +513,10 @@ static int dcc_bot_check_digest(int idx, char *remote_digest)
 
   MD5Init(&md5context);
 
-#ifdef HAVE_SNPRINTF
-  snprintf(digest_string, 33, "<%x%x@", getpid(),
-	   (unsigned int) dcc[idx].timeval);
-#else
-  sprintf(digest_string, "<%x%x@", getpid(),
-	  (unsigned int) dcc[idx].timeval);
-#endif
-  MD5Update(&md5context, (unsigned char *) digest_string, strlen(digest_string));
+  egg_snprintf(digest_string, 33, "<%x%x@", getpid(),
+	       (unsigned int) dcc[idx].timeval);
+  MD5Update(&md5context, (unsigned char *) digest_string,
+	    strlen(digest_string));
   MD5Update(&md5context, (unsigned char *) botnetnick, strlen(botnetnick));
   MD5Update(&md5context, (unsigned char *) ">", 1);
   MD5Update(&md5context, (unsigned char *) password, strlen(password));
@@ -544,7 +541,7 @@ static void dcc_chat_pass(int idx, char *buf, int atr)
   atr = dcc[idx].user ? dcc[idx].user->flags : 0;
 
   /* Check for MD5 digest from remote _bot_. <cybah> */
-  if ((atr & USER_BOT) && !strncasecmp(buf, "digest ", 7)) {
+  if ((atr & USER_BOT) && !egg_strncasecmp(buf, "digest ", 7)) {
     if(dcc_bot_check_digest(idx, buf+7)) {
       nfree(dcc[idx].u.chat);
       dcc[idx].type = &DCC_BOT_NEW;
@@ -1070,7 +1067,7 @@ static int detect_telnet_flood(char *floodhost)
   Context;
   if (flood_telnet_thr == 0 || (glob_friend(fr) && !par_telnet_flood))
     return 0;			/* No flood protection */
-  if (strcasecmp(lasttelnethost, floodhost) != 0) {	/* New... */
+  if (egg_strcasecmp(lasttelnethost, floodhost)) {	/* New... */
     strcpy(lasttelnethost, floodhost);
     lasttelnettime = now;
     lasttelnets = 0;
@@ -1342,7 +1339,7 @@ void dupwait_notify(char *who)
   Assert(who);
   for (idx = 0; idx < dcc_total; idx++)
     if ((dcc[idx].type == &DCC_DUPWAIT) &&
-	!strcmp(dcc[idx].nick, who)) {
+	!egg_strcasecmp(dcc[idx].nick, who)) {
       dcc_telnet_pass(idx, dcc[idx].u.dupwait->atr);
       break;
     }
@@ -1382,7 +1379,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
     return;
   }
   dcc[idx].status &= ~(STAT_BOTONLY | STAT_USRONLY);
-  if ((!strcasecmp(buf, "NEW")) &&
+  if ((!egg_strcasecmp(buf, "NEW")) &&
       ((allow_new_telnets) || (make_userfile))) {
     dcc[idx].type = &DCC_TELNET_NEW;
     dcc[idx].timeval = now;
@@ -1414,7 +1411,7 @@ static void dcc_telnet_id(int idx, char *buf, int atr)
   correct_handle(buf);
   strcpy(dcc[idx].nick, buf);
   if (glob_bot(fr)) {
-    if (!strcasecmp(botnetnick, dcc[idx].nick)) {
+    if (!egg_strcasecmp(botnetnick, dcc[idx].nick)) {
       dprintf(idx, "error You cannot link using my botnetnick.\n");
       putlog(LOG_BOTS, "*", DCC_MYBOTNETNICK, dcc[idx].host);
       killsock(dcc[idx].sock);
@@ -1581,7 +1578,7 @@ static void dcc_telnet_new(int idx, char *buf, int x)
     dprintf(idx, "\nSorry, that nickname is taken already.\n");
     dprintf(idx, "Try another one please:\n");
     return;
-  } else if (!strcasecmp(buf, origbotname) || !strcasecmp(buf, botnetnick)) {
+  } else if (!egg_strcasecmp(buf, origbotname) || !egg_strcasecmp(buf, botnetnick)) {
     dprintf(idx, "Sorry, can't use my name for a nick.\n");
   } else {
     if (make_userfile)
@@ -2083,7 +2080,7 @@ void dcc_telnet_got_ident(int i, char *host)
   }
   dcc[i].type = &DCC_TELNET_ID;
   dcc[i].u.chat = get_data_ptr(sizeof(struct chat_info));
-  bzero(dcc[i].u.chat, sizeof(struct chat_info));
+  egg_bzero(dcc[i].u.chat, sizeof(struct chat_info));
 
   /* Copy acceptable-nick/host mask */
   dcc[i].status = STAT_TELNET | STAT_ECHO;
@@ -2098,7 +2095,7 @@ void dcc_telnet_got_ident(int i, char *host)
   strcpy(dcc[i].u.chat->con_chan, chanset ? chanset->name : "*");
   /* Displays a customizable banner. */
   if (use_telnet_banner)
-   show_banner(i);  
+    show_banner(i);  
   /* This is so we dont tell someone doing a portscan anything
    * about ourselves. <cybah>
    */

@@ -6,7 +6,7 @@
  *   user kickban, kick, op, deop
  *   idle kicking
  * 
- * $Id: chan.c,v 1.30 2000/02/03 22:54:16 fabian Exp $
+ * $Id: chan.c,v 1.39 2000/05/06 22:02:27 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -31,6 +31,11 @@ static time_t last_ctcp = (time_t) 0L;
 static int    count_ctcp = 0;
 static time_t last_invtime = (time_t) 0L;
 static char   last_invchan[300] = "";
+
+/* ID length for !channels.
+ */
+#define CHANNEL_ID_LEN 5
+
 
 /* Returns a pointer to a new channel member structure.
  */
@@ -187,7 +192,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
   /* Okay, make sure i'm not flood-checking myself */
   if (match_my_nick(floodnick))
     return 0;
-  if (!strcasecmp(floodhost, botuserhost))
+  if (!egg_strcasecmp(floodhost, botuserhost))
     return 0;
   /* My user@host (?) */
   if ((which == FLOOD_KICK) || (which == FLOOD_DEOP))
@@ -339,7 +344,7 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
     get_user_flagrec(m->user, &fr, chan->dname);
     sprintf(s, "%s!%s", m->nick, m->userhost);
     if (!chan_sentkick(m) && wild_match(hostmask, s) &&
-	!match_my_nick(m->nick) &&
+	!match_my_nick(m->nick) && !chan_issplit(m) &&
 	!glob_friend(fr) && !chan_friend(fr) &&
 	!isexempted(chan, s) &&	/* Crotale - don't kick +e users */
 	!(channel_dontkickops(chan) &&
@@ -427,7 +432,6 @@ static void refresh_exempt(struct chanset_t *chan, char *user)
             if (e->lastactive < now - 60 && !isexempted(chan, e->mask)) {
               do_mask(chan, chan->channel.exempt, e->mask, 'e');
               e->lastactive = now;
-              return;
             }
           }
           b = b->next;
@@ -817,10 +821,8 @@ static int got324(char *from, char *msg)
 static int got352or4(struct chanset_t *chan, char *user, char *host,
 		     char *nick, char *flags)
 {
-  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
-  char userhost[UHOSTLEN], *p;
+  char userhost[UHOSTLEN];
   memberlist *m;
-  int waschanop;
 
   m = ismember(chan, nick);	/* In my channel list copy? */
   if (!m) {			/* Nope, so update */
@@ -839,7 +841,6 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
     strcpy(botuserhost, m->userhost);	/* Yes, save my own userhost */
     m->joined = now;		/* set this to keep the whining masses happy */
   }
-  waschanop = me_op(chan);	/* Am I opped here? */
   if (strchr(flags, '@') != NULL)	/* Flags say he's opped? */
     m->flags |= (CHANOP | WASOP);	/* Yes, so flag in my table */
   else
@@ -850,51 +851,10 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
     m->flags &= ~CHANVOICE;
   if (!(m->flags & (CHANVOICE | CHANOP)))
     m->flags |= STOPWHO;
-  if (match_my_nick(nick) && !waschanop && me_op(chan))
-    recheck_channel(chan, 1);
   if (match_my_nick(nick) && any_ops(chan) && !me_op(chan) &&
       chan->need_op[0])
     do_tcl("need-op", chan->need_op);
   m->user = get_user_by_host(userhost);
-  get_user_flagrec(m->user, &fr, chan->dname);
-  /* Are they a chanop, and me too */
-  if (chan_hasop(m) && me_op(chan) &&
-      /* ... and are they a channel or global de-op */
-      ((chan_deop(fr) || (glob_deop(fr) && !chan_op(fr))) ||
-       /* or is it bitch mode & they're not an op anywhere */
-       (channel_bitch(chan) && !chan_op(fr) &&
-	!(glob_op(fr) && !chan_deop(fr)))) &&
-      /* and of course it's not me */
-      !match_my_nick(nick)) {
-    add_mode(chan, '-', 'o', nick);
-  }
-  /* If channel is enforce bans */
-  if (channel_enforcebans(chan) &&
-      /* ... and user matches a ban */
-      (u_match_mask(global_bans, userhost) ||
-       u_match_mask(chan->bans, userhost)) &&
-      /* ... and it's not me, and i'm an op */
-      !match_my_nick(nick) && me_op(chan) &&
-      !chan_friend(fr) && !glob_friend(fr) &&
-      !isexempted(chan, userhost) &&
-      !(channel_dontkickops(chan) &&
-	(chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) {	/* arthur2 */
-    /* *bewm* */
-    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick, IRC_BANNED);
-    m->flags |= SENTKICK;
-  }
-  /* if the user is a +k */
-  else if ((chan_kick(fr) || glob_kick(fr)) &&
-	   /* ... and it's not me :) (who'd set me +k anyway, a sicko?) and if
-	    * I'm an op */
-	   !match_my_nick(nick) && me_op(chan)) {
-    /* cya later! */
-    p = get_user(&USERENTRY_COMMENT, m->user);
-    quickban(chan, userhost);
-    dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick,
-	    p ? p : IRC_POLITEKICK);
-    m->flags |= SENTKICK;
-  }
   return 0;
 }
 
@@ -971,6 +931,8 @@ static int got315(char *from, char *msg)
     dprintf(DP_MODE, "JOIN %s %s\n",
 	    (chan->name[0]) ? chan->name : chan->dname, chan->key_prot);
   }
+  else if (me_op(chan))
+    recheck_channel(chan, 1);
   /* do not check for i-lines here. */
   return 0;
 }
@@ -1044,7 +1006,6 @@ static int got368(char *from, char *msg)
 	    add_mode(chan, '-', 'b', b->mask);
 	  b = b->next;
 	}
-      recheck_bans(chan);
     }
   }
   /* If i sent a mode -b on myself (deban) in got367, either
@@ -1112,7 +1073,6 @@ static int got349(char *from, char *msg)
 	      add_mode(chan, '-', 'e', e->mask);
 	    e = e->next;
 	  }
-	recheck_exempts(chan);
       }
     }  
     
@@ -1179,7 +1139,6 @@ static int got347(char *from, char *msg)
 	      add_mode(chan, '-', 'I', inv->mask);
 	    inv = inv->next;
 	  }
-	recheck_invites(chan);
       }
     }
   }
@@ -1246,7 +1205,17 @@ static int got471(char *from, char *msg)
 
   newsplit(&msg);
   chname = newsplit(&msg);
-  chan = findchan(chname);
+  /* !channel short names (also referred to as 'description names'
+   * can be received by skipping over the unique ID.
+   */
+  if ((chname[0] == '!') && (strlen(chname) > CHANNEL_ID_LEN)) {
+    chname += CHANNEL_ID_LEN;
+    chname[0] = '!';
+  }
+  /* We use dname because name is first set on JOIN and we might not
+   * have joined the channel yet.
+   */
+  chan = findchan_by_dname(chname);
   if (chan) {
     putlog(LOG_JOIN, chan->dname, IRC_CHANFULL, chan->dname);
     if (chan->need_limit[0])
@@ -1265,7 +1234,17 @@ static int got473(char *from, char *msg)
 
   newsplit(&msg);
   chname = newsplit(&msg);
-  chan = findchan(chname);
+  /* !channel short names (also referred to as 'description names'
+   * can be received by skipping over the unique ID.
+   */
+  if ((chname[0] == '!') && (strlen(chname) > CHANNEL_ID_LEN)) {
+    chname += CHANNEL_ID_LEN;
+    chname[0] = '!';
+  }
+  /* We use dname because name is first set on JOIN and we might not
+   * have joined the channel yet.
+   */
+  chan = findchan_by_dname(chname);
   if (chan) {
     putlog(LOG_JOIN, chan->dname, IRC_CHANINVITEONLY, chan->dname);
     if (chan->need_invite[0])
@@ -1284,35 +1263,23 @@ static int got474(char *from, char *msg)
 
   newsplit(&msg);
   chname = newsplit(&msg);
-  chan = findchan(chname);
+  /* !channel short names (also referred to as 'description names'
+   * can be received by skipping over the unique ID.
+   */
+  if ((chname[0] == '!') && (strlen(chname) > CHANNEL_ID_LEN)) {
+    chname += CHANNEL_ID_LEN;
+    chname[0] = '!';
+  }
+  /* We use dname because name is first set on JOIN and we might not
+   * have joined the channel yet.
+   */
+  chan = findchan_by_dname(chname);
   if (chan) {
     putlog(LOG_JOIN, chan->dname, IRC_BANNEDFROMCHAN, chan->dname);
     if (chan->need_unban[0])
       do_tcl("need-unban", chan->need_unban);
   } else
     putlog(LOG_JOIN, chname, IRC_BANNEDFROMCHAN, chname);
-  return 0;
-}
-
-/* got 442: not on channel
- */
-static int got442(char *from, char *msg)
-{
-  char *chname;
-  struct chanset_t *chan;
-
-  newsplit(&msg);
-  chname = newsplit(&msg);
-  chan = findchan(chname);
-  if (chan) {
-    if (!channel_inactive(chan)) {
-      putlog(LOG_MISC, chan->dname, IRC_SERVNOTONCHAN, chan->dname);
-      clear_channel(chan, 1);
-      chan->status &= ~CHAN_ACTIVE;
-      dprintf(DP_MODE, "JOIN %s %s\n",
-	      (chan->name[0]) ? chan->name : chan->dname, chan->key_prot);
-    }  
-  }
   return 0;
 }
 
@@ -1325,7 +1292,17 @@ static int got475(char *from, char *msg)
 
   newsplit(&msg);
   chname = newsplit(&msg);
-  chan = findchan(chname);
+  /* !channel short names (also referred to as 'description names'
+   * can be received by skipping over the unique ID.
+   */
+  if ((chname[0] == '!') && (strlen(chname) > CHANNEL_ID_LEN)) {
+    chname += CHANNEL_ID_LEN;
+    chname[0] = '!';
+  }
+  /* We use dname because name is first set on JOIN and we might not
+   * have joined the channel yet.
+   */
+  chan = findchan_by_dname(chname);
   if (chan) {
     putlog(LOG_JOIN, chan->dname, IRC_BADCHANKEY, chan->dname);
     if (chan->need_key[0])
@@ -1492,12 +1469,8 @@ static int gotjoin(char *from, char *chname)
      * name now. This will happen when we initially join the channel, as we
      * dont know the unique channel name that the server has made up. <cybah>
      */  
-    if (strlen(chname)>6) {
-#ifdef HAVE_SNPRINTF
-      snprintf(buf, UHOSTLEN, "!%s", chname + 6);
-#else
-      sprintf(buf, "!%s", chname + 6);
-#endif
+    if (strlen(chname) > 6) {
+      egg_snprintf(buf, UHOSTLEN, "!%s", chname + 6);
       chan = findchan_by_dname(buf);
     }
   } else if (!chan) {
@@ -1527,7 +1500,7 @@ static int gotjoin(char *from, char *chname)
       reset_chan_info(chan);
     } else {
       m = ismember(chan, nick);
-      if (m && m->split && !strcasecmp(m->userhost, uhost)) {
+      if (m && m->split && !egg_strcasecmp(m->userhost, uhost)) {
 	check_tcl_rejn(nick, uhost, u, chan->dname);
 	m->split = 0;
 	m->last = now;
@@ -2015,7 +1988,7 @@ static int gotmsg(char *from, char *msg)
 	      update_idle(chan->dname, nick);
 	    if (!ignoring) {
 	      /* Log DCC, it's to a channel damnit! */
-	      if (strcmp(code, "ACTION") == 0) {
+	      if (!strcmp(code, "ACTION")) {
 		putlog(LOG_PUBLIC, chan->dname, "Action: %s %s", nick, ctcp);
 	      } else {
 		putlog(LOG_PUBLIC, chan->dname,
@@ -2164,7 +2137,6 @@ static cmd_t irc_raw[] =
   {"471",	"",	(Function) got471,	"irc:471"},
   {"473",	"",	(Function) got473,	"irc:473"},
   {"474",	"",	(Function) got474,	"irc:474"},
-  {"442",	"",	(Function) got442,	"irc:442"},
   {"475",	"",	(Function) got475,	"irc:475"},
   {"INVITE",	"",	(Function) gotinvite,	"irc:invite"},
   {"TOPIC",	"",	(Function) gottopic,	"irc:topic"},

@@ -7,7 +7,7 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  * 
- * $Id: proto.h,v 1.20 2000/01/30 19:26:21 fabian Exp $
+ * $Id: proto.h,v 1.25 2000/05/06 22:04:55 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -31,14 +31,11 @@
 #ifndef _EGG_PROTO_H
 #define _EGG_PROTO_H
 
-#include "../lush.h"
+#include "lush.h"
+#include "misc_file.h"
 
 #ifdef HAVE_DPRINTF
 #define dprintf dprintf_eggdrop
-#endif
-
-#ifndef HAVE_BZERO
-void bzero(void *, int);
 #endif
 
 struct chanset_t;		/* keeps the compiler warnings down :) */
@@ -173,6 +170,7 @@ char *get_language(int);
 int cmd_loadlanguage(struct userrec *, int, char *);
 void add_lang_section(char *);
 int del_lang_section(char *);
+int exist_lang_section(char *);
 
 /* main.c */
 void fatal(char *, int);
@@ -217,8 +215,6 @@ void tellhelp(int, char *, struct flag_record *, int);
 void tellwildhelp(int, char *, struct flag_record *);
 void tellallhelp(int, char *, struct flag_record *);
 void showhelp(char *, char *, struct flag_record *, int);
-int copyfile(char *, char *);
-int movefile(char *, char *);
 void rem_help_reference(char *file);
 void add_help_reference(char *file);
 void debug_help(int);
@@ -228,9 +224,10 @@ char *extracthostname(char *);
 void show_banner(int i);
 void make_rand_str(char *, int);
 int oatoi(const char *);
+int is_file(const char *);
+void logsuffix_change();
 
 /* net.c */
-void my_memcpy(char *, char *, int);
 IP my_atoul(char *);
 unsigned long iptolong(IP);
 IP getmyip();

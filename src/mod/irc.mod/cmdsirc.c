@@ -2,7 +2,7 @@
  * chancmds.c -- part of irc.mod
  *   handles commands direclty relating to channel interaction
  * 
- * $Id: cmdsirc.c,v 1.10 2000/01/17 22:36:09 fabian Exp $
+ * $Id: cmdsirc.c,v 1.12 2000/03/23 23:17:58 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -785,9 +785,9 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
     return;
   }
   u = get_user_by_handle(userlist, hand);
-  if (u && (u->flags & USER_OWNER) &&
-      !(atr & USER_OWNER) && !strcasecmp(dcc[idx].nick, hand)) {
-    dprintf(idx, "You can't add hostmasks to the bot owner.\n");
+  if (u && (u->flags & (USER_OWNER|USER_MASTER)) &&
+      !(atr & USER_OWNER) && egg_strcasecmp(dcc[idx].nick, hand)) {
+    dprintf(idx, "You can't add hostmasks to the bot owner/master.\n");
     return;
   }
   if (!statichost)
@@ -795,8 +795,14 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
   else {
     strcpy(s1,s);
     p1 = strchr(s1,'!');
-    if (strchr("~^+=-",p1[1]))
-      p1[1] = '*';
+    if (strchr("~^+=-",p1[1])) {
+      if (strict_host)
+	p1[1] = '?';
+      else {
+	p1[1] = '!';
+	p1++;
+      }
+    }
     p1--;
     p1[0] = '*';
   }
@@ -856,7 +862,7 @@ static void cmd_deluser(struct userrec *u, int idx, char *par)
    * so deluser on a channel they're not on should work
    */
   /* Shouldn't allow people to remove permanent owners (guppy 9Jan1999) */
-  if ((glob_owner(victim) && strcasecmp(dcc[idx].nick, nick)) ||
+  if ((glob_owner(victim) && egg_strcasecmp(dcc[idx].nick, nick)) ||
       isowner(u->handle)) {
     dprintf(idx, "Can't remove the bot owner!\n");
   } else if (glob_botmast(victim) && !glob_owner(user)) {

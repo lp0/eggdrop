@@ -1,14 +1,13 @@
 /* 
  * misc.c -- handles:
- *   split() maskhost() copyfile() movefile()
- *   dumplots() daysago() days() daysdur()
+ *   split() maskhost() dumplots() daysago() days() daysdur()
  *   logging things
  *   queueing output for the bot (msg and help)
  *   resync buffers for sharebots
  *   help system
  *   motd display and %var substitution
  * 
- * $Id: misc.c,v 1.16 2000/02/03 21:58:28 fabian Exp $
+ * $Id: misc.c,v 1.22 2000/05/06 22:04:55 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -43,10 +42,11 @@ extern struct dcc_t	*dcc;
 extern struct chanset_t	*chanset;
 extern char		 helpdir[], version[], origbotname[], botname[],
 			 admin[], motdfile[], ver[], botnetnick[],
-			 bannerfile[];
+			 bannerfile[], logfile_suffix[];
 extern int		 backgrd, con_chan, term_z, use_stderr, dcc_total,
 			 keep_all_logs, quick_logs, strict_host;
 extern time_t		 now;
+extern Tcl_Interp	*interp;
 
 
 int	 shtime = 1;		/* Whether or not to display the time
@@ -116,7 +116,7 @@ void init_misc()
 
 /* low-level stuff for other modules
  */
-static int is_file(char *s)
+int is_file(const char *s)
 {
   struct stat ss;
   int i = stat(s, &ss);
@@ -127,20 +127,6 @@ static int is_file(char *s)
     return 1;
   return 0;
 }
-
-/* unixware has no strcasecmp() without linking in a hefty library */
-#if !HAVE_STRCASECMP
-#define upcase(c) (((c)>='a' && (c)<='z') ? (c)-'a'+'A' : (c))
-
-int strcasecmp(char *s1, char *s2)
-{
-  while ((*s1) && (*s2) && (upcase(*s1) == upcase(*s2))) {
-    s1++;
-    s2++;
-  }
-  return upcase(*s1) - upcase(*s2);
-}
-#endif
 
 int my_strcpy(char *a, char *b)
 {
@@ -278,66 +264,6 @@ void maskhost(char *s, char *nw)
   }
 }
 
-/* Copy a file from one place to another (possibly erasing old copy).
- *
- * returns:  0 if OK
- *	     1 if can't open original file
- *	     2 if can't open new file
- *	     3 if original file isn't normal
- *	     4 if ran out of disk space
- */
-int copyfile(char *oldpath, char *newpath)
-{
-  int fi, fo, x;
-  char buf[512];
-  struct stat st;
-
-  fi = open(oldpath, O_RDONLY, 0);
-  if (fi < 0)
-    return 1;
-  fstat(fi, &st);
-  if (!(st.st_mode & S_IFREG))
-    return 3;
-  fo = creat(newpath, (int) (st.st_mode & 0777));
-  if (fo < 0) {
-    close(fi);
-    return 2;
-  }
-  for (x = 1; x > 0;) {
-    x = read(fi, buf, 512);
-    if (x > 0) {
-      if (write(fo, buf, x) < x) {	/* Couldn't write */
-	close(fo);
-	close(fi);
-	unlink(newpath);
-	return 4;
-      }
-    }
-  }
-  close(fo);
-  close(fi);
-  return 0;
-}
-
-int movefile(char *oldpath, char *newpath)
-{
-  int ret;
-  
-#ifdef HAVE_RENAME
-  /* Try to use rename first */
-  if (rename(oldpath, newpath) == 0)
-    return 0;
-#endif /* HAVE_RENAME */
-
-  /* If that fails, fall back to just copying and then
-   * deleting the file.
-   */
-  ret = copyfile(oldpath, newpath);
-  if (ret == 0)
-    unlink(oldpath);
-  return ret;
-}
-
 /* Dump a potentially super-long string of text.
  * Assume prefix 20 chars or less.
  */
@@ -468,17 +394,14 @@ void putlog EGG_VARARGS_DEF(int, arg1)
 
   /* Format log entry at offset 8, then i can prepend the timestamp */
   out = &s[8];
-#ifdef HAVE_VSNPRINTF
   /* No need to check if out should be null-terminated here,
    * just do it! <cybah>
    */
-  vsnprintf(out, LOGLINEMAX - 8, format, va);
+  egg_vsnprintf(out, LOGLINEMAX - 8, format, va);
   out[LOGLINEMAX - 8] = 0;
-#else
-  vsprintf(out, format, va);
-#endif
   tt = now;
   if (keep_all_logs) {
+#ifndef HAVE_STRFTIME
     strcpy(ct, ctime(&tt));
     ct[10] = 0;
     strcpy(ct, &ct[8]);
@@ -488,6 +411,10 @@ void putlog EGG_VARARGS_DEF(int, arg1)
     strcpy(&ct[5], &ct[20]);
     if (ct[0] == ' ')
       ct[0] = '0';
+#else
+    strftime(ct, 80, logfile_suffix, localtime(&tt));
+    ct[80] = 0;
+#endif
   }
   if ((out[0]) && (shtime)) {
     strcpy(s1, ctime(&tt));
@@ -508,7 +435,11 @@ void putlog EGG_VARARGS_DEF(int, arg1)
 	if (logs[i].f == NULL) {
 	  /* Open this logfile */
 	  if (keep_all_logs) {
+#ifndef HAVE_STRFTIME
 	    sprintf(s1, "%s.%s", logs[i].filename, ct);
+#else
+	    sprintf(s1, "%s%s", logs[i].filename, ct);
+#endif
 	    logs[i].f = fopen(s1, "a+");
 	  } else
 	    logs[i].f = fopen(logs[i].filename, "a+");
@@ -517,7 +448,7 @@ void putlog EGG_VARARGS_DEF(int, arg1)
 	  /* Check if this is the same as the last line added to
 	   * the log. <cybah>
 	   */
-	  if (!strcasecmp(out + 8, logs[i].szlast)) {
+	  if (!egg_strcasecmp(out + 8, logs[i].szlast)) {
 	    /* It is a repeat, so increment repeats */
 	    logs[i].repeats++;
 	  } else {
@@ -563,6 +494,21 @@ void putlog EGG_VARARGS_DEF(int, arg1)
     dprintf(DP_STDERR, "%s", s);
   }
   va_end(va);
+}
+
+void logsuffix_change()
+{
+  int i;
+
+  Context;
+  debug0("Logfile suffix changed. Closing all open logs.");
+  for (i = 0; i < max_logs; i++) {
+    if (logs[i].f) {
+      fflush(logs[i].f);
+      fclose(logs[i].f);
+      logs[i].f = NULL;
+    }
+  }
 }
 
 void check_logsize()
@@ -891,7 +837,7 @@ void help_subst(char *s, char *nick, struct flag_record *flags,
 	q += 2;
 	/* Now q is the string and p is where the rest of the fcn expects */
 	if (!strncmp(q, "help=", 5)) {
-	  if (topic && strcasecmp(q + 5, topic))
+	  if (topic && egg_strcasecmp(q + 5, topic))
 	    blind |= 2;
 	  else
 	    blind &= ~2;
@@ -907,7 +853,7 @@ void help_subst(char *s, char *nick, struct flag_record *flags,
 	      blind &= ~1;
 	  } else if (q[0] == '-') {
 	    blind &= ~1;
-	  } else if (!strcasecmp(q, "end")) {
+	  } else if (!egg_strcasecmp(q, "end")) {
 	    blind &= ~1;
 	    subwidth = 70;
 	    if (cols) {
@@ -918,7 +864,7 @@ void help_subst(char *s, char *nick, struct flag_record *flags,
 	      cols = 0;
 	      towrite = sub;
 	    }
-	  } else if (!strcasecmp(q, "center"))
+	  } else if (!egg_strcasecmp(q, "center"))
 	    center = 1;
 	  else if (!strncmp(q, "cols=", 5)) {
 	    char *r;
@@ -1360,11 +1306,13 @@ char *extracthostname(char *hostmask)
 void show_banner(int idx) {
    FILE *vv;
    char s[1024];
-   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
+   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
-   get_user_flagrec(dcc[idx].user,&fr,dcc[idx].u.chat->con_chan);
+   if (!is_file(bannerfile))
+      return;
+   get_user_flagrec(dcc[idx].user, &fr,dcc[idx].u.chat->con_chan);
    vv = fopen(bannerfile, "r");
-   if (!vv || !is_file(bannerfile))
+   if (!vv)
       return;
    while(!feof(vv)) {
       fgets(s, 120, vv);
@@ -1375,6 +1323,7 @@ void show_banner(int idx) {
         dprintf(idx, "%s", s);
       }
    }
+   fclose(vv);
 }
 
 /* Create a string with random letters and digits

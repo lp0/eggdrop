@@ -1,7 +1,7 @@
 /* 
  * modvals.h
  * 
- * $Id: modvals.h,v 1.10 2000/01/30 19:26:21 fabian Exp $
+ * $Id: modvals.h,v 1.12 2000/03/04 20:49:45 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer

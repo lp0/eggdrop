@@ -1,7 +1,7 @@
 /* 
  * module.h
  * 
- * $Id: module.h,v 1.24 2000/01/31 23:03:02 fabian Exp $
+ * $Id: module.h,v 1.28 2000/04/05 19:58:11 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -26,20 +26,18 @@
 #define _EGG_MOD_MODULE_H
 
 /* Just include *all* the include files...it's slower but EASIER */
-#ifdef HAVE_CONFIG_H
-#  include "../../config.h"
-#endif
-#include "../main.h"
+#include "src/main.h"
 #include "modvals.h"
-#include "../tandem.h"
+#include "src/tandem.h"
 
 /* 
  * This file contains all the orrible stuff required to do the lookup
  * table for symbols, rather than getting the OS to do it, since most
  * OS's require all symbols resolved, this can cause a problem with
- * some modules. This is intimately related to the table in modules.c.
+ * some modules.
  *
- * Don't change the files unless you have flamable underwear.
+ * This is intimately related to the table in `modules.c'. Don't change
+ * the files unless you have flamable underwear.
  *
  * Do not read this file whilst unless heavily sedated, I will not be
  * held responsible for mental break-downs caused by this file <G>
@@ -57,6 +55,26 @@
 #undef Context
 #undef ContextNote
 #undef Assert
+
+/* Compability functions. */
+#ifdef egg_inet_aton
+#  undef egg_inet_aton
+#endif
+#ifdef egg_vsnprintf
+#  undef egg_vsnprintf
+#endif
+#ifdef egg_snprintf
+#  undef egg_snprintf
+#endif
+#ifdef egg_memset
+#  undef egg_memset
+#endif
+#ifdef egg_strcasecmp
+#  undef egg_strcasecmp
+#endif
+#ifdef egg_strncasecmp
+#  undef egg_strncasecmp
+#endif
 
 /* Version checks for modules. */
 #define EGG_IS_MIN_VER(ver) 		((ver) <= EGG_VERSION)
@@ -179,9 +197,8 @@
 #define get_data_ptr(x) ((void *(*)(int,char*,int))global[86])(x,__FILE__,__LINE__)
 #define open_telnet ((int (*) (char *, int))global[87])
 /* 88 - 91 */
-#ifndef HAVE_BZERO
-#define bzero ((void (*) (void *, int))global[88])
-#endif
+/* global[88] is now EMPTY. Was bzero(). Use egg_memset or egg_bzero instead.
+ */
 #define my_memcpy ((void * (*) (void *, const void *, size_t))global[89])
 #define my_atoul ((IP(*)(char *))global[90])
 #define my_strcpy ((int (*)(char *, const char *))global[91])
@@ -393,6 +410,16 @@
 #define sock_has_data ((int(*)(int, int))global[248])
 #define bots_in_subtree ((int (*)(tand_t *))global[249])
 #define users_in_subtree ((int (*)(tand_t *))global[250])
+#define egg_inet_aton ((int (*)(const char *cp, struct in_addr *addr))global[251])
+/* 252 - 255 */
+#define egg_snprintf (global[252])
+#define egg_vsnprintf ((int (*)(char *, size_t, const char *, va_list))global[253])
+#define egg_memset ((void *(*)(void *, int, size_t))global[254])
+#define egg_strcasecmp ((int (*)(const char *, const char *))global[255])
+/* 256 - 259 */
+#define egg_strncasecmp ((int (*)(const char *, const char *, size_t))global[256])
+#define is_file ((int (*)(const char *))global[257])
+#define must_be_owner (*(int *)(global[258]))
 
 
 /* This is for blowfish module, couldnt be bothereed making a whole new .h

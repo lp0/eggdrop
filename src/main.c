@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  * 
- * $Id: main.c,v 1.28 2000/02/01 20:36:18 fabian Exp $
+ * $Id: main.c,v 1.36 2000/05/06 22:04:55 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -79,8 +79,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.5.2";
-int	egg_numver = 1050200;
+char	egg_version[1024] = "1.5.3";
+int	egg_numver = 1050300;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -97,6 +97,7 @@ char	helpdir[121];		/* Directory of help files (if used) */
 char	textdir[121] = "";	/* Directory for text files that get dumped */
 int	keep_all_logs = 0;	/* Never erase logfiles, no matter how old
 				   they are? */
+char logfile_suffix[21] = "%d%b%y"; /* format of logfile suffix */
 time_t	online_since;		/* Unix-time that the bot loaded up */
 int	make_userfile = 0;	/* Using bot in make-userfile mode? (first
 				   user to 'hello' becomes master) */
@@ -120,28 +121,28 @@ time_t	now;			/* duh, now :) */
 
 /* Traffic stats
  */
-int	otraffic_irc = 0;
-int	otraffic_irc_today = 0;
-int	otraffic_bn = 0;
-int	otraffic_bn_today = 0;
-int	otraffic_dcc = 0;
-int	otraffic_dcc_today = 0;
-int	otraffic_filesys = 0;
-int	otraffic_filesys_today = 0;
-int	otraffic_trans = 0;
-int	otraffic_trans_today = 0;
-int	otraffic_unknown = 0;
-int	otraffic_unknown_today = 0;
-int	itraffic_irc = 0;
-int	itraffic_irc_today = 0;
-int	itraffic_bn = 0;
-int	itraffic_bn_today = 0;
-int	itraffic_dcc = 0;
-int	itraffic_dcc_today = 0;
-int	itraffic_trans = 0;
-int	itraffic_trans_today = 0;
-int	itraffic_unknown = 0;
-int	itraffic_unknown_today = 0;
+unsigned long	otraffic_irc = 0;
+unsigned long	otraffic_irc_today = 0;
+unsigned long	otraffic_bn = 0;
+unsigned long	otraffic_bn_today = 0;
+unsigned long	otraffic_dcc = 0;
+unsigned long	otraffic_dcc_today = 0;
+unsigned long	otraffic_filesys = 0;
+unsigned long	otraffic_filesys_today = 0;
+unsigned long	otraffic_trans = 0;
+unsigned long	otraffic_trans_today = 0;
+unsigned long	otraffic_unknown = 0;
+unsigned long	otraffic_unknown_today = 0;
+unsigned long	itraffic_irc = 0;
+unsigned long	itraffic_irc_today = 0;
+unsigned long	itraffic_bn = 0;
+unsigned long	itraffic_bn_today = 0;
+unsigned long	itraffic_dcc = 0;
+unsigned long	itraffic_dcc_today = 0;
+unsigned long	itraffic_trans = 0;
+unsigned long	itraffic_trans_today = 0;
+unsigned long	itraffic_unknown = 0;
+unsigned long	itraffic_unknown_today = 0;
 
 #ifdef DEBUG_CONTEXT
 /* Context storage for fatal crashes */
@@ -471,7 +472,9 @@ static int		lastmin = 99;
 static time_t		then;
 static struct tm	nowtm;
 
-/* Called once a second
+/* Called once a second.
+ *
+ * Note:  Try to not put any Context lines in here (guppy 21Mar2000).
  */
 static void core_secondly()
 {
@@ -491,8 +494,7 @@ static void core_secondly()
       tell_mem_status_dcc(DP_STDOUT);
     }
   }
-  Context;
-  my_memcpy((char *) &nowtm, (char *) localtime(&now), sizeof(struct tm));
+  egg_memcpy(&nowtm, localtime(&now), sizeof(struct tm));
   if (nowtm.tm_min != lastmin) {
     int i = 0;
 
@@ -505,7 +507,6 @@ static void core_secondly()
     while (nowtm.tm_min != lastmin) {
       /* Timer drift, dammit */
       debug2("timer: drift (lastmin=%d, now=%d)", lastmin, nowtm.tm_min);
-      Context;
       i++;
       lastmin = (lastmin + 1) % 60;
       call_hook(HOOK_MINUTELY);
@@ -513,11 +514,9 @@ static void core_secondly()
     if (i > 1)
       putlog(LOG_MISC, "*", "(!) timer drift -- spun %d minutes", i);
     miltime = (nowtm.tm_hour * 100) + (nowtm.tm_min);
-    Context;
     if (((int) (nowtm.tm_min / 5) * 5) == (nowtm.tm_min)) {	/* 5 min */
       call_hook(HOOK_5MINUTELY);
       check_botnet_pings();
-      Context;
       if (quick_logs == 0) {
 	flushlogs();
 	check_logsize();
@@ -537,10 +536,8 @@ static void core_secondly()
 	}
       }
     }
-    Context;
     if (nowtm.tm_min == notify_users_at)
       call_hook(HOOK_HOURLY);
-    Context;
     /* These no longer need checking since they are all check vs minutely
      * settings and we only get this far on the minute.
      */
@@ -567,10 +564,8 @@ static void core_secondly()
 
 static void core_minutely()
 {
-  Context;
   check_tcl_time(&nowtm);
   do_check_timers(&timer);
-  Context;
   if (quick_logs != 0) {
     flushlogs();
     check_logsize();
@@ -674,9 +669,9 @@ int main(int argc, char **argv)
 #endif
 
   /* Initialise context list */
-  for (i = 0; i < 16; i++) {
+  for (i = 0; i < 16; i++)
     Context;
-  }
+
 #include "patch.h"
   /* Version info! */
   sprintf(ver, "eggdrop v%s", egg_version);
@@ -728,7 +723,7 @@ int main(int argc, char **argv)
   /* Initialize variables and stuff */
   now = time(NULL);
   chanset = NULL;
-  my_memcpy((char *) &nowtm, (char *) localtime(&now), sizeof(struct tm));
+  egg_memcpy(&nowtm, localtime(&now), sizeof(struct tm));
   lastmin = nowtm.tm_min;
   srandom(now);
   init_mem();
@@ -1037,8 +1032,14 @@ int main(int argc, char **argv)
 	kill_tcl();
 	init_tcl(argc, argv);
 	init_language(0);
+	/* We expect the encryption module as the current module pointed
+	 * to by `module_list'.
+	 */
 	x = p->funcs[MODCALL_START];
-	x(0);
+	/* `NULL' indicates that we just recently restarted. The module
+	 * is expected to re-initialise as needed.
+	 */
+	x(NULL);
 	rehash();
 	restart_chons();
       }

@@ -4,7 +4,7 @@
  * 
  * Written by Fabian Knittel <fknittel@gmx.de>
  * 
- * $Id: dns.c,v 1.10 2000/01/17 22:36:08 fabian Exp $
+ * $Id: dns.c,v 1.13 2000/03/23 23:17:57 fabian Exp $
  */
 /* 
  * Copyright (C) 1999, 2000  Eggheads
@@ -26,7 +26,7 @@
 
 #define MODULE_NAME "dns"
 
-#include "../module.h"
+#include "src/mod/module.h"
 #include "dns.h"
 
 static void dns_event_success();
@@ -132,7 +132,7 @@ static void cmd_resolve(struct userrec *u, int idx, char *par)
   struct in_addr inaddr;
 
   Context;
-  if (inet_aton(par, &inaddr))
+  if (egg_inet_aton(par, &inaddr))
     dns_lookup(my_ntohl(inaddr.s_addr));
   else
     dns_forward(par);
@@ -228,19 +228,23 @@ static Function dns_table[] =
 
 char *dns_start(Function *global_funcs)
 {
-  int i;
+  int idx;
   
   global = global_funcs;
   Context;
+  module_register(MODULE_NAME, dns_table, 1, 0);
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+    module_undepend(MODULE_NAME);
+    return "This module requires eggdrop1.5.3 or later";
+  }
+
   if (!init_dns_core())
     return "DNS initialisation failed.";
-  i = new_dcc(&DCC_DNS, 0);
-  dcc[i].sock = resfd;
-  dcc[i].timeval = now;
-  strcpy(dcc[i].nick, "(dns)");
+  idx = new_dcc(&DCC_DNS, 0);
+  dcc[idx].sock = resfd;
+  dcc[idx].timeval = now;
+  strcpy(dcc[idx].nick, "(dns)");
 
-  Context;
-  module_register(MODULE_NAME, dns_table, 1, 0);
   add_hook(HOOK_SECONDLY, (Function) dns_check_expires);
   add_hook(HOOK_DNS_HOSTBYIP, (Function) dns_lookup);
   add_hook(HOOK_DNS_IPBYHOST, (Function) dns_forward);

@@ -2,7 +2,7 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  * 
- * $Id: channels.c,v 1.25 2000/01/30 19:26:22 fabian Exp $
+ * $Id: channels.c,v 1.29 2000/04/05 19:58:11 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -26,7 +26,7 @@
 #define MODULE_NAME "channels"
 #define MAKING_CHANNELS
 #include <sys/stat.h>
-#include "../module.h"
+#include "src/mod/module.h"
 
 static Function *global		= NULL;
 
@@ -39,7 +39,6 @@ static int  invite_time		= 0;	/* If invite_time = 0, never remove
 					   them */
 static char chanfile[121]	= "chanfile";
 static int  chan_hack		= 0;
-static int  must_be_owner	= 0;
 static int  quiet_save		= 0;
 static char glob_chanmode[64]	= "nt";	/* Default chanmode (drummer,990731) */
 static struct udef_struct *udef	= NULL;
@@ -84,7 +83,7 @@ void *channel_malloc(int size, char *file, int line)
 #else
   p = nmalloc(size);
 #endif
-  bzero(p, size);
+  egg_bzero(p, size);
   return p;
 }
 
@@ -741,7 +740,6 @@ static tcl_ints my_tcl_ints[] =
   {"ban-time",			&ban_time,			0},
   {"exempt-time",		&exempt_time,			0},
   {"invite-time",		&invite_time,			0},
-  {"must-be-owner",		&must_be_owner,			0},
   {"quiet-save",		&quiet_save,			0},
   {"global-stopnethack-mode",	&global_stopnethack_mode,	0},
   {NULL,			NULL,				0}
@@ -848,6 +846,9 @@ static Function channels_table[] =
   /* 40 - 43 */
   (Function) write_invites,
   (Function) ismodeline,
+  (Function) initudef,
+  (Function) ngetudef,
+  /* 44 - 47 */
 };
 
 char *channels_start(Function * global_funcs)
@@ -866,8 +867,10 @@ char *channels_start(Function * global_funcs)
   gfld_ctcp_time = 60;
   Context;
   module_register(MODULE_NAME, channels_table, 1, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
-    return "This module needs eggdrop1.5.0 or later";
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+    module_undepend(MODULE_NAME);
+    return "This module needs eggdrop1.5.3 or later";
+  }
   add_hook(HOOK_MINUTELY, (Function) check_expired_bans);
   add_hook(HOOK_MINUTELY, (Function) check_expired_exempts);
   add_hook(HOOK_MINUTELY, (Function) check_expired_invites);

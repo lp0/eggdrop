@@ -1,4 +1,6 @@
 /* config.h.in.  Generated automatically from configure.in by autoheader.  */
+#ifndef _EGG_CONFIG_H
+#define _EGG_CONFIG_H
 
 /* Define if on AIX 3.
    System headers sometimes define this.
@@ -25,6 +27,9 @@
 
 /* Define if you need to in order for stat and other things to work.  */
 #undef _POSIX_SOURCE
+
+/* Define to `unsigned' if <sys/types.h> doesn't define.  */
+#undef size_t
 
 /* Define if you have the ANSI C header files.  */
 #undef STDC_HEADERS
@@ -87,9 +92,6 @@
 /* The number of bytes in a short int.  */
 #undef SIZEOF_SHORT_INT
 
-/* Define if you have the bzero function.  */
-#undef HAVE_BZERO
-
 /* Define if you have the clock function.  */
 #undef HAVE_CLOCK
 
@@ -104,6 +106,18 @@
 
 /* Define if you have the getrusage function.  */
 #undef HAVE_GETRUSAGE
+
+/* Define if you have the inet_aton function.  */
+#undef HAVE_INET_ATON
+
+/* Define if you have the isascii function.  */
+#undef HAVE_ISASCII
+
+/* Define if you have the memcpy function.  */
+#undef HAVE_MEMCPY
+
+/* Define if you have the memset function.  */
+#undef HAVE_MEMSET
 
 /* Define if you have the random function.  */
 #undef HAVE_RANDOM
@@ -128,6 +142,12 @@
 
 /* Define if you have the strcasecmp function.  */
 #undef HAVE_STRCASECMP
+
+/* Define if you have the strftime function.  */
+#undef HAVE_STRFTIME
+
+/* Define if you have the strncasecmp function.  */
+#undef HAVE_STRNCASECMP
 
 /* Define if you have the uname function.  */
 #undef HAVE_UNAME
@@ -188,3 +208,5 @@
 
 /* Define if you have the socket library (-lsocket).  */
 #undef HAVE_LIBSOCKET
+
+#endif /* !_EGG_CONFIG_H */

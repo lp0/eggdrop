@@ -2,7 +2,7 @@
  * blowfish.c -- part of blowfish.mod
  *   encryption and decryption of passwords
  * 
- * $Id: blowfish.c,v 1.10 2000/01/30 19:26:21 fabian Exp $
+ * $Id: blowfish.c,v 1.13 2000/03/23 23:17:56 fabian Exp $
  */
 /* 
  * Copyright (C) 1999  Eggheads
@@ -28,7 +28,7 @@
 
 #define MODULE_NAME "encryption"
 #define MAKING_BLOWFISH
-#include "../module.h"
+#include "src/mod/module.h"
 #include "blowfish.h"
 #include "bf_tab.h"		/* P-box P-array, S-box */
 #undef global
@@ -453,25 +453,31 @@ char *blowfish_start(Function *global_funcs)
 {
   int i;
 
-  if (!global_funcs)
-    return NULL;
-  
-  global = global_funcs;
+  /* `global_funcs' is NULL if eggdrop is recovering from a restart.
+   *
+   * As the encryption module is never unloaded, only initialise stuff
+   * that got reset during restart, e.g. the tcl bindings.
+   */
+  if (global_funcs) {
+    global = global_funcs;
 
-  if (!module_rename("blowfish", MODULE_NAME))
-    return "Already loaded.";
-  /* Initialize buffered boxes */
-  for (i = 0; i < BOXES; i++) {
-    box[i].P = NULL;
-    box[i].S = NULL;
-    box[i].key[0] = 0;
-    box[i].lastuse = 0L;
+    if (!module_rename("blowfish", MODULE_NAME))
+      return "Already loaded.";
+    /* Initialize buffered boxes */
+    for (i = 0; i < BOXES; i++) {
+      box[i].P = NULL;
+      box[i].S = NULL;
+      box[i].key[0] = 0;
+      box[i].lastuse = 0L;
+    }
+    Context;
+    module_register(MODULE_NAME, blowfish_table, 2, 0);
+    if (!module_depend(MODULE_NAME, "eggdrop", 105, 0)) {
+      module_undepend(MODULE_NAME);
+      return "This module requires eggdrop1.5.0 or later";
+    }
+    add_hook(HOOK_ENCRYPT_PASS, (Function) blowfish_encrypt_pass);
   }
-  Context;
-  module_register(MODULE_NAME, blowfish_table, 2, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
-    return "This module requires eggdrop1.5.0 or later";
-  add_hook(HOOK_ENCRYPT_PASS, (Function) blowfish_encrypt_pass);
   add_tcl_commands(mytcls);
   return NULL;
 }

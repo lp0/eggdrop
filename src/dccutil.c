@@ -6,7 +6,7 @@
  *   memory management for dcc structures
  *   timeout checking for dcc connections
  * 
- * $Id: dccutil.c,v 1.17 2000/01/30 19:26:20 fabian Exp $
+ * $Id: dccutil.c,v 1.20 2000/04/05 19:55:12 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -108,12 +108,8 @@ void dprintf EGG_VARARGS_DEF(int, arg1)
 
   idx = EGG_VARARGS_START(int, arg1, va);
   format = va_arg(va, char *);
-#ifdef HAVE_VSNPRINTF
-  if ((len = vsnprintf(SBUF, 1023, format, va)) < 0)
+  if ((len = egg_vsnprintf(SBUF, 1023, format, va)) < 0)
     SBUF[len = 1023] = 0;
-#else
-  len = vsprintf(SBUF, format, va);
-#endif
   va_end(va);
   if (idx < 0) {
     tputs(-idx, SBUF, len);
@@ -163,12 +159,8 @@ void chatout EGG_VARARGS_DEF(char *, arg1)
   va_list va;
 
   format = EGG_VARARGS_START(char *, arg1, va);
-#ifdef HAVE_VSNPRINTF
-  if (vsnprintf(s, 511, format, va) < 0)
+  if (egg_vsnprintf(s, 511, format, va) < 0)
     s[511] = 0;
-#else
-  vsprintf(s, format, va);
-#endif
   for (i = 0; i < dcc_total; i++)
     if (dcc[i].type == &DCC_CHAT)
       if (dcc[i].u.chat->channel >= 0)
@@ -188,12 +180,8 @@ void chanout_but EGG_VARARGS_DEF(int, arg1)
   x = EGG_VARARGS_START(int, arg1, va);
   chan = va_arg(va, int);
   format = va_arg(va, char *);
-#ifdef HAVE_VSNPRINTF
-  if (vsnprintf(s, 511, format, va) < 0)
+  if (egg_vsnprintf(s, 511, format, va) < 0)
     s[511] = 0;
-#else
-  vsprintf(s, format, va);
-#endif
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type == &DCC_CHAT) && (i != x))
       if (dcc[i].u.chat->channel == chan)
@@ -259,7 +247,7 @@ void lostdcc(int n)
     dcc[n].type->kill(n, dcc[n].u.other);
   else if (dcc[n].u.other)
     nfree(dcc[n].u.other);
-  bzero(&dcc[n], sizeof(struct dcc_t));
+  egg_bzero(&dcc[n], sizeof(struct dcc_t));
 
   dcc[n].sock = (-1);
   dcc[n].type = &DCC_LOST;
@@ -280,10 +268,9 @@ void removedcc(int n)
     nfree(dcc[n].u.other);
   dcc_total--;
   if (n < dcc_total)
-    my_memcpy((char *) &dcc[n], (char *) &dcc[dcc_total],
-	      sizeof(struct dcc_t));
+    egg_memcpy(&dcc[n], &dcc[dcc_total], sizeof(struct dcc_t));
   else
-    bzero(&dcc[n], sizeof(struct dcc_t)); /* drummer */
+    egg_bzero(&dcc[n], sizeof(struct dcc_t)); /* drummer */
 }
 
 /* Clean up sockets that were just left for dead.
@@ -396,12 +383,13 @@ void *_get_data_ptr(int size, char *file, int line)
 #ifdef DEBUG_MEM
   char x[1024];
 
-  simple_sprintf(x, "dccutil.c:%s", file);
+  p = strrchr(file, '/');
+  simple_sprintf(x, "dccutil.c:%s", p ? p + 1 : file);
   p = n_malloc(size, x, line);
 #else
   p = nmalloc(size);
 #endif
-  bzero(p, size);
+  egg_bzero(p, size);
   return p;
 }
 
@@ -446,12 +434,12 @@ int new_dcc(struct dcc_table *type, int xtra_size)
   if (dcc_total == max_dcc)
     return -1;
   dcc_total++;
-  bzero((char *) &dcc[i], sizeof(struct dcc_t));
+  egg_bzero((char *) &dcc[i], sizeof(struct dcc_t));
 
   dcc[i].type = type;
   if (xtra_size) {
     dcc[i].u.other = nmalloc(xtra_size);
-    bzero(dcc[i].u.other, xtra_size);
+    egg_bzero(dcc[i].u.other, xtra_size);
   }
   return i;
 }
@@ -470,7 +458,7 @@ void changeover_dcc(int i, struct dcc_table *type, int xtra_size)
   dcc[i].type = type;
   if (xtra_size) {
     dcc[i].u.other = nmalloc(xtra_size);
-    bzero(dcc[i].u.other, xtra_size);
+    egg_bzero(dcc[i].u.other, xtra_size);
   }
 }
 

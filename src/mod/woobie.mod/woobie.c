@@ -5,7 +5,7 @@
  * Originally written by ButchBub	  15 July     1997
  * Comments by Fabian Knittel		  29 December 1999
  * 
- * $Id: woobie.c,v 1.9 2000/01/17 22:36:10 fabian Exp $
+ * $Id: woobie.c,v 1.11 2000/03/23 23:17:59 fabian Exp $
  */
 /* 
  * Copyright (C) 1999, 2000  Eggheads
@@ -27,7 +27,7 @@
 
 #define MODULE_NAME "woobie"
 #define MAKING_WOOBIE
-#include "../module.h"
+#include "src/mod/module.h"
 #include <stdlib.h>
 
 #undef global
@@ -137,8 +137,10 @@ char *woobie_start(Function *global_funcs)
    *              ^--------------------------------- module name
    */
   
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0)) {
+    module_undepend(MODULE_NAME);
     return "This module requires eggdrop1.5.0 or later";
+  }
 
   /* Add command table to bind list H_dcc, responsible for dcc commands.
    * Currently we only add one command, `woobie'.

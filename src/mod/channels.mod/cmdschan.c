@@ -2,7 +2,7 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  * 
- * $Id: cmdschan.c,v 1.19 2000/02/01 20:17:36 fabian Exp $
+ * $Id: cmdschan.c,v 1.22 2000/05/06 22:06:44 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -177,7 +177,7 @@ static void cmd_pls_exempt (struct userrec *u, int idx, char *par)
   module_entry *me;
 
   if (!use_exempts) {
-    dprintf(idx, "This command can only be used on IRCnet.\n");
+    dprintf(idx, "This command can only be used with use-exempts enabled.\n");
     return;
   }
   if (!par[0]) {
@@ -316,7 +316,7 @@ static void cmd_pls_invite (struct userrec *u, int idx, char *par)
   module_entry *me;   
 
   if (!use_invites) {
-    dprintf(idx, "This command can only be used on IRCnet. \n");
+    dprintf(idx, "This command can only be used with use-invites enabled.\n");
     return;
   }
   
@@ -544,7 +544,7 @@ static void cmd_mns_exempt (struct userrec * u, int idx, char * par)
   masklist *e;
 
   if (!use_exempts) {
-    dprintf(idx, "This command can only be used on IRCnet.\n");
+    dprintf(idx, "This command can only be used with use-exempts enabled.\n");
     return;
   }   
   if (!par[0]) {
@@ -637,7 +637,7 @@ static void cmd_mns_invite (struct userrec * u, int idx, char * par)
   masklist *inv;
   
   if (!use_invites) {
-    dprintf(idx, "This command can only be used on IRCnet.\n");
+    dprintf(idx, "This command can only be used with use-invites enabled.\n");
     return;
   }
   if (!par[0]) {
@@ -726,7 +726,7 @@ static void cmd_mns_invite (struct userrec * u, int idx, char * par)
 
 static void cmd_bans(struct userrec *u, int idx, char *par)
 {
-  if (!strcasecmp(par, "all")) {
+  if (!egg_strcasecmp(par, "all")) {
     putlog(LOG_CMDS, "*", "#%s# bans all", dcc[idx].nick);
     tell_bans(idx, 1, "");
   } else {
@@ -738,10 +738,10 @@ static void cmd_bans(struct userrec *u, int idx, char *par)
 static void cmd_exempts (struct userrec * u, int idx, char * par)
 {
   if (!use_exempts) {
-    dprintf(idx, "This command can only be used on IRCnet.\n");
+    dprintf(idx, "This command can only be used with use-exempts enabled.\n");
     return;
   }
-  if (!strcasecmp(par, "all")) {
+  if (!egg_strcasecmp(par, "all")) {
     putlog(LOG_CMDS, "*", "#%s# exempts all", dcc[idx].nick);
     tell_exempts(idx, 1, "");
   } else {
@@ -753,10 +753,10 @@ static void cmd_exempts (struct userrec * u, int idx, char * par)
 static void cmd_invites (struct userrec * u, int idx, char * par)
 {
   if (!use_invites) {
-    dprintf(idx, "This command can only be used on IRCnet.\n");
+    dprintf(idx, "This command can only be used with use-invites enabled.\n");
     return;
   }
-  if (!strcasecmp(par, "all")) {
+  if (!egg_strcasecmp(par, "all")) {
     putlog(LOG_CMDS, "*", "#%s# invites all", dcc[idx].nick);
     tell_invites(idx, 1, "");
   } else {
@@ -809,7 +809,7 @@ static void cmd_info(struct userrec *u, int idx, char *par)
     dprintf(idx, "Your info line is locked.  Sorry.\n");
     return;
   }
-  if (!strcasecmp(par, "none")) {
+  if (!egg_strcasecmp(par, "none")) {
     if (chname) {
       par[0] = 0;
       set_handle_chaninfo(userlist, dcc[idx].nick, chname, NULL);
@@ -881,7 +881,7 @@ static void cmd_chinfo(struct userrec *u, int idx, char *par)
   }
   putlog(LOG_CMDS, "*", "#%s# chinfo %s %s %s", dcc[idx].nick, handle,
 	 chname ? chname : par, chname ? par : "");
-  if (!strcasecmp(par, "none"))
+  if (!egg_strcasecmp(par, "none"))
     par[0] = 0;
   if (chname) {
     set_handle_chaninfo(userlist, handle, chname, par);
@@ -913,7 +913,7 @@ static void cmd_stick_yn(int idx, char *par, int yn)
   s[UHOSTMAX] = 0;
        
   /* Now deal with exemptions */
-  if (!strcasecmp(stick_type,"exempt")) {
+  if (!egg_strcasecmp(stick_type,"exempt")) {
     i = u_setsticky_exempt(NULL, s,
 			   (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
     if (i > 0) {
@@ -940,7 +940,7 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     dprintf(idx, "No such exempt.\n");
     return;
   /* Now the invites */
-  } else if (!strcasecmp(stick_type,"invite")) {
+  } else if (!egg_strcasecmp(stick_type,"invite")) {
     i = u_setsticky_invite(NULL, s,
 			   (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
     if (i > 0) {
@@ -967,7 +967,7 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     dprintf(idx, "No such invite.\n");
     return;
   }
-  if (strcasecmp(stick_type,"ban")) {
+  if (egg_strcasecmp(stick_type,"ban")) {
     strncpy(s, stick_type, UHOSTMAX);
     s[UHOSTMAX] = 0;    
   }
@@ -1318,32 +1318,52 @@ static void cmd_chaninfo(struct userrec *u, int idx, char *par)
 static void cmd_chanset(struct userrec *u, int idx, char *par)
 {
   char *chname = NULL, answers[512], *parcpy;
-  char *list[2];
+  char *list[2], *bak, *buf;
   struct chanset_t *chan = NULL;
+  int all = 0;
 
   if (!par[0])
     dprintf(idx, "Usage: chanset [%schannel] <settings>\n", CHANMETA);
   else {
-    if (strchr(CHANMETA, par[0])) {
-      chname = newsplit(&par);
-      get_user_flagrec(u, &user, chname);
-      if (!glob_master(user) && !chan_master(user)) {
-	dprintf(idx, "You dont have access to %s. \n", chname);
-	return;
-      } else if (!(chan = findchan_by_dname(chname)) && (chname[0] != '+')) {
-	dprintf(idx, "That channel doesnt exist!\n");
+    if ((strlen(par) > 2) && (par[0] == '*') && (par[1] == ' ')) {
+      all = 1;
+      get_user_flagrec(u, &user, chanset ? chanset->dname : "");
+      if (!glob_master(user)) {
+	dprintf(idx, "You need to be a global master to use .chanset *.\n");
 	return;
       }
-      if (!chan) {
-	if (par[0])
-	  *--par = ' ';
-	par = chname;
+      newsplit(&par);
+    } else {
+      if (strchr(CHANMETA, par[0])) {
+        chname = newsplit(&par);
+        get_user_flagrec(u, &user, chname);
+        if (!glob_master(user) && !chan_master(user)) {
+	  dprintf(idx, "You dont have access to %s. \n", chname);
+	  return;
+	} else if (!(chan = findchan_by_dname(chname)) && (chname[0] != '+')) {
+	  dprintf(idx, "That channel doesnt exist!\n");
+	  return;
+	}
+	if (!chan) {
+	  if (par[0])
+	    *--par = ' ';
+	  par = chname;
+	}
+      }
+      if (!chan &&
+          !(chan = findchan_by_dname(chname = dcc[idx].u.chat->con_chan))) {
+        dprintf(idx, "Invalid console channel.\n");
+        return;
       }
     }
-    if (!chan &&
-	!(chan = findchan_by_dname(chname = dcc[idx].u.chat->con_chan)))
-      dprintf(idx, "Invalid console channel.\n");
-    else {
+    if (all)
+      chan = chanset;
+    bak = par;
+    buf = nmalloc(strlen(par) + 1);
+    while (chan) {
+      chname = chan->dname;
+      strcpy(buf, bak);
+      par = buf;
       list[0] = newsplit(&par);
       answers[0] = 0;
       while (list[0][0]) {
@@ -1352,9 +1372,9 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
 	  if (tcl_channel_modify(0, chan, 1, list) == TCL_OK) {
 	    strcat(answers, list[0]);
 	    strcat(answers, " ");
-	  } else
+	  } else if (!all || !chan->next)
 	    dprintf(idx, "Error trying to set %s for %s, invalid mode\n",
-		    list[0], chname);
+		    list[0], all ? "all channels" : chname);
 	  list[0] = newsplit(&par);
 	  continue;
 	}
@@ -1366,6 +1386,7 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
 	  if (!strncmp(list[0], "need-", 5) && !(isowner(dcc[idx].nick)) &&
 	      (must_be_owner)) {
 	    dprintf(idx, "Due to security concerns, only permanent owners can set these modes.\n");
+	    nfree(buf);
 	    return;
 	  }
 	  list[1] = par;
@@ -1379,20 +1400,30 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
 	    strcat(answers, " { ");
 	    strcat(answers, parcpy);
 	    strcat(answers, " }");
-	  } else
+	  } else if (!all || !chan->next)
 	    dprintf(idx, "Error trying to set %s for %s, invalid option\n",
-		    list[0], chname);
+		    list[0], all ? "all channels" : chname);
           nfree(parcpy);
 	}
 	break;
       }
-      if (answers[0]) {
+      if (!all && answers[0]) {
 	dprintf(idx, "Successfully set modes { %s } on %s.\n",
 		answers, chname);
 	putlog(LOG_CMDS, "*", "#%s# chanset %s %s", dcc[idx].nick, chname,
 	       answers);
       }
+      if (!all)
+        chan = NULL;
+      else
+        chan = chan->next;
     }
+    if (all && answers[0]) {
+      dprintf(idx, "Successfully set modes { %s } on all channels.\n",
+	      answers);
+      putlog(LOG_CMDS, "*", "#%s# chanset * %s", dcc[idx].nick, answers);
+    }
+    nfree(buf);
   }
 }
 

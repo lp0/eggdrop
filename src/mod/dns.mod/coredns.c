@@ -5,7 +5,7 @@
  * 
  * Modified/written by Fabian Knittel <fknittel@gmx.de>
  * 
- * $Id: coredns.c,v 1.9 2000/01/17 22:36:08 fabian Exp $
+ * $Id: coredns.c,v 1.12 2000/03/23 23:17:57 fabian Exp $
  */
 /* 
  * Portions copyright (C) 1999, 2000  Eggheads
@@ -245,7 +245,7 @@ static struct resolve *allocresolve()
     struct resolve *rp;
 
     rp = (struct resolve *) nmalloc(sizeof(struct resolve));
-    bzero(rp, sizeof(struct resolve));
+    egg_bzero(rp, sizeof(struct resolve));
     return rp;
 }
 
@@ -348,12 +348,12 @@ static void linkresolvehost(struct resolve *addrp)
     rp = hostbash[bashnum];
     if (rp) {
 	while ((rp->nexthost) &&
-	       (strcasecmp(addrp->hostn, rp->nexthost->hostn) < 0))
+	       (egg_strcasecmp(addrp->hostn, rp->nexthost->hostn) < 0))
 	    rp = rp->nexthost;
 	while ((rp->previoushost) &&
-	       (strcasecmp(addrp->hostn, rp->previoushost->hostn) > 0))
+	       (egg_strcasecmp(addrp->hostn, rp->previoushost->hostn) > 0))
 	    rp = rp->previoushost;
-	ret = strcasecmp(addrp->hostn, rp->hostn);
+	ret = egg_strcasecmp(addrp->hostn, rp->hostn);
 	if (ret < 0) {
 	    addrp->previoushost = rp;
 	    addrp->nexthost = rp->nexthost;
@@ -544,12 +544,12 @@ static struct resolve *findhost(char *hostn)
     rp = hostbash[bashnum];
     if (rp) {
 	while ((rp->nexthost)
-	       && (strcasecmp(hostn, rp->nexthost->hostn) >= 0))
+	       && (egg_strcasecmp(hostn, rp->nexthost->hostn) >= 0))
 	    rp = rp->nexthost;
 	while ((rp->previoushost)
-	       && (strcasecmp(hostn, rp->previoushost->hostn) <= 0))
+	       && (egg_strcasecmp(hostn, rp->previoushost->hostn) <= 0))
 	    rp = rp->previoushost;
-	if (strcasecmp(hostn, rp->hostn))
+	if (egg_strcasecmp(hostn, rp->hostn))
 	    return NULL;
 	else {
 	    hostbash[bashnum] = rp;
@@ -779,7 +779,7 @@ static void parserespacket(byte *s, int l)
 		return;
 	    }
 	    namestring[strlen(stackstring)] = '\0';
-	    if (strcasecmp(stackstring, namestring)) {
+	    if (egg_strcasecmp(stackstring, namestring)) {
 		ddebug2(RES_MSG "Unknown query packet dropped. (\"%s\" does not match \"%s\")", stackstring, namestring);
 		return;
 	    }
@@ -830,7 +830,7 @@ static void parserespacket(byte *s, int l)
 		    return;
 		}
 		namestring[strlen(stackstring)] = '\0';
-		if (strcasecmp(stackstring, namestring))
+		if (egg_strcasecmp(stackstring, namestring))
 		    usefulanswer = 0;
 		else
 		    usefulanswer = 1;
@@ -1083,7 +1083,7 @@ static void dns_forward(char *hostn)
     /* Check if someone passed us an IP address as hostname 
      * and return it straight away.
      */
-    if (inet_aton(hostn, &inaddr)) {
+    if (egg_inet_aton(hostn, &inaddr)) {
       call_ipbyhost(hostn, my_ntohl(inaddr.s_addr), 1);
       return;
     }
@@ -1141,7 +1141,7 @@ static int init_dns_network(void)
 	return 0;
     }
     
-    inet_aton("127.0.0.1", &inaddr);
+    egg_inet_aton("127.0.0.1", &inaddr);
     localhost = inaddr.s_addr;
     return 1;
 }
@@ -1166,7 +1166,6 @@ static int init_dns_core(void)
     if (!init_dns_network())
 	return 0;
 
-    Context;
     /* Initialise the hash tables. */
     aseed = time(NULL) ^ (time(NULL) << 3) ^ (dword) getpid();
     for (i = 0; i < BASH_SIZE; i++) {

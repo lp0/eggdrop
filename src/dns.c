@@ -4,7 +4,7 @@
  *   provides the code used by the bot if the DNS module is not loaded
  *   DNS Tcl commands
  * 
- * $Id: dns.c,v 1.14 2000/01/30 19:26:20 fabian Exp $
+ * $Id: dns.c,v 1.17 2000/05/06 22:00:31 fabian Exp $
  */
 /* 
  * Written by Fabian Knittel <fknittel@gmx.de>
@@ -153,7 +153,7 @@ static void dns_dccipbyhost(IP ip, char *hostn, int ok, void *other)
   for (idx = 0; idx < dcc_total; idx++) {
     if ((dcc[idx].type == &DCC_DNSWAIT) &&
         (dcc[idx].u.dns->dns_type == RES_IPBYHOST) &&
-        !strcmp(dcc[idx].u.dns->host, hostn)) {
+        !egg_strcasecmp(dcc[idx].u.dns->host, hostn)) {
       dcc[idx].u.dns->ip = ip;
       if (ok)
         dcc[idx].u.dns->dns_success(idx);
@@ -188,7 +188,8 @@ void dcc_dnsipbyhost(char *hostn)
   while (de) {
     if (de->type && (de->type == &DNS_DCCEVENT_IPBYHOST) &&
 	(de->lookup == RES_IPBYHOST)) {
-      if (de->res_data.hostname && !strcmp(de->res_data.hostname, hostn))
+      if (de->res_data.hostname &&
+	  !egg_strcasecmp(de->res_data.hostname, hostn))
 	/* No need to add anymore. */
 	return;
     }
@@ -196,7 +197,7 @@ void dcc_dnsipbyhost(char *hostn)
   }
 
   de = nmalloc(sizeof(devent_t));
-  bzero(de, sizeof(devent_t));
+  egg_bzero(de, sizeof(devent_t));
 
   /* Link into list. */
   de->next = dns_events;
@@ -227,7 +228,7 @@ void dcc_dnshostbyip(IP ip)
   }
 
   de = nmalloc(sizeof(devent_t));
-  bzero(de, sizeof(devent_t));
+  egg_bzero(de, sizeof(devent_t));
 
   /* Link into list. */
   de->next = dns_events;
@@ -251,8 +252,8 @@ static void dns_tcl_iporhostres(IP ip, char *hostn, int ok, void *other)
   devent_tclinfo_t *tclinfo = (devent_tclinfo_t *) other;
   
   Context;
-  if (Tcl_VarEval(interp, tclinfo->proc, " ", iptostr(htonl(ip)), " ", hostn,
-		  ok ? " 1" : " 0", tclinfo->paras, NULL) == TCL_ERROR)
+  if (Tcl_VarEval(interp, tclinfo->proc, " ", iptostr(my_htonl(ip)), " ",
+		  hostn, ok ? " 1" : " 0", tclinfo->paras, NULL) == TCL_ERROR)
     putlog(LOG_MISC, "*", DCC_TCLERROR, tclinfo->proc, interp->result);
 
   /* Free the memory. It will be unused after this event call. */
@@ -267,18 +268,13 @@ static int dns_tclexpmem(void *other)
   devent_tclinfo_t *tclinfo = (devent_tclinfo_t *) other;
   int l = 0;
 
-  debug1("I'm in tclexpmem... %p", other);
   if (tclinfo) {
     l = sizeof(devent_tclinfo_t);
-    if (tclinfo->proc) {
+    if (tclinfo->proc)
       l += strlen(tclinfo->proc) + 1;
-      debug1("accounting for proc: %s", tclinfo->proc);
-    }
     if (tclinfo->paras)
       l += strlen(tclinfo->paras) + 1;
-      debug1("accounting for paras: %s", tclinfo->paras);
   }
-  debug1("... returning %d bytes usage.", l);
   return l;
 }
 
@@ -301,7 +297,7 @@ static void tcl_dnsipbyhost(char *hostn, char *proc, char *paras)
 
   Context;
   de = nmalloc(sizeof(devent_t));
-  bzero(de, sizeof(devent_t));
+  egg_bzero(de, sizeof(devent_t));
 
   /* Link into list. */
   de->next = dns_events;
@@ -334,7 +330,7 @@ static void tcl_dnshostbyip(IP ip, char *proc, char *paras)
 
   Context;
   de = nmalloc(sizeof(devent_t));
-  bzero(de, sizeof(devent_t));
+  egg_bzero(de, sizeof(devent_t));
 
   /* Link into list. */
   de->next = dns_events;
@@ -418,7 +414,8 @@ void call_ipbyhost(char *hostn, IP ip, int ok)
   while (de) {
     nde = de->next;
     if ((de->lookup == RES_IPBYHOST) &&
-	(!de->res_data.hostname || !strcmp(de->res_data.hostname, hostn))) {
+	(!de->res_data.hostname ||
+	 !egg_strcasecmp(de->res_data.hostname, hostn))) {
       /* Remove the event from the list here, to avoid conflicts if one of
        * the event handlers re-adds another event. */
       if (ode)
@@ -479,7 +476,7 @@ void block_dns_ipbyhost(char *host)
   Context;
   /* Check if someone passed us an IP address as hostname 
    * and return it straight away */
-  if (inet_aton(host, &inaddr)) {
+  if (egg_inet_aton(host, &inaddr)) {
     call_ipbyhost(host, my_ntohl(inaddr.s_addr), 1);
     return;
   }
@@ -548,7 +545,7 @@ static int tcl_dnslookup STDVAR
     }
   }
 
-  if (inet_aton(argv[1], &inaddr))
+  if (egg_inet_aton(argv[1], &inaddr))
     tcl_dnshostbyip(ntohl(inaddr.s_addr), argv[2], paras);
   else
     tcl_dnsipbyhost(argv[1], argv[2], paras);

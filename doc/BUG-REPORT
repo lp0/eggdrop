@@ -43,6 +43,7 @@ Instructions:
      ( ) 8.0
      ( ) 8.1
      ( ) 8.2
+     ( ) 8.3
      ( ) Other - Which? ____
 
 2.2) TCL library patchlevel: ___
@@ -59,8 +60,10 @@ Instructions:
 3) INFORMATION ABOUT THE OS
 
 3.1) OS type:
+     ( ) BeOS
      ( ) BSD/OS
      ( ) Cygwin
+     ( ) Dell SVR4
      ( ) FreeBSD
      ( ) HP-UX
      ( ) IRIX
@@ -68,12 +71,13 @@ Instructions:
      ( ) Linux
      ( ) Lynx
      ( ) NetBSD
-     ( ) Next
+     ( ) NeXT
      ( ) OpenBSD
      ( ) OSF
      ( ) QNX
      ( ) Solaris
      ( ) Sun
+     ( ) Ultrix
      ( ) Other - Which? _____________
 
 3.2) OS Version/Release: _____________

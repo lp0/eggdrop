@@ -2,7 +2,7 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  * 
- * $Id: filesys.c,v 1.23 2000/02/01 20:36:18 fabian Exp $
+ * $Id: filesys.c,v 1.29 2000/05/07 00:08:03 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -28,7 +28,7 @@
 #define MODULE_NAME "filesys"
 #define MAKING_FILESYS
 #ifdef HAVE_CONFIG_H
-# include "../../config.h"
+# include "config.h"
 #endif
 #include <sys/file.h>
 #if HAVE_DIRENT_H
@@ -47,10 +47,10 @@
 #  include <ndir.h>
 # endif
 #endif
-#include "../module.h"
+#include "src/mod/module.h"
 #include "filedb3.h"
 #include "filesys.h"
-#include "../../tandem.h"
+#include "src/tandem.h"
 #include "files.h"
 #include "dbcompat.h"
 #include "filelist.h"
@@ -71,7 +71,9 @@ static char dccin[121] = "";
 /* Let all uploads go to the user's current directory? */
 static int upload_to_cd = 0;
 
-/* Maximum allowable file size for dcc send (1M) */
+/* Maximum allowable file size for dcc send (1M). 0 indicates
+ * unlimited file size.
+ */
 static int dcc_maxsize = 1024;
 
 /* Maximum number of users can be in the file area at once */
@@ -384,7 +386,7 @@ static int _dcc_send(int idx, char *filename, char *nick, char *dir,
     return 0;
   }
   if (x == DCCSEND_BADFN) {
-    dprintf(idx, "File not found (???)\n");
+    dprintf(idx, "File not found ?\n");
     putlog(LOG_FILES, "*", "DCC file not found: %sGET %s [%s]", filename,
 	   resend ? "RE" : "", dcc[idx].nick);
     return 0;
@@ -411,7 +413,7 @@ static int _dcc_send(int idx, char *filename, char *nick, char *dir,
       *p = '_';
   }
     
-  if (strcasecmp(nick, dcc[idx].nick))
+  if (egg_strcasecmp(nick, dcc[idx].nick))
     dprintf(DP_HELP, "NOTICE %s :Here is %s file from %s %s...\n", nick,
 	    resend ? "the" : "a", dcc[idx].nick, resend ? "again " : "");
   dprintf(idx, "Type '/DCC %sGET %s %s' to receive.\n", resend ? "RE" : "",
@@ -666,10 +668,9 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
 	      nick);
       putlog(LOG_FILES, "*", "Refused dcc send %s (%s): no file size",
 	     param, nick);
-    } else if (atoi(msg) > (dcc_maxsize * 1024)) {
+    } else if (dcc_maxsize && (atoi(msg) > (dcc_maxsize * 1024))) {
       dprintf(DP_HELP, "NOTICE %s :Sorry, file too large.\n", nick);
-      putlog(LOG_FILES, "*",
-	     "Refused dcc send %s (%s): file too large", param,
+      putlog(LOG_FILES, "*", "Refused dcc send %s (%s): file too large", param,
 	     nick);
     } else {
       /* This looks like a good place for a sanity check. */
@@ -742,11 +743,9 @@ static void filesys_dcc_send_hostresolved(int i)
   char *s1, *param, prt[100], ip[100], *tempf;
   int len = dcc[i].u.dns->ibuf, j;
 
-  strncpy(dcc[i].host, dcc[i].u.dns->host, UHOSTLEN - 1);
-  dcc[i].host[UHOSTLEN - 1] = 0;
   sprintf(prt, "%d", dcc[i].port);
   sprintf(ip, "%lu", iptolong(my_htonl(dcc[i].addr)));
-  if (!hostsanitycheck_dcc(dcc[i].nick, dcc[i].host, dcc[i].addr,
+  if (!hostsanitycheck_dcc(dcc[i].nick, dcc[i].u.dns->host, dcc[i].addr,
                            dcc[i].u.dns->host, prt)) {
     lostdcc(i);
     return;
@@ -785,7 +784,8 @@ static void filesys_dcc_send_hostresolved(int i)
   my_free(s1);
   if (f) {
     fclose(f);
-    dprintf(DP_HELP, "NOTICE %s :That file already exists.\n", dcc[i].nick);
+    dprintf(DP_HELP, "NOTICE %s :File `%s' already exists.\n",
+	    dcc[i].nick, dcc[i].u.xfer->origname);
     lostdcc(i);
   } else {
     /* Check for dcc-sends in process with the same filename */
@@ -794,8 +794,8 @@ static void filesys_dcc_send_hostresolved(int i)
         if ((dcc[j].type->flags & (DCT_FILETRAN | DCT_FILESEND))
 	    == (DCT_FILETRAN | DCT_FILESEND)) {
 	  if (!strcmp(dcc[i].u.xfer->origname, dcc[j].u.xfer->origname)) {
-	    dprintf(DP_HELP, "NOTICE %s :That file is already being sent.\n",
-		    dcc[i].nick);
+	    dprintf(DP_HELP, "NOTICE %s :File `%s' is already being sent.\n",
+		    dcc[i].nick, dcc[i].u.xfer->origname);
 	    lostdcc(i);
 	    return;
 	  }
@@ -808,8 +808,8 @@ static void filesys_dcc_send_hostresolved(int i)
     my_free(s1);
     if (dcc[i].u.xfer->f == NULL) {
       dprintf(DP_HELP,
-	      "NOTICE %s :Can't create that file (temp dir error)\n",
-	      dcc[i].nick);
+	      "NOTICE %s :Can't create file `%s' (temp dir error)\n",
+	      dcc[i].nick, dcc[i].u.xfer->origname);
       lostdcc(i);
     } else {
       dcc[i].timeval = now;
@@ -831,11 +831,11 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
   struct flag_record fr = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
   Context;
-  if (!strncasecmp(text, "SEND ", 5)) {
+  if (!egg_strncasecmp(text, "SEND ", 5)) {
     filesys_dcc_send(nick, from, u, text + 5);
     return 1;
   }
-  if (strncasecmp(text, "CHAT ", 5) || !u)
+  if (egg_strncasecmp(text, "CHAT ", 5) || !u)
     return 0;
   strcpy(buf, text + 5);
   get_user_flagrec(u, &fr, 0);
@@ -885,7 +885,7 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
       dcc[i].status = STAT_ECHO;
       dcc[i].timeval = now;
       dcc[i].u.file->chat = get_data_ptr(sizeof(struct chat_info));
-      bzero(dcc[i].u.file->chat, sizeof(struct chat_info));
+      egg_bzero(dcc[i].u.file->chat, sizeof(struct chat_info));
 
       strcpy(dcc[i].u.file->chat->con_chan, "*");
       dcc[i].user = u;
@@ -997,10 +997,14 @@ char *filesys_start(Function * global_funcs)
 
   Context;
   module_register(MODULE_NAME, filesys_table, 2, 0);
-  if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0)))
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 3)) {
+    module_undepend(MODULE_NAME);
+    return "You need at least eggdrop1.5.3 to run this module.";
+  }
+  if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0))) {
+    module_undepend(MODULE_NAME);
     return "You need the transfer module to user the file system.";
-  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
-    return "You need at least eggdrop1.5.0 to run this module.";
+  }
   add_tcl_commands(mytcls);
   add_tcl_strings(mystrings);
   add_tcl_ints(myints);

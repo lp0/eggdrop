@@ -4,7 +4,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.24 2000/01/30 19:26:21 fabian Exp $
+ * $Id: modules.c,v 1.31 2000/04/05 19:58:11 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -77,7 +77,7 @@ extern int		 reserved_port, noshare, dcc_total, egg_numver,
 			 require_p, max_dcc, share_greet, password_timeout,
 			 min_dcc_port, max_dcc_port, use_invites, use_exempts,
 			 force_expire, do_restart, protect_readonly,
-			 userfile_perm;
+			 userfile_perm, must_be_owner;
 extern time_t now, online_since;
 extern struct chanset_t *chanset;
 
@@ -293,8 +293,8 @@ Function global_table[] =
   (Function) _get_data_ptr,
   (Function) open_telnet,
   /* 88 - 91 */
-  (Function) bzero,
-  (Function) my_memcpy,
+  (Function) null_func,	/* EMPTY. Originally was: bzero() */
+  (Function) egg_memcpy,
   (Function) my_atoul,
   (Function) my_strcpy,
   /* 92 - 95 */
@@ -501,7 +501,19 @@ Function global_table[] =
   (Function) removedcc,
   (Function) & userfile_perm,	/* int */
   /* 248 - 251 */
-  sock_has_data,
+  (Function) sock_has_data,
+  (Function) bots_in_subtree,
+  (Function) users_in_subtree,
+  (Function) egg_inet_aton,
+  /* 252 - 255 */
+  (Function) egg_snprintf,
+  (Function) egg_vsnprintf,
+  (Function) egg_memset,
+  (Function) egg_strcasecmp,
+  /* 256 - 259 */
+  (Function) egg_strncasecmp,
+  (Function) is_file,
+  (Function) & must_be_owner,	/* int */
 };
 
 void init_modules(void)
@@ -570,7 +582,7 @@ int module_register(char *name, Function * funcs,
 
   Context;
   while (p) {
-    if (p->name && !strcasecmp(name, p->name)) {
+    if (p->name && !egg_strcasecmp(name, p->name)) {
       p->major = major;
       p->minor = minor;
       p->funcs = funcs;
@@ -669,7 +681,7 @@ const char *module_load(char *name)
     }
   }
 #  else
-  for (sl = static_modules; sl && strcasecmp(sl->name, name); sl = sl->next);
+  for (sl = static_modules; sl && egg_strcasecmp(sl->name, name); sl = sl->next);
   Context;
   if (!sl)
     return "Unkown module.";
@@ -698,7 +710,10 @@ const char *module_load(char *name)
     return e;
   }
   check_tcl_load(name);
-  putlog(LOG_MISC, "*", "%s %s", MOD_LOADED, name);
+  if (exist_lang_section(name))
+    putlog(LOG_MISC, "*", MOD_LOADED_WITH_LANG, name);
+  else
+    putlog(LOG_MISC, "*", MOD_LOADED, name);
   Context;
   return NULL;
 }
@@ -760,7 +775,7 @@ module_entry *module_find(char *name, int major, int minor)
   module_entry *p = module_list;
 
   while (p) {
-    if (p->name && !strcasecmp(name, p->name) &&
+    if (p->name && !egg_strcasecmp(name, p->name) &&
 	((major == p->major) || (major == 0)) &&
 	(minor <= p->minor))
       return p;
@@ -774,13 +789,13 @@ static int module_rename(char *name, char *newname)
   module_entry *p = module_list;
 
   while (p) {
-    if (!strcasecmp(newname, p->name))
+    if (!egg_strcasecmp(newname, p->name))
       return 0;
     p = p->next;
   }
   p = module_list;
   while (p) {
-    if (p->name && !strcasecmp(name, p->name)) {
+    if (p->name && !egg_strcasecmp(name, p->name)) {
       nfree(p->name);
       p->name = nmalloc(strlen(newname) + 1);
       strcpy(p->name, newname);
@@ -850,27 +865,30 @@ int module_undepend(char *name1)
 
 void *mod_malloc(int size, char *modname, char *filename, int line)
 {
-  char x[100];
+  char x[100], *p;
 
-  sprintf(x, "%s:%s", modname, filename);
+  p = strrchr(filename, '/');
+  sprintf(x, "%s:%s", modname, p ? p + 1 : filename);
   x[19] = 0;
   return n_malloc(size, x, line);
 }
 
 void *mod_realloc(void *ptr, int size, char *modname, char *filename, int line)
 {
-  char x[100];
+  char x[100], *p;
 
-  sprintf(x, "%s:%s", modname, filename);
+  p = strrchr(filename, '/');
+  sprintf(x, "%s:%s", modname, p ? p + 1 : filename);
   x[19] = 0;
   return n_realloc(ptr, size, x, line);
 }
 
 void mod_free(void *ptr, char *modname, char *filename, int line)
 {
-  char x[100];
+  char x[100], *p;
 
-  sprintf(x, "%s:%s", modname, filename);
+  p = strrchr(filename, '/');
+  sprintf(x, "%s:%s", modname, p ? p + 1 : filename);
   x[19] = 0;
   n_free(ptr, x, line);
 }
@@ -913,8 +931,8 @@ void add_hook(int hook_num, Function func)
     /* special hook <drummer> */
     case HOOK_RFC_CASECMP:
       if (func == NULL) {
-	rfc_casecmp = strcasecmp;
-	rfc_ncasecmp = (int (*)(const char *, const char *, int)) strncasecmp;
+	rfc_casecmp = egg_strcasecmp;
+	rfc_ncasecmp = (int (*)(const char *, const char *, int)) egg_strncasecmp;
 	rfc_tolower = tolower;
 	rfc_toupper = toupper;
       } else {
@@ -1017,7 +1035,7 @@ void do_module_report(int idx, int details, char *which)
   if (p && !which && details)
     dprintf(idx, "MODULES LOADED:\n");
   while (p) {
-    if (!which || !strcasecmp(which, p->name)) {
+    if (!which || !egg_strcasecmp(which, p->name)) {
       dependancy *d = dependancy_list;
 
       if (details)

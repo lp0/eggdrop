@@ -1,7 +1,7 @@
 /* 
  * servmsg.c -- part of server.mod
  * 
- * $Id: servmsg.c,v 1.29 2000/02/03 22:54:17 fabian Exp $
+ * $Id: servmsg.c,v 1.35 2000/05/06 22:00:31 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -109,7 +109,7 @@ static int check_tcl_msg(char *cmd, char *nick, char *uhost,
   Tcl_SetVar(interp, "_msg4", args, 0);
   Context;
   x = check_tcl_bind(H_msg, cmd, &fr, " $_msg1 $_msg2 $_msg3 $_msg4",
-		     MATCH_PARTIAL | BIND_HAS_BUILTINS | BIND_USE_ATTR);
+		     MATCH_EXACT | BIND_HAS_BUILTINS | BIND_USE_ATTR);
   Context;
   if (x == BIND_EXEC_LOG)
     putlog(LOG_CMDS, "*", "(%s!%s) !%s! %s %s", nick, uhost, hand,
@@ -127,8 +127,8 @@ static void check_tcl_notc(char *nick, char *uhost, struct userrec *u,
   Tcl_SetVar(interp, "_notc1", nick, 0);
   Tcl_SetVar(interp, "_notc2", uhost, 0);
   Tcl_SetVar(interp, "_notc3", u ? u->handle : "*", 0);
-  Tcl_SetVar(interp, "_notc4", dest, 0);
-  Tcl_SetVar(interp, "_notc5", arg, 0);
+  Tcl_SetVar(interp, "_notc4", arg, 0);
+  Tcl_SetVar(interp, "_notc5", dest, 0);
   Context;
   check_tcl_bind(H_notc, arg, &fr, " $_notc1 $_notc2 $_notc3 $_notc4 $_notc5",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
@@ -274,7 +274,7 @@ static int got001(char *from, char *msg)
   if (use_silence && global_ign)
       for (u = global_ign; u; u = u->next)
 	dprintf(DP_SERVER, "SILENCE +%s", u->igmask);
-  if (strcasecmp(from, dcc[servidx].host)) {
+  if (egg_strcasecmp(from, dcc[servidx].host)) {
     putlog(LOG_MISC, "*", "(%s claims to be %s; updating server list)",
 	   dcc[servidx].host, from);
     for (i = curserv; i > 0 && x != NULL; i--)
@@ -296,6 +296,40 @@ static int got001(char *from, char *msg)
       strcpy(x->realname, from);
     }
   }
+  return 0;
+}
+
+/* Got 442: not on channel
+ */
+static int got442(char *from, char *msg)
+{
+  char *chname;
+  struct chanset_t *chan;
+  struct server_list *x = serverlist;
+  module_entry *me;
+  int i = 0;
+
+  while (x != NULL) {
+    if (i == curserv) {
+      if (egg_strcasecmp(from, x->realname ? x->realname : x->name))
+	return 0;
+      break;
+    }
+    x = x->next;
+    i++;
+  }
+  newsplit(&msg);
+  chname = newsplit(&msg);
+  chan = findchan(chname);
+  if (chan)
+    if (!channel_inactive(chan)) {
+      putlog(LOG_MISC, chname, IRC_SERVNOTONCHAN, chname);
+      me = module_find("channels", 0, 0);
+      if (me && me->funcs)
+	(me->funcs[CHANNEL_CLEAR])(chan, 1);
+      chan->status &= ~CHAN_ACTIVE;
+      dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
+    }  
   return 0;
 }
 
@@ -353,12 +387,12 @@ static int detect_flood(char *floodnick, char *floodhost, char *from, int which)
   /* Okay, make sure i'm not flood-checking myself */
   if (match_my_nick(floodnick))
     return 0;
-  if (!strcasecmp(floodhost, botuserhost))
+  if (!egg_strcasecmp(floodhost, botuserhost))
     return 0;			/* My user@host (?) */
   p = strchr(floodhost, '@');
   if (p) {
     p++;
-    if (strcasecmp(lastmsghost[which], p)) {	/* New */
+    if (egg_strcasecmp(lastmsghost[which], p)) {	/* New */
       strcpy(lastmsghost[which], p);
       lastmsgtime[which] = now;
       lastmsgs[which] = 0;
@@ -474,7 +508,7 @@ static int gotmsg(char *from, char *msg)
 	    if (!ignoring || trigger_on_ignore) {
 	      if (!check_tcl_ctcp(nick, uhost, u, to, code, ctcp) &&
 		  !ignoring) {
-		if ((lowercase_ctcp && !strcasecmp(code, "DCC")) ||
+		if ((lowercase_ctcp && !egg_strcasecmp(code, "DCC")) ||
 		    (!lowercase_ctcp && !strcmp(code, "DCC"))) {
 		  /* If it gets this far unhandled, it means that
 		   * the user is totally unknown.
@@ -708,7 +742,7 @@ static void minutely_checks()
       if (use_ison) {
 	/* Save space and use the same ISON :P */
 	alt = get_altbotnick();
-	if (alt[0] && strcasecmp (botname, alt))
+	if (alt[0] && egg_strcasecmp (botname, alt))
 	  dprintf(DP_MODE, "ISON :%s %s %s\n", botname, origbotname, alt);
 	else
           dprintf(DP_MODE, "ISON :%s %s\n", botname, origbotname);
@@ -789,7 +823,7 @@ static void got303(char *from, char *msg)
  */
 static int trace_fail(char *from, char *msg)
 {
-  if (keepnick && !use_ison  && !strcasecmp (botname, origbotname)) {
+  if (keepnick && !use_ison  && !egg_strcasecmp (botname, origbotname)) {
     if (!nick_juped)
       putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
     dprintf(DP_MODE, "NICK %s\n", origbotname);
@@ -864,7 +898,7 @@ static int got437(char *from, char *msg)
   } else if (server_online) {
     if (!nick_juped)
       putlog(LOG_MISC, "*", "NICK IS JUPED: %s (keeping '%s').", s, botname);
-    if (!strcmp(s, origbotname))
+    if (!rfc_casecmp(s, origbotname))
       nick_juped = 1;
   } else {
     putlog(LOG_MISC, "*", "%s: %s", IRC_BOTNICKJUPED, s);
@@ -942,7 +976,7 @@ static int gotnick(char *from, char *msg)
         putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
         dprintf(DP_MODE, "NICK %s\n", origbotname);
       } else if (alt[0] && !rfc_casecmp(nick, alt)
-		 && strcasecmp(botname, origbotname)) {
+		 && egg_strcasecmp(botname, origbotname)) {
         putlog(LOG_MISC, "*", IRC_GETALTNICK, alt);
         dprintf(DP_MODE, "NICK %s\n", alt);
       }
@@ -954,7 +988,7 @@ static int gotnick(char *from, char *msg)
       putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
       dprintf(DP_MODE, "NICK %s\n", origbotname);
     } else if (alt[0] && !rfc_casecmp(nick, alt) &&
-	    strcasecmp(botname, origbotname)) {
+	    egg_strcasecmp(botname, origbotname)) {
       putlog(LOG_MISC, "*", IRC_GETALTNICK, altnick);
       dprintf(DP_MODE, "NICK %s\n", altnick);
     }
@@ -1088,10 +1122,9 @@ static int gotkick(char *from, char *msg)
 {
   char *nick, buf2[511], *pbuf, *victim;
 
-/*  strcpy(uhost, from); */
-/*  nick = splitnick(&uhost); */
   nick = from;
-  if (strcmp(nick, botname))  /* not my kick, I don't need to bother about it */
+  if (rfc_casecmp(nick, botname))
+    /* Not my kick, I don't need to bother about it. */
     return 0;
   if (use_penalties) {
     last_time += 2;
@@ -1106,7 +1139,7 @@ static int gotkick(char *from, char *msg)
   newsplit(&pbuf);
   victim = newsplit(&pbuf);
   check_notlagged(victim);
-  if (!strcasecmp(victim, lagcheckstring)) {
+  if (!rfc_casecmp(victim, lagcheckstring)) {
     debug1("I kicked %s, so I think I'm not lagged", victim);
     lagged = 0;
     nfree(lagcheckstring);
@@ -1179,7 +1212,7 @@ static int lagcheck_notop(char *from, char *msg)
   return 0;
 }
 
-static int lagcheck_367 (char *from, char *msg)
+static int lagcheck_367(char *from, char *msg)
 {
   char buf[511], *mask;
 
@@ -1190,10 +1223,10 @@ static int lagcheck_367 (char *from, char *msg)
   mask = buf;
   newsplit(&mask);
   newsplit(&mask);
-  if (lagcheckstring) {
-    if (strcasecmp(lagcheckstring + 3, mask))
+  if (lagcheckstring)
+    if (!wild_match(mask, lagcheckstring + 3) &&
+    	!wild_match(lagcheckstring + 3, mask))
       return 0;
-  }
   lagged = 0;
   if (lagcheckstring) {
     nfree(lagcheckstring);
@@ -1207,7 +1240,8 @@ static int lagcheck_mode (char *from, char *origmsg)
 {
   char *modes, pm, buf[511], *msg;
 
-  if (strcmp(from, botname))  /* that wasn't my modechange... */
+  if (rfc_casecmp(from, botname))
+    /* That wasn't my modechange... */
     return 0;
   strncpy(buf, origmsg, 510);
   buf[510] = 0;
@@ -1241,11 +1275,11 @@ static int lagcheck_401(char *from, char *origmsg)
   strncpy(buf, origmsg, 510);
   buf[510] = 0;
   msg = buf;
-  if (strcmp(newsplit(&msg), botname)) {
+  if (rfc_casecmp(newsplit(&msg), botname)) {
     debug1("This shouldn't happen.(%s)", origmsg);
     return 0;
   }
-  if (!strcasecmp(lagcheckstring2, newsplit(&msg))) {
+  if (!rfc_casecmp(lagcheckstring2, newsplit(&msg))) {
     lagged = 0;
     if (lagcheckstring) {
       nfree(lagcheckstring);
@@ -1279,6 +1313,7 @@ static cmd_t my_raw_binds[] =
   {"437",	"",	(Function) got437,		NULL},
   {"438",	"",	(Function) got438,		NULL},
   {"451",	"",	(Function) got451,		NULL},
+  {"442",	"",	(Function) got442,		NULL},
   {"NICK",	"",	(Function) gotnick,		NULL},
   {"ERROR",	"",	(Function) goterror,		NULL},
   {"KICK",	"",	(Function) gotkick,		NULL},
@@ -1352,6 +1387,8 @@ static void connect_server(void)
        * Note: Put it here, just in case the server quits on us quickly
        */
       cycle_time = server_cycle_wait;
+    else
+      cycle_time = 0;
 
     /* I'm resolving... don't start another server connect request */
     resolvserv = 1;
@@ -1400,7 +1437,6 @@ static void server_resolve_success(int servidx)
       dprintf(DP_MODE, "PASS %s\n", pass);
     dprintf(DP_MODE, "USER %s %s %s :%s\n",
 	    botuser, bothost, dcc[servidx].host, botrealname);
-    cycle_time = 0;
     /* Wait for async result now */
   }
 }

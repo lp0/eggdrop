@@ -2,7 +2,7 @@
  * main.h
  *   include file to include most other include files
  * 
- * $Id: main.h,v 1.11 2000/02/01 20:36:18 fabian Exp $
+ * $Id: main.h,v 1.13 2000/03/23 23:17:55 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -26,10 +26,8 @@
 #ifndef _EGG_MAIN_H
 #define _EGG_MAIN_H
 
-#ifndef MAKING_MODS
-#  ifdef HAVE_CONFIG_H
-#    include "../config.h"
-#  endif
+#ifdef HAVE_CONFIG_H
+#  include <config.h>
 #endif
 
 /* UGH! Why couldn't Tcl pick a standard? */
@@ -74,6 +72,7 @@
 #include "tclhash.h"
 #include "chan.h"
 #include "users.h"
+#include "compat/compat.h"
 
 #ifndef MAKING_MODS
 extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,

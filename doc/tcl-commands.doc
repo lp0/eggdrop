@@ -19,21 +19,27 @@ specific commands, see later.
 
 *** OUTPUT COMMANDS ***
 
-  putserv <text>
+  putserv <text> [options]
     sends text to the server, like 'dump' (intended for direct server
       commands); output is queued so that you won't flood yourself off
       the server
+    options are:
+        -next     push messages to the front of the queue
     returns: nothing
 
-  puthelp <text>
+  puthelp <text> [options]
     sends text to the server like 'putserv', but uses a different queue
       (intended for sending messages to channels or people)
+    options are:
+        -next     push messages to the front of the queue
     returns: nothing
 
-  putquick <text>
+  putquick <text> [options]
     sends text to the server, like 'dump' (intended for direct server
     commands); output is queued so that you won't flood yourself off
     the server, using the MODE queue (should be alot faster)
+    options are:
+        -next     push messages to the front of the queue
     returns: nothing
 
   putkick <channel> <nick,nick,...> [reason]
@@ -66,7 +72,7 @@ specific commands, see later.
   queuesize [queue]
     returns: the number of msgs in all queues. If a queue is specified, only
       the size of this queue is returned. valid queues are: mode, server,
-      help, or all.
+      help.
 
    clearqueue <queue>
      returns: number of deleted lines from the specified queue
@@ -132,10 +138,10 @@ specific commands, see later.
                   will set a users laston time in a channel record
                   (if it already exists)
 
-  chnick <old-handle> <new-handle>
-    changes a user's handle
-    returns: "1" on success; "0" if the handle is already used, the handle
-      is invalid, or the user can't be found
+|  chhandle <old-handle> <new-handle>
+|    changes a user's handle
+|    returns: "1" on success; "0" if the handle is already used, the handle
+|      is invalid, or the user can't be found
 
   chattr <handle> [changes [channel]]
     changes the attributes for a user record, if you include any -- changes
@@ -548,6 +554,9 @@ specific commands, see later.
     returns: list of nicknames currently on the bot's channel that have all
        of the flags specified; if no flags are given, all of the nicknames
        are returned
+    Please note, that if you're executing chanlist after a part or sign bind,
+    the gone user will still be listed so you can check for wasop, isop, etc.
+   
 
   getchanidle <nickname> <channel>
     returns: number of minutes that person has been idle; "0" if the speci-
@@ -904,6 +913,23 @@ specific commands, see later.
 |   additional parameters (called arg1, arg2 and argn above) get appended
 |   to the proc's other parameters.
 
+| md5 <string>
+|   returns: the 128 bits MD5 "message-digest" of the specified string.
+
+| compressfile [-level <level>] <src-file> [target-file]
+| uncompressfile <src-file> [target-file]
+|   Compress or uncompress files. The level option specifies the compression
+|   mode to use when compressing. Available modes are from 0 (minimum CPU
+|   usage, minimum compression) all the way up to 9 (maximum CPU usage,
+|   maximum compression).
+|   If you don't specify the target-file, the src-file will be overwritten.
+
+| iscompressed <filename>
+|   Determines whether <filename> is gzip compressed. Returns "1" if it is,
+|   "0" if it isn't and "2" if some kind of error prevented the checks from
+|   succeeding.
+
+
 GLOBAL VARIABLES:
   (All config-file variables are global, too.  But these variables
   are set by the bot.)
@@ -940,8 +966,8 @@ GLOBAL VARIABLES:
     The last command binding which triggered.   This allows you to
     identify which command triggered a tcl routine.
 
-| md5 <string>
-|   returns: the 128 bits MD5 "message-digest" of the specified string.
+| isjuped
+|   value is 1 if bots nick is juped(437) 0 otherwise.
 
 COMMAND EXTENSION:
 
@@ -1014,12 +1040,19 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
   (7)  NOTC   (stackable)
        bind notc <flags> <mask> <proc>
-|      procname <nick> <user@host> <handle> <dest> <text>
+|      procname <nick> <user@host> <handle> <text> <dest>
 
 |      destination will be a nickname (the bot's nickname, obviously) or
 |      a channel name; matches the entire line of text from a /notice with
        the mask; it is considered a breach of protocol to respond to a
        /notice on IRC, so this is intended for internal use (ie, logging, etc) only
+
+|      new Tcl procs should be declared as
+|      proc notcproc {nick uhost hand chan text {dest ""}} {
+|        global botnick; if {$dest==""} { set dest $botnick }
+|        ...
+|      }
+|      for compatiblity
 
   (8)  JOIN   (stackable)
        bind join <flags> <mask> <proc>
@@ -1036,6 +1069,10 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        triggered by someone leaving the channel; as in JOIN, the <mask>
        is matched against "#channel nick!user@host" and can contain
        wildcards. if no part message is specified msg will be set to "".
+       
+|      new Tcl procs should be declared as
+|      proc partproc {nick uhost hand chan {msg ""}} { ... }
+|      for compatiblity
 
   (10) SIGN   (stackable)
        bind sign <flags> <mask> <proc>

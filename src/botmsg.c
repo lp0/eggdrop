@@ -5,7 +5,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: botmsg.c,v 1.9 2000/01/30 19:26:19 fabian Exp $
+ * $Id: botmsg.c,v 1.12 2000/05/06 21:59:24 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -52,12 +52,8 @@ void tandout_but EGG_VARARGS_DEF(int, arg1)
   x = EGG_VARARGS_START(int, arg1, va);
   format = va_arg(va, char *);
 
-#ifdef HAVE_VSNPRINTF
-  if ((l = vsnprintf(s, 511, format, va)) < 0)
+  if ((l = egg_vsnprintf(s, 511, format, va)) < 0)
     s[l = 511] = 0;
-#else
-  l = vsprintf(s, format, va);
-#endif
   va_end(va);
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type == &DCC_BOT) && (i != x) &&
@@ -307,12 +303,8 @@ void botnet_send_priv EGG_VARARGS_DEF(int, arg1)
   tobot = va_arg(va, char *);
   format = va_arg(va, char *);
 
-#ifdef HAVE_VSNPRINTF
-  if (vsnprintf(tbuf, 450, format, va) < 0)
+  if (egg_vsnprintf(tbuf, 450, format, va) < 0)
     tbuf[450] = 0;
-#else
-  vsprintf(tbuf, format, va);
-#endif
   va_end(va);
   if (tobot) {
 #ifndef NO_OLD_BOTNET
@@ -787,16 +779,16 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
   /* note length + PRIVMSG header + nickname + date  must be <512  */
   p = strchr(to, '@');
   if (p != NULL) {		/* Cross-bot note */
-    char x[20];
+    char x[21];
 
     *p = 0;
     strncpy(x, to, 20);
     x[20] = 0;
     *p = '@';
     p++;
-    if (!strcasecmp(p, botnetnick))	/* To me?? */
+    if (!egg_strcasecmp(p, botnetnick))	/* To me?? */
       return add_note(x, from, msg, idx, echo); /* Start over, dimwit. */
-    if (strcasecmp(from, botnetnick)) {
+    if (egg_strcasecmp(from, botnetnick)) {
       if (strlen(from) > 40)
 	from[40] = 0;
       if (strchr(from, '@')) {
@@ -858,7 +850,7 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
   for (i = 0; i < dcc_total; i++) {
     if ((dcc[i].type->flags & DCT_GETNOTES) &&
 	((sock == (-1)) || (sock == dcc[i].sock)) &&
-	(!strcasecmp(dcc[i].nick, to))) {
+	(!egg_strcasecmp(dcc[i].nick, to))) {
       int aok = 1;
 
       if (dcc[i].type == &DCC_CHAT)
@@ -885,7 +877,7 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
 	  else if (*from == '@')
 	    fr = p + 1;
 	}
-	if ((idx == (-2)) || (!strcasecmp(from, botnetnick)))
+	if (idx == -2 || (!egg_strcasecmp(from, botnetnick)))
 	  dprintf(i, "*** [%s] %s%s\n", fr, l ? work : "", msg);
 	else
 	  dprintf(i, "%cNote [%s]: %s%s\n", 7, fr, l ? work : "", msg);

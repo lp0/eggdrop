@@ -4,7 +4,7 @@
  * 
  *   IF YOU ALTER THIS FILE, YOU NEED TO RECOMPILE THE BOT.
  * 
- * $Id: eggdrop.h,v 1.24 2000/01/30 19:26:20 fabian Exp $
+ * $Id: eggdrop.h,v 1.29 2000/04/05 19:31:38 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -188,17 +188,19 @@
 #  define Assert(expr)	{}
 #endif
 
-#undef malloc
-#define malloc(x)	dont_use_old_malloc(x)
-#undef free
-#define free(x)		dont_use_old_free(x)
+#ifndef COMPILING_MEM
+#  undef malloc
+#  define malloc(x)	dont_use_old_malloc(x)
+#  undef free
+#  define free(x)	dont_use_old_free(x)
+#endif /* !COMPILING_MEM */
 
 /* 32 bit type */
 #if (SIZEOF_INT == 4)
 typedef unsigned int u_32bit_t;
 #else
 #  if (SIZEOF_LONG == 4)
-typedef unsigned int u_32bit_t;
+typedef unsigned long u_32bit_t;
 #  else
 #    include "cant/find/32bit/type"
 #  endif
@@ -317,6 +319,7 @@ struct xfer_info {
   char from[NICKLEN];		/* [GET] user who offered the file	   */
   FILE *f;			/* pointer to file being sent/received	   */
   unsigned int type;		/* xfer connection type, see enum below	   */
+  unsigned short ack_type;	/* type of ack				   */
   unsigned long offset;		/* offset from beginning of file, during
 				   resend				   */
 };
@@ -330,11 +333,19 @@ enum {				/* transfer connection handling a ...	*/
 	XFER_GET		/*  ... file-get from s.o.		*/
 };
 
+enum {
+	XFER_ACK_UNKNOWN,	/* We don't know how blocks are acked.	*/
+	XFER_ACK_WITH_OFFSET,	/* Skipped data is also counted as
+				   received.				*/
+	XFER_ACK_WITHOUT_OFFSET	/* Skipped data is NOT counted in ack.	*/
+};
+
 struct bot_info {
   char version[121];		/* channel/version info			*/
   char linker[NOTENAMELEN + 1];	/* who requested this link		*/
-  int numver;
-  int port;			/* base port				*/
+  int  numver;
+  int  port;			/* base port				*/
+  int  uff_flags;		/* user file feature flags		*/
 };
 
 struct relay_info {
@@ -432,11 +443,6 @@ struct dupwait_info {
 #define STAT_LINKING 0x00100	/* the bot is currently going through
 				   the linking stage			 */
 #define STAT_AGGRESSIVE   0x200	/* aggressively sharing with this bot	 */
-#define STAT_UFF_OVERRIDE 0x400	/* overriding existing bot entries	 */
-#define STAT_UFF_COMPRESS 0x800	/* compress the userfile when sending	 */
-#define STAT_UFF_ENCRYPT 0x1000	/* encrypt the userfile	when sending	 */
-#define STAT_UFF_INVITE  0x2000	/* send invites in userfile		 */
-#define STAT_UFF_EXEMPT  0x4000	/* send exempts in userfile		 */
 
 /* Flags for listening sockets
  */
@@ -519,6 +525,7 @@ typedef struct {
 #define SOCK_PROXYWAIT	0x0080	/* waiting for SOCKS traversal		*/
 #define SOCK_PASS	0x0100	/* passed on; only notify in case
 				   of traffic				*/
+#define SOCK_VIRTUAL	0x0200	/* not-connected socket (dont read it!)	*/
 
 /* Flags to sock_has_data
  */

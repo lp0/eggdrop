@@ -2,7 +2,7 @@
  * msgcmds.c -- part of irc.mod
  *   all commands entered via /MSG
  * 
- * $Id: msgcmds.c,v 1.9 2000/01/17 22:36:09 fabian Exp $
+ * $Id: msgcmds.c,v 1.12 2000/03/23 23:17:58 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -39,7 +39,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
   if (u)
     atr = u->flags;
   if (u && !(atr & USER_COMMON)) {
-    dprintf(DP_HELP, "NOTICE %s :%s, %s.\n", IRC_HI, nick, u->handle);
+    dprintf(DP_HELP, "NOTICE %s :%s, %s.\n", nick, IRC_HI, u->handle);
     return 1;
   }
   if (get_user_by_handle(userlist, nick)) {
@@ -323,7 +323,7 @@ static int msg_info(char *nick, char *host, struct userrec *u, char *par)
       dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_INFOLOCKED);
       return 1;
     }
-    if (!strcasecmp(par, "none")) {
+    if (!egg_strcasecmp(par, "none")) {
       par[0] = 0;
       if (chname) {
 	set_handle_chaninfo(userlist, u->handle, chname, NULL);
@@ -510,7 +510,7 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
   if (s2 && s2[0] && !(u2->flags & USER_BOT))
     dprintf(DP_HELP, "NOTICE %s :[%s] %s\n", nick, u2->handle, s2);
   for (xk = get_user(&USERENTRY_XTRA, u2); xk; xk = xk->next)
-    if (!strcasecmp(xk->key, "EMAIL"))
+    if (!egg_strcasecmp(xk->key, "EMAIL"))
       dprintf(DP_HELP, "NOTICE %s :[%s] email: %s\n", nick, u2->handle,
 	      xk->data);
   ok = 0;
@@ -690,17 +690,22 @@ static int msg_voice(char *nick, char *host, struct userrec *u, char *par)
 	chan = findchan_by_dname(par);
 	if (chan && channel_active(chan)) {
 	  get_user_flagrec(u, &fr, par);
-	  if (chan_voice(fr) || glob_voice(fr))
+	  if (chan_voice(fr) || glob_voice(fr) ||
+	      chan_op(fr) || glob_op(fr)) {
 	    add_mode(chan, '+', 'v', nick);
 	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! VOICE %s",
 		   nick, host, u->handle, par);
+	  } else
+	    putlog(LOG_CMDS, "*", "(%s!%s) !*! failed VOICE %s",
+		nick, host, par);
 	  return 1;
 	}
       } else {
 	chan = chanset;
 	while (chan != NULL) {
 	  get_user_flagrec(u, &fr, chan->dname);
-	  if (chan_voice(fr) || glob_voice(fr))
+	  if (chan_voice(fr) || glob_voice(fr) ||
+	      chan_op(fr) || glob_op(fr))
 	    add_mode(chan, '+', 'v', nick);
 	  chan = chan->next;
 	}
