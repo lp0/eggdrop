@@ -4,9 +4,7 @@
  *   a bunch of functions to find and change user records
  *   change and check user (and channel-specific) flags
  * 
- * dprintf'ized, 10nov1995
- * 
- * $Id: userrec.c,v 1.25 2000/07/14 22:26:58 guppy Exp $
+ * $Id: userrec.c,v 1.17 2000/01/30 19:26:21 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -27,30 +25,34 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "main.h"
 #include <sys/stat.h>
+#include "main.h"
 #include "users.h"
 #include "chan.h"
 #include "modules.h"
 #include "tandem.h"
 
-extern struct dcc_t *dcc;
-extern struct chanset_t *chanset;
-extern int default_flags, default_uflags, quiet_save, dcc_total, share_greet;
-extern char userfile[], ver[], botnetnick[];
-extern time_t now;
+extern struct dcc_t	*dcc;
+extern struct chanset_t	*chanset;
+extern int		 default_flags, default_uflags, quiet_save,
+			 dcc_total, share_greet;
+extern char		 userfile[], ver[], botnetnick[];
+extern time_t		 now;
 
-int noshare = 1;		/* don't send out to sharebots */
-int sort_users = 0;		/* sort the userlist when saving */
-struct userrec *userlist = NULL;	/* user records are stored here */
-struct userrec *lastuser = NULL;	/* last accessed user record */
-maskrec *global_bans = NULL,
-        *global_exempts = NULL,
-        *global_invites = NULL;
-struct igrec *global_ign = NULL;
-int cache_hit = 0, cache_miss = 0;	/* temporary cache accounting */
-int strict_host = 1;
-char BUF[512]; /* lame buffer for get_user_by_host() */
+int		 noshare = 1;		/* don't send out to sharebots	    */
+int		 sort_users = 0;	/* sort the userlist when saving    */
+struct userrec	*userlist = NULL;	/* user records are stored here	    */
+struct userrec	*lastuser = NULL;	/* last accessed user record	    */
+maskrec		*global_bans = NULL,
+		*global_exempts = NULL,
+		*global_invites = NULL;
+struct igrec	*global_ign = NULL;
+int		cache_hit = 0,
+		cache_miss = 0;		/* temporary cache accounting	    */
+int		strict_host = 1;
+int		userfile_perm = 0600;	/* Userfile permissions,
+					   default rw-------		    */
+
 
 #ifdef DEBUG_MEM
 void *_user_malloc(int size, char *file, int line)
@@ -98,7 +100,8 @@ inline int expmem_mask(struct maskrec *m)
   return result;
 }
 
-/* memory we should be using */
+/* Memory we should be using
+ */
 int expmem_users()
 {
   int tot;
@@ -134,16 +137,16 @@ int expmem_users()
     }
     u = u->next;
   }
-  /* account for each channel's masks */
+  /* Account for each channel's masks */
   for (chan = chanset; chan; chan = chan->next) {
 
-    /* account for each channel's ban-list user */
+    /* Account for each channel's ban-list user */
     tot += expmem_mask(chan->bans);
 
-    /* account for each channel's exempt-list user */
+    /* Account for each channel's exempt-list user */
     tot += expmem_mask(chan->exempts);
 
-    /* account for each channel's invite-list user */
+    /* Account for each channel's invite-list user */
     tot += expmem_mask(chan->invites);
   }
   
@@ -175,29 +178,30 @@ int count_users(struct userrec *bu)
   return tot;
 }
 
-/* make nick!~user@host into nick!user@host if necessary */
-/* also the new form: nick!+user@host or nick!-user@host */
-/* new: returns a statically allocated buffer with the result (drummer) */
-static char* fixfrom(char *s)
+/* Convert "nick!~user@host", "nick!+user@host" and "nick!-user@host"
+ * to "nick!user@host" if necessary. (drummer)
+ */
+static char *fixfrom(char *s)
 {
   char *p;
+  static char buf[512];
 
   if (s == NULL)
     return NULL;
-  strncpy(BUF, s, 511);
-  BUF[511] = 0;
+  strncpy(buf, s, 511);
+  buf[511] = 0;
   if (strict_host)
-    return BUF;
-  if ((p = strchr(BUF, '!')))
+    return buf;
+  if ((p = strchr(buf, '!')))
     p++;
   else
-    p = s;			/* sometimes we get passed just a
+    p = s;			/* Sometimes we get passed just a
 				 * user@host here... */
-  /* these are ludicrous. */
+  /* These are ludicrous. */
   if (strchr("~+-^=", *p) && (p[1] != '@')) /* added check for @ - drummer */
     strcpy(p, p + 1);
-  /* bug was: n!~@host -> n!@host  now: n!~@host */
-  return BUF;
+  /* Bug was: n!~@host -> n!@host  now: n!~@host */
+  return buf;
 }
 
 struct userrec *check_dcclist_hand(char *handle)
@@ -247,7 +251,8 @@ struct userrec *get_user_by_handle(struct userrec *bu, char *handle)
   return NULL;
 }
 
-/* fix capitalization, etc */
+/* Fix capitalization, etc
+ */
 void correct_handle(char *handle)
 {
   struct userrec *u;
@@ -258,8 +263,8 @@ void correct_handle(char *handle)
   strcpy(handle, u->handle);
 }
 
-/*        This will be usefull in a lot of places, much more code re-use so we
- *      endup with a smaller executable bot. <cybah> 
+/* This will be usefull in a lot of places, much more code re-use so we
+ * endup with a smaller executable bot. <cybah> 
  */
 void clear_masks(maskrec *m)
 {
@@ -315,13 +320,15 @@ void clear_userlist(struct userrec *bu)
       cst->bans = cst->exempts = cst->invites = NULL;
     }
   }
-  /* remember to set your userlist to NULL after calling this */
+  /* Remember to set your userlist to NULL after calling this */
   Context;
 }
 
-/* find CLOSEST host match */
-/* (if "*!*@*" and "*!*@*clemson.edu" both match, use the latter!) */
-/* 26feb: CHECK THE CHANLIST FIRST to possibly avoid needless search */
+/* Find CLOSEST host match
+ * (if "*!*@*" and "*!*@*clemson.edu" both match, use the latter!)
+ *
+ * Checks the chanlist first, to possibly avoid needless search.
+ */
 struct userrec *get_user_by_host(char *host)
 {
   struct userrec *u = userlist, *ret;
@@ -360,7 +367,8 @@ struct userrec *get_user_by_host(char *host)
   return ret;
 }
 
-/* use fixfrom() or dont? (drummer) */
+/* use fixfrom() or dont? (drummer)
+ */
 struct userrec *get_user_by_equal_host(char *host)
 {
   struct userrec *u = userlist;
@@ -378,8 +386,9 @@ struct userrec *get_user_by_equal_host(char *host)
   return NULL;
 }
 
-/* try: pass_match_by_host("-",host)
- * will return 1 if no password is set for that host */
+/* Try: pass_match_by_host("-",host)
+ * will return 1 if no password is set for that host
+ */
 int u_pass_match(struct userrec *u, char *pass)
 {
   char *cmp, new[32];
@@ -418,7 +427,7 @@ int write_user(struct userrec *u, FILE * f, int idx)
   if (fprintf(f, "%-10s - %-24s\n", u->handle, s) == EOF)
     return 0;
   for (ch = u->chanrec; ch; ch = ch->next) {
-    cst = findchan(ch->channel);
+    cst = findchan_by_dname(ch->channel);
     if (cst && ((idx < 0) || channel_shared(cst))) {
       if (idx >= 0) {
 	fr.match = (FR_CHAN | FR_BOT);
@@ -454,10 +463,11 @@ int write_user(struct userrec *u, FILE * f, int idx)
 
 int sort_compare(struct userrec *a, struct userrec *b)
 {
-  /* order by flags, then alphabetically
+  /* Order by flags, then alphabetically
    * first bots: +h / +a / +l / other bots
    * then users: +n / +m / +o / other users
-   * return true if (a > b) */
+   * return true if (a > b)
+   */
   if (a->flags & b->flags & USER_BOT) {
     if (~bot_flags(a) & bot_flags(b) & BOT_HUB)
       return 1;
@@ -522,7 +532,8 @@ void sort_userlist()
   }
 }
 
-/* rewrite the entire user file */
+/* Rewrite the entire user file. Also write the channel file at the same time
+ */
 void write_userfile(int idx)
 {
   FILE *f;
@@ -532,12 +543,11 @@ void write_userfile(int idx)
   int ok;
 
   Context;
-  /* also write the channel file at the same time */
   if (userlist == NULL)
-    return;			/* no point in saving userfile */
+    return;			/* No point in saving userfile */
   sprintf(s, "%s~new", userfile);
   f = fopen(s, "w");
-  chmod(s, 0600);		/* make it -rw------- */
+  chmod(s, userfile_perm);
   if (f == NULL) {
     putlog(LOG_MISC, "*", USERF_ERRWRITE);
     return;
@@ -578,11 +588,11 @@ int change_handle(struct userrec *u, char *newh)
 
   if (!u)
     return 0;
-  /* nothing that will confuse the userfile */
+  /* Nothing that will confuse the userfile */
   if ((newh[1] == 0) && strchr(BADHANDCHARS, newh[0]))
     return 0;
   check_tcl_nkch(u->handle, newh);
-  /* yes, even send bot nick changes now: */
+  /* Yes, even send bot nick changes now: */
   if ((!noshare) && !(u->flags & USER_UNSHARED))
     shareout(NULL, "h %s %s\n", u->handle, newh);
   strcpy(s, u->handle);
@@ -637,15 +647,15 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
     sprintf(xk->data, "%09lu", now);
     set_user(&USERENTRY_XTRA, u, xk);
   }
-  /* strip out commas -- they're illegal */
-  /* about this fixfrom():
-   * we should use this fixfrom before every call of adduser()
-   * but its much easier to use here...
-   * (drummer)
-   * only use it if we have a host :) (dw) 
-   */
+  /* Strip out commas -- they're illegal */
   if (host && host[0]) {
     char *p;
+
+    /* About this fixfrom():
+     *   We should use this fixfrom before every call of adduser()
+     *   but its much easier to use here...  (drummer)
+     *   Only use it if we have a host :) (dw) 
+     */
     host = fixfrom(host);
     p = strchr(host, ',');
 
@@ -667,8 +677,7 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
     fr.global = u->flags;
     fr.udef_global = u->flags_udef;
     build_flags(x, &fr, 0);
-    shareout(NULL, "n %s %s %s %s\n", handle, host && host[0] ? host : "none",
-             pass, x);
+    shareout(NULL, "n %s %s %s %s\n", handle, host, pass, x);
   }
   if (bu == NULL)
     bu = u;
@@ -744,7 +753,7 @@ int deluser(char *handle)
     shareout(NULL, "k %s\n", handle);
   for (fnd = 0; fnd < dcc_total; fnd++)
     if (dcc[fnd].user == u)
-      dcc[fnd].user = 0;	/* clear any dcc users for this entry,
+      dcc[fnd].user = 0;	/* Clear any dcc users for this entry,
 				 * null is safe-ish */
   clear_chanlist();
   freeuser(u);
@@ -860,18 +869,18 @@ struct userrec *get_user_by_nick(char *nick)
   	char word[512];
 
 	sprintf(word, "%s!%s", m->nick, m->userhost);
-	/* no need to check the return value ourself */
+	/* No need to check the return value ourself */
 	return get_user_by_host(word);;
       }
       m = m->next;
     }
     chan = chan->next;
   }
-  /* sorry, no matches */
+  /* Sorry, no matches */
   return NULL;
 }
 
-void user_del_chan(char *name)
+void user_del_chan(char *dname)
 {
   struct chanuserrec *ch, *och;
   struct userrec *u;
@@ -880,7 +889,7 @@ void user_del_chan(char *name)
     ch = u->chanrec;
     och = NULL;
     while (ch) {
-      if (!rfc_casecmp(name, ch->channel)) {
+      if (!rfc_casecmp(dname, ch->channel)) {
 	if (och)
 	  och->next = ch->next;
 	else

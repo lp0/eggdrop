@@ -7,7 +7,7 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  * 
- * $Id: proto.h,v 1.24 2000/05/29 02:29:09 guppy Exp $
+ * $Id: proto.h,v 1.20 2000/01/30 19:26:21 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -38,8 +38,7 @@
 #endif
 
 #ifndef HAVE_BZERO
-void bzero(char *, int);
-
+void bzero(void *, int);
 #endif
 
 struct chanset_t;		/* keeps the compiler warnings down :) */
@@ -59,7 +58,6 @@ extern int (*rfc_ncasecmp) (const char *, const char *, int);
 extern int (*rfc_toupper) (int);
 extern int (*rfc_tolower) (int);
 extern int (*match_noterej) (struct userrec *, char *);
-
 #endif
 
 /* botcmd.c */
@@ -129,6 +127,7 @@ char *stripmasktype(int);
 
 /* dcc.c */
 void failed_link(int);
+void dupwait_notify(char *);
 
 /* dccutil.c */
 void dprintf EGG_VARARGS(int, arg1);
@@ -152,6 +151,17 @@ struct dcc_t *find_idx(int);
 int new_dcc(struct dcc_table *, int);
 void del_dcc(int);
 char *add_cr(char *);
+void changeover_dcc(int, struct dcc_table *, int);
+
+/* dns.c */
+extern void (*dns_hostbyip) (IP);
+extern void (*dns_ipbyhost) (char *);
+void block_dns_hostbyip(IP);
+void block_dns_ipbyhost(char *);
+void call_hostbyip(IP, char *, int);
+void call_ipbyhost(char *, IP, int);
+void dcc_dnshostbyip(IP);
+void dcc_dnsipbyhost(char *);
 
 /* gotdcc.c */
 void gotdcc(char *, char *, struct userrec *, char *);
@@ -163,7 +173,6 @@ char *get_language(int);
 int cmd_loadlanguage(struct userrec *, int, char *);
 void add_lang_section(char *);
 int del_lang_section(char *);
-int exist_lang_section(char *);
 
 /* main.c */
 void fatal(char *, int);
@@ -218,6 +227,7 @@ void remove_gunk(char *);
 char *extracthostname(char *);
 void show_banner(int i);
 void make_rand_str(char *, int);
+int oatoi(const char *);
 
 /* net.c */
 void my_memcpy(char *, char *, int);
@@ -226,7 +236,9 @@ unsigned long iptolong(IP);
 IP getmyip();
 void neterror(char *);
 void setsock(int, int);
+int allocsock(int, int);
 int getsock(int);
+char *hostnamefromip(unsigned long);
 void killsock(int);
 int answer(int, char *, unsigned long *, unsigned short *, int);
 int open_listen(int *);
@@ -238,6 +250,9 @@ void dequeue_sockets();
 int sockgets(char *, int *);
 void tell_netdebug(int);
 int sanitycheck_dcc(char *, char *, char *, char *);
+int hostsanitycheck_dcc(char *, char *, IP, char *, char *);
+char *iptostr(IP);
+int sock_has_data(int, int);
 
 /* tcl.c */
 void protect_tcl();

@@ -2,7 +2,7 @@
  * cmdt.h
  *   stuff for builtin commands
  * 
- * $Id: cmdt.h,v 1.4 2000/01/08 21:23:13 per Exp $
+ * $Id: cmdt.h,v 1.3 2000/01/17 22:36:06 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer

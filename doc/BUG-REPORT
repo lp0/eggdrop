@@ -1,5 +1,5 @@
 =====================================================================
-              Eggheads Eggdrop 1.4 Bug Report Form
+              Eggheads Eggdrop 1.5 Bug Report Form
 =====================================================================
 
 By reporting bugs, you help to improve the quality of eggdrop which
@@ -8,7 +8,7 @@ provide, the easier and more likely it is for the dev team to fix the
 bug. Please add everything that you think is important, in addition
 to the information requested in this form. Thanks.
 
-Note: First check http://www.eggheads.org/bugzilla/ to see if the bug
+Note: First check http://www.eggheads.org/bugs.html to see if the bug
       you want to report is already fixed.
 
 Instructions:
@@ -19,7 +19,7 @@ Instructions:
 1) INFORMATION ABOUT YOUR EGGDROP
 
 1.1) version:
-     1.4.__
+     1.5.__
 
 1.2) make type:
      ( ) dynamic
@@ -43,7 +43,6 @@ Instructions:
      ( ) 8.0
      ( ) 8.1
      ( ) 8.2
-     ( ) 8.3
      ( ) Other - Which? ____
 
 2.2) TCL library patchlevel: ___
@@ -60,7 +59,6 @@ Instructions:
 3) INFORMATION ABOUT THE OS
 
 3.1) OS type:
-     ( ) BeOS
      ( ) BSD/OS
      ( ) Cygwin
      ( ) FreeBSD
@@ -76,7 +74,6 @@ Instructions:
      ( ) QNX
      ( ) Solaris
      ( ) Sun
-     ( ) Ultrix
      ( ) Other - Which? _____________
 
 3.2) OS Version/Release: _____________

@@ -1,5 +1,5 @@
 # Makefile for src/mod/irc.mod/
-# $Id: Makefile,v 1.10 1999/12/15 02:32:59 guppy Exp $
+# $Id: Makefile,v 1.5 1999/12/21 17:35:16 fabian Exp $
 
 doofus:
 	@echo ""

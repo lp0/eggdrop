@@ -1,7 +1,7 @@
 /* 
  * tclserv.c -- part of server.mod
  * 
- * $Id: tclserv.c,v 1.4 2000/01/08 21:23:17 per Exp $
+ * $Id: tclserv.c,v 1.5 2000/01/17 22:36:10 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -37,7 +37,13 @@ static int tcl_putquick STDVAR
   char s[511], *p;
 
   Context;
-  BADARGS(2, 2, " text");
+  BADARGS(2, 3, " text ?options?");
+  if ((argc == 3) &&
+      !(!strcasecmp(argv[2], "-next") || !strcasecmp(argv[2], "-normal"))) {
+      Tcl_AppendResult(irp, "unknown putquick option: should be one of: ",
+		       "-normal -next", NULL);
+    return TCL_ERROR;
+  }
   strncpy(s, argv[1], 510);
   s[510] = 0;
   p = strchr(s, '\n');
@@ -46,7 +52,10 @@ static int tcl_putquick STDVAR
    p = strchr(s, '\r');
   if (p != NULL)
     *p = 0;
-  dprintf(DP_MODE, "%s\n", s);
+  if (argc == 3 && !strcasecmp(argv[2], "-next"))
+    dprintf(DP_MODE_NEXT, "%s\n", s);
+  else
+    dprintf(DP_MODE, "%s\n", s);
   return TCL_OK;
 }
 
@@ -55,7 +64,13 @@ static int tcl_putserv STDVAR
   char s[511], *p;
 
   Context;
-  BADARGS(2, 2, " text");
+  BADARGS(2, 3, " text ?options?");
+  if ((argc == 3) &&
+    !(!strcasecmp(argv[2], "-next") || !strcasecmp(argv[2], "-normal"))) {
+    Tcl_AppendResult(irp, "unknown putserv option: should be one of: ",
+		     "-normal -next", NULL);
+    return TCL_ERROR;
+  }
   strncpy(s, argv[1], 510);
   s[510] = 0;
   p = strchr(s, '\n');
@@ -64,7 +79,10 @@ static int tcl_putserv STDVAR
    p = strchr(s, '\r');
   if (p != NULL)
     *p = 0;
-  dprintf(DP_SERVER, "%s\n", s);
+  if (argc == 3 && !strcasecmp(argv[2], "-next"))
+    dprintf(DP_SERVER_NEXT, "%s\n", s);
+  else
+    dprintf(DP_SERVER, "%s\n", s);
   return TCL_OK;
 }
 
@@ -73,7 +91,13 @@ static int tcl_puthelp STDVAR
   char s[511], *p;
 
   Context;
-  BADARGS(2, 2, " text");
+  BADARGS(2, 3, " text ?options?");
+  if ((argc == 3) &&
+    !(!strcasecmp(argv[2], "-next") || !strcasecmp(argv[2], "-normal"))) {
+    Tcl_AppendResult(irp, "unknown puthelp option: should be one of: ",
+		     "-normal -next", NULL);
+    return TCL_ERROR;
+  }
   strncpy(s, argv[1], 510);
   s[510] = 0;
   p = strchr(s, '\n');
@@ -82,7 +106,10 @@ static int tcl_puthelp STDVAR
    p = strchr(s, '\r');
   if (p != NULL)
     *p = 0;
-  dprintf(DP_HELP, "%s\n", s);
+  if (argc == 3 && !strcasecmp(argv[2], "-next"))
+    dprintf(DP_HELP_NEXT, "%s\n", s);
+  else
+    dprintf(DP_HELP, "%s\n", s);
   return TCL_OK;
 }
 
@@ -231,12 +258,12 @@ static int tcl_queuesize STDVAR
 
 static tcl_cmds my_tcl_cmds[] =
 {
-  {"jump", tcl_jump},
-  {"isbotnick", tcl_isbotnick},
-  {"clearqueue", tcl_clearqueue},
-  {"queuesize", tcl_queuesize},
-  {"puthelp", tcl_puthelp},
-  {"putserv", tcl_putserv},
-  {"putquick", tcl_putquick},
-  {0, 0},
+  {"jump",		tcl_jump},
+  {"isbotnick",		tcl_isbotnick},
+  {"clearqueue",	tcl_clearqueue},
+  {"queuesize",		tcl_queuesize},
+  {"puthelp",		tcl_puthelp},
+  {"putserv",		tcl_putserv},
+  {"putquick",		tcl_putquick},
+  {NULL,		NULL},
 };

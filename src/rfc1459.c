@@ -1,7 +1,7 @@
 /* 
  * rfc1459.c
  * 
- * $Id: rfc1459.c,v 1.4 1999/12/22 20:30:03 guppy Exp $
+ * $Id: rfc1459.c,v 1.3 1999/12/21 17:35:10 fabian Exp $
  */
 /* 
  * This code was more or less cloned from the ircd-hybrid 5.3 source.

@@ -1,5 +1,5 @@
 /* 
- * seen.c
+ * seen.c -- part of seen.mod
  *  Implement the seen.tcl script functionality via module
  * 
  * by ButchBub - Scott G. Taylor (staylor@mrynet.com)
@@ -10,7 +10,7 @@
  * 1.2     1997-08-20      Minor fixes. [BB]
  * 1.2a    1997-08-24      Minor fixes. [BB]
  * 
- * $Id: seen.c,v 1.13 2000/01/08 21:23:17 per Exp $
+ * $Id: seen.c,v 1.13 2000/01/17 22:36:09 fabian Exp $
  */
 /* 
  * Copyright (C) 1999, 2000  Eggheads
@@ -94,13 +94,13 @@ typedef struct {
 
 static trig_data trigdata[] =
 {
-  {"god", "Let's not get into a religious discussion, %s"},
-  {"jesus", "Let's not get into a religious discussion, %s"},
-  {"shit", "Here's looking at you, %s"},
-  {"yourself", "Yeah, whenever I look in a mirror..."},
-  {NULL, "You found me, %s!"},
-  {"elvis", "Last time I was on the moon man."},
-  {0, 0}
+  {"god",	"Let's not get into a religious discussion, %s"},
+  {"jesus",	"Let's not get into a religious discussion, %s"},
+  {"shit",	"Here's looking at you, %s"},
+  {"yourself",	"Yeah, whenever I look in a mirror..."},
+  {NULL,	"You found me, %s!"},
+  {"elvis",	"Last time I was on the moon man."},
+  {NULL,	NULL}
 };
 
 static int seen_expmem()
@@ -115,12 +115,12 @@ static int pub_seen(char *nick, char *host, char *hand,
 		    char *channel, char *text)
 {
   char prefix[50];
-  struct chanset_t *chan = findchan(channel);
+  struct chanset_t *chan = findchan_by_dname(channel);
 
   Context;
   if ((chan != NULL) && channel_seen(chan)) {
-    sprintf(prefix, "PRIVMSG %s :", channel);
-    do_seen(DP_HELP, prefix, nick, hand, channel, text);
+    sprintf(prefix, "PRIVMSG %s :", chan->name);
+    do_seen(DP_HELP, prefix, nick, hand, chan->dname, text);
   }
   return 0;
 }
@@ -148,8 +148,8 @@ static int dcc_seen(struct userrec *u, int idx, char *par)
   return 0;
 }
 
-static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel,
-		    char *text)
+static void do_seen(int idx, char *prefix, char *nick, char *hand,
+		    char *channel, char *text)
 {
   char stuff[512];
   char word1[512], word2[512];
@@ -394,7 +394,7 @@ static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel
   }
   /* Check if the target was on the channel, but is netsplit */
   Context;
-  chan = findchan(channel);
+  chan = findchan_by_dname(channel);
   if (chan) {
     m = ismember(chan, whotarget);
     if (m && chan_issplit(m)) {
@@ -416,13 +416,13 @@ static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel
     if (m && chan_issplit(m)) {
       dprintf(idx,
 	      "%s%s%s was just on %s, but got netsplit.\n",
-	      prefix, whoredirect, whotarget, chan->name);
+	      prefix, whoredirect, whotarget, chan->dname);
       return;
     }
     if (m) {
       dprintf(idx,
 	      "%s%s%s is on %s right now!\n",
-	      prefix, whoredirect, whotarget, chan->name);
+	      prefix, whoredirect, whotarget, chan->dname);
       return;
     }
     chan = chan->next;
@@ -543,7 +543,7 @@ static char *match_trigger(char *word)
       return t->text;
     t++;
   }
-  return (char *) 0;
+  return (char *) NULL;
 }
 
 static char *getxtra(char *hand, char *field)
@@ -576,12 +576,11 @@ static void wordshift(char *first, char *rest)
 {
   char *p, *q = rest;
 
-  LOOPIT:
-  p = newsplit(&q);
-  strcpy(first, p);
-  strcpy(rest, q);
-  if (!strcasecmp(first, "and") || !strcasecmp(first, "or"))
-    goto LOOPIT;
+  do {
+    p = newsplit(&q);
+    strcpy(first, p);
+    strcpy(rest, q);
+  } while (!strcasecmp(first, "and") || !strcasecmp(first, "or"));
 }
 
 /* Report on current seen info for .modulestat. */
@@ -594,20 +593,20 @@ static void seen_report(int idx, int details)
 /* PUB channel builtin commands. */
 static cmd_t seen_pub[] =
 {
-  {"seen", "", pub_seen, 0},
-  {0, 0, 0, 0}
+  {"seen",	"",	pub_seen,	NULL},
+  {NULL,	NULL,	NULL,		NULL}
 };
 
 static cmd_t seen_dcc[] =
 {
-  {"seen", "", dcc_seen, 0},
-  {0, 0, 0, 0}
+  {"seen",	"",	dcc_seen, 	NULL},
+  {NULL,	NULL,	NULL,		NULL}
 };
 
 static cmd_t seen_msg[] =
 {
-  {"seen", "", msg_seen, 0},
-  {0, 0, 0, 0}
+  {"seen",	"",	msg_seen,	NULL},
+  {NULL,	NULL,	NULL,		NULL}
 };
 
 static int server_seen_setup(char *mod)
@@ -630,9 +629,9 @@ static int irc_seen_setup(char *mod)
 
 static cmd_t seen_load[] =
 {
-  {"server", "", server_seen_setup, 0},
-  {"irc", "", irc_seen_setup, 0},
-  {0, 0, 0, 0}
+  {"server",	"",	server_seen_setup,	NULL},
+  {"irc",	"",	irc_seen_setup,		NULL},
+  {NULL,	NULL,	NULL,			NULL}
 };
 
 static char *seen_close()
@@ -666,13 +665,13 @@ char *seen_start(Function * egg_func_table)
 
   Context;
   module_register(MODULE_NAME, seen_table, 2, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
-    return "This module needs eggdrop1.4.0 or later";
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
+    return "This module needs eggdrop1.5.0 or later";
   add_builtins(H_load, seen_load);
   add_builtins(H_dcc, seen_dcc);
   add_help_reference("seen.help");
-  server_seen_setup(0);
-  irc_seen_setup(0);
+  server_seen_setup(NULL);
+  irc_seen_setup(NULL);
   trigdata[4].key = botnetnick;
   return NULL;
 }

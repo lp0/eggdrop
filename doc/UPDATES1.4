@@ -2,139 +2,14 @@
 Changes in eggdrop: (since v1.4.0)
 ----------------------------------
 
-1.4.5 (November 15, 2000)
+1.4.3
 Foundby   Fixedby   What....
-          Tothwolf  Removed checks for bogus masks in +ban, +exempt, and
-                      +invite. Minor error message fixes. Minor source cleanups.
-          Fabian    Cleaned up readtclprog().
-various   prox      Fixed problems with high ASCII characters in loaded tcl
-                      configuration files.
-illi      Fabian    Added configure check for maths library (libm).
-Bob       Fabian    Removing a user in a tcl proc bound to join crashed the bot.
-various   guppy     tcl_binds was added; by default it will return a list of
-                      all binds in memory including ones added by the bot, it
-                      also accepts certain bind types and masks
-          jeffx     added +c and +R chanmode support for DALnet's
-                      Bahamut ircd
-          Eugene    we were missing 0xe33 in the core.german.lang
-Ben       Eugene    changed the priority of a WHO done when users are 
-                      deopped to DP_HELP from DP_MODE
-          Tothwolf  increased the size of whois_fields to 1024
-various   Eule      removed all the bogus ban/invite/etc ... checks
-          Sup       fixes various typos in the docs and a small bug when 
-                     doing '.help motd'
-Wiktor    Fabian    SHELL is now configurable. We prefer /bin/sh5 on Ultrix.
-
-1.4.4 (July 16, 2000)
-Foundby   Fixedby   What....
-          Tit00n/   Updated and fixed french core language file.
-          Lucas
-Tothwolf  Fabian    CR and escape sequences were not filtered out during
-                      relay sessions. Removed usage of CR were unneeded.
-TaKeDa    Sup       adduser() failed to detect empty hostnames.
-          Eule      recheck_channel not before end of who, remove several
-                    lines in got352or4 because in recheck_channel present
-          Eule      Removed call to enforce_bans in real_add_mode().
-          Eule      minor update to getops-2.2d
-          Fabian    The dcc `page' command did not always properly store the
-                      console settings.
-various   Fabian    fixed minor notice bug in notes module.
-plan9     Fabian    call_hook*() now allows hook_list modification during a
-                      hook run.
-          SuperS    Added support for Tcl8.4 to configure script.
-          RebuM/    Prefixed `USAGE' and `FAILED' language defines with `MISC_'.
-          Tothwolf
-          guppy/    removed CHAN_PERMBANNED and reworked a tiny bit of sloppy
-          |^Raven^|   code.
-          Sup       Added various sanity checks for inactive channels.
-          Sup       `.msg' was not correctly requiring a message parameter.
-Charvel   Fabian    Telnet status was dropped during relay connections.
-Ben       Eule      new in u_addban: if (expire_time==now) return 1;
-Tothwolf  Eule      added for cmd_botattr DCC_FORK_BOT-check.
-          Eule      Added further bot-link check to securely avoid loops at   
-                      an earlier stage.
-Wiktor    Fabian    `.su' was requesting passwords from non-perm-owners.
-ITE       guppy     removed duplicate filesys #define's in lang.h
-MBroLad   Fabian    added tcl var global-idle-kick to provide a default value
-                      for idle-kick channel settings.
-          Murf      adjusted compiler flag and added explicit variable cast
-                      in module.c to fix errors on Tru64 Unix 5.0.
-          Sup       fixed output of `.stick' for missing parameters.
-          Sup       minor fixes to the core help-file.
-paravoid  Eugene    kick_msg in the revenge code was mixed up
-Wiktor    guppy     msg_die now sends the reason along with the BOT SHUTDOWN
-                      message
-          Sup       added .help tcl
-          Fabian    Cleaned up language load messages. Most are now moved to
-                      debug level. Each "Module loaded:" message also states
-                      wether the module has language support. \t is supported
-                      in language entries. tcl_language is depreciated.
-          guppy     changed the output of +statuslog to be more effective
-Ben       Fabian/   Lowered server-queue priority of nick-regain commands from
-          guppy       DP_MODE to DP_SERVER (both ISON and TRACE methods)
-          blaster   bind flud was getting the nickname passed in the
-                      user@host information
-kirben    guppy     changed the userinfo version from 1.05 to 1.06
-Wiktor    guppy     added three new events, 'init-server', 'connect-server'
-                      and 'disconnect-server'
-LtGen     Fabian    Enhanced `.unlink' to remove ghost bots (as a temporary
-                      work-around).
-Felix3339 Fabian    `chanset chanmode' now forces the bot to immediately
-                      recheck the currently set channel modes.
-          Eule      in got442: if remote-server return
-guppy     Fabian    fixed 1 byte buffer overflow in add_note().
-
-1.4.3 (April 11, 2000)
-Foundby   Fixedby   What....
-          Wiktor    added ghost bug to KNOWN-PROBLEMS file
-          Fabian    showbanner was still losing fds under certain circumstances.
-          G`Quann   small doc change to tcl-commands.doc
-          Wiktor    modified the docs to show the proper CVS usage
-          guppy     removed some excessive Context calls in core_secondly
-          aba       minor fixes for HPUX
-Felix3339 Eule      fixed +host sharing bug
-          guppy     tcl_getdccidle now can be used on all idx types
-          guppy     tcl_boot now uses strncpy
-          Jason     added HTML documentation to doc/web_docs/.
-          Fabian    `make install' didn't install the html files
-          guppy     $lastbind now shows the bind trigger, instead of what
-                     was typed to trigger the bind (ie: partial matches)
-          Bosko     eggdrop.h had the wrong typedef a long u_32bit_t
-node      guppy     H_msg now matches on the exact word used
-          nakee     BSDi 4.x support added to aclocal.m4
-tabo      Eugene    wrong notice target in msg_hello
-          drummer   msg_voice works now for channel ops
-poptix    Fabian    configure didn't abort if no Tcl library was found.
-NESS      Lucas     now closes the telnet banner file after displaying it
-          Eule      remove duplicate call recheck_bans, recheck_exempts and
-                      recheck_invites
-G`Quann   Fabian    maybe_revenge() was changing the `from' buffer, causing
-                      problems when later binds accessed it.
-          Tothwolf  configure fixes for vpath compiles
-          Jason     multiple exempts were not set correctly
-Wiktor    Eule      tcl_chanmask's time output was broken
-BarkerJr  Fabian    rand_nick used wrong random number generator family
-          david     tcl_setuser was not saving console settings correctly
-toot      drummer   bot was removing non-existant +I/+e/+b masks.
-          SuperS    added OS support for Ultrix and BeOS and tcl fixes when
-                      finding tcl on those systems
-Tom       Fabian    filesys tcl_hide/_unhide/_share/_unshare didn't work at all
-          david     .binds now supports wildcard matches
-          toot      changed "This command can only be used on IRCnet" to
-                      say they need use-exempts/invites and fixed hybrid
-                      net-type to not use invites by default.
-          Eule      issplit-check for kick_all and idle_kick
-          Wiktor    invalid putlog msg in share module.
-          dw        chanmaster could use .adduser to add host to globmaster.
-toot      dw        .adduser !nick didn't care of strict-host settings.
-          mho       ',' in ban reason could fuck up the userlist.
-          eugene    irc.help missed %b in a cpl of places.
 deaf      dw        channel owner could +host/-host global master.
 scott     Wiktor    usefull is spelled useful.
           dw        maskhost removed valid chars in the middle of the username
                       not just the first char as it should.
           Jason     use_exempts and use_invites wasn't checked when setting
-                      the modes on joining a channel and getting ops.
+                      the modes on joining a channel and getting ops. 
           dw        botmasters(+m) could not .chinfo bot info.
           dw        bug in def_set caused global info lines to replace
                       extended chars (ISO8859-1) with ?'s.
@@ -143,80 +18,78 @@ Wiktor    dw        filesys.help was messed up corrected it.
 nervous   dw        tcl botattr was unable to set chan specific +s.
 FireEgl   dw        passwdok should only return 1 if passwords match,
                       "" or "-" will match an empty(nonset) pass.
+          Wiktor    added a small trick to the doc/tricks file
 
-1.4.2 (January 30, 2000)
+1.4.2
 Foundby   Fixedby   What....
 SuperS/   Fabian    missing header caused compile errors related to bzero()
-Joker                 also fixes problems with missing headers for
-                      strcasecmp and strncasecmp on some systems.
-          Wiktor    new trick to tricks file
-toot      dw        .who <bot> did only show first chan.
-          dw        handle got messed up in mode bindings.
-          Wiktor/   moved banned: to langfiles so it can be changed easy.
-          Tothwolf
-          dw        cleaned up a litle to save a few bytes
+Joker
+toot      dw        .who bot did only show first chan.
+          dw        handle got messed up in mode bindings
+          Tothwolf/ moved banned: to langfiles so it can be changed easy.
+          Wiktor
+          Eule      updated copyright stuff
 david     Fabian    botattr was interpreting relay'ed bots as linked
-          Wiktor    fixed typo in transfer.mod
-          Rufus     fixed HQ user creation on eggdrop -nt
-mortmann  Jason	    +I modes used the wrong queue and was not stacked
-		      also fixed a minor +e prob.
-          Wiktor    updated INSTALL & compiling.FAQ documents
+          dw        cleaned up a little to save a few bytes
+mortmann  Jason     +I modes used the wrong queue and was not stacked
+                    also fixed a minor +e prob.
 toot      dw /      fixed problem with .adduser and strict-host = 0
           drummer
+          Rufus     fixed HQ user creation on eggdrop -nt
+          Wiktor    fixed typo in transfer.mod
 Nils      Fabian    `wire off' displayed the wrong nick. Also fixed a wire
-                     memory accounting bug
-DVS01     Fabian    transfer module now supports filenames with spaces
+                    memory accounting bug
           Fabian    added makros EGG_MIN_VER and EGG_MAX_VER so that modules
                     can use one source file for various eggdrop versions
+DVS01     Fabian    transfer module now supports filenames with spaces
+          Wiktor    updated compiling FAQ
 Wiktor    Tothwolf  configure warning bug related to TCLLIB and TCLINC vars
-          Eule      updated copyright stuff
           Fabian    as lostdcc deconstructs dcc entries, no need for
                     dcc_remove_lost in many places anymore.
+          Ian       channel floods are now also detected even if the flooder
+                    is already ignored
 SuperS/   Fabian    several warning fixes, increased compliance with ANSI C
 Shane
-Jz	  dw	    adduser could add +n even if n was in private-globals
+Jz        dw        adduser could add +n even if n was in private-globals
+          dw        +user w/o a host would get corrupted
           Fabian    changed keep-all-logs to append yyyy instead of only yy
-	  dw	    +user w/o a host would get corrupted
-toot	  dw	    .quit from a su'd nick would always broadcast you as
-		    joining the party line even if you have .chat off
+toot      dw        .quit from a su'd nick would always broadcast you as
+                    joining the party line even if you have .chat off
           dw        wrong error msg in cmd_chpass
-slennox   dw /      pushmode wouldn't work on the victim in a mode binding
-          drummer   since it first run the binding then updated u->flags
           Fabian    a few dcc fixes and lostdcc() now also deconstructs the
                     entries instead of only marking them DCC_LOST.
+slennox   dw /      pushmode wouldn't work on the victim in a mode binding
+          drummer   since it first run the binding then updated u->flags
 toot      Fabian    user_del_chan caused a SEGV
           dw        minor doc fix in eggdrop.conf.dist
-NESS      Lucas     server-online was documented wrong
+NEWS      Lucas     server-online was documented wrong
           drummer   enforceban was kicking users that did not match a channel
                     ban; solved by using fixfrom/strict-host more intelligently
 G`Quann   Fabian    nowtm now a structure instead of a pointer
 toot      Fabian    server module can't handle the new lostdcc() approach,
                     so it now uses removedcc() instead.
-          Fabian    minor language cleanup
-toot      Fabian    bot crashed in punish_badguy()
-          Fabian    sockets lost during module *_close caused a SEGV 
+toot	  Fabian    bot crashed in punish_badguy()
+          Fabian    sockets lost during module *_close caused a SEGV
 toot      Fabian    was not hiding socket num for DCC_LOST entries.
-          Tothwolf  more cleanups dealing with the GPL header
+          Fabian    lostdcc behaviour change caused lost sockets in server mod
           Fabian    lostdcc() caused corrupted dcc lists in many situations.
                     using DCC_LOST instead now.
-          Fabian    lostdcc behaviour change caused lost sockets in server mod
-NetG0D    guppy     mucked up language entry if set userfile was missing
-	  dw	    Make sure a corefile can be written if you compile
-		    with debug symbols
-	  dw/Fabian unbind's from within a proc could cause a crash.
+          dw        Make sure a corefile can be written if you compile
+                    with debug symbols
+          dw/Fabian unbind's could crash the bot
           Fabian    killmember was deleting non-existant entries if the channel
                     was still pending
-GTo	  Fabian    showing wrong message on revenge kick
+GTo       Fabian    showing wrong message on revenge kick
 
-1.4.1 (December 17, 1999)
+1.4.1
 Foundby   Fixedby   What....
-          Fabian    tputs could crash in a "writing to nonexistent socket"
-                    loop
-SuperS	  Fabian    compile time warnings related to wild_match_file
+          Fabian    tputs could crash in a "writing to nonexistent socket" loop
+SuperS    Fabian    compile time warnings related to wild_match_file
 LtGen     Fabian    unsynced tandem list caused crash when trying to reject
           Tothwolf  added GPL header and cvs id tag to source files
           Tothwolf  fixed/added many #ifndefs in various header files
           Tothwolf  changed 'Assert(ptr != NULL)' references to 'Assert(prt)'
+          drummer   fixed a tiny join flood bug
           Tothwolf  converted the PATCH macro to a function; DEBUG_ASSERT
                     now compiles with DEBUG_MEM
           Fabian    made 32bit variable usage consistent throughout the code

@@ -2,7 +2,7 @@
  * server.c -- part of server.mod
  *   basic irc server support
  * 
- * $Id: server.c,v 1.32 2000/05/28 18:31:32 guppy Exp $
+ * $Id: server.c,v 1.35 2000/01/31 22:56:01 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -52,6 +52,7 @@ static char botuserhost[121];	/* bot's user@host (refreshed whenever the
 				 * how the server sees it */
 static int keepnick;		/* keep trying to regain my intended
 				 * nickname? */
+static int nick_juped = 0;	/* True if origbotname is juped(RPL437) (dw) */
 static int check_stoned;	/* Check for a stoned server? */
 static int serverror_quit;	/* Disconnect from server if ERROR
 				 * messages received? */
@@ -82,33 +83,59 @@ static int net_type;
 static int must_be_owner;	/* arthur2 */
 static char connectserver[121];	/* what, if anything, to do before connect
 				 * to the server */
-
-/* allow a msgs being twice in a queue ? */
-static int double_mode;
+static int resolvserv;		/* in the process of resolving a server host */
+static int double_mode;		/* allow a msgs to be twice in a queue? */
 static int double_server;
 static int double_help;
 static int double_warned;
-
-static int lastpingtime = 0;	/* IRCNet LAGmeter support -- drummer */
+static int lastpingtime;	/* IRCNet LAGmeter support -- drummer */
+static char stackablecmds[511];
+static time_t last_time;
+static int use_penalties;
+static int use_fastdeq;
+static int nick_len;		/* Maximal nick length allowed on the
+				 * network. */
+static int kick_method = 1;
+static int optimize_kicks = 0;
 
 static Function *global = NULL;
 
 static p_tcl_bind_list H_wall, H_raw, H_notc, H_msgm, H_msg, H_flud,
- H_ctcr, H_ctcp;
+		       H_ctcr, H_ctcp;
 
 static void empty_msgq(void);
 static void next_server(int *, char *, unsigned int *, char *);
-static char *get_altbotnick(void);
 static void disconnect_server(int);
+static char *get_altbotnick(void);
+static int calc_penalty(char *);
+static int fast_deq(int);
+static char *splitnicks(char **);
+static void check_queues(char *, char *);
+static void parse_q(struct msgq_head *, char *, char *);
+static void purge_kicks(struct msgq_head *);
+static int deq_kick(int);
+static void check_lag(char *);
+static void check_notlagged(char *);
+static int lagged = 0;
+static int lagchecktype;
+static char *lagcheckstring;
+static char *lagcheckstring2;
+static int use_lagcheck;
+#define LC_KICK 1
+#define LC_OVMODE 2
+#define LC_BEIMODE 3
 
 #include "servmsg.c"
 
-/* number of seconds to wait between transmitting queued lines to the server
+#define MAXPENALTY 10
+
+/* Number of seconds to wait between transmitting queued lines to the server
  * lower this value at your own risk.  ircd is known to start flood control
- * at 512 bytes/2 seconds */
+ * at 512 bytes/2 seconds.
+ */
 #define msgrate 2
 
-/* maximum messages to store in each queue */
+/* Maximum messages to store in each queue. */
 static int maxqmsg;
 static struct msgq_head mq, hq, modeq;
 static int burst;
@@ -116,24 +143,28 @@ static int burst;
 #include "cmdsserv.c"
 #include "tclserv.c"
 
-/***** BOT SERVER QUEUES *****/
 
-/* called periodically to shove out another queued item */
-/* mode queue gets priority now */
-/* most servers will allow 'busts' of upto 5 msgs...so let's put something
- * in to support flushing modeq a little faster if possible ...
- * will send upto 4 msgs from modeq, and then send 1 msg every time
+/*
+ *     Bot server queues
+ */
+
+/* Called periodically to shove out another queued item.
+ * 
+ * 'mode' queue gets priority now.
+ * 
+ * Most servers will allow 'busts' of upto 5 msgs, so let's put something
+ * in to support flushing modeq a little faster if possible.
+ * Will send upto 4 msgs from modeq, and then send 1 msg every time
  * it will *not* send anything from hq until the 'burst' value drops
- * down to 0 again (allowing a sudden mq flood to sneak through) */
-
+ * down to 0 again (allowing a sudden mq flood to sneak through).
+ */
 static void deq_msg()
 {
   struct msgq *q;
-  static time_t last_time = 0;
   int ok = 0;
 
   /* now < last_time tested 'cause clock adjustments could mess it up */
-  if (((now - last_time) >= msgrate) || (now < last_time)) {
+  if (((now - last_time) >= msgrate) || (now < (last_time - 90))) {
     last_time = now;
     if (burst > 0)
       burst--;
@@ -141,11 +172,27 @@ static void deq_msg()
   }
   if (serv < 0)
     return;
-  /* send upto 4 msgs to server if the *critical queue* has anything in it */
+  /* Send upto 4 msgs to server if the *critical queue* has anything in it */
   if (modeq.head) {
-    while (modeq.head && (burst < 4)) {
+    while (modeq.head && (burst < 4) && ((last_time - now) < MAXPENALTY)) {
+      if (lagged && (burst >= 3))
+        return;
+      if (deq_kick(DP_MODE)) {
+        burst++;
+        continue;
+      }
+      if (!modeq.head)
+        break;
+      if (fast_deq(DP_MODE)) {
+        burst++;
+        continue;
+      }
       tputs(serv, modeq.head->msg, modeq.head->len);
+      if (debug_output)
+        putlog(LOG_SRVOUT, "*", "[m->] %s", modeq.head->msg);
       modeq.tot--;
+      check_lag(modeq.head->msg);
+      last_time += calc_penalty(modeq.head->msg);
       q = modeq.head->next;
       nfree(modeq.head->msg);
       nfree(modeq.head);
@@ -156,13 +203,21 @@ static void deq_msg()
       modeq.last = 0;
     return;
   }
-  /* send something from the normal msg q even if we're slightly bursting */
-  if (burst > 1)
+  /* Send something from the normal msg q even if we're slightly bursting */
+  if ((burst > 1) || lagged)
     return;
   if (mq.head) {
     burst++;
+    if (deq_kick(DP_SERVER))
+      return;
+    if (fast_deq(DP_SERVER))
+      return;
     tputs(serv, mq.head->msg, mq.head->len);
+    if (debug_output)
+      putlog(LOG_SRVOUT, "*", "[s->] %s", mq.head->msg);
     mq.tot--;
+    check_lag(mq.head->msg);
+    last_time += calc_penalty(mq.head->msg);
     q = mq.head->next;
     nfree(mq.head->msg);
     nfree(mq.head);
@@ -171,12 +226,21 @@ static void deq_msg()
       mq.last = 0;
     return;
   }
-  /* never send anything from the help queue unless everything else is
-   * finished */
+  /* Never send anything from the help queue unless everything else is
+   * finished.
+   */
   if (!hq.head || burst || !ok)
     return;
+  if (deq_kick(DP_HELP))
+    return;
+  if (fast_deq(DP_HELP))
+    return;
   tputs(serv, hq.head->msg, hq.head->len);
+  if (debug_output)
+    putlog(LOG_SRVOUT, "*", "[h->] %s", hq.head->msg);
   hq.tot--;
+  check_lag(hq.head->msg);
+  last_time += calc_penalty(hq.head->msg);
   q = hq.head->next;
   nfree(hq.head->msg);
   nfree(hq.head);
@@ -185,7 +249,705 @@ static void deq_msg()
     hq.last = 0;
 }
 
-/* clean out the msg queues (like when changing servers) */
+static void check_lag(char *buf)
+{
+  char msgstr[511], *msg, *cmd, *chans, *nicks, *nick, *ch, *par, pm, mode, *modes;
+  struct chanset_t *cs;
+  int found;
+
+  if (lagged || !use_lagcheck)
+    return;
+  if (lagcheckstring) {
+    nfree(lagcheckstring);
+    lagcheckstring = NULL;
+  }
+  if (lagcheckstring2) {
+    nfree(lagcheckstring2);
+    lagcheckstring2 = NULL;
+  }
+  lagchecktype = 0;
+  strncpy(msgstr, buf, 510);
+  msgstr[510] = 0;
+  msg = msgstr;
+  if (msg[strlen(msg) - 1] == '\n')
+    msg[strlen(msg) - 1] = 0;
+  cmd = newsplit(&msg);
+  if (!strcasecmp(cmd, "KICK")) {
+    chans = newsplit(&msg);
+    nicks = newsplit(&msg);
+    nick = nicks;
+    while (strlen(nicks) > 0)
+      nick = splitnicks(&nicks);
+    found = 0;
+    while (strlen(chans) > 0) {
+      ch = splitnicks(&chans);
+      cs = findchan(ch);
+      if (!cs)
+        continue;
+      if (ismember(cs, nick)) {
+        found = 1;
+        break;
+      }
+    }
+    if (!found) {
+      debug0("member not on target chans, aborting lagcheck");
+      lagged = 0;
+      return;
+    }
+    lagcheckstring = nmalloc(strlen(nick) + 1);
+    lagcheckstring2 = nmalloc(strlen(nick) + 1);
+    strcpy(lagcheckstring2, nick);
+    strcpy(lagcheckstring, nick);
+    lagged = 1;
+    lagchecktype = LC_KICK;
+    debug2("Starting lagcheck using KICK %s (%s)", nick, buf);
+  } else if (!strcasecmp(cmd, "MODE")) {
+    chans = newsplit(&msg);
+    modes = newsplit(&msg);
+    par = newsplit(&msg);
+    ch = splitnicks(&chans);
+    cs = findchan(ch);
+    if (!cs) {
+      debug0("I'm not on the target channel, aborting lagcheck");
+      lagged = 0;
+      return;
+    }
+    pm = modes[0];
+    if (((pm != '+') && (pm != '-')) || (strlen(par) < 1)) {
+      lagged = 0;
+      return;
+    }
+    mode = modes[1];
+    if (strchr("ov", mode)) {
+      if (!ismember(cs, par)) {
+        debug0("Target vor o/v mode not on channel, aborting lagcheck.");
+        lagged = 0;
+        return;
+      }
+      lagcheckstring = nmalloc(strlen(par) + 4);
+      sprintf(lagcheckstring, "%c%c %s", pm, mode, par);
+      lagged = 1;
+      lagchecktype = LC_OVMODE;
+      debug2("Starting lagcheck using MODE %s (%s)", lagcheckstring, buf);
+    } else if (strchr("beI", mode)) {
+      lagcheckstring = nmalloc(strlen(par) + 4);
+      sprintf(lagcheckstring, "%c%c %s", pm, mode, par);
+      lagged = 1;
+      lagchecktype = LC_BEIMODE;
+      debug2("Starting lagcheck using MODE %s (%s)", lagcheckstring, buf);
+    } else {
+      lagged = 0;
+      return;
+    }
+  }
+}
+
+static void check_notlagged(char *buf)
+{
+  if (!lagged || (lagchecktype == LC_KICK))
+    return;
+  debug1("check_notlagged: %s", buf);
+  if (!lagcheckstring) {
+    lagged = 0;
+    return;
+  }
+  if (lagchecktype == LC_KICK) {
+    debug1("LC_KICK should not appear here", lagcheckstring);
+    return;
+  }
+  if ((buf[0] == '+') || (buf[0] == '-')) {
+    if (!strcasecmp(lagcheckstring, buf)) {
+      debug1("MODE %s processed, I guess I'm not lagged", lagcheckstring);
+      nfree(lagcheckstring);
+      lagcheckstring = NULL;
+      lagged = 0;
+    }
+  } else {
+    if (!strcasecmp(lagcheckstring + 3, buf)) {
+      debug2("%s left, stopping lagcheck for %s", buf, lagcheckstring);
+      nfree(lagcheckstring);
+      lagcheckstring = NULL;
+      lagged = 0;
+    }
+  }
+}
+
+static int calc_penalty(char * msg)
+{
+  char *cmd, *par1, *par2, *par3;
+  register int penalty, i, ii;
+
+  Context;
+  if (!use_penalties && (net_type != 2) && (net_type != 4))
+    return 0;
+  if (msg[strlen(msg) - 1] == '\n')
+    msg[strlen(msg) - 1] = '\0';
+  cmd = newsplit(&msg);
+  if (msg)
+    i = strlen(msg);
+  else
+    i = strlen(cmd);
+  last_time -= 2; /* undo eggdrop standard flood prot */
+  if ((net_type == 2) || (net_type == 4)) {
+    last_time += (2 + i / 120);
+    return 0;
+  }
+  penalty = (1 + i / 100);
+  if (!strcasecmp(cmd, "KICK")) {
+    par1 = newsplit(&msg); /* channel */
+    par2 = newsplit(&msg); /* victim(s) */
+    par3 = splitnicks(&par2);
+    penalty++;
+    while (strlen(par3) > 0) {
+      par3 = splitnicks(&par2);
+      penalty++;
+    }
+    ii = penalty;
+    par3 = splitnicks(&par1);
+    while (strlen(par1) > 0) {
+      par3 = splitnicks(&par1);
+      penalty += ii;
+    }
+  } else if (!strcasecmp(cmd, "MODE")) {
+    i = 0;
+    par1 = newsplit(&msg); /* channel */
+    par2 = newsplit(&msg); /* mode(s) */
+    if (!strlen(par2))
+      i++;
+    while (strlen(par2) > 0) {
+      if (strchr("ntimps", par2[0]))
+        i += 3;
+      else if (!strchr("+-", par2[0]))
+        i += 1;
+      par2++;
+    }
+    while (strlen(msg) > 0) {
+      newsplit(&msg);
+      i += 2;
+    }
+    ii = 0;
+    while (strlen(par1) > 0) {
+      splitnicks(&par1);
+      ii++;
+    }
+    penalty += (ii * i);
+  } else if (!strcasecmp(cmd, "TOPIC")) {
+    penalty++;
+    par1 = newsplit(&msg); /* channel */
+    par2 = newsplit(&msg); /* topic */
+    if (strlen(par2) > 0) {  /* topic manipulation => 2 penalty points */
+      penalty += 2;
+      par3 = splitnicks(&par1);
+      while (strlen(par1) > 0) {
+        par3 = splitnicks(&par1);
+        penalty += 2;
+      }
+    }
+  } else if (!strcasecmp(cmd, "PRIVMSG") || !strcasecmp(cmd, "NOTICE")) {
+    par1 = newsplit(&msg); /* channel(s)/nick(s) */
+    /* Add one sec penalty for each recipient */
+    while (strlen(par1) > 0) {
+      splitnicks(&par1);
+      penalty++;
+    }
+  } else if (!strcasecmp(cmd, "WHO")) {
+    par1 = newsplit(&msg); /* masks */
+    par2 = par1;
+    while (strlen(par1) > 0) {
+      par2 = splitnicks(&par1);
+      if (strlen(par2) > 4)   /* long WHO-masks receive less penalty */
+        penalty += 3;
+      else
+        penalty += 5;
+    }
+  } else if (!strcasecmp(cmd, "AWAY")) {
+    if (strlen(msg) > 0)
+      penalty += 2;
+    else
+      penalty += 1;
+  } else if (!strcasecmp(cmd, "INVITE")) {
+    /* Successful invite receives 2 or 3 penalty points. Let's go
+     * with the maximum.
+     */
+    penalty += 3;
+  } else if (!strcasecmp(cmd, "JOIN")) {
+    penalty += 2;
+  } else if (!strcasecmp(cmd, "PART")) {
+    penalty += 4;
+  } else if (!strcasecmp(cmd, "VERSION")) {
+    penalty += 2;
+  } else if (!strcasecmp(cmd, "TIME")) {
+    penalty += 2;
+  } else if (!strcasecmp(cmd, "TRACE")) {
+    penalty += 2;
+  } else if (!strcasecmp(cmd, "NICK")) {
+    penalty += 3;
+  } else if (!strcasecmp(cmd, "ISON")) {
+    penalty += 1;
+  } else if (!strcasecmp(cmd, "WHOIS")) {
+    penalty += 2;
+  } else if (!strcasecmp(cmd, "DNS")) {
+    penalty += 2;
+  } else {
+    debug1("Unknown command %s, adding 1sec standard-penalty", cmd);
+    penalty++;
+  }
+  /* Shouldn't happen, but you never know... */
+  if (penalty > 99)
+    penalty = 99;
+  if (penalty < 2) {
+    putlog(LOG_SRVOUT, "*", "Penalty < 2sec, that's impossible!");
+    penalty = 2;
+  }
+  if (debug_output && (penalty != 0))
+    putlog(LOG_SRVOUT, "*", "Adding penalty: %i", penalty);
+  return penalty;
+}
+
+char *splitnicks(char **rest)
+{
+  register char *o, *r;
+
+  if (!rest)
+    return *rest = "";
+  o = *rest;
+  while (*o == ' ')
+    o++;
+  r = o;
+  while (*o && (*o != ','))
+    o++;
+  if (*o)
+    *o++ = 0;
+  *rest = o;
+  return r;
+}
+
+static int fast_deq(int which)
+{
+  struct msgq_head *h;
+  struct msgq *m, *nm;
+  char msgstr[511], nextmsgstr[511], tosend[511], victims[511], stackable[511];
+  char *msg, *nextmsg, *cmd, *nextcmd, *to, *nextto, *stckbl;
+  int len, doit , found;
+
+  Context;
+  doit = found = 0;
+  if (!use_fastdeq)
+    return 0;
+  switch (which) {
+    case DP_MODE:
+      h = &modeq;
+      break;
+    case DP_SERVER:
+      h = &mq;
+      break;
+    case DP_HELP:
+      h = &hq;
+      break;
+    default:
+      return 0;
+  }
+  m = h->head;
+  strncpy(msgstr, m->msg, 510);
+  msgstr[510] = 0;
+  msg = msgstr;
+  cmd = newsplit(&msg);
+  if (use_fastdeq > 1) {
+    strncpy(stackable, stackablecmds, 510);
+    stackable[510] = 0;
+    stckbl = stackable;
+    while (strlen(stckbl) > 0) {
+      if (!strcasecmp(newsplit(&stckbl), cmd)) {
+        found = 1;
+        break;
+      }
+    }
+    /* If use_fastdeq is 2, only commands in the list should be stacked. */
+    if ((use_fastdeq == 2) && !found)
+      return 0;
+    /* If use_fastdeq is 3, only commands that are _not_ in the list
+     * should be stacked.
+     */
+    if ((use_fastdeq == 3) && found)
+      return 0;
+  }
+  to = newsplit(&msg);
+  len = strlen(to);
+  if (to[len - 1] == '\n')
+    to[len -1] = 0;
+  simple_sprintf(victims, "%s", to);
+  while (m) {
+    nm = m->next;
+    if (!nm)
+      break;
+    strncpy(nextmsgstr, nm->msg, 510);
+    nextmsgstr[510] = 0;
+    nextmsg = nextmsgstr;
+    nextcmd = newsplit(&nextmsg);
+    nextto = newsplit(&nextmsg);
+    len = strlen(nextto);
+    if (nextto[len-1] == '\n')
+      nextto[len-1] = 0;
+    if (!strcmp(cmd, nextcmd) && !strcmp(msg, nextmsg)
+        && ((strlen(cmd) + strlen(victims) + strlen(nextto) + strlen(msg) + 2) < 510)) {
+      simple_sprintf(victims, "%s,%s", victims, nextto);
+      doit = 1;
+      m->next = nm->next;
+      if (!nm->next)
+        h->last = m;
+      nfree(nm->msg);
+      nfree(nm);
+      h->tot--;
+    } else
+      m = m->next;
+  }
+  if (doit) {
+    simple_sprintf(tosend, "%s %s %s", cmd, victims, msg);
+    len = strlen(tosend);
+    tosend[len - 1] = '\n';
+    tputs(serv, tosend, len);
+    m = h->head->next;
+    nfree(h->head->msg);
+    nfree(h->head);
+    h->head = m;
+    if (!h->head)
+      h->last = 0;
+    h->tot--;
+    if (debug_output) {
+      tosend[len - 1] = 0;
+      switch (which) {
+        case DP_MODE:
+          putlog(LOG_SRVOUT, "*", "[m=>] %s", tosend);
+          break;
+        case DP_SERVER:
+          putlog(LOG_SRVOUT, "*", "[s=>] %s", tosend);
+          break;
+        case DP_HELP:
+          putlog(LOG_SRVOUT, "*", "[h=>] %s", tosend);
+          break;
+      }
+    }
+    check_lag(tosend);
+    last_time += calc_penalty(tosend);
+    return 1;
+  }
+  Context;
+  return 0;
+}
+
+static void check_queues(char *oldnick, char *newnick)
+{
+  char pm, mode;
+
+  Context;
+  if ((optimize_kicks == 2) || (use_lagcheck == 2)) {
+    if (modeq.head)
+      parse_q(&modeq, oldnick, newnick);
+    if (mq.head)
+      parse_q(&mq, oldnick, newnick);
+    if (hq.head)
+      parse_q(&hq, oldnick, newnick);
+  }
+  if (lagged) {
+    if (lagchecktype == LC_KICK) {
+      if (!strcasecmp(lagcheckstring, oldnick)) {
+        nfree(lagcheckstring);
+        lagcheckstring = nmalloc(strlen(newnick) + 1);
+        strcpy(lagcheckstring, newnick);
+      }
+    } else if (!strcasecmp(lagcheckstring + 3, oldnick)) {
+      pm = lagcheckstring[0];
+      mode = lagcheckstring[1];
+      nfree(lagcheckstring);
+      lagcheckstring = nmalloc(strlen(newnick) + 4);
+      lagcheckstring[0] = pm;
+      lagcheckstring[1] = mode;
+      strcpy(lagcheckstring + 3, newnick);
+    }
+  }
+  Context;
+}
+
+static void parse_q(struct msgq_head *q, char *oldnick, char *newnick)
+{
+  struct msgq *m, *lm;
+  char buf[511], *msg, *nicks, *nick, *chan, newnicks[511], newmsg[511];
+  int changed;
+
+  Context;
+  m = q->head;
+  lm = NULL;
+  while (m) {
+    changed = 0;
+    if ((optimize_kicks == 2) && !strncasecmp(m->msg, "KICK ", 5)) {
+      newnicks[0] = 0;
+      strncpy(buf, m->msg, 510);
+      buf[510] = 0;
+      msg = buf;
+      newsplit(&msg);
+      chan = newsplit(&msg);
+      nicks = newsplit(&msg);
+      while (strlen(nicks) > 0) {
+        nick = splitnicks(&nicks);
+        if (!strcasecmp(nick, oldnick) &&
+            ((9 + strlen(chan) + strlen(newnicks) + strlen(newnick) +
+              strlen(nicks) + strlen(msg)) < 510)) {
+          if (newnick)
+            sprintf(newnicks, "%s,%s", newnicks, newnick);
+          changed = 1;
+        } else
+          sprintf(newnicks, ",%s", nick);
+      }
+      sprintf(newmsg, "KICK %s %s %s", chan, newnicks + 1, msg);
+    } else if ((use_lagcheck == 2) && !strncasecmp(m->msg, "MODE ", 5)) {
+      newnicks[0] = 0;
+      strncpy(buf, m->msg, 510);
+      buf[510] = 0;
+      msg = buf;
+      newsplit(&msg);
+      sprintf(newnicks, "%s", newsplit(&msg));
+      sprintf(newnicks, "%s %s", newnicks, newsplit(&msg));
+      while (strlen(msg) > 0) {
+        nick = newsplit(&msg);
+        if (!strcasecmp(nick, oldnick) &&
+            ((9 + strlen(newnicks) + strlen(newnick) +
+              strlen(nicks) + strlen(msg)) < 510)) {
+          if (newnick)
+            sprintf(newnicks, "%s %s", newnicks, newnick);
+          changed = 1;
+        } else
+          sprintf(newnicks, "%s %s", newnicks, nick);
+      }
+      sprintf(newmsg, "MODE %s", newnicks);
+    }
+    if (changed) {
+      if (newnicks[0] == 0) {
+        if (!lm)
+          q->head = m->next;
+        else
+          lm->next = m->next;
+        nfree(m->msg);
+        nfree(m);
+        m = lm;
+        q->tot--;
+        if (!q->head)
+          q->last = 0;
+      } else {
+        nfree(m->msg);
+        m->msg = nmalloc(strlen(newmsg) + 1);
+        m->len = strlen(newmsg);
+        strcpy(m->msg, newmsg);
+      }
+    }
+    lm = m;
+    if (m)
+      m = m->next;
+    else
+      m = q->head;
+  }
+  Context;
+}
+
+static void purge_kicks(struct msgq_head *q)
+{
+  struct msgq *m, *lm;
+  char buf[511], *reason, *nicks, *nick, *chan, newnicks[511];
+  char newmsg[511], chans[511], *chns, *ch;
+  int changed, found;
+  struct chanset_t *cs;
+
+  Context;
+  m = q->head;
+  lm = NULL;
+  while (m) {
+    if (!strncasecmp(m->msg, "KICK", 4)) {
+      newnicks[0] = 0;
+      changed = 0;
+      strncpy(buf, m->msg, 510);
+      buf[510] = 0;
+      reason = buf;
+      newsplit(&reason);
+      chan = newsplit(&reason);
+      nicks = newsplit(&reason);
+      while (strlen(nicks) > 0) {
+        found = 0;
+        nick = splitnicks(&nicks);
+        sprintf(chans, chan);
+        chns = chans;
+        while (strlen(chns) > 0) {
+          ch = newsplit(&chns);
+          cs = findchan(ch);
+          if (!cs)
+            continue;
+          if (ismember(cs, nick))
+            found = 1;
+        }
+        if (found)
+          sprintf(newnicks, "%s,%s", newnicks, nick);
+        else {
+          putlog(LOG_SRVOUT, "*", "%s isn't on any target channel, removing kick...",
+                 nick);
+          changed = 1;
+        }
+      }
+      if (changed) {
+        if (newnicks[0] == 0) {
+          if (!lm)
+            q->head = m->next;
+          else
+            lm->next = m->next;
+          nfree(m->msg);
+          nfree(m);
+          m = lm;
+          q->tot--;
+          if (!q->head)
+            q->last = 0;
+        } else {
+          nfree(m->msg);
+          sprintf(newmsg, "KICK %s %s %s", chan, newnicks + 1, reason);
+          m->msg = nmalloc(strlen(newmsg) + 1);
+          m->len = strlen(newmsg);
+          strcpy(m->msg, newmsg);
+        }
+      }
+    }
+    lm = m;
+    if (m)
+      m = m->next;
+    else
+      m = q->head;
+  }
+  Context;
+}
+
+static int deq_kick(int which)
+{
+  struct msgq_head *h;
+  struct msgq *msg, *m, *lm;
+  char buf[511], buf2[511], *reason2, *nicks, *chan, *chan2, *reason;
+  char *nick, newnicks[511], newnicks2[511], newmsg[511];
+  int changed = 0, nr = 0;
+
+  Context;
+  if (!optimize_kicks)
+    return 0;
+  newnicks[0] = 0;
+  switch (which) {
+    case DP_MODE:
+      h = &modeq;
+      break;
+    case DP_SERVER:
+      h = &mq;
+      break;
+    case DP_HELP:
+      h = &hq;
+      break;
+    default:
+      return 0;
+  }
+  if (strncasecmp(h->head->msg, "KICK", 4))
+    return 0;
+  if (optimize_kicks == 2) {
+    purge_kicks(h);
+    if (!h->head)
+      return 1;
+  }
+  if (strncasecmp(h->head->msg, "KICK", 4))
+    return 0;
+  msg = h->head;
+  strncpy(buf, msg->msg, 510);
+  buf[510] = 0;
+  reason = buf;
+  newsplit(&reason);
+  chan = newsplit(&reason);
+  nicks = newsplit(&reason);
+  while (strlen(nicks) > 0) {
+    sprintf(newnicks, "%s,%s", newnicks, newsplit(&nicks));
+    nr++;
+  }
+  m = msg->next;
+  lm = NULL;
+  while (m && (nr < kick_method)) {
+    if (!strncasecmp(m->msg, "KICK", 4)) {
+      changed = 0;
+      newnicks2[0] = 0;
+      strncpy(buf2, m->msg, 510);
+      buf2[510] = 0;
+      reason2 = buf2;
+      newsplit(&reason2);
+      chan2 = newsplit(&reason2);
+      nicks = newsplit(&reason2);
+      if (!strcasecmp(chan, chan2) && !strcasecmp(reason, reason2)) {
+        while (strlen(nicks) > 0) {
+          nick = splitnicks(&nicks);
+          if ((nr < kick_method) &&
+             ((9 + strlen(chan) + strlen(newnicks) + strlen(nick) +
+             strlen(reason)) < 510)) {
+            sprintf(newnicks, "%s,%s", newnicks, nick);
+            nr++;
+            changed = 1;
+          } else
+            sprintf(newnicks2, "%s,%s", newnicks2, nick);
+        }
+      }
+      if (changed) {
+        if (newnicks2[0] == 0) {
+          if (!lm)
+            h->head->next = m->next;
+          else
+            lm->next = m->next;
+          nfree(m->msg);
+          nfree(m);
+          m = lm;
+          h->tot--;
+          if (!h->head)
+            h->last = 0;
+        } else {
+          nfree(m->msg);
+          sprintf(newmsg, "KICK %s %s %s", chan2, newnicks2 + 1, reason);
+          m->msg = nmalloc(strlen(newmsg) + 1);
+          m->len = strlen(newmsg);
+          strcpy(m->msg, newmsg);
+        }
+      }
+    }
+    lm = m;
+    if (m)
+      m = m->next;
+    else
+      m = h->head->next;
+  }
+  sprintf(newmsg, "KICK %s %s %s", chan, newnicks + 1, reason);
+  tputs(serv, newmsg, strlen(newmsg));
+  if (debug_output) {
+    newmsg[strlen(newmsg) - 1] = 0;
+    switch (which) {
+      case DP_MODE:
+        putlog(LOG_SRVOUT, "*", "[m->] %s", newmsg);
+        break;
+      case DP_SERVER:
+        putlog(LOG_SRVOUT, "*", "[s->] %s", newmsg);
+        break;
+      case DP_HELP:
+        putlog(LOG_SRVOUT, "*", "[h->] %s", newmsg);
+        break;
+    }
+    debug3("Changed: %d, kick-method: %d, nr: %d", changed, kick_method, nr);
+  }
+  h->tot--;
+  check_lag(newmsg);
+  last_time += calc_penalty(newmsg);
+  m = h->head->next;
+  nfree(h->head->msg);
+  nfree(h->head);
+  h->head = m;
+  if (!h->head)
+    h->last = 0;
+  return 1;
+}
+
+/* Clean out the msg queues (like when changing servers).
+ */
 static void empty_msgq()
 {
   struct msgq *q, *qq;
@@ -214,48 +976,67 @@ static void empty_msgq()
   modeq.tot = mq.tot = hq.tot = modeq.warned = mq.warned = hq.warned = 0;
   mq.head = hq.head = modeq.head = mq.last = hq.last = modeq.last = 0;
   burst = 0;
+  lagged = 0;
 }
 
-/* use when sending msgs... will spread them out so there's no flooding */
+/* Use when sending msgs... will spread them out so there's no flooding.
+ */
 static void queue_server(int which, char *buf, int len)
 {
-  struct msgq_head *h = 0;
-  struct msgq *q;
-  struct msgq_head tempq;
-  struct msgq *tq, *tqq;
-  int doublemsg;
-  doublemsg = 0;
+  struct msgq_head *h = NULL,
+  		    tempq;
+  struct msgq	   *q, *tq, *tqq;
+  int		    doublemsg = 0,
+  		    qnext = 0;
+
+  /* Don't even BOTHER if there's no server online. */
   if (serv < 0)
-    return;			/* don't even BOTHER if there's no server
-				 * online */
-  /* patch by drummer - no queue for PING and PONG */
-  if ((strncasecmp(buf, "PING", 4) == 0) || (strncasecmp(buf, "PONG", 4) == 0)) {
-    if ((buf[1] == 73) || (buf[1] == 105)) {
-      lastpingtime = now;
-    }				/* lagmeter */
+    return;
+  /* No queue for PING and PONG - drummer */
+  if ((strncasecmp(buf, "PING", 4) == 0) ||
+      (strncasecmp(buf, "PONG", 4) == 0)) {
+    if ((buf[1] == 73) || (buf[1] == 105))
+      lastpingtime = now;	/* lagmeter */
     tputs(serv, buf, len);
     return;
   }
+
   switch (which) {
+  case DP_MODE_NEXT:
+    qnext = 1;
+    /* Fallthrough */
   case DP_MODE:
     h = &modeq;
     tempq = modeq;
-    if (double_mode) doublemsg = 1;
+    if (double_mode)
+      doublemsg = 1;
     break;
+
+  case DP_SERVER_NEXT:
+    qnext = 1;
+    /* Fallthrough */
   case DP_SERVER:
     h = &mq;
     tempq = mq;
-    if (double_server) doublemsg = 1;
+    if (double_server)
+      doublemsg = 1;
     break;
+
+  case DP_HELP_NEXT:
+    qnext = 1;
+    /* Fallthrough */
   case DP_HELP:
     h = &hq;
     tempq = hq;
-    if (double_help) doublemsg = 1;
+    if (double_help)
+      doublemsg = 1;
     break;
+
   default:
     putlog(LOG_MISC, "*", "!!! queueing unknown type to server!!");
     return;
   }
+
   if (h->tot < maxqmsg) {
     if (!doublemsg) {   /* Don't queue msg if it's already queued */
       tq = tempq.head;
@@ -274,11 +1055,21 @@ static void queue_server(int which, char *buf, int len)
       }
     }
     q = nmalloc(sizeof(struct msgq));
-    q->next = NULL;
-    if (h->head)
-      h->last->next = q;
-    else
+    if (qnext) {
+      q->next = h->head;
+    } else {
+      q->next = NULL;
+    }
+    if (h->head){
+      if (!qnext){
+        h->last->next = q;
+      }
+    } else {
       h->head = q;
+    }
+    if (qnext) {
+       h->head = q;
+    }
     h->last = q;
     q->len = len;
     q->msg = nmalloc(len + 1);
@@ -298,21 +1089,30 @@ static void queue_server(int which, char *buf, int len)
     case DP_MODE:
       putlog(LOG_SRVOUT, "*", "[!m] %s", buf);
       break;
+    case DP_MODE_NEXT:
+      putlog(LOG_SRVOUT, "*", "[!!m] %s", buf);
+      break;
     case DP_SERVER:
       putlog(LOG_SRVOUT, "*", "[!s] %s", buf);
+      break;
+    case DP_SERVER_NEXT:
+      putlog(LOG_SRVOUT, "*", "[!!s] %s", buf);
       break;
     case DP_HELP:
       putlog(LOG_SRVOUT, "*", "[!h] %s", buf);
       break;
+    case DP_HELP_NEXT:
+      putlog(LOG_SRVOUT, "*", "[!!h] %s", buf);
+      break;
     }
   }
-  if (which == DP_MODE)
+  if ((which == DP_MODE) || (which == DP_MODE_NEXT))
     deq_msg();			/* DP_MODE needs to be ASAP, flush if
 				 * possible */
 }
 
-/* add someone to a queue */
-/* new server to the list */
+/* Add a new server to the server_list.
+ */
 static void add_server(char *ss)
 {
   struct server_list *x, *z = serverlist;
@@ -359,7 +1159,8 @@ static void add_server(char *ss)
   }
 }
 
-/* clear out a list */
+/* Clear out the given server_list.
+ */
 static void clearq(struct server_list *xx)
 {
   struct server_list *x;
@@ -377,8 +1178,10 @@ static void clearq(struct server_list *xx)
   }
 }
 
-/* set botserver to the next available server
- * -> if (*ptr == -1) then jump to that particular server */
+/* Set botserver to the next available server.
+ * 
+ * -> if (*ptr == -1) then jump to that particular server
+ */
 static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
 {
   struct server_list *x = serverlist;
@@ -386,7 +1189,7 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
 
   if (x == NULL)
     return;
-  /* -1  -->  go to specified server */
+  /* -1  -->  Go to specified server */
   if (*ptr == (-1)) {
     while (x) {
       if (x->port == *port) {
@@ -403,7 +1206,7 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
       x = x->next;
       i++;
     }
-    /* gotta add it : */
+    /* Gotta add it: */
     x = nmalloc(sizeof(struct server_list));
 
     x->next = 0;
@@ -420,7 +1223,7 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
     *ptr = i;
     return;
   }
-  /* find where i am and boogie */
+  /* Find where i am and boogie */
   i = (*ptr);
   while ((i > 0) && (x != NULL)) {
     x = x->next;
@@ -429,11 +1232,11 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
   if (x != NULL) {
     x = x->next;
     (*ptr)++;
-  }				/* go to next server */
+  }				/* Go to next server */
   if (x == NULL) {
     x = serverlist;
     *ptr = 0;
-  }				/* start over at the beginning */
+  }				/* Start over at the beginning */
   strcpy(serv, x->name);
   *port = x->port ? x->port : default_port;
   if (x->pass)
@@ -442,7 +1245,8 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
     pass[0] = 0;
 }
 
-static int server_6char STDVAR {
+static int server_6char STDVAR
+{
   Function F = (Function) cd;
   char x[20];
 
@@ -453,7 +1257,8 @@ static int server_6char STDVAR {
   return TCL_OK;
 }
 
-static int server_5char STDVAR {
+static int server_5char STDVAR
+{
   Function F = (Function) cd;
 
   BADARGS(6, 6, " nick user@host handle channel text");
@@ -462,7 +1267,8 @@ static int server_5char STDVAR {
   return TCL_OK;
 }
 
-static int server_2char STDVAR {
+static int server_2char STDVAR
+{
   Function F = (Function) cd;
 
   BADARGS(3, 3, " nick msg");
@@ -471,7 +1277,8 @@ static int server_2char STDVAR {
   return TCL_OK;
 }
 
-static int server_msg STDVAR {
+static int server_msg STDVAR
+{
   Function F = (Function) cd;
 
   BADARGS(5, 5, " nick uhost hand buffer");
@@ -480,7 +1287,8 @@ static int server_msg STDVAR {
   return TCL_OK;
 }
 
-static int server_raw STDVAR {
+static int server_raw STDVAR
+{
   Function F = (Function) cd;
 
   BADARGS(4, 4, " from code args");
@@ -489,7 +1297,8 @@ static int server_raw STDVAR {
   return TCL_OK;
 }
 
-/* read/write normal string variable */
+/* Read/write normal string variable.
+ */
 static char *nick_change(ClientData cdata, Tcl_Interp * irp, char *name1,
 			 char *name2, int flags)
 {
@@ -503,33 +1312,38 @@ static char *nick_change(ClientData cdata, Tcl_Interp * irp, char *name1,
   } else {			/* writes */
     new = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
     if (rfc_casecmp(origbotname, new)) {
-      if (origbotname[0])
+      if (origbotname[0]) {
 	putlog(LOG_MISC, "*", "* IRC NICK CHANGE: %s -> %s",
 	       origbotname, new);
+        nick_juped = 0;
+      }
       strncpy(origbotname, new, NICKMAX);
       origbotname[NICKMAX] = 0;
       if (server_online)
-	dprintf(DP_SERVER, "NICK %s\n", origbotname);
+	dprintf(DP_MODE, "NICK %s\n", origbotname);
     }
   }
   return NULL;
 }
 
-/* replace all '?'s in s with a random number */
+/* Replace all '?'s in s with a random number.
+ */
 static void rand_nick(char *nick)
 {
   char *p = nick;
+
   while ((p = strchr(p, '?')) != NULL) {
-    *p = '0' + random() % 10;
+    *p = '0' + rand() % 10;
     p++;
   }
 }
 
-/* return the alternative bot nick */
+/* Return the alternative bot nick.
+ */
 static char *get_altbotnick(void)
 {
   Context;
-  /* a random-number nick? */
+  /* A random-number nick? */
   if (strchr(altnick, '?')) {
     if (!raltnick[0]) {
       strncpy(raltnick, altnick, NICKMAX);
@@ -541,22 +1355,23 @@ static char *get_altbotnick(void)
     return altnick;
 }
 
-static char *altnick_change(ClientData cdata, Tcl_Interp * irp, char *name1,
+static char *altnick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
 			    char *name2, int flags)
 {
   Context;
-  /* always unset raltnick. Will be regenerated when needed. */
+  /* Always unset raltnick. Will be regenerated when needed. */
   raltnick[0] = 0;
   return NULL;
 }
 
-static char *traced_server(ClientData cdata, Tcl_Interp * irp, char *name1,
+static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
 			   char *name2, int flags)
 {
   char s[1024];
 
   if (server_online) {
     int servidx = findanyidx(serv);
+
     simple_sprintf(s, "%s:%u", dcc[servidx].host, dcc[servidx].port);
   } else
     s[0] = 0;
@@ -567,7 +1382,7 @@ static char *traced_server(ClientData cdata, Tcl_Interp * irp, char *name1,
   return NULL;
 }
 
-static char *traced_botname(ClientData cdata, Tcl_Interp * irp, char *name1,
+static char *traced_botname(ClientData cdata, Tcl_Interp *irp, char *name1,
 			    char *name2, int flags)
 {
   char s[1024];
@@ -580,88 +1395,138 @@ static char *traced_botname(ClientData cdata, Tcl_Interp * irp, char *name1,
   return NULL;
 }
 
-static char *traced_nettype(ClientData cdata, Tcl_Interp * irp, char *name1,
-			    char *name2, int flags)
+static void do_nettype(void)
 {
   switch (net_type) {
-  case 0:
+  case 0:	/* EfNet except new +e/+I hybrid */
     use_silence = 0;
     check_mode_r = 0;
+    nick_len = 9;
     break;
-  case 1:
+  case 1:	/* Ircnet */
     use_silence = 0;
     check_mode_r = 1;
+    use_penalties = 1;
+    use_fastdeq = 3;
+    nick_len = 9;
+    simple_sprintf(stackablecmds, "INVITE AWAY VERSION NICK ISON");
+    kick_method = 4;
     break;
-  case 2:
+  case 2:	/* Undernet */
     use_silence = 1;
     check_mode_r = 0;
+    use_fastdeq = 2;
+    nick_len = 9;
+    simple_sprintf(stackablecmds, "PRIVMSG NOTICE TOPIC PART WHOIS");
     break;
-  case 3:
+  case 3:	/* Dalnet */
     use_silence = 0;
     check_mode_r = 0;
+    nick_len = 32;
     break;
-  case 4:
+  case 4:	/* new +e/+I Efnet hybrid */
     use_silence = 0;
     check_mode_r = 0;
+    nick_len = 9;
     break;
   default:
     break;
+  }
+}
+
+static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
+			    char *name2, int flags)
+{
+  do_nettype();
+  return NULL;
+}
+
+static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp, char *name1,
+			    char *name2, int flags)
+{
+  if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
+    char s[40];
+
+    sprintf(s, "%d", nick_len);
+    Tcl_SetVar2(interp, name1, name2, s, TCL_GLOBAL_ONLY);
+    if (flags & TCL_TRACE_UNSETS)
+      Tcl_TraceVar(irp, name1, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		   traced_nicklen, cdata);
+  } else {
+    char *cval = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
+    long lval = 0;
+
+    if (cval && Tcl_ExprLong(interp, cval, &lval) != TCL_ERROR) {
+      if (lval > NICKMAX)
+	lval = NICKMAX;
+      nick_len = (int) lval;
+    }
   }
   return NULL;
 }
 
 static tcl_strings my_tcl_strings[] =
 {
-  {"botnick", 0, 0, STR_PROTECT},
-  {"altnick", altnick, NICKMAX, 0},
-  {"realname", botrealname, 80, 0},
-  {"init-server", initserver, 120, 0},
-  {"connect-server", connectserver, 120, 0},
-  {0, 0, 0, 0}
+  {"botnick",			NULL,		0,		STR_PROTECT},
+  {"altnick",			altnick,	NICKMAX,	0},
+  {"realname",			botrealname,	80,		0},
+  {"init-server",		initserver,	120,		0},
+  {"connect-server",		connectserver,	120,		0},
+  {"stackable-commands",	stackablecmds,	510,		0},
+  {NULL,			NULL,		0,		0}
 };
 
 static tcl_coups my_tcl_coups[] =
 {
-  {"flood-msg", &flud_thr, &flud_time},
-  {"flood-ctcp", &flud_ctcp_thr, &flud_ctcp_time},
-  {0, 0, 0}
+  {"flood-msg",		&flud_thr,		&flud_time},
+  {"flood-ctcp",	&flud_ctcp_thr, 	&flud_ctcp_time},
+  {NULL,		NULL,			NULL}
 };
 
 static tcl_ints my_tcl_ints[] =
 {
-  {"use-silence", 0, 0},
-  {"use-console-r", 0, 1},
-  {"servlimit", &min_servs, 0},
-  {"server-timeout", &server_timeout, 0},
-  {"lowercase-ctcp", &lowercase_ctcp, 0},
-  {"server-online", (int *) &server_online, 2},
-  {"never-give-up", &never_give_up, 0},
-  {"keep-nick", &keepnick, 0},
-  {"strict-servernames", &strict_servernames, 0},
-  {"check-stoned", &check_stoned, 0},
-  {"serverror-quit", &serverror_quit, 0},
-  {"quiet-reject", &quiet_reject, 0},
-  {"max-queue-msg", &maxqmsg, 0},
-  {"trigger-on-ignore", &trigger_on_ignore, 0},
-  {"answer-ctcp", &answer_ctcp, 0},
-  {"server-cycle-wait", (int *) &server_cycle_wait, 0},
-  {"default-port", &default_port, 0},
-  {"check-mode-r", &check_mode_r, 0},
-  {"use-ison", &use_ison, 0},
-  {"net-type", &net_type, 0},
-  {"must-be-owner", &must_be_owner, 0},		/* arthur2 */
-  {"ctcp-mode", &ctcp_mode, 0},
-  {"double-mode", &double_mode, 0}, /* G`Quann */
-  {"double-server", &double_server, 0},
-  {"double-help", &double_help, 0},
-  {0, 0, 0}
+  {"use-silence",		NULL,				0},
+  {"use-console-r",		NULL,				1},
+  {"servlimit",			&min_servs,			0},
+  {"server-timeout",		&server_timeout,		0},
+  {"lowercase-ctcp",		&lowercase_ctcp,		0},
+  {"server-online",		(int *) &server_online,		2},
+  {"never-give-up",		&never_give_up,			0},
+  {"keep-nick",			&keepnick,			0},
+  {"strict-servernames",	&strict_servernames,		0},
+  {"check-stoned",		&check_stoned,			0},
+  {"serverror-quit",		&serverror_quit,		0},
+  {"quiet-reject",		&quiet_reject,			0},
+  {"max-queue-msg",		&maxqmsg,			0},
+  {"trigger-on-ignore",		&trigger_on_ignore,		0},
+  {"answer-ctcp",		&answer_ctcp,			0},
+  {"server-cycle-wait",		(int *) &server_cycle_wait,	0},
+  {"default-port",		&default_port,			0},
+  {"check-mode-r",		&check_mode_r,			0},
+  {"use-ison",			&use_ison,			0},
+  {"net-type",			&net_type,			0},
+  {"must-be-owner",		&must_be_owner,			0},/* arthur2 */
+  {"ctcp-mode",			&ctcp_mode,			0},
+  {"double-mode",		&double_mode,			0},/* G`Quann */
+  {"double-server",		&double_server,			0},
+  {"double-help",		&double_help,			0},
+  {"use-penalties",		&use_penalties,			0},
+  {"use-fastdeq",		&use_fastdeq,			0},
+  {"nick-len",			&nick_len,			0},
+  {"optimize-kicks",		&optimize_kicks,		0},
+  {"isjuped",			&nick_juped,			0},
+  {"use-lagcheck",		&use_lagcheck,			0},
+  {"bot-is-lagged",		&lagged,			0},
+  {NULL,			NULL,				0}
 };
 
-/**********************************************************************/
 
-/* oddballs */
+/*
+ *     Tcl variable trace functions
+ */
 
-/* read/write the server list */
+/* Read or write the server list.
+ */
 static char *tcl_eggserver(ClientData cdata, Tcl_Interp * irp, char *name1,
 			   char *name2, int flags)
 {
@@ -672,7 +1537,7 @@ static char *tcl_eggserver(ClientData cdata, Tcl_Interp * irp, char *name1,
 
   Context;
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
-    /* create server list */
+    /* Create server list */
     Tcl_DStringInit(&ds);
     for (q = serverlist; q; q = q->next) {
       sprintf(x, "%s:%d%s%s %s", q->name, q->port ? q->port : default_port,
@@ -683,7 +1548,7 @@ static char *tcl_eggserver(ClientData cdata, Tcl_Interp * irp, char *name1,
     slist = Tcl_DStringValue(&ds);
     Tcl_SetVar2(interp, name1, name2, slist, TCL_GLOBAL_ONLY);
     Tcl_DStringFree(&ds);
-  } else {			/* writes */
+  } else {		/* TCL_TRACE_WRITES */
     if (serverlist) {
       clearq(serverlist);
       serverlist = NULL;
@@ -691,14 +1556,14 @@ static char *tcl_eggserver(ClientData cdata, Tcl_Interp * irp, char *name1,
     slist = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
     if (slist != NULL) {
       code = Tcl_SplitList(interp, slist, &lc, &list);
-      if (code == TCL_ERROR) {
+      if (code == TCL_ERROR)
 	return interp->result;
-      }
-      for (i = 0; i < lc && i < 50; i++) {
+      for (i = 0; i < lc && i < 50; i++)
 	add_server(list[i]);
-      }
-      /* tricky way to make the bot reset its server pointers
-       * perform part of a '.jump <current-server>': */
+
+      /* Tricky way to make the bot reset its server pointers
+       * perform part of a '.jump <current-server>':
+       */
       if (server_online) {
 	int servidx = findanyidx(serv);
 
@@ -712,25 +1577,31 @@ static char *tcl_eggserver(ClientData cdata, Tcl_Interp * irp, char *name1,
   return NULL;
 }
 
-/* trace the servers */
-#define tcl_traceserver(name,ptr) \
-  Tcl_TraceVar(interp,name,TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS, \
-	       tcl_eggserver,(ClientData)ptr)
+/* Trace the servers */
+#define tcl_traceserver(name, ptr) \
+  Tcl_TraceVar(interp, name, TCL_TRACE_READS | TCL_TRACE_WRITES |	\
+	       TCL_TRACE_UNSETS, tcl_eggserver, (ClientData) ptr)
 
-#define tcl_untraceserver(name,ptr) \
-  Tcl_UntraceVar(interp,name,TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS, \
-	       tcl_eggserver,(ClientData)ptr)
+#define tcl_untraceserver(name, ptr) \
+  Tcl_UntraceVar(interp, name, TCL_TRACE_READS | TCL_TRACE_WRITES |	\
+		 TCL_TRACE_UNSETS, tcl_eggserver, (ClientData) ptr)
 
 
-/* this only handles CHAT requests, otherwise it's handled in filesys */
+/*
+ *     CTCP DCC CHAT functions
+ */
+
+static void dcc_chat_hostresolved(int);
+
+/* This only handles CHAT requests, otherwise it's handled in filesys.
+ */
 static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
 			 char *object, char *keyword, char *text)
 {
   char *action, *param, *ip, *prt, buf[512], *msg = buf;
-  int i, sock;
+  int i;
   struct userrec *u = get_user_by_handle(userlist, handle);
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
   strcpy(msg, text);
   action = newsplit(&msg);
@@ -747,7 +1618,7 @@ static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
     putlog(LOG_MISC, "*", DCC_TOOMANYDCCS2, "CHAT", param, nick, from);
   } else if (!(glob_party(fr) || (!require_p && chan_op(fr)))) {
     if (glob_xfer(fr))
-      return 0;			/* allow filesys to pick up the chat */
+      return 0;			/* Allow filesys to pick up the chat */
     if (!quiet_reject)
       dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED2);
     putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED, nick, from);
@@ -756,7 +1627,7 @@ static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
       dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
     putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
   } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
-    /* invalid port range, do clients even use over 5000?? */
+    /* Invalid port range. */
     if (!quiet_reject)
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
 	      DCC_CONNECTFAILED1);
@@ -765,44 +1636,79 @@ static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
   } else {
     if (!sanitycheck_dcc(nick, from, ip, prt))
       return 1;
-    sock = getsock(0);
-    if (open_telnet_dcc(sock, ip, prt) < 0) {
-      neterror(buf);
-      if(!quiet_reject)
-	dprintf(DP_HELP, "NOTICE %s :%s (%s)\n", nick,
-		DCC_CONNECTFAILED1, buf);
-      putlog(LOG_MISC, "*", "%s: CHAT (%s!%s)", DCC_CONNECTFAILED2,
-	     nick, from);
-      putlog(LOG_MISC, "*", "    (%s)", buf);
-      killsock(sock);
-    } else {
-      i = new_dcc(&DCC_CHAT_PASS, sizeof(struct chat_info));
+    i = new_dcc(&DCC_DNSWAIT, sizeof(struct dns_info));
 
-      dcc[i].addr = my_atoul(ip);
-      dcc[i].port = atoi(prt);
-      dcc[i].sock = sock;
-      strcpy(dcc[i].nick, u->handle);
-      strcpy(dcc[i].host, from);
-      dcc[i].status = STAT_ECHO;
-      if (glob_party(fr))
-	dcc[i].status |= STAT_PARTY;
-      strcpy(dcc[i].u.chat->con_chan, chanset ? chanset->name : "*");
-      dcc[i].timeval = now;
-      dcc[i].user = u;
-      /* ok, we're satisfied with them now: attempt the connect */
-      putlog(LOG_MISC, "*", "DCC connection: CHAT (%s!%s)", nick, from);
-      dprintf(i, "%s\n", DCC_ENTERPASS);
+    if (i < 0) {
+      putlog(LOG_MISC, "*", "DCC connection: CHAT (%s!%s)", dcc[i].nick, ip);
+      return 1;
     }
+    dcc[i].addr = my_atoul(ip);
+    dcc[i].port = atoi(prt);
+    dcc[i].sock = -1;
+    strcpy(dcc[i].nick, u->handle);
+    strcpy(dcc[i].host, from);
+    dcc[i].timeval = now;
+    dcc[i].user = u;
+    dcc[i].u.dns->ip = dcc[i].addr;
+    dcc[i].u.dns->dns_type = RES_HOSTBYIP;
+    dcc[i].u.dns->dns_success = (Function) dcc_chat_hostresolved;
+    dcc[i].u.dns->dns_failure = (Function) dcc_chat_hostresolved;
+    dcc[i].u.dns->type = &DCC_CHAT_PASS;
+    dcc_dnshostbyip(dcc[i].addr);
   }
   return 1;
 }
+
+static void dcc_chat_hostresolved(int i)
+{
+  char buf[512], ip[512];
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+
+  sprintf(buf, "%d", dcc[i].port);
+  if (!hostsanitycheck_dcc(dcc[i].nick, dcc[i].host, dcc[i].addr,
+			  dcc[i].u.dns->host, buf)) {
+    lostdcc(i);
+    return;
+  }
+  dcc[i].sock = getsock(0);
+  sprintf(ip, "%lu", iptolong(my_htonl(dcc[i].addr)));
+  if (open_telnet_dcc(dcc[i].sock, ip, buf) < 0) {
+    neterror(buf);
+    if(!quiet_reject)
+      dprintf(DP_HELP, "NOTICE %s :%s (%s)\n", dcc[i].nick,
+	      DCC_CONNECTFAILED1, buf);
+    putlog(LOG_MISC, "*", "%s: CHAT (%s!%s)", DCC_CONNECTFAILED2,
+	   dcc[i].nick, dcc[i].host);
+    putlog(LOG_MISC, "*", "    (%s)", buf);
+    killsock(dcc[i].sock);
+    lostdcc(i);
+  } else {
+    changeover_dcc(i, &DCC_CHAT_PASS, sizeof(struct chat_info));
+    dcc[i].status = STAT_ECHO;
+    get_user_flagrec(dcc[i].user, &fr, 0);
+    if (glob_party(fr))
+      dcc[i].status |= STAT_PARTY;
+    strcpy(dcc[i].u.chat->con_chan, (chanset) ? chanset->dname : "*");
+    dcc[i].timeval = now;
+    /* Ok, we're satisfied with them now: attempt the connect */
+    putlog(LOG_MISC, "*", "DCC connection: CHAT (%s!%s)", dcc[i].nick,
+	   dcc[i].host);
+    dprintf(i, "%s\n", DCC_ENTERPASS);
+  }
+  return;
+}
+
+
+/*
+ *     Server timer functions
+ */
 
 static void server_secondly()
 {
   if (cycle_time)
     cycle_time--;
   deq_msg();
-  if (serv < 0)
+  if (!resolvserv && serv < 0)
     connect_server();
 }
 
@@ -810,15 +1716,16 @@ static void server_5minutely()
 {
   if (check_stoned) {
     if (waiting_for_awake) {
-      /* uh oh!  never got pong from last time, five minutes ago! */
-      /* server is probably stoned */
+      /* Uh oh!  Never got pong from last time, five minutes ago!
+       * Server is probably stoned.
+       */
       int servidx = findanyidx(serv);
 
       disconnect_server(servidx);
       lostdcc(servidx);
       putlog(LOG_SERV, "*", IRC_SERVERSTONED);
     } else if (!trying_server) {
-      /* check for server being stoned */
+      /* Check for server being stoned. */
       dprintf(DP_MODE, "PING :%lu\n", (unsigned long) now);
       waiting_for_awake = 1;
     }
@@ -840,22 +1747,26 @@ static void server_postrehash()
     fatal("NO SERVER.", 0);
     if (oldnick[0] && !rfc_casecmp(oldnick, botname)
        && !rfc_casecmp(oldnick, get_altbotnick())) {
-    /* change botname back, don't be premature */
+    /* Change botname back, don't be premature. */
     strcpy(botname, oldnick);
-    dprintf(DP_SERVER, "NICK %s\n", origbotname);
+    dprintf(DP_MODE, "NICK %s\n", origbotname);
   }
-  /* change botname back incase we were using altnick previous to rehash */
+  /* Change botname back incase we were using altnick previous to rehash. */
   else if (oldnick[0])
     strcpy(botname, oldnick);
   if (initserver[0])
     do_tcl("init-server", initserver);
 }
 
-/* a report on the module status */
+/* A report on the module status.
+ */
 static void server_report(int idx, int details)
 {
   char s1[128], s[128];
 
+  if (nick_juped)
+    dprintf(idx, "    NICK IS JUPED: %s %s\n", origbotname,
+            keepnick?"(trying)":"");
   dprintf(idx, "    Online as: %s!%s (%s)\n", botname, botuserhost,
 	  botrealname);
   if (!trying_server) {
@@ -877,7 +1788,8 @@ static void server_report(int idx, int details)
     dprintf(idx, "    %s\n", IRC_NOSERVER);
   if (modeq.tot)
     dprintf(idx, "    %s %d%%, %d msgs\n", IRC_MODEQUEUE,
-            (int) ((float) (modeq.tot * 100.0) / (float) maxqmsg), (int) modeq.tot);
+            (int) ((float) (modeq.tot * 100.0) / (float) maxqmsg),
+	    (int) modeq.tot);
   if (mq.tot)
     dprintf(idx, "    %s %d%%, %d msgs\n", IRC_SERVERQUEUE,
            (int) ((float) (mq.tot * 100.0) / (float) maxqmsg), (int) mq.tot);
@@ -912,30 +1824,35 @@ static int server_expmem()
       tot += strlen(s->realname) + 1;
     tot += sizeof(struct server_list);
   }
+
   while (m != NULL) {
     tot += m->len + 1;
     tot += sizeof(struct msgq);
-
     m = m->next;
   }
+
   m = hq.head;
   while (m != NULL) {
     tot += m->len + 1;
     tot += sizeof(struct msgq);
-
     m = m->next;
   }
+
   m = modeq.head;
   while (m != NULL) {
     tot += m->len + 1;
     tot += sizeof(struct msgq);
-
     m = m->next;
   }
+  if (lagcheckstring)
+    tot += strlen(lagcheckstring) + 1;
+  if (lagcheckstring2)
+    tot += strlen(lagcheckstring2) + 1;
   return tot;
 }
 
-/* puts full hostname in s */
+/* Put the full hostname in s.
+ */
 static void getmyhostname(char *s)
 {
   struct hostent *hp;
@@ -968,19 +1885,19 @@ static void getmyhostname(char *s)
     fatal("Can't determine your hostname!", 0);
 }
 
-/* update the add/rem_builtins in server.c if you add to this list!! */
 static cmd_t my_ctcps[] =
 {
-  {"DCC", "", ctcp_DCC_CHAT, "server:DCC"},
-  {0, 0, 0, 0}
+  {"DCC",	"",	ctcp_DCC_CHAT,		"server:DCC"},
+  {NULL,	NULL,	NULL,			NULL}
 };
 
 static char *server_close()
 {
+  /* FIXME - I'm an ugly hack. */
   cmd_t C_t[] =
   {
-    {"die", "m", NULL, NULL},
-    {0, 0, 0, 0}
+    {"die",	"m",	NULL,			NULL},
+    {NULL,	NULL,	NULL,			NULL}
   };
   C_t[0].func = (Function) cmd_die;
 
@@ -993,6 +1910,7 @@ static char *server_close()
   rem_builtins(H_raw, my_raw_binds);
   rem_builtins(H_ctcp, my_ctcps);
   Context;
+  /* Restore original commands. */
   add_builtins(H_dcc, C_t);
   Context;
   del_bind_table(H_wall);
@@ -1024,6 +1942,9 @@ static char *server_close()
   Tcl_UntraceVar(interp, "net-type",
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		 traced_nettype, NULL);
+  Tcl_UntraceVar(interp, "nick-len",
+		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		 traced_nicklen, NULL);
   tcl_untraceserver("servers", NULL);
   Context;
   empty_msgq();
@@ -1035,6 +1956,14 @@ static char *server_close()
   del_hook(HOOK_PRE_REHASH, (Function) server_prerehash);
   del_hook(HOOK_REHASH, (Function) server_postrehash);
   Context;
+  if (lagcheckstring) {
+    nfree(lagcheckstring);
+    lagcheckstring = NULL;
+  }
+  if (lagcheckstring2) {
+    nfree(lagcheckstring2);
+    lagcheckstring2 = NULL;
+  }
   module_undepend(MODULE_NAME);
   return NULL;
 }
@@ -1048,47 +1977,49 @@ static Function server_table[] =
   (Function) server_expmem,
   (Function) server_report,
   /* 4 - 7 */
-  (Function) 0,			/* char * (points to botname later on) */
-  (Function) botuserhost,	/* char * */
-  (Function) & quiet_reject,	/* int */
-  (Function) & serv,
+  (Function) NULL,		/* char * (points to botname later on)	*/
+  (Function) botuserhost,	/* char *				*/
+  (Function) & quiet_reject,	/* int					*/
+  (Function) & serv,		/* int					*/
   /* 8 - 11 */
-  (Function) & flud_thr,	/* int */
-  (Function) & flud_time,	/* int */
-  (Function) & flud_ctcp_thr,	/* int */
-  (Function) & flud_ctcp_time,	/* int */
+  (Function) & flud_thr,	/* int					*/
+  (Function) & flud_time,	/* int					*/
+  (Function) & flud_ctcp_thr,	/* int					*/
+  (Function) & flud_ctcp_time,	/* int					*/
   /* 12 - 15 */
   (Function) match_my_nick,
   (Function) check_tcl_flud,
-  (Function) NULL, /* fixfrom */ /* moved to the core !!! (drummer) */
-  (Function) & answer_ctcp,	/* int */
+  (Function) NULL,		/* fixfrom - moved to the core (drummer) */
+  (Function) & answer_ctcp,	/* int					*/
   /* 16 - 19 */
-  (Function) & trigger_on_ignore,	/* int */
+  (Function) & trigger_on_ignore, /* int				*/
   (Function) check_tcl_ctcpr,
   (Function) detect_avalanche,
   (Function) nuke_server,
   /* 20 - 23 */
-  (Function) newserver,		/* char * */
-  (Function) & newserverport,	/* int */
-  (Function) newserverpass,	/* char * */
+  (Function) newserver,		/* char *				*/
+  (Function) & newserverport,	/* int					*/
+  (Function) newserverpass,	/* char *				*/
   /* 24 - 27 */
-  (Function) & cycle_time,	/* int */
-  (Function) & default_port,	/* int */
-  (Function) & server_online,	/* int */
-  (Function) & min_servs,
+  (Function) & cycle_time,	/* int					*/
+  (Function) & default_port,	/* int					*/
+  (Function) & server_online,	/* int					*/
+  (Function) & min_servs,	/* int					*/
   /* 28 - 31 */
-  (Function) & H_raw,
-  (Function) & H_wall,
-  (Function) & H_msg,
-  (Function) & H_msgm,
+  (Function) & H_raw,		/* p_tcl_bind_list			*/
+  (Function) & H_wall,		/* p_tcl_bind_list			*/
+  (Function) & H_msg,		/* p_tcl_bind_list			*/
+  (Function) & H_msgm,		/* p_tcl_bind_list			*/
   /* 32 - 35 */
-  (Function) & H_notc,
-  (Function) & H_flud,
-  (Function) & H_ctcp,
-  (Function) & H_ctcr,
+  (Function) & H_notc,		/* p_tcl_bind_list			*/
+  (Function) & H_flud,		/* p_tcl_bind_list			*/
+  (Function) & H_ctcp,		/* p_tcl_bind_list			*/
+  (Function) & H_ctcr,		/* p_tcl_bind_list			*/
   /* 36 - 39 */
   (Function) ctcp_reply,
-  (Function) get_altbotnick,	/* char * */
+  (Function) get_altbotnick,	/* char *				*/
+  (Function) & nick_len,	/* int					*/
+  (Function) check_tcl_notc
 };
 
 char *server_start(Function * global_funcs)
@@ -1097,7 +2028,10 @@ char *server_start(Function * global_funcs)
 
   global = global_funcs;
 
-  /* init all the variables *must* be done in _start rather than globally */
+  /*
+   * Init of all the variables *must* be done in _start rather than
+   * globally.
+   */
   serv = -1;
   strict_host = 1;
   botname[0] = 0;
@@ -1141,14 +2075,27 @@ char *server_start(Function * global_funcs)
   double_mode = 0;
   double_server = 0;
   double_help = 0;
+  use_penalties = 0;
+  use_fastdeq = 0;
+  stackablecmds[0] = 0;
+  resolvserv = 0;
+  lastpingtime = 0;
+  last_time = 0;
+  nick_len = 9;
+  lagchecktype = 0;
+  lagcheckstring = NULL;
+  lagcheckstring2 = NULL;
+  lagged = 0;
+  use_lagcheck = 0;
+
   Context;
   server_table[4] = (Function) botname;
-  module_register(MODULE_NAME, server_table, 1, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
-    return "This module requires eggdrop1.4.0 or later";
-  /* weird ones */
+  module_register(MODULE_NAME, server_table, 1, 1);
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
+    return "This module requires eggdrop1.5.0 or later";
+
   Context;
-  /* fool bot in reading the values */
+  /* Fool bot in reading the values. */
   tcl_eggserver(NULL, interp, "servers", NULL, 0);
   tcl_traceserver("servers", NULL);
   s = Tcl_GetVar(interp, "nick", TCL_GLOBAL_ONLY);
@@ -1170,10 +2117,14 @@ char *server_start(Function * global_funcs)
   Tcl_TraceVar(interp, "net-type",
 	       TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 	       traced_nettype, NULL);
+  Tcl_TraceVar(interp, "nick-len",
+	       TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+	       traced_nicklen, NULL);
+
   Context;
   H_wall = add_bind_table("wall", HT_STACKABLE, server_2char);
   H_raw = add_bind_table("raw", HT_STACKABLE, server_raw);
-  H_notc = add_bind_table("notc", HT_STACKABLE, server_5char);
+  H_notc = add_bind_table("notc", HT_STACKABLE, server_6char);
   H_msgm = add_bind_table("msgm", HT_STACKABLE, server_5char);
   H_msg = add_bind_table("msg", 0, server_msg);
   H_flud = add_bind_table("flud", HT_STACKABLE, server_5char);
@@ -1212,26 +2163,7 @@ char *server_start(Function * global_funcs)
   Context;
   sprintf(botuserhost, "%s@%s", botuser, bothost);	/* wishful thinking */
   curserv = 999;
-  if (net_type == 0) {		/* EfNet except new +e/+I hybrid */
-    use_silence = 0;
-    check_mode_r = 0;
-  }
-  if (net_type == 1) {		/* Ircnet */
-    use_silence = 0;
-    check_mode_r = 1;
-  }
-  if (net_type == 2) {		/* Undernet */
-    use_silence = 1;
-    check_mode_r = 0;
-  }
-  if (net_type == 3) {		/* Dalnet */
-    use_silence = 0;
-    check_mode_r = 0;
-  }
-  if (net_type == 4) {		/* new +e/+I Efnet hybrid */
-    use_silence = 0;
-    check_mode_r = 0;
-  }
+  do_nettype();
   putlog(LOG_MISC, "*", "=== SERVER SUPPORT LOADED");
   return NULL;
 }

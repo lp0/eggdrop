@@ -2,7 +2,7 @@
  * ctcp.h -- part of ctcp.mod
  *   all the defines for ctcp.c
  * 
- * $Id: ctcp.h,v 1.4 2000/01/08 21:23:15 per Exp $
+ * $Id: ctcp.h,v 1.3 2000/01/17 22:36:08 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer

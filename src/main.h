@@ -2,7 +2,7 @@
  * main.h
  *   include file to include most other include files
  * 
- * $Id: main.h,v 1.13 2000/01/29 12:45:28 per Exp $
+ * $Id: main.h,v 1.11 2000/02/01 20:36:18 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -79,34 +79,42 @@
 extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,
  DCC_RELAY, DCC_RELAYING, DCC_FORK_RELAY, DCC_PRE_RELAY, DCC_CHAT_PASS,
  DCC_FORK_BOT, DCC_SOCKET, DCC_TELNET_ID, DCC_TELNET_NEW, DCC_TELNET_PW,
- DCC_TELNET, DCC_IDENT, DCC_IDENTWAIT;
+ DCC_TELNET, DCC_IDENT, DCC_IDENTWAIT, DCC_DNSWAIT;
 
 #endif
 
-/* from net.h */
 
-/* my own byte swappers */
+/* Our own byte swappers
+ */
 #ifdef WORDS_BIGENDIAN
-#  define swap_short(sh) (sh)
-#  define swap_long(ln) (ln)
+#  define swap_short(sh)	(sh)
+#  define swap_long(ln)		(ln)
 #else
-#  define swap_short(sh) ((((sh) & 0xff00) >> 8) | (((sh) & 0x00ff) << 8))
-#  define swap_long(ln) (swap_short(((ln)&0xffff0000)>>16) | (swap_short((ln)&0x0000ffff)<<16))
+#  define swap_short(sh)	((((sh) & 0xff00) >> 8) |		 \
+				 (((sh) & 0x00ff) << 8))
+#  define swap_long(ln)		(swap_short(((ln) & 0xffff0000) >> 16) | \
+				 (swap_short((ln) & 0x0000ffff) << 16))
 #endif
-#define iptolong(a) (0xffffffff & (long)(swap_long((unsigned long)a)))
-#define fixcolon(x) if (x[0]==':') {x++;} else {x=newsplit(&x);}
 
-/* Stupid Borg Cube crap ;p */
+#define iptolong(a)		(0xffffffff & 				\
+				 (long) (swap_long((unsigned long) a)))
+#define fixcolon(x)		if ((x)[0] == ':') { 			\
+					(x)++;				\
+				} else {				\
+					(x) = newsplit(&(x));		\
+				}
+
+#define my_ntohs(sh)	swap_short(sh)
+#define my_htons(sh)	swap_short(sh)
+#define my_ntohl(ln)	swap_long(ln)
+#define my_htonl(ln)	swap_long(ln)
+
 #ifdef BORGCUBES
 
-/* net.h needs this */
-#define O_NONBLOCK      00000004	/* POSIX non-blocking I/O       */
+/* For net.c */
+#  define O_NONBLOCK	00000004    /* POSIX non-blocking I/O		   */
 
-/* mod/filesys.mod/filedb.c needs this */
-#define _S_IFMT         0170000		/* type of file */
-#define _S_IFDIR        0040000		/*   directory */
-#define S_ISDIR(m)      (((m)&(_S_IFMT)) == (_S_IFDIR))
+#endif				/* BORGUBES */
 
-#endif				/* BORGCUBES */
 
 #endif				/* _EGG_MAIN_H */

@@ -1,7 +1,7 @@
-# userinfo.tcl v1.06 for Eggdrop 1.4.3 and higher
+# userinfo.tcl v1.05 for Eggdrop 1.1.6 and higher
 #           Scott G. Taylor -- ButchBub!staylor@mrynet.com
 #
-# $Id: userinfo1.0.tcl,v 1.6 2000/05/23 21:06:16 guppy Exp $
+# $Id: userinfo1.0.tcl,v 1.3 1999/12/21 17:35:08 fabian Exp $
 #
 # v1.00      ButchBub     14 July      1997 -Original release.  Based on
 #                                            whois.tcl "URL" commands.
@@ -17,8 +17,6 @@
 #                                           -dcc .showfields command added
 #                                           -deletes removed userinfo fields
 #                                            from the whois-fields list.
-# v1.06      guppy        19 March     2000 -removed lastbind workaround since
-#                                            lastbind is fixed in eggdrop1.4.3
 #
 # TO USE:  o    Set the desired userinfo field keywords to the
 #               `userinfo-fields' line below where indicated.
@@ -68,14 +66,16 @@ set userinfo-fields "URL BF GF IRL EMAIL DOB"
 
 # This script's identification
 
-set userinfover "Userinfo TCL v1.06"
+set userinfover "Userinfo TCL v1.05"
 
-# This script is NOT for pre-1.4.3 versions.
+# This script is NOT for pre-1.3.0 versions.
 
 catch { set numversion }
-if {![info exists numversion] || ($numversion < 1040300)} {
+if {![info exists numversion] || ($numversion < 1030000)} {
+    if {[string range $version 0 2] != "1.3"} {
     putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
     return 0
+  }
 }
 
 # Make sure we don't bail because whois and/or userinfo-fields arn't set.
@@ -133,7 +133,18 @@ if { ${userinfo-fields} != "" } {
 
 proc msg_setuserinfo {nick uhost hand arg} {
   global lastbind quiet-reject userinfo-fields
+# BEGIN - $lastbind bug work around fix (added by Dude in v1.05)
+  if { [lsearch -exact [string tolower ${userinfo-fields}] [string tolower $lastbind]] >= 0 } {
    set userinfo [string toupper $lastbind]
+  } else {
+   set lsearch [lsearch [string tolower ${userinfo-fields}] [string tolower $lastbind]*]
+   if { $lsearch >= 0 } {
+    set userinfo [string toupper [lindex ${userinfo-fields} $lsearch]]
+   } else {
+    set userinfo [string toupper $lastbind]
+   }
+  }
+# END - $lastbind bug work around fix (added by Dude in v1.05)
   set arg [cleanarg $arg]
   set ignore 1
   foreach channel [channels] {
@@ -172,8 +183,20 @@ proc msg_setuserinfo {nick uhost hand arg} {
 # This is the dcc '.<info>' procedure.
 
 proc dcc_setuserinfo {hand idx arg} {
-  global lastbind userinfo-fields
+global lastbind userinfo-fields
+# BEGIN - $lastbind bug work around fix (added by Dude in v1.05)
+  if { [lsearch -exact [string tolower ${userinfo-fields}] [string tolower $lastbind]] >= 0 } {
+   set userinfo [string toupper $lastbind]
+  } else {
+   set lsearch [lsearch [string tolower ${userinfo-fields}] [string tolower $lastbind]*]
+   if { $lsearch >= 0 } {
+    set userinfo [string toupper [lindex ${userinfo-fields} $lsearch]]
+   } else {
+    # this is here just incase the work around fails
     set userinfo [string toupper $lastbind]
+   }
+  }
+# END - $lastbind bug work around fix (added by Dude in v1.05)
   set arg [cleanarg $arg]
   if {$arg != ""} {
     if {[string tolower $arg] == "none"} {
@@ -197,8 +220,20 @@ proc dcc_setuserinfo {hand idx arg} {
 # This is the DCC `.ch<info>' procedure
 
 proc dcc_chuserinfo {hand idx arg} {
-  global lastbind userinfo-fields
+global lastbind userinfo-fields
+# BEGIN - $lastbind bug work around fix (added by Dude in v1.05)
+  if { [lsearch -exact [string tolower ${userinfo-fields}] [string tolower [string range $lastbind 2 end]]] >= 0 } {
    set userinfo [string toupper [string range $lastbind 2 end]]
+  } else {
+   set lsearch [lsearch [string tolower ${userinfo-fields}] [string tolower [string range $lastbind 2 end]]*]
+   if { $lsearch >= 0 } {
+    set userinfo [string toupper [lindex ${userinfo-fields} $lsearch]]
+   } else {
+    # this is here just incase the work around fails
+    set userinfo [string toupper [string range $lastbind 2 end]]
+   }
+  }
+# END - $lastbind bug work around fix (added by Dude in v1.05)
   set arg [cleanarg $arg]
   if { $arg == "" } {
     putdcc $idx "syntax: .ch[string tolower $userinfo] <who> \[<[string tolower $userinfo]>|NONE\]"

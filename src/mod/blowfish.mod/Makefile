@@ -1,5 +1,5 @@
 # Makefile for src/mod/blowfish.mod/
-# $Id: Makefile,v 1.10 1999/12/15 02:32:59 guppy Exp $
+# $Id: Makefile,v 1.5 1999/12/21 17:35:11 fabian Exp $
 
 doofus:
 	@echo ""

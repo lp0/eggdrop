@@ -3,7 +3,7 @@
 #
 # german translation by rtc
 #
-# $Id: filesys.german.lang,v 1.4 1999/12/15 02:32:59 guppy Exp $
+# $Id: filesys.german.lang,v 1.2 1999/12/21 17:35:16 fabian Exp $
 
 0x300,Konvertiere Dateisystem-Abbild in %s ...
 0x301,filedb-update: kann Verzeichnis nicht oeffnen!

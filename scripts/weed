@@ -2,7 +2,7 @@
 # ^-- little trick to restart using tclsh \
 exec tclsh "$0" "$@"
 #
-# $Id: weed,v 1.5 1999/12/15 02:32:57 guppy Exp $
+# $Id: weed,v 1.5 1999/12/21 17:35:08 fabian Exp $
 #
 # weed out certain undesirables from an eggdrop userlist
 # try just typing 'tclsh weed' to find out the options

@@ -1,9 +1,9 @@
 #
-# notes2.tcl - v2.1.1 - released by MHT <mht@mygale.org>
+# notes2.tcl - v2.1.0 - released by MHT <mht@mygale.org>
 #                     - a bind apart script from #TSF
 #                     - for eggdrop 1.3.15+
 #
-# $Id: notes2.tcl,v 1.4 2000/08/18 19:34:41 guppy Exp $
+# $Id: notes2.tcl,v 1.2 1999/12/21 17:35:08 fabian Exp $
 #
 ####
 #
@@ -27,9 +27,6 @@
 #         Generally never happens, except in case of 'Chriphil's syndrome' ;-p
 #       - Added missing 'You don't have that many messages.'
 #
-# 2.1.1 - fixed a couple of small bugs pertaining to $nick being used instead of
-#         $botnet-nick (found by takeda, fixed by guppy)
-#
 ####
 # Check your notes on every shared bot of the hub.
 #
@@ -52,7 +49,7 @@ bind   bot  - notes2reply: *bot:notes2reply
 
 ########
 proc n2_notesindex {bot handle idx} {
-    global nick botnet-nick
+    global nick
     switch "([notes $handle])" {
 	"(-2)" { putbot $bot "notes2reply: $handle Notefile failure. $idx" }
 	#"-1" { putbot $bot "notes2reply: $handle I don't know you. $idx" }
@@ -69,7 +66,7 @@ proc n2_notesindex {bot handle idx} {
 		    putbot $bot "notes2reply: $handle %$index. $sender ($date) $idx"
 		}
 	    }
-	    putbot $bot "notes2reply: $handle ### Use '.notes ${botnet-nick} read' to read them. $idx"
+	    putbot $bot "notes2reply: $handle ### Use '.notes $nick read' to read them. $idx"
 	}
     }
     return 1
@@ -175,14 +172,14 @@ proc *chon:notes2 {handle idx} {
 
 ########
 proc *dcc:notes2 {handle idx arg} {
-    global nick botnet-nick
+    global nick
     if {$arg == ""} {
 	putidx $idx "Usage: notes \[bot|all\] index"
 	putidx $idx "       notes \[bot|all\] read <#|all>"
 	putidx $idx "       notes \[bot|all\] erase <#|all>"
 	putidx $idx "       # may be numbers and/or intervals separated by ;"
 	putidx $idx "       ex: notes erase 2-4;8;16-"
-	putidx $idx "           notes ${botnet-nick} read all"
+	putidx $idx "           notes $nick read all"
     } else {
 	set bot [string tolower [lindex $arg 0]]
 	set cmd [string tolower [lindex $arg 1]]

@@ -1,7 +1,7 @@
 /* 
  * server.h -- part of server.mod
  * 
- * $Id: server.h,v 1.7 2000/01/08 21:23:17 per Exp $
+ * $Id: server.h,v 1.7 2000/01/28 22:14:03 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -27,9 +27,9 @@
 
 #define check_tcl_ctcp(a,b,c,d,e,f) check_tcl_ctcpr(a,b,c,d,e,f,H_ctcp)
 #define check_tcl_ctcr(a,b,c,d,e,f) check_tcl_ctcpr(a,b,c,d,e,f,H_ctcr)
+
 #ifndef MAKING_SERVER
 /* 4 - 7 */
-
 #define botuserhost ((char *)(server_funcs[5]))
 #define quiet_reject (*(int *)(server_funcs[6]))
 #define serv (*(int *)(server_funcs[7]))
@@ -67,9 +67,12 @@
 #define H_flud (*(p_tcl_bind_list *)(server_funcs[32]))
 #define H_ctcp (*(p_tcl_bind_list *)(server_funcs[33]))
 #define H_ctcr (*(p_tcl_bind_list *)(server_funcs[34]))
-/* 35 - 36 */
+/* 35 - 38 */
 #define ctcp_reply ((char *)(server_funcs[35]))
 #define get_altbotnick ((char *(*)(void))(server_funcs[36]))
+#define nick_len (*(int *)(server_funcs[37]))
+#define check_tcl_notc ((int (*)(char *,char *,struct userrec *,char *,char *))server_funcs[38])
+
 #endif				/* MAKING_SERVER */
 
 #endif				/* _EGG_MOD_SERVER_SERVER_H */

@@ -10,7 +10,7 @@
  * 
  * dprintf'ized, 9nov1995
  * 
- * $Id: users.c,v 1.18 2000/02/06 18:37:44 per Exp $
+ * $Id: users.c,v 1.12 2000/01/22 23:30:54 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -304,7 +304,7 @@ static void restore_chanban(struct chanset_t *chan, char *host)
     }
   }
   putlog(LOG_MISC, "*", "*** Malformed banline for %s.",
-	 chan ? chan->name : "global_bans");
+	 chan ? chan->dname : "global_bans");
 }
 
 static void restore_chanexempt (struct chanset_t * chan, char * host)
@@ -361,7 +361,7 @@ static void restore_chanexempt (struct chanset_t * chan, char * host)
     }
   }
   putlog(LOG_MISC,"*","*** Malformed exemptline for %s.",
-	 chan?chan->name:"global_exempts");
+	 chan?chan->dname:"global_exempts");
 }
 
 static void restore_chaninvite (struct chanset_t * chan, char * host)
@@ -418,7 +418,7 @@ static void restore_chaninvite (struct chanset_t * chan, char * host)
     }
   }
   putlog(LOG_MISC,"*","*** Malformed inviteline for %s.",
-	 chan?chan->name:"global_invites");
+	 chan?chan->dname:"global_invites");
 }
 
 static void restore_ignore(char *host)
@@ -794,7 +794,7 @@ int readuserfile(char *file, struct userrec **ret)
 	    rmspace(s);
 	    fr.match = FR_CHAN;
 	    break_down_flags(fl, &fr, 0);
-	    if (findchan(chname)) {
+	    if (findchan_by_dname(chname)) {
 	      for (cr = u->chanrec; cr; cr = cr->next)
 		if (!rfc_casecmp(cr->channel, chname))
 		  break;
@@ -820,8 +820,7 @@ int readuserfile(char *file, struct userrec **ret)
 	} else if (!strncmp(code, "::", 2)) {
 	  /* channel-specific bans */
 	  strcpy(lasthand, &code[2]);
-	  u = NULL;
-	  if (!findchan(lasthand)) {
+	  if (!findchan_by_dname(lasthand)) {
 	    strcpy(s1, lasthand);
 	    strcat(s1, " ");
 	    if (strstr(ignored, s1) == NULL) {
@@ -834,7 +833,7 @@ int readuserfile(char *file, struct userrec **ret)
 	    /* Remove all bans for this channel to avoid dupes */
 	    /* NOTE only remove bans for when getting a userfile
 	     * from another bot & that channel is shared */
-	    cst = findchan(lasthand);
+	    cst = findchan_by_dname(lasthand);
 	    if ((*ret == userlist) || channel_shared(cst)) {
 	      clear_masks(cst->bans);
 	      cst->bans = NULL;
@@ -847,8 +846,7 @@ int readuserfile(char *file, struct userrec **ret)
 	} else if (strncmp(code, "&&", 2) == 0) {
 	  /* channel-specific exempts */
 	  strcpy(lasthand, &code[2]);
-	  u = NULL;
-	  if (!findchan(lasthand)) {
+	  if (!findchan_by_dname(lasthand)) {
 	    strcpy(s1, lasthand);
 	    strcat(s1, " ");
 	    if (strstr(ignored, s1) == NULL) {
@@ -861,7 +859,7 @@ int readuserfile(char *file, struct userrec **ret)
 	    /* Remove all exempts for this channel to avoid dupes */
 	    /* NOTE only remove exempts for when getting a userfile
 	     * from another bot & that channel is shared */
-	    cst = findchan(lasthand);
+	    cst = findchan_by_dname(lasthand);
 	    if ((*ret == userlist) || channel_shared(cst)) {
 	      clear_masks(cst->exempts);
 	      cst->exempts = NULL;
@@ -874,8 +872,7 @@ int readuserfile(char *file, struct userrec **ret)
 	} else if (strncmp(code, "$$", 2) == 0) {  
 	  /* channel-specific invites */
 	  strcpy(lasthand, &code[2]);
-	  u = NULL;
-	  if (!findchan(lasthand)) {   
+	  if (!findchan_by_dname(lasthand)) {   
 	    strcpy(s1, lasthand);
 	    strcat(s1, " ");
 	    if (strstr(ignored, s1) == NULL) {
@@ -888,7 +885,7 @@ int readuserfile(char *file, struct userrec **ret)
 	    /* Remove all invites for this channel to avoid dupes */
 	    /* NOTE only remove invites for when getting a userfile
 	     * from another bot & that channel is shared */
-	    cst = findchan(lasthand);
+	    cst = findchan_by_dname(lasthand);
 	    if ((*ret == userlist) || channel_shared(cst)) {
 	      clear_masks(cst->invites);
               cst->invites = NULL;
@@ -1042,6 +1039,9 @@ void autolink_cycle(char *start)
 	return;
       if (dcc[i].type == &DCC_FORK_BOT)
 	return;
+      if ((dcc[i].type == &DCC_DNSWAIT) &&
+	  (dcc[i].u.dns && (dcc[i].u.dns->type == &DCC_FORK_BOT)))
+	return;
     }
   }
   if (!start) {
@@ -1107,7 +1107,7 @@ void autolink_cycle(char *start)
 	    putlog(LOG_BOTS, "*", "%s %s", BOT_REJECTING, dcc[i].nick);
 	    chatout("*** %s bot %s\n", p, dcc[i].nick);
 	    botnet_send_unlinked(i, dcc[i].nick, p);
-	    dprintf(i, "bye\n");
+	    dprintf(i, "bye %s\n", BOT_REJECTING);
 	    killsock(dcc[i].sock);
 	    lostdcc(i);
 	  } else if (i < 0) {

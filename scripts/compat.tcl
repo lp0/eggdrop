@@ -6,7 +6,7 @@
 # Tothwolf  06Oct1999: optimized
 # rtc       10Oct1999: added [set|get][dn|up]loads functions
 #
-# $Id: compat.tcl,v 1.4 1999/12/15 02:32:57 guppy Exp $
+# $Id: compat.tcl,v 1.4 1999/12/21 17:35:08 fabian Exp $
 
 proc gethosts {hand} {
   getuser $hand HOSTS

@@ -1,7 +1,7 @@
 #! /path/to/eggdrop
 # ^- set that to the directory eggdrop is in ie "#! /users/lamest/egg/eggdrop"
 #
-# $Id: eggdrop.conf.dist,v 1.44 2000/07/28 05:11:18 guppy Exp $
+# $Id: eggdrop.conf.dist,v 1.21 2000/02/03 21:58:28 fabian Exp $
 #
 # This is a sample configuration file for your bot.  You will definitely
 # want to edit this, to set up your bot.  Right now it creates a bot called
@@ -20,7 +20,7 @@
 
 # IMPORTANT: Remember to make install and cd to the directory it created
 # (~/eggdrop by default) before you continue, running the bot from
-# eggdrop1.4.xx/ will not work.
+# eggdrop1.5/ will not work.
 
 ##### GENERAL STUFF #####
 
@@ -35,24 +35,23 @@ set admin "Lamer <email: lamer@lamest.lame.org>"
 # your botnet, for human curiosity only.
 set network "I.didnt.edit.my.config.file.net"
 
-# what timezone is your bot in? This timezone string specifies
-# the name of your timezone. It must be three or more alpabetic
-# characters long.
-#
-# ie: Central European Time (UTC+1) would be "CET"
+# what timezone is your bot in?
+# The timezone string specifies the name of the timezone and
+# must be three or more alphabetic characters.
+# ex. Central European Time(UTC+1) could be "CET"
 set timezone "EST"
 
-# Offset is the amount of time to be added or subtracted from
-# the local timezone to figure out UTC (aka GMT).
-#
-# If your bot is running west of the Prime Merdidian then your
-# offset will be a positive value; however, if east it will be
-# a negative value. (ie: your timezone is UTC+1, offset would be
-# -1)
+# offset specifies the time value to be added to the local time
+# to get Coordinated Universal Time (UTC aka GMT).
+# The offset is positive if the local timezone is west of the
+# Prime Meridian and negative if it is east.
+# The value(hours) must be between 0 and 24
+# ex. if the timezone is UTC+1 the offset is -1
 set offset "5"
 
-# If you want the timezone setting to take effect for your Eggdrop
-# (ie: logging and logfiles) then uncomment the following line
+# If you dont want to use the timezone setting for scripting
+# purpose only but instead everywhere possible (new) then
+# uncomment the next line.
 #set env(TZ) "$timezone $offset"
 
 # if you're using virtual hosting (your machine has more than 1 IP), you
@@ -120,9 +119,9 @@ set quick-logs 0
 
 # in 'eggdrop.log' put private msgs/ctcps, commands, misc info, and
 # errors from any channel:
-logfile mco * "eggdrop.log"
+logfile mco * "logs/eggdrop.log"
 # in 'lame.log' put joins, parts, kicks, bans, and mode changes from #lamest:
-logfile jk #lamest "lamest.log"
+logfile jk #lamest "logs/lamest.log"
 
 # [0/1] timestamp entries in the log file? (generally a good idea)
 set log-time 1
@@ -169,11 +168,22 @@ set temp-path "/tmp"
 
 # the MOTD is displayed when people dcc chat to the bot.
 # type '.help set motd' in DCC CHAT for tons of motd options.
-set motd "motd"
+set motd "text/motd"
 
 # holds the banner displayed on telnet connections
-set telnet-banner "telnet-banner"
+set telnet-banner "text/banner"
 
+# Specifies what permissions the user, channel and notes files should be set
+# to.  The octal values are the same as for the chmod system command.
+#
+#          u  g  o           u  g  o           u  g  o
+#    0600  rw-------   0400  r--------   0200  -w-------    u - user
+#    0660  rw-rw----   0440  r--r-----   0220  -w--w----    g - group
+#    0666  rw-rw-rw-   0444  r--r--r--   0222  -w--w--w-    o - others
+#
+# Most users will want to leave the permissions set to 0600, to ensure
+# maximum security.
+set userfile-perm 0600
 
 ##### BOTNET #####
 
@@ -255,7 +265,7 @@ set resolve-timeout 15
 # (does anyone besides Sun use this?)
 #set firewall "!sun-barr.ebay:3666"
 
-# if you have a NAT firewall (your box has an IP in one of the following
+# if you have a NAT firewall (you box has an IP in one of the following
 # ranges: 192.168.0.0-192.168.255.255, 172.16.0.0-172.31.255.255,
 # 10.0.0.0-10.255.255.255 and your firewall transparently changes your
 # address to a unique address for your box.) or you have IP masquerading
@@ -353,6 +363,13 @@ set enable-simul 1
 # [0/1] allow +d & +k users to use commands bound as -|- ?
 set allow-dk-cmds 1
 
+# If a bot connects which already seems to be connected, I wait
+# dupwait-timeout seconds before I check again and then finally reject
+# the bot. This is useful to stop hubs from rejecting bots that actually
+# have already disconnected from another hub, but the disconnect information
+# has not yet spread over the botnet due to lag.
+set dupwait-timeout 5
+
 
 
 # You MUST remove this line for this config file to work.  This has been
@@ -378,6 +395,13 @@ die "Please edit your config file."
 # default, otherwise, use your head :)
 set mod-path "modules/"
 
+
+#### DNS MODULE #####
+
+# this module provides asynchronous dns support. This will avoid long
+# periods where the bot just hangs there, waiting for a hostname to
+# resolve, which often let it timeout on all other connections.
+loadmodule dns
 
 ##### CHANNELS MODULE #####
 
@@ -425,25 +449,26 @@ set global-flood-deop 3:10
 set global-flood-kick 3:10
 set global-flood-join 5:60
 set global-flood-ctcp 3:60
-
-set global-idle-kick 0
+set global-flood-nick 5:60
 
 set global-chanset {
         -clearbans      -enforcebans
         +dynamicbans    +userbans
         -autoop         -bitch
         +greet          +protectops
-        +statuslog      +stopnethack
-        -revenge        -secret
-        -autovoice      +cycle
-        +dontkickops    -wasoptest
+        +statuslog      -revenge
+        -secret         -autovoice
+        +cycle          +dontkickops
         -inactive       -protectfriends
         +shared         -seen
 	+userexempts	+dynamicexempts
 	+userinvites	+dynamicinvites
+	-nodesynch
 }
 
 set global-chanmode "nt"
+
+set global-stopnethack-mode 0
 
 # do this for each channel you wish to sit on:
 # NOTE: for some reason Tcl won't let you put comments inside { } -- so
@@ -452,6 +477,7 @@ set global-chanmode "nt"
 channel add #lamest {
   chanmode "+nt-likm"
   idle-kick 0
+  stopnethack-mode 0
   need-op { putserv "PRIVMSG #lamest :op me cos i'm lame!" }
   need-invite { putserv "PRIVMSG #lamest :let me in!" }
   need-key { putserv "PRIVMSG #lamest :let me in!" }
@@ -462,6 +488,7 @@ channel add #lamest {
   flood-kick 3:10
   flood-join 5:60
   flood-ctcp 3:60
+  flood-nick 5:60
 }
 
 # the things inside the { } are CHANNEL OPTIONS -- they can be set within
@@ -474,6 +501,19 @@ channel add #lamest {
 # idle-kick
 #   kick channel members after how many minutes of being idle?
 #   (leave out to disable, or set to 0)
+
+#   stopnethack-mode
+#     de-op anyone who enters the channel with serverops
+#       0 turn off,
+#       1 isoptest (allow serverop if registered op), 
+#       2 wasoptest (allow serverop if op before split)
+#       3 allow serverop if isop or wasop
+#       4 allow serverop if isop and wasop
+#       5 if channel -bitch: see stopnethack-mode 3
+#         if channel +bitch: see stopnethack-mode 1
+#       6 if channel -bitch: see stopnethack-mode 2
+#         if channel +bitch: see stopnethack-mode 4
+
 # need-op
 #   script to run (if any) when the bot needs to be op'd on this channel
 # need-invite
@@ -574,10 +614,6 @@ channel set #lamest +protectfriends
 #   it's annoying; i think it's neat)
 channel set #lamest +statuslog
 
-#   de-op someone that enters the channel with server ops (ie, netsplit
-#   ops) when they didn't have them before the split?
-channel set #lamest +stopnethack
-
 #   remember people who deop/kick/ban the bot or valid ops, and punish them?
 #   users with +f (friend) flag are exempt from revenge
 channel set #lamest +revenge
@@ -600,10 +636,6 @@ channel set #lamest +cycle
 #   clone attacks
 channel set #lamest +dontkickops
 
-#   during net-rejoins does a wasop test for +stopnethack (same as +w user
-#   flag, but affects a whole channel)
-channel set #lamest -wasoptest
-
 #   prevents the bot from joining the channel (or makes it leave the channel
 #   if it is already there).
 #   Can be useful to make the bot leave a channel without loosing it's
@@ -614,6 +646,10 @@ channel set #lamest -inactive
 
 #   respond to seen requests in the channel?  (seen module must be loaded)
 channel set #lamest -seen
+
+#   allow non-ops to perform channel modes?  (Stops bot from
+#   fighting with services such as ChanServ)
+channel set #lamest +nodesynch
 
 # here's a shorter example:
 channel add #botcentral {
@@ -711,7 +747,8 @@ set server-timeout 15
 # if the number of servers on the net gets below this number, it will
 # jump to a new server (ie, it will assume it's on the losing end of a
 # netsplit) -- set to 0 to turn off
-# [most irc networks use TS now, so it's to your advantage to turn this off]
+# [most irc networks use TS or ND now, so it's to your advantage to turn
+# this off]
 set servlimit 0
 
 # [0/1] check for stoned servers? (i.e. Where the server connection has
@@ -762,6 +799,9 @@ set double-help 0
 # Only use this if you set net-type 5
 #set check-mode-r 1
 
+# This variable sets the maximum nick length allowed on the network. Most
+# only support 9. The maximum supported by eggdrop is 32.
+#set nick-len 9
 
 ##### CTCP MODULE #####
 
@@ -791,6 +831,12 @@ set bounce-bans 1
 # [0/1] define this if you want to bounce all the server modes
 set bounce-modes 0
 
+# [0/1] Do you want the bot to kick users who set bogus bans?
+set kick-bogus-bans 1
+
+# [0/1] Do you want the bot to remove bogus bans?
+set bounce-bogus-bans 1
+
 # If there are more than max-bans active bans on a channel, then the
 # bot won't try to put more bans. Thus it won't flood the irc server.
 # ircd 2.9.5 allows 20 bans. ircd 2.10 allows 30 bans (max).
@@ -800,9 +846,14 @@ set max-bans 20
 # 2.10 irc servers.
 set max-modes 30
 
-# [0/1] define this to allow modes from non-op users (ChanServ)
-# or if you use services like X/W to avoid fake op messages
-set allow-desync 0
+# [0/1] Do you want the bot to kick bogus usernames?
+# Remember that if it does, as it won't ban them, it can be at the origin
+# of a nice kick-flood
+set kick-bogus 0
+
+# [0/1] Do you want the bot to ban bogus usernames?
+# Can prevent the above described kick-flood, but can also fill the banlist
+set ban-bogus 0
 
 # [0/1] Do you want the bot to kick for control character/ctcp avalanches
 # to a channel?
@@ -887,6 +938,18 @@ set max-exempts 20
 # server. Only 2.10 irc servers are concerned by these +I modes.
 #  * This is an IRCNET feature
 set max-invites 20
+
+# [0/1] Do you want the bot to remove bogus exempts?
+set bounce-bogus-exempts 0
+
+# [0/1] Do you want the bot to kick users who set bogus exempts?
+set kick-bogus-exempts 0
+
+# [0/1] Do you want the bot to remove bogus invites?
+set bounce-bogus-invites 0
+
+# [0/1] Do you want the bot to kick users who set bogus invites?
+set kick-bogus-invites 0
 
 # The following lines should be left uncommented unless the default values
 # are being over-ridden. By default exempts and invites are on for IRCnet
@@ -1014,6 +1077,11 @@ set xfer-timeout 30
 # NOTE: paranoid people should use this feature on their hub bot - this
 # will force all +host/+user/chpass/etc. changes to be made via the hub
 #set private-user 0
+
+# [0/1] this setting makes the bot discard it's own bot records in favor of
+# the ones sent by the hub. Note: This only works with hubs that are v1.5.1
+# _or higher_.
+#set override-bots 0
 
 
 ##### FILESYSTEM MODULE #####

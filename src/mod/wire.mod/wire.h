@@ -1,7 +1,7 @@
 /* 
  * wire.h -- part of wire.mod
  * 
- * $Id: wire.h,v 1.4 2000/01/08 21:23:17 per Exp $
+ * $Id: wire.h,v 1.3 2000/01/17 22:36:10 fabian Exp $
  */
 /* 
  * Copyright (C) 1999, 2000  Eggheads
@@ -38,4 +38,4 @@
 #define WIRE_UNLOAD		get_language(0xa009)
 #define WIRE_VERSIONERROR	get_language(0xa00a)
 
-#endif                          /* _EGG_MOD_WIRE_WIRE_H */
+#endif				/* _EGG_MOD_WIRE_WIRE_H */

@@ -3,9 +3,7 @@
  *   Tcl stubs for file system commands
  *   Tcl stubs for everything else
  * 
- * dprintf'ized, 1aug1996
- * 
- * $Id: tclmisc.c,v 1.11 2000/08/02 05:05:41 guppy Exp $
+ * $Id: tclmisc.c,v 1.10 2000/01/30 19:26:21 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -26,23 +24,25 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#include "main.h"
 #include <sys/stat.h>
+#include "main.h"
 #include "modules.h"
 #include "tandem.h"
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
 
-extern p_tcl_bind_list  bind_table_list;
-extern tcl_timer_t *timer, *utimer;
-extern struct dcc_t *dcc;
-extern char origbotname[], botnetnick[];
-extern struct userrec *userlist;
-extern time_t now;
-extern module_entry *module_list;
+/* Includes for the tcl_md5 function <Olrick> */
+#include "md5/global.h"
+#include "md5/md5.h"
 
-/***********************************************************************/
+extern tcl_timer_t	*timer, *utimer;
+extern struct dcc_t	*dcc;
+extern char		 origbotname[], botnetnick[];
+extern struct userrec	*userlist;
+extern time_t		 now;
+extern module_entry	*module_list;
+
 
 static int tcl_putlog STDVAR
 {
@@ -113,44 +113,6 @@ static int tcl_timer STDVAR
     x = add_timer(&timer, atoi(argv[1]), argv[2], 0L);
     sprintf(s, "timer%lu", x);
     Tcl_AppendResult(irp, s, NULL);
-  }
-  return TCL_OK;
-}
-
-static int tcl_binds STDVAR
-{
-  struct tcl_bind_mask *hm;
-  p_tcl_bind_list p, kind;
-  tcl_cmd_t *tt;
-  char *list[5], *g, flg[100], hits[160];
-  int matching = 0;
-
-  BADARGS(1, 2, " ?type/mask?");
-
-  kind = find_bind_table(argv[1] ? argv[1] : "");
-  if (!kind && argv[1])
-    matching = 1;
-
-  for (p = kind ? kind : bind_table_list; p; p = kind ? 0 : p->next) {
-    Context;
-    for (hm = p->first; hm; hm = hm->next) {
-      for (tt = hm->first; tt; tt = tt->next) {
-        if (matching && !wild_match(argv[1], p->name) && 
-            !wild_match(argv[1], hm->mask) && 
-            !wild_match(argv[1], tt->func_name))
-          continue;
-	build_flags(flg, &(tt->flags), NULL);
-        sprintf(hits, "%i", (int) tt->hits);
-        list[0] = p->name;
-        list[1] = flg;
-        list[2] = hm->mask;
-        list[3] = hits;
-        list[4] = tt->func_name;
-        g = Tcl_Merge(5, list);
-        Tcl_AppendElement(irp, g);
-        Tcl_Free((char *) g);
-      }
-    }
   }
   return TCL_OK;
 }
@@ -405,7 +367,7 @@ static int tcl_die STDVAR
   botnet_send_bye();
   write_userfile(-1);
   fatal(g, 0);
-  /* should never return, but, to keep gcc happy: */
+  /* Should never return, but, to keep gcc happy: */
   return TCL_OK;
 }
 
@@ -456,6 +418,7 @@ static int tcl_unames STDVAR
   char *unix_n, *vers_n;
 #ifdef HAVE_UNAME
   struct utsname un;
+
   if (uname(&un) < 0) {
 #endif
     unix_n = "*unkown*";
@@ -529,38 +492,60 @@ static int tcl_reloadhelp STDVAR
   return TCL_OK;
 }
 
+static int tcl_md5 STDVAR
+{
+  MD5_CTX       md5context;
+  char          digest_string[33];       /* 32 for digest in hex + null */
+  unsigned char digest[16];
+  int           i;
+
+  Context;
+  BADARGS(2, 2, " string");
+
+  MD5Init(&md5context);
+  MD5Update(&md5context, (unsigned char *)argv[1], strlen(argv[1]));
+  MD5Final(digest, &md5context);
+
+  for(i=0; i<16; i++)
+    sprintf(digest_string + (i*2), "%.2x", digest[i]);
+
+  Tcl_AppendResult(irp, digest_string, NULL);
+
+  return TCL_OK;
+}
+
 tcl_cmds tclmisc_cmds[] =
 {
-  {"putlog", tcl_putlog},
-  {"putcmdlog", tcl_putcmdlog},
-  {"putxferlog", tcl_putxferlog},
-  {"putloglev", tcl_putloglev},
-  {"timer", tcl_timer},
-  {"utimer", tcl_utimer},
-  {"killtimer", tcl_killtimer},
-  {"killutimer", tcl_killutimer},
-  {"unixtime", tcl_unixtime},
-  {"timers", tcl_timers},
-  {"utimers", tcl_utimers},
-  {"ctime", tcl_ctime},
-  {"myip", tcl_myip},
-  {"rand", tcl_rand},
-  {"sendnote", tcl_sendnote},
-  {"dumpfile", tcl_dumpfile},
-  {"dccdumpfile", tcl_dccdumpfile},
-  {"backup", tcl_backup},
-  {"exit", tcl_die},
-  {"die", tcl_die},
-  {"strftime", tcl_strftime},
-  {"unames", tcl_unames},
-  {"unloadmodule", tcl_unloadmodule},
-  {"loadmodule", tcl_loadmodule},
-  {"checkmodule", tcl_loadmodule},
-  {"modules", tcl_modules},
-  {"loadhelp", tcl_loadhelp},
-  {"unloadhelp", tcl_unloadhelp},
-  {"reloadhelp", tcl_reloadhelp},
-  {"duration", tcl_duration},
-  {"binds", tcl_binds},
-  {0, 0}
+  {"putlog",		tcl_putlog},
+  {"putcmdlog",		tcl_putcmdlog},
+  {"putxferlog",	tcl_putxferlog},
+  {"putloglev",		tcl_putloglev},
+  {"timer",		tcl_timer},
+  {"utimer",		tcl_utimer},
+  {"killtimer",		tcl_killtimer},
+  {"killutimer",	tcl_killutimer},
+  {"unixtime",		tcl_unixtime},
+  {"timers",		tcl_timers},
+  {"utimers",		tcl_utimers},
+  {"ctime",		tcl_ctime},
+  {"myip",		tcl_myip},
+  {"rand",		tcl_rand},
+  {"sendnote",		tcl_sendnote},
+  {"dumpfile",		tcl_dumpfile},
+  {"dccdumpfile",	tcl_dccdumpfile},
+  {"backup",		tcl_backup},
+  {"exit",		tcl_die},
+  {"die",		tcl_die},
+  {"strftime",		tcl_strftime},
+  {"unames",		tcl_unames},
+  {"unloadmodule",	tcl_unloadmodule},
+  {"loadmodule",	tcl_loadmodule},
+  {"checkmodule",	tcl_loadmodule},
+  {"modules",		tcl_modules},
+  {"loadhelp",		tcl_loadhelp},
+  {"unloadhelp",	tcl_unloadhelp},
+  {"reloadhelp",	tcl_reloadhelp},
+  {"duration",		tcl_duration},
+  {"md5",		tcl_md5},
+  {NULL,		NULL}
 };

@@ -15,7 +15,7 @@
  * 1.4       1997-11-25      1.2.2.0         Added language addition  Kirk
  * 1.5       1998-07-12      1.3.0.0         Fixed ;me and updated    BB
  * 
- * $Id: wire.c,v 1.12 2000/06/22 03:45:05 guppy Exp $
+ * $Id: wire.c,v 1.11 2000/01/17 22:36:10 fabian Exp $
  */
 /* 
  * Copyright (C) 1999, 2000  Eggheads
@@ -288,7 +288,7 @@ static int cmd_wire(struct userrec *u, int idx, char *par)
 
   Context;
   if (!par[0]) {
-    dprintf(idx, "%s: .wire [<encrypt-key>|OFF|info]\n", MISC_USAGE);
+    dprintf(idx, "%s: .wire [<encrypt-key>|OFF|info]\n", USAGE);
     return 0;
   }
   while (w) {
@@ -436,7 +436,8 @@ static void wire_leave(int sock)
     w2 = w2->next;
   }
   /* Check to see if someone else is using this wire key.
-   * If so, then don't remove the wire filter binding */
+   * If so, then don't remove the wire filter binding.
+   */
   w2 = wirelist;
   while (w2) {
     if (w2 != w && !strcmp(w2->key, w->key))
@@ -537,22 +538,22 @@ static void wire_report(int idx, int details)
 
 static cmd_t wire_dcc[] =
 {
-  {"wire", "", cmd_wire, 0},
-  {"onwire", "", cmd_onwire, 0},
-  {"wirelist", "n", cmd_wirelist, 0},
-  {0, 0, 0, 0}
+  {"wire",	"",	(Function) cmd_wire,		NULL},
+  {"onwire",	"",	(Function) cmd_onwire,		NULL},
+  {"wirelist",	"n",	(Function) cmd_wirelist,	NULL},
+  {NULL,	NULL,	NULL,				NULL}
 };
 
 static cmd_t wire_chof[] =
 {
-  {"*", "", (Function) chof_wire, "wire:chof"},
-  {0, 0, 0, 0}
+  {"*",		"",	(Function) chof_wire,		"wire:chof"},
+  {NULL,	NULL,	NULL,				NULL}
 };
 
 static cmd_t wire_filt[] =
 {
-  {";*", "", (Function) cmd_putwire, "wire:filt"},
-  {0, 0, 0, 0}
+  {";*",	"",	(Function) cmd_putwire,		"wire:filt"},
+  {NULL,	NULL,	NULL,				NULL}
 };
 
 static char *wire_close()
@@ -562,8 +563,9 @@ static char *wire_close()
   char *enctmp;
   p_tcl_bind_list H_temp;
 
-  /* Remove any current wire encrypt bindings
-   * for now, don't worry about duplicate unbinds */
+  /* Remove any current wire encrypt bindings for now, don't worry
+   * about duplicate unbinds.
+   */
   Context;
   while (w) {
     enctmp = encrypt_string(w->key, "wire");
@@ -611,7 +613,7 @@ char *wire_start(Function * global_funcs)
 
   Context;
   module_register(MODULE_NAME, wire_table, 2, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0)) {
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0)) {
     module_undepend(MODULE_NAME);
     return WIRE_VERSIONERROR;
   }
@@ -622,11 +624,7 @@ char *wire_start(Function * global_funcs)
   add_builtins(H_filt, wire_filt);
   H_temp = find_bind_table("chof");
   add_builtins(H_chof, wire_chof);
-  wirelist = 0;
-  /* Absolutely HUGE! change to this module
-   * Ah well, at least the language file gets loaded 'on demand' - Kirk */
+  wirelist = NULL;
   add_lang_section("wire");
-  /* Even better thing is, all the modules can be lang'ed now :)
-   * and you just need this one line at the bottom of the code - Kirk */
   return NULL;
 }

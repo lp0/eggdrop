@@ -1,7 +1,7 @@
 dnl aclocal.m4
 dnl   macros autoconf uses when building configure from configure.in
 dnl
-dnl $Id: aclocal.m4,v 1.14 2000/08/07 16:23:43 guppy Exp $
+dnl $Id: aclocal.m4,v 1.8 2000/02/01 23:35:23 fabian Exp $
 dnl
 AC_DEFUN(EGG_MSG_CONFIGURE_START, [dnl
 AC_MSG_RESULT()
@@ -15,6 +15,11 @@ dnl
 AC_DEFUN(EGG_MSG_CONFIGURE_END, [dnl
 AC_MSG_RESULT()
 AC_MSG_RESULT(Configure is done.)
+AC_MSG_RESULT()
+AC_MSG_RESULT([WARNING!!])
+AC_MSG_RESULT([This is a DEVELOPMENT release! We do not consider it])
+AC_MSG_RESULT([stable. Please report all bugs you find, as long as])
+AC_MSG_RESULT([they are not yet fixed in a later release.])
 AC_MSG_RESULT()
 if test -f "./$EGGEXEC"
 then
@@ -97,7 +102,7 @@ SHLIB_CC="${CC}"
 SHLIB_LD="${CC}"
 SHLIB_STRIP="${STRIP}"
 NEED_DL=1
-DEFAULT_MAKE=eggdrop
+DEFAULT_MAKE=debug
 
 AC_MSG_CHECKING(your OS)
 if eval "test \"`echo '$''{'egg_cv_var_system'+set}'`\" = set"
@@ -109,31 +114,20 @@ fi
 
 case "$egg_cv_var_system" in
   BSD/OS)
-    bsd_version=`${UNAME} -r | cut -d . -f 1` 
-    case "$bsd_version" in 
-      2) 
-      AC_MSG_RESULT(BSD/OS 2 statically linked modules are the only choice)
+    if test "x`${UNAME} -r | cut -d . -f 1`" = "x2"
+    then
+      AC_MSG_RESULT(BSD/OS 2! statically linked modules are the only choice)
       NEED_DL=0
       DEFAULT_MAKE=static
-      ;;
-      3)
-      AC_MSG_RESULT(BSD/OS 3 stuck with an old OS ...)
+    else
+      AC_MSG_RESULT(BSD/OS 3+! ok I spose)
       MOD_CC=shlicc
       MOD_LD=shlicc
       MOD_STRIP="${STRIP} -d"
       SHLIB_LD="shlicc -r"
       SHLIB_STRIP=touch
       AC_DEFINE(MODULES_OK)dnl
-      ;;
-      *)
-      AC_MSG_RESULT(BSD/OS 4+ Eat your heart out Linux!)
-      CFLAGS="$CFLAGS -Wall"
-      MOD_LD="${CC} "
-      MOD_STRIP="${STRIP} -d"
-      SHLIB_LD="${CC} -shared -nostartfiles"
-      AC_DEFINE(MODULES_OK)dnl  
-      ;;	
-    esac
+    fi
     ;;
   CYGWIN*)
     AC_MSG_RESULT(Cygwin)
@@ -143,7 +137,7 @@ case "$egg_cv_var_system" in
   HP-UX)
     AC_MSG_RESULT([HP-UX, just shoot yourself now])
     HPUX=yes
-    MOD_LD="gcc -fPIC -shared"
+    MOD_LD="gcc -Wl,-E"
     SHLIB_CC="gcc -fPIC"
     SHLIB_LD="ld -b"
     NEED_DL=0
@@ -167,19 +161,6 @@ case "$egg_cv_var_system" in
     SHLIB_STRIP=strip
     NEED_DL=0
     DEFAULT_MAKE=static
-    ;;
-  Ultrix)
-    AC_MSG_RESULT(Ultrix)
-    NEED_DL=0
-    SHLIB_STRIP=touch
-    DEFUALT_MAKE=static
-    SHELL=/bin/sh5
-    ;;
-  BeOS)
-    AC_MSG_RESULT(BeOS)
-    NEED_DL=0
-    SHLIB_STRIP=strip
-    DEFUALT_MAKE=static
     ;;
   Linux)
     AC_MSG_RESULT(Linux! The choice of the GNU generation)
@@ -205,7 +186,7 @@ case "$egg_cv_var_system" in
         MOD_CC=cc
         MOD_LD=cc
         SHLIB_CC=cc
-        SHLIB_LD="ld -shared -expect_unresolved \"'*'\""
+        SHLIB_LD="ld -shared -expect_unresolved '*'"
         SHLIB_STRIP=touch
         AC_DEFINE(MODULES_OK)dnl
         ;;
@@ -296,7 +277,6 @@ else
   AC_CHECK_LIB(nsl, connect)
   AC_CHECK_LIB(dns, gethostbyname)
   AC_CHECK_LIB(dl, dlopen)
-  AC_CHECK_LIB(m, tan, EGG_MATH_LIB="-lm")
   # This is needed for Tcl libraries compiled with thread support
   AC_CHECK_LIB(pthread,pthread_mutex_init,
 ac_cv_lib_pthread_pthread_mutex_init=yes,
@@ -312,6 +292,21 @@ ac_cv_lib_pthread_pthread_mutex_init=no)
     fi
   fi
 fi
+])dnl
+dnl
+dnl
+AC_DEFUN(EGG_CHECK_RES_LIBS, [dnl
+AC_CHECK_FUNC(res_init, ,
+  AC_CHECK_LIB(resolv, res_init, RESLIB="-lresolv",
+   AC_CHECK_LIB(bind, res_init, RESLIB="-lbind",
+    AC_MSG_ERROR(No resolver library found))))
+
+AC_CHECK_FUNC(res_mkquery, ,
+  AC_CHECK_LIB(resolv, res_mkquery, RESLIB="-lresolv",
+   AC_CHECK_LIB(bind, res_mkquery, RESLIB="-lbind",
+    AC_MSG_ERROR(No resolver library found))))
+
+AC_SUBST(RESLIB)
 ])dnl
 dnl
 dnl
@@ -363,40 +358,6 @@ then
   EGGEXEC=eggdrop${EXEEXT}
 fi
 AC_SUBST(EGGEXEC)dnl
-])dnl
-dnl
-dnl
-AC_DEFUN(EGG_CHECK_FILEDB_STRUCT, [dnl
-AC_MSG_CHECKING(space left in file database struct)
-
-if eval "test \"`echo '$''{'egg_cv_struct_filedb_size'+set}'`\" = set"
-then
-  echo $ac_n "(cached) $ac_c" 1>&6
-else
-  cat > conftest.$ac_ext << EOF
-#include "confdefs.h"
-#include <stdio.h>
-#include <sys/time.h>
-#include "$srcdir/src/mod/filesys.mod/files.h"
-int main() {
-  fprintf(stdout, "%d/%d %s\n", 512 - sizeof(struct filler), sizeof(filedb), "bytes");
-  return 0;
-}
-EOF
-  if { (eval echo configure: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext}
-  then
-    eval "egg_cv_struct_filedb_size='`./conftest${ac_exeext}`'"
-    rm -rf conftest*
-  else
-    echo "configure: failed program was:" >&5
-    cat conftest.$ac_ext >&5
-    eval "egg_cv_struct_filedb_size=unknown"
-    rm -rf conftest*
-  fi
-  rm -f conftest*
-fi
-AC_MSG_RESULT($egg_cv_struct_filedb_size)
-AC_MSG_RESULT([   (standard is currently 48/512 bytes)])
 ])dnl
 dnl
 dnl
@@ -701,7 +662,6 @@ dnl
 dnl
 AC_DEFUN(EGG_TCL_CHECK_VERSION, [dnl
 # Both TCLLIBFN & TCLINCFN must be set, or we bail
-TCL_FOUND=0
 if test ! "x${TCLLIBFN}" = "x" && test ! "x${TCLINCFN}" = "x"
 then
   TCL_FOUND=1
@@ -767,7 +727,7 @@ dnl
 AC_DEFUN(EGG_TCL_CHECK_PRE70, [dnl
 # Is this version of Tcl too old for us to use ?
 TCL_VER_PRE70=`echo $egg_cv_var_tcl_version | $AWK '{split([$]1, i, "."); if (i[[1]] < 7) print "yes"; else print "no"}'`
-if test "x$TCL_VER_PRE70" = "xyes"
+if test "$TCL_VER_PRE70" = "xyes"
 then
   cat << EOF >&2
 configure: error:
@@ -797,13 +757,13 @@ AC_DEFUN(EGG_TCL_TESTLIBS, [dnl
 # Setup TCL_TESTLIBS for Tcl library tests
 if test ! "x${TCLLIBEXT}" = "x.a"
 then
-  TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB $LIBS"
+  TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS -lm $LIBS"
 else
   if test ! "x${tcllibname}" = "x"
   then
-    TCL_TESTLIBS="$TCLLIB/lib$TCLLIBFN $EGG_MATH_LIB $LIBS"
+    TCL_TESTLIBS="$TCLLIB/lib$TCLLIBFN -lm $LIBS"
   else
-    TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB $LIBS"
+    TCL_TESTLIBS="-L$TCLLIB -l$TCLLIBFNS -lm $LIBS"
   fi
 fi
 if test "x${ac_cv_lib_pthread_pthread_mutex_init}" = "xyes"
@@ -914,7 +874,7 @@ AC_DEFUN(EGG_TCL_LIB_REQS, [dnl
 if test ! "x${TCLLIBEXT}" = "x.a"
 then
   TCL_REQS="$TCLLIB/lib$TCLLIBFN"
-  TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB"
+  TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
 else
 
   # Set default make as static for unshared Tcl library
@@ -940,10 +900,10 @@ EOF
     if test ! "x${tcllibname}" = "x"
     then
       TCL_REQS="$TCLLIB/lib$TCLLIBFN"
-      TCL_LIBS="$TCLLIB/lib$TCLLIBFN $EGG_MATH_LIB"
+      TCL_LIBS="$TCLLIB/lib$TCLLIBFN -lm"
     else
       TCL_REQS="$TCLLIB/lib$TCLLIBFN"
-      TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB"
+      TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
     fi
   else
     cat << EOF >&2
@@ -954,7 +914,7 @@ configure: warning:
 
 EOF
     TCL_REQS="libtcle.a"
-    TCL_LIBS="-L. -ltcle $EGG_MATH_LIB"
+    TCL_LIBS="-L. -ltcle -lm"
   fi
 fi
 AC_SUBST(TCL_REQS)dnl
@@ -1012,7 +972,7 @@ fi
 dnl
 dnl
 AC_DEFUN(EGG_SUBST_EGGVERSION, [dnl
-EGGVERSION=`grep 'char egg_version' $srcdir/src/main.c | $AWK '{gsub(/(\"|\;)/, "", [$]4); print [$]4}'`
+EGGVERSION=`grep 'char.egg_version' src/main.c | $AWK '{gsub(/(\"|\;)/, "", [$]4); print [$]4}'`
 egg_version_num=`echo ${EGGVERSION} | $AWK 'BEGIN { FS = "."; } { printf("%d%02d%02d", [$]1, [$]2, [$]3); }'`
 AC_SUBST(EGGVERSION)dnl
 AC_DEFINE_UNQUOTED(EGG_VERSION, $egg_version_num)dnl
@@ -1026,3 +986,4 @@ then
 fi
 AC_SUBST(DEST)dnl
 ])dnl
+

@@ -2,9 +2,7 @@
  * msgcmds.c -- part of irc.mod
  *   all commands entered via /MSG
  * 
- * dprintf'ized, 4feb1996
- * 
- * $Id: msgcmds.c,v 1.22 2000/06/22 03:45:05 guppy Exp $
+ * $Id: msgcmds.c,v 1.9 2000/01/17 22:36:09 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -32,8 +30,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
   int common = 0;
   int atr = 0;
   struct chanset_t *chan;
-  struct flag_record fr =
-  {FR_GLOBAL, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL, 0, 0, 0, 0, 0};
 
   if ((!learn_users) && (!make_userfile))
     return 0;
@@ -42,12 +39,11 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
   if (u)
     atr = u->flags;
   if (u && !(atr & USER_COMMON)) {
-    dprintf(DP_HELP, "NOTICE %s :%s, %s.\n", nick, IRC_HI, u->handle);
+    dprintf(DP_HELP, "NOTICE %s :%s, %s.\n", IRC_HI, nick, u->handle);
     return 1;
   }
   if (get_user_by_handle(userlist, nick)) {
-    struct flag_record fr =
-    {FR_GLOBAL, 0, 0, 0, 0, 0};
+    struct flag_record fr = {FR_GLOBAL, 0, 0, 0, 0, 0};
     fr.global = atr;
 
     dprintf(DP_HELP, IRC_BADHOST1, IRC_BADHOST1_ARGS);
@@ -60,7 +56,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
     return 1;
   }
   if (strlen(nick) > HANDLEN) {
-    /* crazy dalnet */
+    /* Crazy dalnet */
     dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, IRC_NICKTOOLONG);
     return 1;
   }
@@ -86,7 +82,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
   }
   for (chan = chanset; chan; chan = chan->next) {
     if (ismember(chan, nick))
-      add_chanrec_by_handle(userlist, nick, chan->name);
+      add_chanrec_by_handle(userlist, nick, chan->dname);
   }
   dprintf(DP_HELP, IRC_SALUT1, IRC_SALUT1_ARGS);
   dprintf(DP_HELP, IRC_SALUT2, IRC_SALUT2_ARGS);
@@ -218,10 +214,7 @@ static int msg_ident(char *nick, char *host, struct userrec *u, char *par)
       return 1;
     } else {
       struct chanset_t *chan = chanset;
-      struct flag_record fr =
-      {
-	FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0
-      };
+      struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
       putlog(LOG_CMDS, "*", "(%s!%s) !*! IDENT %s", nick, host, who);
       simple_sprintf(s, "%s!%s", nick, host);
@@ -229,12 +222,15 @@ static int msg_ident(char *nick, char *host, struct userrec *u, char *par)
       dprintf(DP_HELP, "NOTICE %s :%s: %s\n", nick, IRC_ADDHOSTMASK, s1);
       addhost_by_handle(who, s1);
       while (chan) {
-	get_user_flagrec(u2, &fr, chan->name);
-	/* is the channel or the user marked auto-op? */
+	get_user_flagrec(u2, &fr, chan->dname);
+	/* Is the channel or the user marked auto-op? */
 	if ((channel_autoop(chan) || glob_autoop(fr) || chan_autoop(fr)) &&
-           (mx = ismember(chan, nick)) && !chan_hasop(mx) && !chan_sentop(mx) &&	
-           /* are they actually validly +o ? */
-	   (chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))) {
+           (mx = ismember(chan, nick)) &&
+	   /* ... and isn't the user chanop already? */
+	   !chan_hasop(mx) && !chan_sentop(mx) && 
+	   /* ... and are they actually validly +o? */
+	   !chan_sentop(mx) && (chan_op(fr) || (glob_op(fr) &&
+	   !chan_deop(fr)))) {
 	  add_mode(chan, '+', 'o', nick);
           mx->flags |= SENTOP;
         }
@@ -308,7 +304,7 @@ static int msg_info(char *nick, char *host, struct userrec *u, char *par)
     }
   }
   if (par[0] && (strchr(CHANMETA, par[0]) != NULL)) {
-    if (!findchan(chname = newsplit(&par))) {
+    if (!findchan_by_dname(chname = newsplit(&par))) {
       dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_NOMONITOR);
       return 1;
     }
@@ -346,7 +342,8 @@ static int msg_info(char *nick, char *host, struct userrec *u, char *par)
     dprintf(DP_HELP, "NOTICE %s :%s %s\n", nick, IRC_FIELDCHANGED, par);
     if (chname) {
       set_handle_chaninfo(userlist, u->handle, chname, par);
-      putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO %s ...", nick, host, u->handle, chname);
+      putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO %s ...", nick, host, u->handle,
+	     chname);
     } else {
       set_user(&USERENTRY_INFO, u, par);
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO ...", nick, host, u->handle);
@@ -379,8 +376,7 @@ static int msg_info(char *nick, char *host, struct userrec *u, char *par)
 static int msg_who(char *nick, char *host, struct userrec *u, char *par)
 {
   struct chanset_t *chan;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   memberlist *m;
   char s[UHOSTLEN], also[512], *info;
   int i;
@@ -393,10 +389,10 @@ static int msg_who(char *nick, char *host, struct userrec *u, char *par)
     return 1;
   if (!par[0]) {
     dprintf(DP_HELP, "NOTICE %s :%s: /msg %s who <channel>\n", nick,
-	    MISC_USAGE, botname);
+	    USAGE, botname);
     return 0;
   }
-  chan = findchan(par);
+  chan = findchan_by_dname(par);
   if (!chan) {
     dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_NOMONITOR);
     return 0;
@@ -424,7 +420,7 @@ static int msg_who(char *nick, char *host, struct userrec *u, char *par)
     if (info && (info[0] == '@'))
       info++;
     else if (u) {
-      get_handle_chaninfo(u->handle, chan->name, s);
+      get_handle_chaninfo(u->handle, chan->dname, s);
       if (s[0]) {
 	info = s;
 	if (info[0] == '@')
@@ -487,7 +483,7 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! WHOIS %s", nick, host, u->handle, par);
   u2 = get_user_by_handle(userlist, par);
   if (!u2) {
-    /* no such handle -- maybe it's a nickname of someone on a chan? */
+    /* No such handle -- maybe it's a nickname of someone on a chan? */
     ok = 0;
     chan = chanset;
     while (chan && !ok) {
@@ -522,11 +518,11 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
   while (chan != NULL) {
     if (hand_on_chan(chan, u2)) {
       sprintf(s1, "NOTICE %s :[%s] %s %s.", nick, u2->handle,
-	      IRC_ONCHANNOW, chan->name);
+	      IRC_ONCHANNOW, chan->dname);
       ok = 1;
     } else {
-      get_user_flagrec(u, &fr, chan->name);
-      cr = get_chanrec(u2, chan->name);
+      get_user_flagrec(u, &fr, chan->dname);
+      cr = get_chanrec(u2, chan->dname);
       if (cr && (cr->laston > tt) &&
 	  (!channel_hidden(chan) ||
 	   hand_on_chan(chan, u) ||
@@ -538,7 +534,7 @@ static int msg_whois(char *nick, char *host, struct userrec *u, char *par)
 	s[12] = 0;
 	ok = 1;
 	sprintf(s1, "NOTICE %s :[%s] %s %s on %s", nick, u2->handle,
-		IRC_LASTSEENAT, s, chan->name);
+		IRC_LASTSEENAT, s, chan->dname);
       }
     }
     chan = chan->next;
@@ -569,8 +565,7 @@ static int msg_help(char *nick, char *host, struct userrec *u, char *par)
     return 0;
   }
   if (helpdir[0]) {
-    struct flag_record fr =
-    {FR_ANYWH | FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+    struct flag_record fr = {FR_ANYWH | FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
     get_user_flagrec(u, &fr, 0);
     if (!par[0])
@@ -586,13 +581,14 @@ static int msg_help(char *nick, char *host, struct userrec *u, char *par)
   return 1;
 }
 
-/* i guess just op them on every channel they're on */
+/* I guess just op them on every channel they're on, unless they specify
+ * a parameter.
+ */
 static int msg_op(char *nick, char *host, struct userrec *u, char *par)
 {
   struct chanset_t *chan;
   char *pass;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   if (match_my_nick(nick))
     return 1;
@@ -601,7 +597,7 @@ static int msg_op(char *nick, char *host, struct userrec *u, char *par)
     /* Prevent people from gaining ops when no password set */
     if (!u_pass_match(u, "-")) {
       if (par[0]) {
-	chan = findchan(par);
+	chan = findchan_by_dname(par);
 	if (chan && channel_active(chan)) {
 	  get_user_flagrec(u, &fr, par);
 	  if (chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))
@@ -613,7 +609,7 @@ static int msg_op(char *nick, char *host, struct userrec *u, char *par)
       } else {
 	chan = chanset;
 	while (chan != NULL) {
-	  get_user_flagrec(u, &fr, chan->name);
+	  get_user_flagrec(u, &fr, chan->dname);
 	  if (chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))
 	    add_mode(chan, '+', 'o', nick);
 	  chan = chan->next;
@@ -640,16 +636,16 @@ static int msg_key(char *nick, char *host, struct userrec *u, char *par)
   if (u_pass_match(u, pass)) {
     /* Prevent people from getting key with no pass set */
     if (!u_pass_match(u, "-")) {
-      if (!(chan = findchan(par))) {
+      if (!(chan = findchan_by_dname(par))) {
 	dprintf(DP_HELP, "NOTICE %s :%s: /MSG %s key <pass> <channel>\n",
-		nick, MISC_USAGE, botname);
+		nick, USAGE, botname);
 	return 1;
       }
       if (!channel_active(chan)) {
 	dprintf(DP_HELP, "NOTICE %s :%s: %s\n", nick, par, IRC_NOTONCHAN);
 	return 1;
       }
-      chan = findchan(par);
+      chan = findchan_by_dname(par);
       if (chan && channel_active(chan)) {
 	get_user_flagrec(u, &fr, par);
 	if (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) {
@@ -662,9 +658,10 @@ static int msg_key(char *nick, char *host, struct userrec *u, char *par)
 		     nick, host, u->handle, par);
 	    }
 	  } else {
-	    dprintf(DP_HELP, "NOTICE %s :%s: no key set for this channel\n", nick, par);
-	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! KEY %s",
-	         nick, host, u->handle, par);
+	    dprintf(DP_HELP, "NOTICE %s :%s: no key set for this channel\n",
+		    nick, par);
+	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! KEY %s", nick, host, u->handle,
+		   par);
 	  }
 	}
 	return 1;
@@ -675,14 +672,14 @@ static int msg_key(char *nick, char *host, struct userrec *u, char *par)
   return 1;
 }
 
-/* dont have to specify a channel now and can use this command
- * regardless of +autovoice or being a chanop. (guppy 7Jan1999) */
+/* Don't have to specify a channel now and can use this command
+ * regardless of +autovoice or being a chanop. (guppy 7Jan1999)
+ */
 static int msg_voice(char *nick, char *host, struct userrec *u, char *par)
 {
   struct chanset_t *chan;
   char *pass;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   if (match_my_nick(nick))
     return 1;
@@ -690,25 +687,20 @@ static int msg_voice(char *nick, char *host, struct userrec *u, char *par)
   if (u_pass_match(u, pass)) {
     if (!u_pass_match(u, "-")) {
       if (par[0]) {
-	chan = findchan(par);
+	chan = findchan_by_dname(par);
 	if (chan && channel_active(chan)) {
 	  get_user_flagrec(u, &fr, par);
-	  if (chan_voice(fr) || glob_voice(fr) ||
-	      chan_op(fr) || glob_op(fr)) {
+	  if (chan_voice(fr) || glob_voice(fr))
 	    add_mode(chan, '+', 'v', nick);
 	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! VOICE %s",
 		   nick, host, u->handle, par);
-	  } else
-	    putlog(LOG_CMDS, "*", "(%s!%s) !*! failed VOICE %s",
-		nick, host, par);
 	  return 1;
 	}
       } else {
 	chan = chanset;
 	while (chan != NULL) {
-	  get_user_flagrec(u, &fr, chan->name);
-	  if (chan_voice(fr) || glob_voice(fr) ||
-	      chan_op(fr) || glob_op(fr))
+	  get_user_flagrec(u, &fr, chan->dname);
+	  if (chan_voice(fr) || glob_voice(fr))
 	    add_mode(chan, '+', 'v', nick);
 	  chan = chan->next;
 	}
@@ -725,8 +717,7 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
 {
   char *pass;
   struct chanset_t *chan;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   if (match_my_nick(nick))
     return 1;
@@ -736,7 +727,7 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
   if (u_pass_match(u, pass)) {
     if (par[0] == '*') {
       for (chan = chanset; chan; chan = chan->next) {
-	get_user_flagrec(u, &fr, chan->name);
+	get_user_flagrec(u, &fr, chan->dname);
 	if ((chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) &&
 	    (chan->channel.mode & CHANINV))
 	  dprintf(DP_SERVER, "INVITE %s %s\n", nick, chan->name);
@@ -745,16 +736,16 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
 	     u->handle);
       return 1;
     }
-    if (!(chan = findchan(par))) {
+    if (!(chan = findchan_by_dname(par))) {
       dprintf(DP_HELP, "NOTICE %s :%s: /MSG %s invite <pass> <channel>\n",
-	      nick, MISC_USAGE, botname);
+	      nick, USAGE, botname);
       return 1;
     }
     if (!channel_active(chan)) {
       dprintf(DP_HELP, "NOTICE %s :%s: %s\n", nick, par, IRC_NOTONCHAN);
       return 1;
     }
-    /* we need to check access here also (dw 991002) */
+    /* We need to check access here also (dw 991002) */
     get_user_flagrec(u, &fr, par);
     if (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) {
       dprintf(DP_SERVER, "INVITE %s %s\n", nick, par);
@@ -775,7 +766,6 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
   char *pass;
   int i, l;
   struct chanset_t *chan;
-
 #ifdef HAVE_UNAME
   struct utsname un;
 
@@ -807,12 +797,13 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
   if (admin[0])
     dprintf(DP_HELP, "NOTICE %s :Admin: %s\n", nick, admin);
   /* Fixed previous lame code. Well it's still lame, will overflow the
-   * buffer with a long channel-name. <cybah> */
+   * buffer with a long channel-name. <cybah>
+   */
   Context;
   strcpy(s, "Channels: ");
   l = 10;
   for (chan = chanset; chan; chan = chan->next) {
-    l += my_strcpy(s + l, chan->name);
+    l += my_strcpy(s + l, chan->dname);
     if (!channel_active(chan))
       l += my_strcpy(s + l, " (trying)");
     else if (channel_pending(chan))
@@ -834,9 +825,8 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
   }
   Context;
   i = count_users(userlist);
-  dprintf(DP_HELP, "NOTICE %s :%d user%s  (mem: %uk)\n", nick, i, i == 1 ? "" : "s",
-	  (int) (expected_memory() / 1024));
-  /* waiting for beldin to make it extern */
+  dprintf(DP_HELP, "NOTICE %s :%d user%s  (mem: %uk)\n", nick, i,
+	  i == 1 ? "" : "s", (int) (expected_memory() / 1024));
   daysdur(now, server_online, s);
   dprintf(DP_HELP, "NOTICE %s :Connected %s\n", nick, s);
   dprintf(DP_HELP, "NOTICE %s :Online as: %s!%s\n", nick, botname,
@@ -884,20 +874,16 @@ static int msg_die(char *nick, char *host, struct userrec *u, char *par)
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! DIE", nick, host, u->handle);
   dprintf(-serv, "NOTICE %s :%s\n", nick, BOT_MSGDIE);
-  if (!par[0])
   simple_sprintf(s, "BOT SHUTDOWN (authorized by %s)", u->handle);
-  else
-    simple_sprintf(s, "BOT SHUTDOWN (%s: %s)", u->handle, par);
   chatout("*** %s\n", s);
   botnet_send_chat(-1, botnetnick, s);
   botnet_send_bye();
-  if (!par[0]) {
+  if (!par[0])
     nuke_server(nick);
-  } else {
+  else
     nuke_server(par);
-  }
   write_userfile(-1);
-  sleep(1);			/* give the server time to understand */
+  sleep(1);			/* Give the server time to understand */
   sprintf(s, "DEAD BY REQUEST OF %s!%s", nick, host);
   fatal(s, 0);
   return 1;
@@ -955,7 +941,7 @@ static int msg_reset(char *nick, char *host, struct userrec *u, char *par)
     return 1;
   }
   if (par[0]) {
-    chan = findchan(par);
+    chan = findchan_by_dname(par);
     if (!chan) {
       dprintf(DP_HELP, "NOTICE %s :%s: %s\n", nick, par, IRC_NOMONITOR);
       return 0;
@@ -979,15 +965,14 @@ static int msg_go(char *nick, char *host, struct userrec *u, char *par)
 {
   struct chanset_t *chan;
   int ok = 0, ok2 = 0;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   if (match_my_nick(nick))
     return 1;
   if (!u)
     return 0;
   if (par[0]) {
-    chan = findchan(par);
+    chan = findchan_by_dname(par);
     if (!chan)
       return 0;
     if (!(chan->status & CHAN_ACTIVE)) {
@@ -1003,11 +988,11 @@ static int msg_go(char *nick, char *host, struct userrec *u, char *par)
     }
     if (!me_op(chan)) {
       dprintf(DP_SERVER, "PART %s\n", chan->name);
-      putlog(LOG_CMDS, chan->name, "(%s!%s) !%s! GO %s", nick, host,
+      putlog(LOG_CMDS, chan->dname, "(%s!%s) !%s! GO %s", nick, host,
 	     u->handle, par);
       return 1;
     }
-    putlog(LOG_CMDS, chan->name, "(%s!%s) !%s! failed GO %s (i'm chop)",
+    putlog(LOG_CMDS, chan->dname, "(%s!%s) !%s! failed GO %s (i'm chop)",
 	   nick, host, u->handle, par);
     return 1;
   }
@@ -1050,7 +1035,7 @@ static int msg_jump(char *nick, char *host, struct userrec *u, char *par)
       dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_NOPASS);
     return 1;
   }
-  s = newsplit(&par);		/* password */
+  s = newsplit(&par);		/* Password */
   if (u_pass_match(u, s)) {
     if (par[0]) {
       s = newsplit(&par);
@@ -1072,33 +1057,35 @@ static int msg_jump(char *nick, char *host, struct userrec *u, char *par)
   return 1;
 }
 
-/* MSG COMMANDS */
-/* function call should be:
- * int msg_cmd("handle","nick","user@host","params");
- * function is responsible for any logging
- * (return 1 if successful, 0 if not) */
-/* update the add/rem_builtins in irc.c if you add to this list!! */
+/* MSG COMMANDS
+ *
+ * Function call should be:
+ *    int msg_cmd("handle","nick","user@host","params");
+ *
+ * The function is responsible for any logging. Return 1 if successful,
+ * 0 if not.
+ */
 static cmd_t C_msg[] =
 {
-  {"addhost", "", (Function) msg_addhost, NULL},
-  {"die", "n", (Function) msg_die, NULL},
-  {"go", "", (Function) msg_go, NULL},
-  {"hello", "", (Function) msg_hello, NULL},
-  {"help", "", (Function) msg_help, NULL},
-  {"ident", "", (Function) msg_ident, NULL},
-  {"info", "", (Function) msg_info, NULL},
-  {"invite", "o|o", (Function) msg_invite, NULL},
-  {"jump", "m", (Function) msg_jump, NULL},
-  {"key", "o|o", (Function) msg_key, NULL},
-  {"memory", "m", (Function) msg_memory, NULL},
-  {"op", "", (Function) msg_op, NULL},
-  {"pass", "", (Function) msg_pass, NULL},
-  {"rehash", "m", (Function) msg_rehash, NULL},
-  {"reset", "m", (Function) msg_reset, NULL},
-  {"save", "m", (Function) msg_save, NULL},
-  {"status", "m|m", (Function) msg_status, NULL},
-  {"voice", "", (Function) msg_voice, NULL},
-  {"who", "", (Function) msg_who, NULL},
-  {"whois", "", (Function) msg_whois, NULL},
-  {0, 0, 0, 0}
+  {"addhost",		"",	(Function) msg_addhost,		NULL},
+  {"die",		"n",	(Function) msg_die,		NULL},
+  {"go",		"",	(Function) msg_go,		NULL},
+  {"hello",		"",	(Function) msg_hello,		NULL},
+  {"help",		"",	(Function) msg_help,		NULL},
+  {"ident",		"",	(Function) msg_ident,		NULL},
+  {"info",		"",	(Function) msg_info,		NULL},
+  {"invite",		"o|o",	(Function) msg_invite,		NULL},
+  {"jump",		"m",	(Function) msg_jump,		NULL},
+  {"key",		"o|o",	(Function) msg_key,		NULL},
+  {"memory",		"m",	(Function) msg_memory,		NULL},
+  {"op",		"",	(Function) msg_op,		NULL},
+  {"pass",		"",	(Function) msg_pass,		NULL},
+  {"rehash",		"m",	(Function) msg_rehash,		NULL},
+  {"reset",		"m",	(Function) msg_reset,		NULL},
+  {"save",		"m",	(Function) msg_save,		NULL},
+  {"status",		"m|m",	(Function) msg_status,		NULL},
+  {"voice",		"",	(Function) msg_voice,		NULL},
+  {"who",		"",	(Function) msg_who,		NULL},
+  {"whois",		"",	(Function) msg_whois,		NULL},
+  {NULL,		NULL,	NULL,				NULL}
 };

@@ -1,7 +1,8 @@
 /* 
  * filesys.c -- part of filesys.mod
+ *   main file of the filesys eggdrop module
  * 
- * $Id: filesys.c,v 1.17 2000/01/11 13:37:19 per Exp $
+ * $Id: filesys.c,v 1.23 2000/02/01 20:36:18 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -27,64 +28,69 @@
 #define MODULE_NAME "filesys"
 #define MAKING_FILESYS
 #ifdef HAVE_CONFIG_H
-#include "../../config.h"
+# include "../../config.h"
 #endif
 #include <sys/file.h>
 #if HAVE_DIRENT_H
-#include <dirent.h>
-#define NAMLEN(dirent) strlen((dirent)->d_name)
+# include <dirent.h>
+# define NAMLEN(dirent) strlen((dirent)->d_name)
 #else
-#define dirent direct
-#define NAMLEN(dirent) (dirent)->d_namlen
-#if HAVE_SYS_NDIR_H
-#include <sys/ndir.h>
-#endif
-#if HAVE_SYS_DIR_H
-#include <sys/dir.h>
-#endif
-#if HAVE_NDIR_H
-#include <ndir.h>
-#endif
+# define dirent direct
+# define NAMLEN(dirent) (dirent)->d_namlen
+# if HAVE_SYS_NDIR_H
+#  include <sys/ndir.h>
+# endif
+# if HAVE_SYS_DIR_H
+#  include <sys/dir.h>
+# endif
+# if HAVE_NDIR_H
+#  include <ndir.h>
+# endif
 #endif
 #include "../module.h"
+#include "filedb3.h"
 #include "filesys.h"
 #include "../../tandem.h"
 #include "files.h"
+#include "dbcompat.h"
+#include "filelist.h"
 
 static p_tcl_bind_list H_fil;
 static Function *transfer_funcs = NULL;
 
 /* fcntl.h sets this :/ */
-#undef global			/* fcntl.h sets this :/ */
+#undef global
 static Function *global = NULL;
 
-/* root dcc directory */
-static char dccdir[121];
+/* Root dcc directory */
+static char dccdir[121] = "";
 
-/* directory to put incoming dcc's into */
-static char dccin[121];
+/* Directory to put incoming dcc's into */
+static char dccin[121] = "";
 
-/* let all uploads go to the user's current directory? */
+/* Let all uploads go to the user's current directory? */
 static int upload_to_cd = 0;
 
-/* maximum allowable file size for dcc send (1M) */
+/* Maximum allowable file size for dcc send (1M) */
 static int dcc_maxsize = 1024;
 
-/* maximum number of users can be in the file area at once */
+/* Maximum number of users can be in the file area at once */
 static int dcc_users = 0;
 
-/* where to put the filedb, if not in a hidden '.filedb' file in */
-/* each directory */
-static char filedb_path[121];
+/* Where to put the filedb, if not in a hidden '.filedb' file in
+ * each directory.
+ */
+static char filedb_path[121] = "";
 
+/* Prototypes */
 static int is_valid();
-
 static void eof_dcc_files(int idx);
 static void dcc_files(int idx, char *buf, int i);
 static void disp_dcc_files(int idx, char *buf);
 static int expmem_dcc_files(void *x);
 static void kill_dcc_files(int idx, void *x);
 static void out_dcc_files(int idx, char *buf, void *x);
+static char *mktempfile(char *filename);
 
 static struct dcc_table DCC_FILES =
 {
@@ -92,8 +98,8 @@ static struct dcc_table DCC_FILES =
   DCT_MASTER | DCT_VALIDIDX | DCT_SHOWWHO | DCT_SIMUL | DCT_CANBOOT | DCT_FILES,
   eof_dcc_files,
   dcc_files,
-  0,
-  0,
+  NULL,
+  NULL,
   disp_dcc_files,
   expmem_dcc_files,
   kill_dcc_files,
@@ -102,34 +108,36 @@ static struct dcc_table DCC_FILES =
 
 static struct user_entry_type USERENTRY_DCCDIR =
 {
-  0,				/* always 0 ;) */
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
-  0,
+  NULL,				/* always NULL ;) */
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
+  NULL,
   "DCCDIR"
 };
 
-#include "filedb.c"
 #include "files.c"
+#include "filedb3.c"
 #include "tclfiles.c"
+#include "dbcompat.c"
+#include "filelist.c"
 
-/* check for tcl-bound file command, return 1 if found */
-/* fil: proc-name <handle> <dcc-handle> <args...> */
+/* Check for tcl-bound file command, return 1 if found
+ * fil: proc-name <handle> <dcc-handle> <args...>
+ */
 static int check_tcl_fil(char *cmd, int idx, char *args)
 {
   int x;
   char s[5];
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   Context;
   get_user_flagrec(dcc[idx].user, &fr, dcc[idx].u.file->chat->con_chan);
@@ -193,7 +201,8 @@ static void dcc_files_pass(int idx, char *buf, int x)
   lostdcc(idx);
 }
 
-/* hash function for file area commands */
+/* Hash function for file area commands.
+ */
 static int got_files_cmd(int idx, char *msg)
 {
   char *code;
@@ -239,7 +248,7 @@ static void dcc_files(int idx, char *buf, int i)
 
       dprintf(idx, "Returning you to command mode...\n");
       ci = dcc[idx].u.file->chat;
-      nfree(dcc[idx].u.file);
+      my_free(dcc[idx].u.file);
       dcc[idx].u.chat = ci;
       dcc[idx].status &= (~STAT_CHAT);
       dcc[idx].type = &DCC_CHAT;
@@ -325,7 +334,7 @@ static int cmd_files(struct userrec *u, int idx, char *par)
       if (!welcome_to_files(idx)) {
 	struct chat_info *ci = dcc[idx].u.file->chat;
 
-	nfree(dcc[idx].u.file);
+	my_free(dcc[idx].u.file);
 	dcc[idx].u.chat = ci;
 	dcc[idx].type = &DCC_CHAT;
 	putlog(LOG_FILES, "*", "File system broken.");
@@ -343,12 +352,8 @@ static int cmd_files(struct userrec *u, int idx, char *par)
   return 0;
 }
 
-#define DCCSEND_OK     0
-#define DCCSEND_FULL   1	/* dcc table is full */
-#define DCCSEND_NOSOCK 2	/* can't open a listening socket */
-#define DCCSEND_BADFN  3	/* no such file */
-
-static int _dcc_send(int idx, char *filename, char *nick, char *dir)
+static int _dcc_send(int idx, char *filename, char *nick, char *dir,
+		     int resend)
 {
   int x;
   char *nfn, *buf = NULL;
@@ -356,112 +361,144 @@ static int _dcc_send(int idx, char *filename, char *nick, char *dir)
   Context;
   if (strlen(nick) > HANDLEN)
     nick[HANDLEN] = 0;
-  x = raw_dcc_send(filename, nick, dcc[idx].nick, dir);
+  if (resend)
+    x = raw_dcc_resend(filename, nick, dcc[idx].nick, dir);
+  else
+    x = raw_dcc_send(filename, nick, dcc[idx].nick, dir);
   if (x == DCCSEND_FULL) {
     dprintf(idx, "Sorry, too many DCC connections.  (try again later)\n");
-    putlog(LOG_FILES, "*", "DCC connections full: GET %s [%s]", filename,
-	   dcc[idx].nick);
+    putlog(LOG_FILES, "*", "DCC connections full: %sGET %s [%s]", filename,
+	   resend ? "RE" : "", dcc[idx].nick);
     return 0;
   }
   if (x == DCCSEND_NOSOCK) {
     if (reserved_port) {
       dprintf(idx, "My DCC SEND port is in use.  Try later.\n");
-      putlog(LOG_FILES, "*", "DCC port in use (can't open): GET %s [%s]",
-	     filename, dcc[idx].nick);
+      putlog(LOG_FILES, "*", "DCC port in use (can't open): %sGET %s [%s]",
+	     resend ? "RE" : "", filename, dcc[idx].nick);
     } else {
       dprintf(idx, "Unable to listen at a socket.\n");
-      putlog(LOG_FILES, "*", "DCC socket error: GET %s [%s]", filename,
-	     dcc[idx].nick);
+      putlog(LOG_FILES, "*", "DCC socket error: %sGET %s [%s]", filename,
+	     resend ? "RE" : "", dcc[idx].nick);
     }
     return 0;
   }
   if (x == DCCSEND_BADFN) {
     dprintf(idx, "File not found (???)\n");
-    putlog(LOG_FILES, "*", "DCC file not found: GET %s [%s]", filename,
+    putlog(LOG_FILES, "*", "DCC file not found: %sGET %s [%s]", filename,
+	   resend ? "RE" : "", dcc[idx].nick);
+    return 0;
+  }
+  if (x == DCCSEND_FEMPTY) {
+    dprintf(idx, "The file is empty.  Aborted transfer.\n");
+    putlog(LOG_FILES, "*", "DCC file is empty: %s [%s]", filename,
 	   dcc[idx].nick);
     return 0;
   }
-  nfn = strrchr(filename, '/');
+  nfn = strrchr(dir, '/');
   if (nfn == NULL)
-    nfn = filename;
+    nfn = dir;
   else
     nfn++;
+
+  /* Eliminate any spaces in the filename. */
   if (strchr(nfn, ' ')) {
     char *p;
 
-    buf = nmalloc(strlen(nfn) + 1);
-    strcpy(buf, nfn);
+    malloc_strcpy(buf, nfn);
     p = nfn = buf;
     while ((p = strchr(p, ' ')) != NULL)
       *p = '_';
   }
+    
   if (strcasecmp(nick, dcc[idx].nick))
-    dprintf(DP_HELP, "NOTICE %s :Here is a file from %s ...\n", nick, dcc[idx].nick);
-  dprintf(idx, "Type '/DCC GET %s %s' to receive.\n", botname, nfn);
-  dprintf(idx, "Sending: %s to %s\n", nfn, nick);
-  if (buf)
-    nfree(buf);
+    dprintf(DP_HELP, "NOTICE %s :Here is %s file from %s %s...\n", nick,
+	    resend ? "the" : "a", dcc[idx].nick, resend ? "again " : "");
+  dprintf(idx, "Type '/DCC %sGET %s %s' to receive.\n", resend ? "RE" : "",
+	  botname, nfn);
+  dprintf(idx, "%sending: %s to %s\n", resend ? "Res" : "S", nfn, nick);
+  my_free(buf);
   return 1;
 }
 
-static int do_dcc_send(int idx, char *dir, char *fn, char *nick)
+static int do_dcc_send(int idx, char *dir, char *fn, char *nick, int resend)
 {
-  char s[161], s1[161];
+  char *s = NULL, *s1 = NULL;
   FILE *f;
   int x;
 
   Context;
-  if (strlen(nick) > NICKMAX)
+  if (nick && (strlen(nick) > NICKMAX))
     nick[NICKMAX] = 0;
   if (dccdir[0] == 0) {
     dprintf(idx, "DCC file transfers not supported.\n");
-    putlog(LOG_FILES, "*", "Refused dcc get %s from [%s]", fn, dcc[idx].nick);
+    putlog(LOG_FILES, "*", "Refused dcc %sget %s from [%s]", resend ? "re" : "",
+	   fn, dcc[idx].nick);
     return 0;
   }
   if (strchr(fn, '/') != NULL) {
     dprintf(idx, "Filename cannot have '/' in it...\n");
-    putlog(LOG_FILES, "*", "Refused dcc get %s from [%s]", fn, dcc[idx].nick);
+    putlog(LOG_FILES, "*", "Refused dcc %sget %s from [%s]", resend ? "re" : "",
+	   fn, dcc[idx].nick);
     return 0;
   }
-  if (dir[0])
+  if (dir[0]) {
+    s = nmalloc(strlen(dccdir) + strlen(dir) + strlen(fn) + 2);
     sprintf(s, "%s%s/%s", dccdir, dir, fn);
-  else
+  } else {
+    s = nmalloc(strlen(dccdir) + strlen(fn) + 1);
     sprintf(s, "%s%s", dccdir, fn);
+  }
   f = fopen(s, "r");
   if (f == NULL) {
     dprintf(idx, "No such file.\n");
-    putlog(LOG_FILES, "*", "Refused dcc get %s from [%s]", fn, dcc[idx].nick);
+    putlog(LOG_FILES, "*", "Refused dcc %sget %s from [%s]", resend ? "re" : "",
+	   fn, dcc[idx].nick);
+    my_free(s);
     return 0;
   }
   fclose(f);
-  if (!nick[0])
+  if (!nick || !nick[0])
     nick = dcc[idx].nick;
-  /* already have too many transfers active for this user?  queue it */
+  /* Already have too many transfers active for this user?  queue it */
   if (at_limit(nick)) {
     char xxx[1024];
 
     sprintf(xxx, "%d*%s%s", strlen(dccdir), dccdir, dir);
     queue_file(xxx, fn, dcc[idx].nick, nick);
     dprintf(idx, "Queued: %s to %s\n", fn, nick);
+    my_free(s);
     return 1;
   }
   if (copy_to_tmp) {
-    /* copy this file to /tmp */
+    char *tempfn = mktempfile(fn);
+
+    /* Copy this file to /tmp, add a random prefix to the filename. */
+    s = nrealloc(s, strlen(dccdir) + strlen(dir) + strlen(fn) + 2); 
     sprintf(s, "%s%s%s%s", dccdir, dir, dir[0] ? "/" : "", fn);
-    sprintf(s1, "%s%s", tempdir, fn);
+    s1 = nrealloc(s1, strlen(tempdir) + strlen(tempfn) + 1);
+    sprintf(s1, "%s%s", tempdir, tempfn);
+    my_free(tempfn);
     if (copyfile(s, s1) != 0) {
       dprintf(idx, "Can't make temporary copy of file!\n");
       putlog(LOG_FILES | LOG_MISC, "*",
-	     "Refused dcc get %s: copy to %s FAILED!",
-	     fn, tempdir);
+	     "Refused dcc %sget %s: copy to %s FAILED!",
+	     resend ? "re" : "", fn, tempdir);
+      my_free(s);
+      my_free(s1);
       return 0;
     }
-  } else
+  } else {
+    s1 = nrealloc(s1, strlen(dccdir) + strlen(dir) + strlen(fn) + 2); 
     sprintf(s1, "%s%s%s%s", dccdir, dir, dir[0] ? "/" : "", fn);
+  }
+  s = nrealloc(s, strlen(dir) + strlen(fn) + 2);
   sprintf(s, "%s%s%s", dir, dir[0] ? "/" : "", fn);
-  x = _dcc_send(idx, s1, nick, s);
+  x = _dcc_send(idx, s1, nick, s, resend);
   if (x != DCCSEND_OK)
     wipe_tmp_filename(s1, -1);
+  my_free(s);
+  my_free(s1);
   return x;
 }
 
@@ -516,7 +553,7 @@ static void kill_dcc_files(int idx, void *x)
 
   if (f->chat)
     DCC_CHAT.kill(idx, f->chat);
-  nfree(x);
+  my_free(x);
 }
 
 static void eof_dcc_files(int idx)
@@ -550,24 +587,24 @@ static void out_dcc_files(int idx, char *buf, void *x)
 
 static cmd_t mydcc[] =
 {
-  {"files", "-", cmd_files, NULL},
-  {0, 0, 0, 0}
+  {"files",		"-",	cmd_files,		NULL},
+  {NULL,		NULL,	NULL,			NULL}
 };
 
 static tcl_strings mystrings[] =
 {
-  {"files-path", dccdir, 120, STR_DIR | STR_PROTECT},
-  {"incoming-path", dccin, 120, STR_DIR | STR_PROTECT},
-  {"filedb-path", filedb_path, 120, STR_DIR | STR_PROTECT},
-  {NULL, NULL, 0, 0}
+  {"files-path",	dccdir,		120,	STR_DIR | STR_PROTECT},
+  {"incoming-path",	dccin,		120,	STR_DIR | STR_PROTECT},
+  {"filedb-path",	filedb_path,	120,	STR_DIR | STR_PROTECT},
+  {NULL,		NULL,		0,	0}
 };
 
 static tcl_ints myints[] =
 {
-  {"max-filesize", &dcc_maxsize},
-  {"max-file-users", &dcc_users},
-  {"upload-to-pwd", &upload_to_cd},
-  {NULL, NULL}
+  {"max-filesize",	&dcc_maxsize},
+  {"max-file-users",	&dcc_users},
+  {"upload-to-pwd",	&upload_to_cd},
+  {NULL,		NULL}
 };
 
 static struct dcc_table DCC_FILES_PASS =
@@ -576,7 +613,7 @@ static struct dcc_table DCC_FILES_PASS =
   0,
   eof_dcc_files,
   dcc_files_pass,
-  0,
+  NULL,
   tout_dcc_files_pass,
   disp_dcc_files_pass,
   expmem_dcc_files,
@@ -584,15 +621,20 @@ static struct dcc_table DCC_FILES_PASS =
   out_dcc_files
 };
 
-/* received a ctcp-dcc */
+
+static void filesys_dcc_send_hostresolved(int);
+	
+/* Received a ctcp-dcc.
+ */
 static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
 			     char *text)
 {
-  char *param, *ip, *prt, buf[512], s1[512], *msg = buf;
-  FILE *f;
-  int atr = u ? u->flags : 0, i, j;
+  char *param, *ip, *prt, *buf = NULL, *msg;
+  int atr = u ? u->flags : 0, i;
 
   Context;
+  buf = nmalloc(strlen(text) + 1);
+  msg = buf;
   strcpy(buf, text);
   param = newsplit(&msg);
   if (!(atr & USER_XFER)) {
@@ -613,7 +655,7 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
     ip = newsplit(&msg);
     prt = newsplit(&msg);
     if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
-      /* invalid port range, do clients even use over 5000?? */
+      /* Invalid port range. */
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
 	      DCC_CONNECTFAILED1);
       putlog(LOG_FILES, "*", "Refused dcc send %s (%s): invalid port", param,
@@ -631,85 +673,162 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
 	     nick);
     } else {
       /* This looks like a good place for a sanity check. */
-      if (!sanitycheck_dcc(nick, from, ip, prt))
+      if (!sanitycheck_dcc(nick, from, ip, prt)) {
+	my_free(buf);
 	return;
-      i = new_dcc(&DCC_FORK_SEND, sizeof(struct xfer_info));
+      }
+      i = new_dcc(&DCC_DNSWAIT, sizeof(struct dns_info));
 
       if (i < 0) {
 	dprintf(DP_HELP, "NOTICE %s :Sorry, too many DCC connections.\n",
 		nick);
 	putlog(LOG_MISC, "*", "DCC connections full: SEND %s (%s!%s)",
 	       param, nick, from);
+	return;
       }
       dcc[i].addr = my_atoul(ip);
       dcc[i].port = atoi(prt);
-      dcc[i].sock = -1;
+      dcc[i].sock = (-1);
+      dcc[i].user = u;
       strcpy(dcc[i].nick, nick);
       strcpy(dcc[i].host, from);
-      if (param[0] == '.')
-	param[0] = '_';
-      strncpy(dcc[i].u.xfer->filename, param, 120);
-      dcc[i].u.xfer->filename[120] = 0;
-      if (upload_to_cd) {
-	char *p = get_user(&USERENTRY_DCCDIR, u);
+      dcc[i].u.dns->cbuf = get_data_ptr(strlen(param) + 1);
+      strcpy(dcc[i].u.dns->cbuf, param);
+      dcc[i].u.dns->ibuf = atoi(msg);
+      dcc[i].u.dns->ip = dcc[i].addr;
+      dcc[i].u.dns->dns_type = RES_HOSTBYIP;
+      dcc[i].u.dns->dns_success = (Function) filesys_dcc_send_hostresolved;
+      dcc[i].u.dns->dns_failure = (Function) filesys_dcc_send_hostresolved;
+      dcc[i].u.dns->type = &DCC_FORK_SEND;
+      dcc_dnshostbyip(dcc[i].addr);
+    }
+  }
+  my_free(buf);
+}
 
-	if (p)
-	  sprintf(dcc[i].u.xfer->dir, "%s%s/", dccdir, p);
-	else
-	  sprintf(dcc[i].u.xfer->dir, "%s", dccdir);
-      } else
-	strcpy(dcc[i].u.xfer->dir, dccin);
-      dcc[i].u.xfer->length = atoi(msg);
-      sprintf(s1, "%s%s", dcc[i].u.xfer->dir, param);
-      Context;
-      f = fopen(s1, "r");
-      if (f) {
-	fclose(f);
-	dprintf(DP_HELP, "NOTICE %s :That file already exists.\n", nick);
-	lostdcc(i);
-      } else {
-	/* check for dcc-sends in process with the same filename */
-	for (j = 0; j < dcc_total; j++)
-	  if (j != i) {
-	    if ((dcc[j].type->flags & (DCT_FILETRAN | DCT_FILESEND))
-		== (DCT_FILETRAN | DCT_FILESEND)) {
-	      if (!strcmp(param, dcc[j].u.xfer->filename)) {
-		dprintf(DP_HELP,
-		  "NOTICE %s :That file is already being sent.\n", nick);
-		lostdcc(i);
-		return;
-	      }
-	    }
-	  }
-	/* put uploads in /tmp first */
-	sprintf(s1, "%s%s", tempdir, param);
-	dcc[i].u.xfer->f = fopen(s1, "w");
-	if (dcc[i].u.xfer->f == NULL) {
-	  dprintf(DP_HELP,
-		  "NOTICE %s :Can't create that file (temp dir error)\n",
-		  nick);
-	  lostdcc(i);
-	} else {
-	  dcc[i].timeval = now;
-	  dcc[i].sock = getsock(SOCK_BINARY);
-	  if (open_telnet_dcc(dcc[i].sock, ip, prt) < 0) {
-	    dcc[i].type->eof(i);
+/* Create a temporary filename with random elements. Shortens
+ * the filename if the total string is longer than NAME_MAX.
+ * The original buffer is not modified.   (Fabian)
+ * 
+ * Please adjust MKTEMPFILE_TOT if you change any lengths
+ *   7 - size of the random string
+ *   2 - size of additional characters in "%u-%s-%s" format string
+ *   8 - estimated size of getpid()'s output converted to %u */
+#define MKTEMPFILE_TOT (7 + 2 + 8)
+static char *mktempfile(char *filename)
+{
+  char rands[8], *tempname, *fn = filename;
+  int l;
+
+  make_rand_str(rands, 7);
+  l = strlen(filename);
+  if ((l + MKTEMPFILE_TOT) > NAME_MAX) {
+    fn[NAME_MAX - MKTEMPFILE_TOT] = 0;
+    l = NAME_MAX - MKTEMPFILE_TOT;
+    fn = nmalloc(l + 1);
+    strncpy(fn, filename, l);
+    fn[l] = 0;
+  }
+  tempname = nmalloc(l + MKTEMPFILE_TOT + 1);
+  sprintf(tempname, "%u-%s-%s", getpid(), rands, fn);
+  if (fn != filename)
+    my_free(fn);
+  return tempname;
+}
+
+static void filesys_dcc_send_hostresolved(int i)
+{
+  FILE *f;
+  char *s1, *param, prt[100], ip[100], *tempf;
+  int len = dcc[i].u.dns->ibuf, j;
+
+  strncpy(dcc[i].host, dcc[i].u.dns->host, UHOSTLEN - 1);
+  dcc[i].host[UHOSTLEN - 1] = 0;
+  sprintf(prt, "%d", dcc[i].port);
+  sprintf(ip, "%lu", iptolong(my_htonl(dcc[i].addr)));
+  if (!hostsanitycheck_dcc(dcc[i].nick, dcc[i].host, dcc[i].addr,
+                           dcc[i].u.dns->host, prt)) {
+    lostdcc(i);
+    return;
+  }
+  param = nmalloc(strlen(dcc[i].u.dns->cbuf) + 1);
+  strcpy(param, dcc[i].u.dns->cbuf);
+
+  changeover_dcc(i, &DCC_FORK_SEND, sizeof(struct xfer_info));
+  if (param[0] == '.')
+    param[0] = '_';
+  /* Save the original filename */
+  dcc[i].u.xfer->origname = get_data_ptr(strlen(param) + 1);
+  strcpy(dcc[i].u.xfer->origname, param);
+  tempf = mktempfile(param);
+  dcc[i].u.xfer->filename = get_data_ptr(strlen(tempf) + 1);
+  strcpy(dcc[i].u.xfer->filename, tempf);
+  /* We don't need the temporary buffers anymore */
+  my_free(tempf);
+  my_free(param);
+
+  if (upload_to_cd) {
+    char *p = get_user(&USERENTRY_DCCDIR, dcc[i].user);
+
+    if (p)
+      sprintf(dcc[i].u.xfer->dir, "%s%s/", dccdir, p);
+    else
+      sprintf(dcc[i].u.xfer->dir, "%s", dccdir);
+  } else
+    strcpy(dcc[i].u.xfer->dir, dccin);
+  dcc[i].u.xfer->length = len;
+  s1 = nmalloc(strlen(dcc[i].u.xfer->dir) +
+	       strlen(dcc[i].u.xfer->origname) + 1);
+  sprintf(s1, "%s%s", dcc[i].u.xfer->dir, dcc[i].u.xfer->origname);
+  Context;      
+  f = fopen(s1, "r");
+  my_free(s1);
+  if (f) {
+    fclose(f);
+    dprintf(DP_HELP, "NOTICE %s :That file already exists.\n", dcc[i].nick);
+    lostdcc(i);
+  } else {
+    /* Check for dcc-sends in process with the same filename */
+    for (j = 0; j < dcc_total; j++)
+      if (j != i) {
+        if ((dcc[j].type->flags & (DCT_FILETRAN | DCT_FILESEND))
+	    == (DCT_FILETRAN | DCT_FILESEND)) {
+	  if (!strcmp(dcc[i].u.xfer->origname, dcc[j].u.xfer->origname)) {
+	    dprintf(DP_HELP, "NOTICE %s :That file is already being sent.\n",
+		    dcc[i].nick);
+	    lostdcc(i);
+	    return;
 	  }
 	}
       }
+    /* Put uploads in /tmp first */
+    s1 = nmalloc(strlen(tempdir) + strlen(dcc[i].u.xfer->filename) + 1);
+    sprintf(s1, "%s%s", tempdir, dcc[i].u.xfer->filename);
+    dcc[i].u.xfer->f = fopen(s1, "w");
+    my_free(s1);
+    if (dcc[i].u.xfer->f == NULL) {
+      dprintf(DP_HELP,
+	      "NOTICE %s :Can't create that file (temp dir error)\n",
+	      dcc[i].nick);
+      lostdcc(i);
+    } else {
+      dcc[i].timeval = now;
+      dcc[i].sock = getsock(SOCK_BINARY);
+      if (open_telnet_dcc(dcc[i].sock, ip, prt) < 0)
+	dcc[i].type->eof(i);
     }
   }
 }
 
-/* this only handles CHAT requests, otherwise it's handled in filesys */
+/* This only handles CHAT requests, otherwise it's handled in filesys.
+ */
 static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
 			    char *object, char *keyword, char *text)
 {
   char *param, *ip, *prt, buf[512], *msg = buf;
   int i, sock;
   struct userrec *u = get_user_by_handle(userlist, handle);
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
   Context;
   if (!strncasecmp(text, "SEND ", 5)) {
@@ -724,7 +843,7 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
   if (dcc_total == max_dcc) {
     putlog(LOG_MISC, "*", DCC_TOOMANYDCCS2, "CHAT(file)", param, nick, from);
   } else if (glob_party(fr) || (!require_p && chan_op(fr)))
-    return 0;			/* allow ctcp.so to pick up the chat */
+    return 0;			/* Allow ctcp.so to pick up the chat */
   else if (!glob_xfer(fr)) {
     if (!quiet_reject)
       dprintf(DP_HELP, "NOTICE %s :.\n", nick, DCC_REFUSED3);
@@ -749,7 +868,7 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
       putlog(LOG_MISC, "*", "    (%s)", buf);
       killsock(sock);
     } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
-      /* invalid port range, do clients even use over 5000?? */
+      /* Invalid port range. */
       if (!quiet_reject)
         dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
 	        DCC_CONNECTFAILED1);
@@ -779,8 +898,8 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
 
 static cmd_t myctcp[] =
 {
-  {"DCC", "", filesys_DCC_CHAT, "files:DCC"},
-  {0, 0, 0, 0}
+  {"DCC",	"",	filesys_DCC_CHAT,		"files:DCC"},
+  {NULL,	NULL,	NULL,				NULL}
 };
 
 static void init_server_ctcps(char *module)
@@ -793,8 +912,8 @@ static void init_server_ctcps(char *module)
 
 static cmd_t myload[] =
 {
-  {"server", "", (Function) init_server_ctcps, "filesys:server"},
-  {0, 0, 0, 0}
+  {"server",	"",	(Function) init_server_ctcps,	"filesys:server"},
+  {NULL,	NULL,	NULL,				NULL}
 };
 
 static int filesys_expmem()
@@ -877,14 +996,11 @@ char *filesys_start(Function * global_funcs)
   global = global_funcs;
 
   Context;
-  dccdir[0] = 0;
-  dccin[0] = 0;
-  filedb_path[0] = 0;
   module_register(MODULE_NAME, filesys_table, 2, 0);
   if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0)))
     return "You need the transfer module to user the file system.";
-  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
-    return "You need at least eggdrop1.4.0 to run this module.";
+  if (!module_depend(MODULE_NAME, "eggdrop", 105, 0))
+    return "You need at least eggdrop1.5.0 to run this module.";
   add_tcl_commands(mytcls);
   add_tcl_strings(mystrings);
   add_tcl_ints(myints);
@@ -897,7 +1013,7 @@ char *filesys_start(Function * global_funcs)
   my_memcpy(&USERENTRY_DCCDIR, &USERENTRY_INFO,
 	    sizeof(struct user_entry_type) - sizeof(char *));
 
-  USERENTRY_DCCDIR.got_share = 0;	/* we dont want it shared tho */
+  USERENTRY_DCCDIR.got_share = 0;	/* We dont want it shared tho */
   add_entry_type(&USERENTRY_DCCDIR);
   DCC_FILES_PASS.timeout_val = &password_timeout;
   add_lang_section("filesys");
@@ -908,6 +1024,3 @@ static int is_valid()
 {
   return dccdir[0];
 }
-
-/* 2 stupid backward compatability functions */
-/* set upload/dnload stats for a user */

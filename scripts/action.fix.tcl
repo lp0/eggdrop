@@ -3,7 +3,7 @@
 # Tothwolf  25May1999: cleanup
 # Tothwolf  04Oct1999: changed proc names slightly
 #
-# $Id: action.fix.tcl,v 1.4 1999/12/15 02:32:57 guppy Exp $
+# $Id: action.fix.tcl,v 1.3 1999/12/21 17:35:07 fabian Exp $
 
 # fix for mirc dcc chat /me's
 bind filt - "\001ACTION *\001" filt:dcc_action

@@ -1,7 +1,7 @@
 # Makefile for src/
-# $Id: Makefile.in,v 1.9 2000/07/17 21:03:07 guppy Exp $
+# $Id: Makefile.in,v 1.6 1999/12/25 00:07:50 fabian Exp $
 
-SHELL = @SHELL@
+SHELL = /bin/sh
 top_srcdir = @top_srcdir@
 
 @SET_MAKE@
@@ -11,7 +11,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 
 OBJS = botcmd.o botmsg.o botnet.o chanprog.o cmds.o dcc.o \
-dccutil.o flags.o language.o main.o mem.o misc.o \
+dccutil.o dns.o flags.o language.o main.o mem.o misc.o \
 modules.o net.o rfc1459.o tcl.o tcldcc.o tclhash.o \
 tclmisc.o tcluser.o userent.o userrec.o users.o md5/md5c.o
 
@@ -130,3 +130,4 @@ userrec.o: userrec.c main.h lang.h eggdrop.h flags.h proto.h ../lush.h \
 users.o: users.c main.h lang.h eggdrop.h flags.h proto.h ../lush.h \
  cmdt.h tclegg.h tclhash.h chan.h users.h modules.h mod/modvals.h \
  tandem.h
+dns.o: dns.c dns.h

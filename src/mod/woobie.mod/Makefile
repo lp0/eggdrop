@@ -1,5 +1,5 @@
 # Makefile for src/mod/woobie.mod/
-# $Id: Makefile,v 1.10 1999/12/15 02:33:00 guppy Exp $
+# $Id: Makefile,v 1.5 1999/12/21 17:35:32 fabian Exp $
 
 doofus:
 	@echo ""

@@ -1,5 +1,5 @@
 # Makefile for src/mod/filesys.mod/
-# $Id: Makefile,v 1.11 1999/12/15 02:32:59 guppy Exp $
+# $Id: Makefile,v 1.9 2000/02/01 20:36:18 fabian Exp $
 
 doofus:
 	@echo ""
@@ -30,5 +30,6 @@ clean:
 ../filesys.o: filesys.c ../../../config.h ../module.h ../../main.h \
  ../../lang.h ../../eggdrop.h ../../flags.h ../../proto.h \
  ../../../lush.h ../../cmdt.h ../../tclegg.h ../../tclhash.h \
- ../../chan.h ../../users.h ../modvals.h ../../tandem.h filesys.h \
- ../transfer.mod/transfer.h files.h filedb.c files.c tclfiles.c
+ ../../chan.h ../../users.h ../modvals.h ../../tandem.h ../../stat.h \
+ ../transfer.mod/transfer.h filesys.h files.h filedb3.c filedb3.h \
+ files.c tclfiles.c dbcompat.c filelist.c filelist.h

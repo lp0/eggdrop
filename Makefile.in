@@ -2,9 +2,9 @@
 #  This is the Makefile for EGGDROP (the irc bot)
 #  You should never need to edit this.
 #
-# $Id: Makefile.in,v 1.32 2000/07/17 21:03:07 guppy Exp $
+# $Id: Makefile.in,v 1.12 1999/12/21 17:35:01 fabian Exp $
 
-SHELL = @SHELL@
+SHELL = /bin/sh
 top_srcdir = @top_srcdir@
 
 @SET_MAKE@
@@ -61,6 +61,8 @@ XLIBS = @TCL_LIBS@ @LIBS@
 TCLLIB = @TCLLIB@
 TCLLIBFN = @TCLLIBFN@
 
+RESLIB = @RESLIB@
+
 CFLAGS = @CFLAGS@ -I.. @DEFS@ $(CFLGS)
 DEBCFLAGS = @CFLAGS@ -I.. @DEFS@ -DDEBUG_ASSERT -DDEBUG_MEM $(CFLGS)
 
@@ -76,7 +78,7 @@ MAKE_MODULES = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(SHLIB_CC)' 'LD=$(SHLIB_LD)' \
 MAKE_STATIC = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(CC)' 'LD=$(LD)' \
 'STRIP=$(STRIP)' 'RANLIB=$(RANLIB)' 'CFLAGS=$(CFLAGS) -DSTATIC' \
 'CPPFLAGS=$(CPPFLAGS)' 'TCLLIB=$(TCLLIB)' 'TCLLIBFN=$(TCLLIBFN)' \
-'XREQS=$(XREQS)' 'XLIBS=$(XLIBS)' 'EGGEXEC=$(EGGEXEC)' \
+'XREQS=$(XREQS)' 'XLIBS=$(XLIBS) $(RESLIB)' 'EGGEXEC=$(EGGEXEC)' \
 'EGGBUILD=(static version)' 'MODOBJS=mod/*.o'
 
 MAKE_DEBEGG = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(MOD_CC)' 'LD=$(MOD_LD) -g' \
@@ -91,7 +93,7 @@ MAKE_DEBMODULES = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(SHLIB_CC)' 'LD=$(SHLIB_LD)' \
 MAKE_SDEBUG = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(CC)' 'LD=$(LD) -g' \
 'STRIP=touch' 'RANLIB=$(RANLIB)' 'CFLAGS=-g3 $(DEBCFLAGS) -DSTATIC' \
 'CPPFLAGS=$(CPPFLAGS)' 'TCLLIB=$(TCLLIB)' 'TCLLIBFN=$(TCLLIBFN)' \
-'XREQS=$(XREQS)' 'XLIBS=$(XLIBS)' 'EGGEXEC=$(EGGEXEC)' \
+'XREQS=$(XREQS)' 'XLIBS=$(XLIBS) $(RESLIB)' 'EGGEXEC=$(EGGEXEC)' \
 'EGGBUILD=(static and debug version)' 'MODOBJS=mod/*.o'
 
 MAKE_DEPEND = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(CC)' 'LD=$(LD)' \
@@ -280,11 +282,20 @@ install-modules:
 
 install-data:
 	@$(INSTALL_DATA) eggdrop.conf.dist $(DEST)
-	@if test ! -f $(DEST)/motd; then \
-		$(INSTALL_DATA) motd $(DEST); \
+	@if test ! -d $(DEST)/logs; then \
+		echo "Creating 'logs' subdirectory."; \
+		$(top_srcdir)/mkinstalldirs $(DEST)/logs; \
+		$(INSTALL_DATA) logs/CONTENTS $(DEST)/logs/; \
+	fi;
+	@if test ! -d $(DEST)/text; then \
+		echo "Creating 'text' subdirectory."; \
+		$(top_srcdir)/mkinstalldirs $(DEST)/text; \
+	fi;
+	@if test ! -f $(DEST)/text/motd; then \
+		$(INSTALL_DATA) text/motd $(DEST)/text/; \
 	fi
-	@if test ! -f $(DEST)/telnet-banner; then \
-		$(INSTALL_DATA) telnet-banner $(DEST); \
+	@if test ! -f $(DEST)/text/banner; then \
+		$(INSTALL_DATA) text/banner $(DEST)/text/; \
 	fi
 
 install-help:

@@ -1,7 +1,7 @@
 /* 
  * transfer.h -- part of transfer.mod
  * 
- * $Id: transfer.h,v 1.6 2000/01/08 21:23:17 per Exp $
+ * $Id: transfer.h,v 1.9 2000/01/17 22:36:10 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -25,11 +25,13 @@
 #ifndef _EGG_MOD_TRANSFER_TRANSFER_H
 #define _EGG_MOD_TRANSFER_TRANSFER_H
 
-#define DCCSEND_OK     0
-#define DCCSEND_FULL   1	/* dcc table is full */
-#define DCCSEND_NOSOCK 2	/* can't open a listening socket */
-#define DCCSEND_BADFN  3	/* no such file */
-#define MAX_FILENAME_LENGTH 40	/* max file lengh */
+enum dccsend_types {
+  DCCSEND_OK = 0,
+  DCCSEND_FULL,		/* DCC table is full			*/
+  DCCSEND_NOSOCK,	/* Can not open a listening socket	*/
+  DCCSEND_BADFN,	/* No such file				*/
+  DCCSEND_FEMPTY	/* File is empty			*/
+};
 
 #ifndef MAKING_TRANSFER
 /* 4 - 7 */
@@ -50,9 +52,31 @@
 /* 16 - 19 */
 #define USERENTRY_FSTAT (*(struct user_entry_type *)(transfer_funcs[16]))
 #define quiet_reject (*(int *)(transfer_funcs[17]))
+#define raw_dcc_resend(a,b,c,d) (((int (*) (char *,char *,char *,char *))transfer_funcs[18])(a,b,c,d))
 
-#else
+#else	/* MAKING_TRANSFER */
+
+static int raw_dcc_resend(char *, char *, char *, char *);
 static int raw_dcc_send(char *, char *, char *, char *);
+
+#define TRANSFER_REGET_PACKETID 0xfeab
+
+typedef struct {
+  u_16bit_t packet_id;		/* Identification ID, should be equal
+	 			   to TRANSFER_REGET_PACKETID		*/
+  u_8bit_t  byte_order;		/* Byte ordering, see byte_order_test()	*/
+  u_32bit_t byte_offset;	/* Number of bytes to skip relative to
+				   the file beginning			*/
+} transfer_reget;
+
+typedef struct zarrf {
+  char *dir;			/* Absolute dir if it starts with '*',
+				   otherwise dcc dir.			*/
+  char *file;
+  char nick[NICKLEN];		/* Who queued this file			*/
+  char to[NICKLEN];		/* Who will it be sent to		*/
+  struct zarrf *next;
+} fileq_t;
 
 #endif				/* MAKING_TRANSFER */
 

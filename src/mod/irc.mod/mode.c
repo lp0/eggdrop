@@ -4,11 +4,7 @@
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  * 
- * dprintf'ized, 12dec1995
- * multi-channel, 6feb1996
- * stopped the bot deopping masters and bots in bitch mode, pteron 23Mar1997
- * 
- * $Id: mode.c,v 1.42 2000/07/31 02:35:03 guppy Exp $
+ * $Id: mode.c,v 1.20 2000/01/31 22:56:01 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -29,7 +25,7 @@
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-/* reversing this mode? */
+/* Reversing this mode? */
 static int reversing = 0;
 
 #define PLUS    1
@@ -40,11 +36,8 @@ static int reversing = 0;
 #define EXEMPT  32
 #define INVITE  64
 
-static struct flag_record user =
-{FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
-
-static struct flag_record victim =
-{FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+static struct flag_record user   = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+static struct flag_record victim = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
 static void flush_mode(struct chanset_t *chan, int pri)
 {
@@ -86,7 +79,7 @@ static void flush_mode(struct chanset_t *chan, int pri)
   }
   chan->limit = (-1);
   chan->key[0] = 0;
-  /* do -b before +b to avoid server ban overlap ignores */
+  /* Do -b before +b to avoid server ban overlap ignores */
   for (i = 0; i < modesperline; i++)
     if ((chan->cmode[i].type & MINUS) && (chan->cmode[i].type & BAN)) {
       if (ok < 2) {
@@ -158,7 +151,8 @@ static void flush_mode(struct chanset_t *chan, int pri)
   }
 }
 
-/* queue a channel mode change */
+/* Queue a channel mode change
+ */
 static void real_add_mode(struct chanset_t *chan,
 			  char plus, char mode, char *op)
 {
@@ -170,7 +164,7 @@ static void real_add_mode(struct chanset_t *chan,
   
   Context;
   if (!me_op(chan))
-    return;			/* no point in queueing the mode */
+    return;			/* No point in queueing the mode */
 
   if (mode == 'o' || mode == 'v') {
     mx = ismember(chan, op);
@@ -213,16 +207,20 @@ static void real_add_mode(struct chanset_t *chan,
   if ((mode == 'o') || (mode == 'b') || (mode == 'v') ||
       (mode == 'e') || (mode == 'I')) {
     type = (plus == '+' ? PLUS : MINUS) |
-      (mode == 'o' ? CHOP : (mode == 'b' ? BAN : (mode == 'v' ? VOICE : (mode == 'e' ? EXEMPT : INVITE))));
-    /* if -b'n a non-existant ban...nuke it */
-    /* on ircnet ischanXXX() should be used, otherwise isXXXed() */
-    if ((plus == '-') &&
-       (((mode == 'b') && (!ischanban(chan, op))) ||
-        ((mode == 'e') && (!ischanexempt(chan, op))) ||
-        ((mode == 'I') && (!ischaninvite(chan, op)))))
-      return;
-    /* if there are already max_bans bans on the channel, don't try to add 
-     * one more */
+           (mode == 'o' ? CHOP : (mode == 'b' ? BAN : (mode == 'v' ? VOICE : (mode == 'e' ? EXEMPT : INVITE))));
+    /* 
+     * FIXME: Some networks remove overlapped bans, IrcNet does not
+     *        (poptix/drummer)
+     */
+    /* If -b'ing a non-existant ban...*/
+    if (((plus == '-') && (mode == 'b') && !ischanban(chan, op)) ||
+        /* or +b'ing an existant ban... */
+        ((plus == '+') && (mode == 'b') && ischanban(chan, op)))
+      return;	/* ...nuke it */
+
+    /* If there are already max_bans bans on the channel, don't try to add 
+     * one more.
+     */
     Context;
     bans = 0;
     for (m = chan->channel.ban; m && m->mask[0]; m = m->next)
@@ -231,8 +229,10 @@ static void real_add_mode(struct chanset_t *chan,
     if ((plus == '+') && (mode == 'b'))
       if (bans >= max_bans)
 	return;
-    /* if there are already max_exempts exemptions on the channel, don't
-     * try to add one more */
+
+    /* If there are already max_exempts exemptions on the channel, don't
+     * try to add one more.
+     */
     Context;
     exempts = 0;
     for (m = chan->channel.exempt; m && m->mask[0]; m = m->next)
@@ -241,8 +241,10 @@ static void real_add_mode(struct chanset_t *chan,
     if ((plus == '+') && (mode == 'e'))
       if (exempts >= max_exempts)
 	return;
-    /* if there are already max_invites invitations on the channel, don't
-     * try to add one more */
+
+    /* If there are already max_invites invitations on the channel, don't
+     * try to add one more.
+     */
     Context;
     invites = 0;
     for (m = chan->channel.invite; m && m->mask[0]; m = m->next)
@@ -251,8 +253,10 @@ static void real_add_mode(struct chanset_t *chan,
     if ((plus == '+') && (mode == 'I'))
       if (invites >= max_invites)
 	return;
-    /* if there are already max_modes +b/+e/+I modes on the channel, don't 
-     * try to add one more */
+
+    /* If there are already max_modes +b/+e/+I modes on the channel, don't 
+     * try to add one more.
+     */
     modes = bans + exempts + invites;
     if ((modes >= max_modes) && (plus == '+') &&
 	((mode == 'b') || (mode == 'e') || (mode == 'I')))
@@ -261,8 +265,8 @@ static void real_add_mode(struct chanset_t *chan,
     for (i = 0; i < modesperline; i++)
       if ((chan->cmode[i].type == type) && (chan->cmode[i].op != NULL) &&
 	  (!rfc_casecmp(chan->cmode[i].op, op)))
-	return;			/* already in there :- duplicate */
-    ok = 0;			/* add mode to buffer */
+	return;			/* Already in there :- duplicate */
+    ok = 0;			/* Add mode to buffer */
     l = strlen(op) + 1;
     if ((chan->bytes + l) > mode_buf_len)
       flush_mode(chan, NORMAL);
@@ -270,16 +274,18 @@ static void real_add_mode(struct chanset_t *chan,
       if ((chan->cmode[i].type == 0) && (!ok)) {
 	chan->cmode[i].type = type;
 	chan->cmode[i].op = (char *) channel_malloc(l);
-	chan->bytes += l;	/* add 1 for safety */
+	chan->bytes += l;	/* Add 1 for safety */
 	strcpy(chan->cmode[i].op, op);
 	ok = 1;
       }
-    ok = 0;			/* check for full buffer */
+    ok = 0;			/* Check for full buffer */
     for (i = 0; i < modesperline; i++)
       if (chan->cmode[i].type == 0)
 	ok = 1;
     if (!ok)
-      flush_mode(chan, NORMAL);	/* full buffer!  flush modes */
+      flush_mode(chan, NORMAL);	/* Full buffer!  flush modes */
+    if ((mode == 'b') && (plus == '+') && channel_enforcebans(chan))
+      enforce_bans(chan);
     return;
   }
   /* +k ? store key */
@@ -292,7 +298,7 @@ static void real_add_mode(struct chanset_t *chan,
   else if ((plus == '+') && (mode == 'l'))
     chan->limit = atoi(op);
   else {
-    /* typical mode changes */
+    /* Typical mode changes */
     if (plus == '+')
       strcpy(s, chan->pls);
     else
@@ -309,17 +315,33 @@ static void real_add_mode(struct chanset_t *chan,
   }
 }
 
-/**********************************************************************/
-/* horrible code to parse mode changes */
-/* no, it's not horrible, it just looks that way */
+
+/*
+ *    Mode parsing functions
+ */
 
 static void got_key(struct chanset_t *chan, char *nick, char *from,
 		    char *key)
 {
+  int bogus = 0, i;
+  memberlist *m;
+
   if ((!nick[0]) && (bounce_modes))
     reversing = 1;
   set_key(chan, key);
-  if (((reversing) && !(chan->key_prot[0])) ||
+  for (i = 0; i < strlen(key); i++)
+    if (((key[i] < 32) || (key[i] == 127)) &&
+	(key[i] != 2) && (key[i] != 31) && (key[i] != 22))
+      bogus = 1;
+  if (bogus && !match_my_nick(nick)) {
+    putlog(LOG_MODES, chan->dname, "%s on %s!", CHAN_BADCHANKEY, chan->dname);
+    m = ismember(chan, nick);
+    if (m) {
+      dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick, CHAN_BADCHANKEY);
+      m->flags |= SENTKICK;
+    }
+  }
+  if (((reversing) && !(chan->key_prot[0])) || (bogus) ||
       ((chan->mode_mns_prot & CHANKEY) &&
        !(glob_master(user) || glob_bot(user) || chan_master(user)))) {
     if (strlen(key) != 0) {
@@ -337,10 +359,11 @@ static void got_op(struct chanset_t *chan, char *nick, char *from,
   char s[UHOSTLEN];
   struct userrec *u;
   int check_chan = 0;
+  int snm = chan->stopnethack_mode;
 
   m = ismember(chan, who);
   if (!m) {
-    putlog(LOG_MISC, chan->name, CHAN_BADCHANMODE, CHAN_BADCHANMODE_ARGS);
+    putlog(LOG_MISC, chan->dname, CHAN_BADCHANMODE, CHAN_BADCHANMODE_ARGS);
     dprintf(DP_MODE, "WHO %s\n", who);
     return;
   }
@@ -354,17 +377,19 @@ static void got_op(struct chanset_t *chan, char *nick, char *from,
   } else
     u = m->user;
 
-  get_user_flagrec(u, &victim, chan->name);
-  /* flags need to be set correctly right from the beginning now, so that
-   * add_mode() doesn't get irritated  (Fabian) */
+  get_user_flagrec(u, &victim, chan->dname);
+  /* Flags need to be set correctly right from the beginning now, so that
+   * add_mode() doesn't get irritated.
+   */
   m->flags |= CHANOP;
-  check_tcl_mode(nick, from, opu, chan->name, "+o", who);
-  /* added new meaning of WASOP:
+  check_tcl_mode(nick, from, opu, chan->dname, "+o", who);
+  /* Added new meaning of WASOP:
    * in mode binds it means: was he op before get (de)opped
    * (stupid IrcNet allows opped users to be opped again and
    *  opless users to be deopped)
    * script now can use [wasop nick chan] proc to check
-   * if user was op or wasnt  (drummer) */
+   * if user was op or wasnt  (drummer)
+   */
   m->flags &= ~SENTOP;
 
   /* I'm opped, and the opper isn't me */
@@ -373,14 +398,14 @@ static void got_op(struct chanset_t *chan, char *nick, char *from,
 	   nick[0]) {
     /* Channis is +bitch, and the opper isn't a global master or a bot */
     if (channel_bitch(chan) && !(glob_master(*opper) || glob_bot(*opper)) &&
-    /* and the *opper isn't a channel master */
+	/* ... and the *opper isn't a channel master */
 	!chan_master(*opper) &&
-    /* and the oppee isn't global op/master/bot */
+	/* ... and the oppee isn't global op/master/bot */
 	!(glob_op(victim) || glob_bot(victim)) &&
-    /* and the oppee isn't a channel op/master */
+	/* ... and the oppee isn't a channel op/master */
 	!chan_op(victim))
       add_mode(chan, '-', 'o', who);
-      /* opped is channel +d or global +d */
+      /* Opped is channel +d or global +d */
     else if ((chan_deop(victim) ||
 		(glob_deop(victim) && !chan_op(victim))) &&
 	       !glob_master(*opper) && !chan_master(*opper))
@@ -393,14 +418,22 @@ static void got_op(struct chanset_t *chan, char *nick, char *from,
     if (chan_deop(victim) || (glob_deop(victim) && !chan_op(victim))) {
       m->flags |= FAKEOP;
       add_mode(chan, '-', 'o', who);
-    } else if (channel_stopnethack(chan)) {
-      if ((chan_wasoptest(victim) || glob_wasoptest(victim) ||
-      channel_wasoptest(chan)) && (!(m->delay))) {
+    } else if (snm > 0 && snm < 7 && !(m->delay)) {
+      if (snm == 5) snm = channel_bitch(chan) ? 1 : 3;
+      if (snm == 6) snm = channel_bitch(chan) ? 4 : 2;
+      if (chan_wasoptest(victim) || glob_wasoptest(victim) ||
+      snm == 2) {
         if (!chan_wasop(m)) {
           m->flags |= FAKEOP;
           add_mode(chan, '-', 'o', who);
         }
-      } else if (!(chan_op(victim) || (glob_op(victim) && !chan_deop(victim)))) {
+      } else if (!(chan_op(victim) ||
+		 (glob_op(victim) && !chan_deop(victim)))) {
+		  if (snm == 1 || snm == 4 || (snm == 3 && !chan_wasop(m))) {
+		    add_mode(chan, '-', 'o', who);
+		    m->flags |= FAKEOP;
+        }
+      } else if (snm == 4 && !chan_wasop(m)) {
         add_mode(chan, '-', 'o', who);
         m->flags |= FAKEOP;
       }
@@ -421,7 +454,7 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
 
   m = ismember(chan, who);
   if (!m) {
-    putlog(LOG_MISC, chan->name, CHAN_BADCHANMODE, CHAN_BADCHANMODE_ARGS);
+    putlog(LOG_MISC, chan->dname, CHAN_BADCHANMODE, CHAN_BADCHANMODE_ARGS);
     dprintf(DP_MODE, "WHO %s\n", who);
     return;
   }
@@ -429,17 +462,18 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
   simple_sprintf(s, "%s!%s", m->nick, m->userhost);
   simple_sprintf(s1, "%s!%s", nick, from);
   u = get_user_by_host(s);
-  get_user_flagrec(u, &victim, chan->name);
+  get_user_flagrec(u, &victim, chan->dname);
 
   had_op = chan_hasop(m);
-  /* flags need to be set correctly right from the beginning now, so that
-   * add_mode() doesn't get irritated  (Fabian) */
+  /* Flags need to be set correctly right from the beginning now, so that
+   * add_mode() doesn't get irritated.
+   */
   m->flags &= ~(CHANOP | SENTDEOP | FAKEOP);
-  check_tcl_mode(nick, from, opu, chan->name, "-o", who);
-  /* check comments in got_op()  (drummer) */
+  check_tcl_mode(nick, from, opu, chan->dname, "-o", who);
+  /* Check comments in got_op()  (drummer) */
   m->flags &= ~WASOP;
 
-  /* deop'd someone on my oplist? */
+  /* Deop'd someone on my oplist? */
   if (me_op(chan)) {
     int ok = 1;
 
@@ -452,24 +486,23 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
     if (!ok && !match_my_nick(nick) &&
        rfc_casecmp(who, nick) && had_op &&
 	!match_my_nick(who)) {	/* added 25mar1996, robey */
-      /* reop? */
-      /* let's break it down home boy... */
-      /* is the deopper NOT a master or bot? */
+      /* Do we want to reop? */
+      /* Is the deopper NOT a master or bot? */
       if (!glob_master(user) && !chan_master(user) && !glob_bot(user) &&
-      /* is the channel protectops? */
+	  /* and is the channel protectops? */
 	  ((channel_protectops(chan) &&
-      /* provided it's not +bitch ... */
+	    /* and it's not +bitch ... */
 	    (!channel_bitch(chan) ||
-      /* or the users a valid op */
+	    /* or the user's a valid op? */
 	     chan_op(victim) || (glob_op(victim) && !chan_deop(victim)))) ||
-      /* is the channel protectfriends? */
+	   /* or is the channel protectfriends? */
            (channel_protectfriends(chan) &&
-      /* and the users a valid friend */
+	     /* and the users a valid friend? */
              (chan_friend(victim) || (glob_friend(victim) &&
 				      !chan_deop(victim))))) &&
-      /* and provided the users not a de-op */
+       /* and the users not a de-op? */
        !(chan_deop(victim) || (glob_deop(victim) && !chan_op(victim))))
-	/* then we'll bless them */
+	/* Then we'll bless them */
 	add_mode(chan, '+', 'o', who);
       else if (reversing)
 	add_mode(chan, '+', 'o', who);
@@ -477,20 +510,21 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
   }
 
   if (!nick[0])
-    putlog(LOG_MODES, chan->name, "TS resync (%s): %s deopped by %s",
-	   chan->name, who, from);
-  /* check for mass deop */
+    putlog(LOG_MODES, chan->dname, "TS resync (%s): %s deopped by %s",
+	   chan->dname, who, from);
+  /* Check for mass deop */
   if (nick[0])
     detect_chan_flood(nick, from, s1, chan, FLOOD_DEOP, who);
-  /* having op hides your +v status -- so now that someone's lost ops,
-   * check to see if they have +v */
+  /* Having op hides your +v status -- so now that someone's lost ops,
+   * check to see if they have +v
+   */
   if (!(m->flags & (CHANVOICE | STOPWHO))) {
-    dprintf(DP_HELP, "WHO %s\n", m->nick);
+    dprintf(DP_MODE, "WHO %s\n", m->nick);
     m->flags |= STOPWHO;
   }
-  /* was the bot deopped? */
+  /* Was the bot deopped? */
   if (match_my_nick(who)) {
-    /* cancel any pending kicks and modes */
+    /* Cancel any pending kicks and modes */
     memberlist *m2 = chan->channel.member;
 
     while (m2 && m2->nick[0]) {
@@ -500,8 +534,8 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
     if (chan->need_op[0])
       do_tcl("need-op", chan->need_op);
     if (!nick[0])
-      putlog(LOG_MODES, chan->name, "TS resync deopped me on %s :(",
-	     chan->name);
+      putlog(LOG_MODES, chan->dname, "TS resync deopped me on %s :(",
+	     chan->dname);
   }
   if (nick[0])
     maybe_revenge(chan, s1, s, REVENGE_DEOP);
@@ -512,61 +546,108 @@ static void got_ban(struct chanset_t *chan, char *nick, char *from,
 		    char *who)
 {
   char me[UHOSTLEN], s[UHOSTLEN], s1[UHOSTLEN];
-  int check = 1;
+  int check, i, bogus;
   memberlist *m;
   struct userrec *u;
 
   simple_sprintf(me, "%s!%s", botname, botuserhost);
   simple_sprintf(s, "%s!%s", nick, from);
   newban(chan, who, s);
+  bogus = 0;
+  check = 1; 
   if (wild_match(who, me) && me_op(chan)) {
     /* First of all let's check whether some luser banned us ++rtc */
-    if (match_my_nick(nick)) {
+    if (match_my_nick(nick))
       /* Bot banned itself -- doh! ++rtc */
-      putlog(LOG_MISC, "*", "Uh, banned myself on %s, reversing...", chan->name);
-    }
+      putlog(LOG_MISC, "*", "Uh, banned myself on %s, reversing...",
+	     chan->dname);
     reversing = 1;
     check = 0;
-  } else if (!match_my_nick(nick)) {	/* it's not my ban */
+  } else if (!match_my_nick(nick)) {	/* It's not my ban */
     if (channel_nouserbans(chan) && nick[0] && !glob_bot(user) &&
 	!glob_master(user) && !chan_master(user)) {
-      /* no bans made by users */
+      /* No bans made by users */
       add_mode(chan, '-', 'b', who);
       return;
     }
-    /* don't enforce a server ban right away -- give channel users a chance
-     * to remove it, in case it's fake */
+    for (i = 0; who[i]; i++)
+      if (((who[i] < 32) || (who[i] == 127)) &&
+	  (who[i] != 2) && (who[i] != 22) && (who[i] != 31))
+	bogus = 1;
+    if (bogus) {
+      if (glob_bot(user) || glob_friend(user) || chan_friend(user) ||
+	  (channel_dontkickops(chan) &&
+	   (chan_op(user) || (glob_op(user) && !chan_deop(user))))) {	/* arthur2 */
+	/* Fix their bogus ban */
+	if (bounce_bogus_bans) {
+	  int ok = 0;
+
+	  strcpy(s1, who);
+	  for (i = 0; i < strlen(s1); i++) {
+	    if (((s1[i] < 32) || (s1[i] == 127)) &&
+		(s1[i] != 2) && (s1[i] != 22) && (s1[i] != 31))
+	      s1[i] = '?';
+	    if ((s1[i] != '?') && (s1[i] != '*') &&
+		(s1[i] != '!') && (s1[i] != '@'))
+	      ok = 1;
+	  }
+	  add_mode(chan, '-', 'b', who);
+	  flush_mode(chan, NORMAL);
+	  /* Only re-add it if it has something besides wildcards */
+	  if (ok)
+	    add_mode(chan, '+', 'b', s1);
+	}
+      } else {
+	if (bounce_bogus_bans) {
+	  add_mode(chan, '-', 'b', who);
+	  if (kick_bogus_bans) {
+	    m = ismember(chan, nick);
+	    /* If the user is in the channel and we didn't send a kick yet */
+	    if (m && !chan_sentkick(m)) {
+	      m->flags |= SENTKICK;
+	      dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick,
+		      CHAN_BOGUSBAN);
+	    }
+	  }
+	}
+      }
+      return;
+    }
+    /* Don't enforce a server ban right away -- give channel users a chance
+     * to remove it, in case it's fake
+     */
     if (!nick[0]) {
       check = 0;
       if (bounce_modes)
 	reversing = 1;
     }
-    /* does this remotely match against any of our hostmasks? */
-    /* just an off-chance... */
+    /* Does this remotely match against any of our hostmasks?
+     * just an off-chance...
+     */
     u = get_user_by_host(who);
     if (u) {
-      get_user_flagrec(u, &victim, chan->name);
+      get_user_flagrec(u, &victim, chan->dname);
       if (glob_friend(victim) || (glob_op(victim) && !chan_deop(victim)) ||
 	  chan_friend(victim) || chan_op(victim)) {
 	if (!glob_master(user) && !glob_bot(user) && !chan_master(user))
-	  /* reversing = 1; */ /* arthur2 - 99/05/31 */
+	  /* commented out: reversing = 1; */ /* arthur2 - 99/05/31 */
 	  check = 0;
 	if (glob_master(victim) || chan_master(victim))
 	  check = 0;
       }
     } else {
-      /* banning an oplisted person who's on the channel? */
+      /* Banning an oplisted person who's on the channel? */
       m = chan->channel.member;
       while (m && m->nick[0]) {
 	sprintf(s1, "%s!%s", m->nick, m->userhost);
 	if (wild_match(who, s1)) {
 	  u = get_user_by_host(s1);
 	  if (u) {
-	    get_user_flagrec(u, &victim, chan->name);
+	    get_user_flagrec(u, &victim, chan->dname);
 	    if (glob_friend(victim) ||
 		(glob_op(victim) && !chan_deop(victim))
 		|| chan_friend(victim) || chan_op(victim)) {
-	      /* remove ban on +o/f/m user, unless placed by another +m/b */
+	      /* Remove ban on +o/f/m user, unless placed by another +m/b */
 	      if (!glob_master(user) && !glob_bot(user) &&
 		  !chan_master(user)) {
 		if (!isexempted(chan, s1)) {
@@ -585,14 +666,12 @@ static void got_ban(struct chanset_t *chan, char *nick, char *from,
     }
   }
   /* If a ban is set on an exempted user then we might as well set exemption
-   * at the same time */
+   * at the same time.
+   */
   refresh_exempt(chan,who);
-  /* if ((u_equals_exempt(global_exempts,who) || u_equals_exempt(chan->exempts, who))) {
-   * add_mode(chan, '+', 'e' , who);
-   *} */
   if (check && channel_enforcebans(chan))
     kick_all(chan, who, IRC_BANNED);
-  /* is it a server ban from nowhere? */
+  /* Is it a server ban from nowhere? */
   if (reversing ||
       (bounce_bans && (!nick[0]) &&
        (!u_equals_mask(global_bans, who) ||
@@ -603,6 +682,7 @@ static void got_ban(struct chanset_t *chan, char *nick, char *from,
 static void got_unban(struct chanset_t *chan, char *nick, char *from,
 		      char *who, struct userrec *u)
 {
+  int i, bogus;
   masklist *b, *old;
 
   b = chan->channel.ban;
@@ -620,16 +700,43 @@ static void got_unban(struct chanset_t *chan, char *nick, char *from,
     nfree(b->who);
     nfree(b);
   }
+  bogus = 0;
+  for (i = 0; i < strlen(who); i++)
+    if (((who[i] < 32) || (who[i] == 127)) &&
+	(who[i] != 2) && (who[i] != 22) && (who[i] != 31))
+      bogus = 1;
+  /* It's bogus, not by me, and in fact didn't exist anyway... */
+  if (bogus && !match_my_nick(nick) && !isbanned(chan, who) &&
+      /* not by valid +f/+b/+o? */
+      !(glob_friend(user) || glob_bot(user) ||
+	(glob_op(user) && !chan_deop(user))) &&
+      !(chan_friend(user) || chan_op(user))) {
+    /* Then lets kick the weenie */
+    memberlist *m = ismember(chan, nick);
+
+    /* No point in kicking someone who doesn't exist or which we are
+     * trying to kick already.
+     */
+    if (m && !chan_sentkick(m)) {
+      m->flags |= SENTKICK;
+      dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick, CHAN_BADBAN);
+    }
+    return;
+  }
   if (u_sticky_mask(chan->bans, who) || u_sticky_mask(global_bans, who)) {
-    /* that's a sticky ban! No point in being
-     * sticky unless we enforce it!! */
+    /* That's a sticky ban! No point in being
+     * sticky unless we enforce it!!
+     */
     add_mode(chan, '+', 'b', who);
   }
   if ((u_equals_mask(global_bans, who) || u_equals_mask(chan->bans, who)) &&
       me_op(chan) && !channel_dynamicbans(chan)) {
-    /* that's a permban! */
-     if ((!glob_bot(user) || !(bot_flags(u) & BOT_SHARE)) &&
-         ((!glob_op(user) || chan_deop(user)) && !chan_op(user)))
+    /* That's a permban! */
+    if (glob_bot(user) && (bot_flags(u) & BOT_SHARE)) {
+      /* Sharebot -- do nothing */
+    } else if ((glob_op(user) && !chan_deop(user)) || chan_op(user)) {
+      dprintf(DP_HELP, "NOTICE %s :%s %s", nick, who, CHAN_PERMBANNED);
+    } else
       add_mode(chan, '+', 'b', who);
   }
 }
@@ -637,23 +744,75 @@ static void got_unban(struct chanset_t *chan, char *nick, char *from,
 static void got_exempt(struct chanset_t *chan, char *nick, char *from,
 		       char *who)
 {
-  char s[UHOSTLEN];
+  char me[UHOSTLEN], s[UHOSTLEN], s1[UHOSTLEN];
+  int check, i, bogus;
+  memberlist *m;
 
   Context;
+  simple_sprintf(me, "%s!%s", botname, botuserhost);
   simple_sprintf(s, "%s!%s", nick, from);
   newexempt(chan, who, s);
-  if (!match_my_nick(nick)) {	/* it's not my exemption */
+  bogus = 0;
+  check = 1;
+  if (!match_my_nick(nick)) {	/* It's not my exemption */
     if (channel_nouserexempts(chan) && nick[0] && !glob_bot(user) &&
 	!glob_master(user) && !chan_master(user)) {
-      /* no exempts made by users */
+      /* No exempts made by users */
       add_mode(chan, '-', 'e', who);
+      return;
+    }
+    for (i = 0; who[i]; i++)
+      if (((who[i] < 32) || (who[i] == 127)) &&
+	  (who[i] != 2) && (who[i] != 22) && (who[i] != 31))
+	bogus = 1;
+    if (bogus) {
+      if (glob_bot(user) || glob_friend(user) || chan_friend(user) ||
+	  (channel_dontkickops(chan) &&
+	   (chan_op(user) || (glob_op(user) && !chan_deop(user))))) {	/* arthur2 */
+	/* Fix their bogus exemption */
+	if (bounce_bogus_exempts) {
+	  int ok = 0;
+	  
+	  strcpy(s1, who);
+	  for (i = 0; i < strlen(s1); i++) {
+	    if (((s1[i] < 32) || (s1[i] == 127)) &&
+		(s1[i] != 2) && (s1[i] != 22) && (s1[i] != 31))
+	      s1[i] = '?';
+	    if ((s1[i] != '?') && (s1[i] != '*') &&
+		(s1[i] != '!') && (s1[i] != '@'))
+	      ok = 1;
+	  }
+	  add_mode(chan, '-', 'e', who);
+	  flush_mode(chan, NORMAL);
+	  /* Only re-add it if it has something besides wildcards */
+	  if (ok)
+	    add_mode(chan, '+', 'e', s1);
+	}
+      } else {
+	if (bounce_bogus_exempts) {
+	  add_mode(chan, '-', 'e', who);
+	  if (kick_bogus_exempts) {
+	    m = ismember(chan, nick);
+	    /* No point in kicking someone who doesn't exist or which we are
+	     * trying to kick already.
+	     */
+	    if (m && !chan_sentkick(m)) {
+	      m->flags |= SENTKICK;
+	      dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick,
+		      CHAN_BOGUSEXEMPT);
+	    }
+	  }
+	}
+      }
       return;
     }
     if ((!nick[0]) && (bounce_modes))
       reversing = 1;
   }
   if (reversing || (bounce_exempts && !nick[0] && 
-     (!u_equals_mask(global_exempts, who) || !u_equals_mask(chan->exempts, who))))
+		   (!u_equals_mask(global_exempts, who) ||
+		    !u_equals_mask(chan->exempts, who))
+		    && (check)))
     add_mode(chan, '-', 'e', who);
 }
 
@@ -681,11 +840,11 @@ static void got_unexempt(struct chanset_t *chan, char *nick, char *from,
     nfree(e);
   }
   if (u_sticky_mask(chan->exempts, who) || u_sticky_mask(global_exempts, who)) {
-    /* that's a sticky exempt! No point in being
-     * sticky unless we enforce it!! */
+    /* That's a sticky exempt! No point in being sticky unless we enforce it!!
+     */
     add_mode(chan, '+', 'e', who);
   }
-  /* if exempt was removed by master then leave it else check for bans */
+  /* If exempt was removed by master then leave it else check for bans */
   if (!nick[0] && glob_bot(user) && !glob_master(user) && !chan_master(user)) {
     b = chan->channel.ban;
     while (b->mask[0] && !match) {
@@ -699,9 +858,9 @@ static void got_unexempt(struct chanset_t *chan, char *nick, char *from,
   }
   if ((u_equals_mask(global_exempts, who) || u_equals_mask(chan->exempts, who)) &&
       me_op(chan) && !channel_dynamicexempts(chan)) {
-    /* that's a permexempt! */
+    /* That's a permexempt! */
     if (glob_bot(user) && (bot_flags(u) & BOT_SHARE)) {
-      /* sharebot -- do nothing */
+      /* Sharebot -- do nothing */
     } else
       add_mode(chan, '+', 'e', who);
   }
@@ -710,22 +869,74 @@ static void got_unexempt(struct chanset_t *chan, char *nick, char *from,
 static void got_invite(struct chanset_t *chan, char *nick, char *from,
 		       char *who)
 {
-  char s[UHOSTLEN];
+  char me[UHOSTLEN], s[UHOSTLEN], s1[UHOSTLEN];
+  int check, i, bogus;
+  memberlist *m;
 
+  simple_sprintf(me, "%s!%s", botname, botuserhost);
   simple_sprintf(s, "%s!%s", nick, from);
   newinvite(chan, who, s);
-  if (!match_my_nick(nick)) {	/* it's not my invitation */
+  bogus = 0;
+  check = 1;
+  if (!match_my_nick(nick)) {	/* It's not my invitation */
     if (channel_nouserinvites(chan) && nick[0] && !glob_bot(user) &&
 	!glob_master(user) && !chan_master(user)) {
-      /* no exempts made by users */
+      /* No exempts made by users */
       add_mode(chan, '-', 'I', who);
+      return;
+    }
+    for (i = 0; who[i]; i++)
+      if (((who[i] < 32) || (who[i] == 127)) &&
+	  (who[i] != 2) && (who[i] != 22) && (who[i] != 31))
+	bogus = 1;
+    if (bogus) {
+      if (glob_bot(user) || glob_friend(user) || chan_friend(user) ||
+	  (channel_dontkickops(chan) &&
+	   (chan_op(user) || (glob_op(user) && !chan_deop(user))))) {	/* arthur2 */
+	/* Fix their bogus invitation */
+	if (bounce_bogus_invites) {
+	  int ok = 0;
+
+	  strcpy(s1, who);
+	  for (i = 0; i < strlen(s1); i++) {
+	    if (((s1[i] < 32) || (s1[i] == 127)) &&
+		(s1[i] != 2) && (s1[i] != 22) && (s1[i] != 31))
+	      s1[i] = '?';
+	    if ((s1[i] != '?') && (s1[i] != '*') &&
+		(s1[i] != '!') && (s1[i] != '@'))
+	      ok = 1;
+	  }
+	  add_mode(chan, '-', 'I', who);
+	  flush_mode(chan, NORMAL);
+	  /* Only re-add it if it has something besides wildcards */
+	  if (ok)
+	    add_mode(chan, '+', 'I', s1);
+	}
+      } else {
+	if (bounce_bogus_invites) {
+	  add_mode(chan, '-', 'I', who);
+	  if (kick_bogus_invites) {
+	    m = ismember(chan, nick);
+	    /* No point in kicking someone who doesn't exist or which we are
+	     * trying to kick already.
+	     */
+	    if (m && !chan_sentkick(m)) {
+	      m->flags |= SENTKICK;
+	      dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick,
+		      CHAN_BOGUSINVITE);
+	    }
+	  }
+	}
+      }
       return;
     }
     if ((!nick[0]) && (bounce_modes))
       reversing = 1;
   }
   if (reversing || (bounce_invites && (!nick[0])  && 
-     (!u_equals_mask(global_invites, who) || !u_equals_mask(chan->invites, who))))
+		    (!u_equals_mask(global_invites, who) ||
+		     !u_equals_mask(chan->invites, who))
+		    && (check)))
     add_mode(chan, '-', 'I', who);
 }
 
@@ -750,35 +961,38 @@ static void got_uninvite(struct chanset_t *chan, char *nick, char *from,
     nfree(inv);
   }
   if (u_sticky_mask(chan->invites, who) || u_sticky_mask(global_invites, who)) {
-    /* that's a sticky invite! No point in being
-     * sticky unless we enforce it!! */
+    /* That's a sticky invite! No point in being sticky unless we enforce it!!
+     */
     add_mode(chan, '+', 'I', who);
   }
   if (!nick[0] && glob_bot(user) && !glob_master(user) && !chan_master(user)
       &&  (chan->channel.mode & CHANINV))
     add_mode(chan, '+', 'I', who);
-  if ((u_equals_mask(global_invites, who) || u_equals_mask(chan->invites, who)) &&
-      me_op(chan) && !channel_dynamicinvites(chan)) {
-    /* that's a perminvite! */
+  if ((u_equals_mask(global_invites, who) ||
+       u_equals_mask(chan->invites, who)) && me_op(chan) &&
+      !channel_dynamicinvites(chan)) {
+    /* That's a perminvite! */
     if (glob_bot(user) && (bot_flags(u) & BOT_SHARE)) {
-      /* sharebot -- do nothing */
+      /* Sharebot -- do nothing */
     } else
       add_mode(chan, '+', 'I', who);
   }
 }
 
-/* a pain in the ass: mode changes */
-static void gotmode(char *from, char *msg)
+static int gotmode(char *from, char *origmsg)
 {
-  char *nick, *ch, *op, *chg;
-  char s[UHOSTLEN];
+  char *nick, *ch, *op, *chg, *msg;
+  char s[UHOSTLEN], buf[511];
   char ms2[3];
   int z;
   struct userrec *u;
   memberlist *m;
   struct chanset_t *chan;
 
-  /* usermode changes? */
+  strncpy(buf, origmsg, 510);
+  buf[510] = 0;
+  msg = buf;
+  /* Usermode changes? */
   if (msg[0] && (strchr(CHANMETA, msg[0]) != NULL)) {
     ch = newsplit(&msg);
     chg = newsplit(&msg);
@@ -789,9 +1003,9 @@ static void gotmode(char *from, char *msg)
       dprintf(DP_SERVER, "PART %s\n", ch);
     } else if (!channel_pending(chan)) {
       z = strlen(msg);
-      if (msg[--z] == ' ')	/* i hate cosmetic bugs :P -poptix */
+      if (msg[--z] == ' ')	/* I hate cosmetic bugs :P -poptix */
 	msg[z] = 0;
-      putlog(LOG_MODES, chan->name, "%s: mode change '%s %s' by %s",
+      putlog(LOG_MODES, chan->dname, "%s: mode change '%s %s' by %s",
 	     ch, chg, msg, from);
       u = get_user_by_host(from);
       get_user_flagrec(u, &user, ch);
@@ -799,8 +1013,7 @@ static void gotmode(char *from, char *msg)
       m = ismember(chan, nick);
       if (m)
 	m->last = now;
-      if ((allow_desync == 0) &&	/* arthur2: added flag tests */
-	  !(glob_friend(user) || chan_friend(user) ||
+      if (!(glob_friend(user) || chan_friend(user) ||
 	    (channel_dontkickops(chan) &&
 	     (chan_op(user) || (glob_op(user) && !chan_deop(user)))))) {
 	if (m && me_op(chan)) {
@@ -810,7 +1023,7 @@ static void gotmode(char *from, char *msg)
 		    CHAN_FAKEMODE_KICK);
 	    m->flags |= SENTKICK;
 	    reversing = 1;
-	  } else if (!chan_hasop(m)) {
+	  } else if (!chan_hasop(m) && !channel_nodesynch(chan)) {
 	    putlog(LOG_MODES, ch, CHAN_DESYNCMODE, ch);
 	    dprintf(DP_MODE, "KICK %s %s :%s\n", ch, nick,
 		    CHAN_DESYNCMODE_KICK);
@@ -851,16 +1064,6 @@ static void gotmode(char *from, char *msg)
 	  if ((!nick[0]) && (bounce_modes))
 	    reversing = 1;
 	  break;
-	case 'c':
-	  todo = CHANNOCLR;
-	  if ((!nick[0]) && (bounce_modes))
-	    reversing = 1;
-	  break;
-	case 'R':
-	  todo = CHANREGON;
-	  if ((!nick[0]) && (bounce_modes))
-	    reversing = 1;
-	  break;
 	case 't':
 	  todo = CHANTOPIC;
 	  if ((!nick[0]) && (bounce_modes))
@@ -885,7 +1088,7 @@ static void gotmode(char *from, char *msg)
 	  if ((!nick[0]) && (bounce_modes))
 	    reversing = 1;
 	  if (ms2[0] == '-') {
-	    check_tcl_mode(nick, from, u, chan->name, ms2, "");
+	    check_tcl_mode(nick, from, u, chan->dname, ms2, "");
 	    if ((reversing) && (chan->channel.maxmembers != (-1))) {
 	      simple_sprintf(s, "%d", chan->channel.maxmembers);
 	      add_mode(chan, '+', 'l', s);
@@ -902,7 +1105,7 @@ static void gotmode(char *from, char *msg)
 	      break;
 	    }
 	    chan->channel.maxmembers = atoi(op);
-	    check_tcl_mode(nick, from, u, chan->name, ms2,
+	    check_tcl_mode(nick, from, u, chan->dname, ms2,
 			   int_to_base10(chan->channel.maxmembers));
 	    if (((reversing) &&
 		 !(chan->mode_pls_prot & CHANLIMIT)) ||
@@ -931,6 +1134,7 @@ static void gotmode(char *from, char *msg)
 	  if (op == '\0') {
 	    break;
 	  }
+	  check_tcl_mode(nick, from, u, chan->dname, ms2, op);
 	  if (ms2[0] == '+')
 	    got_key(chan, nick, from, op);
 	  else {
@@ -955,37 +1159,35 @@ static void gotmode(char *from, char *msg)
 	  fixcolon(op);
 	  m = ismember(chan, op);
 	  if (!m) {
-	    putlog(LOG_MISC, chan->name,
+	    putlog(LOG_MISC, chan->dname,
 		   CHAN_BADCHANMODE, CHAN_BADCHANMODE_ARGS2);
 	    dprintf(DP_MODE, "WHO %s\n", op);
 	  } else {
-	    get_user_flagrec(m->user, &victim, chan->name);
+	    get_user_flagrec(m->user, &victim, chan->dname);
 	    if (ms2[0] == '+') {
 	      m->flags &= ~SENTVOICE;
 	      m->flags |= CHANVOICE;
-	      check_tcl_mode(nick, from, u, chan->name, ms2, op);
+	      check_tcl_mode(nick, from, u, chan->dname, ms2, op);
 	      if (!glob_master(user) && !chan_master(user)) {
 		if (channel_autovoice(chan) &&
 		    (chan_quiet(victim) ||
 		     (glob_quiet(victim) && !chan_voice(victim)))) {
 		  add_mode(chan, '-', 'v', op);
-		} else if (reversing) {
+		} else if (reversing)
 		  add_mode(chan, '-', 'v', op);
-		   }
 	      }
 	    } else {
 	      m->flags &= ~SENTDEVOICE;
 	      m->flags &= ~CHANVOICE;
-	      check_tcl_mode(nick, from, u, chan->name, ms2, op);
+	      check_tcl_mode(nick, from, u, chan->dname, ms2, op);
 	      if (!glob_master(user) && !chan_master(user)) {
 		if ((channel_autovoice(chan) && !chan_quiet(victim) &&
 		    (chan_voice(victim) || glob_voice(victim))) ||
 		    (!chan_quiet(victim) && 
 		    (glob_gvoice(victim) || chan_gvoice(victim)))) {
 		  add_mode(chan, '+', 'v', op);
-		} else if (reversing) {
+		} else if (reversing)
 		  add_mode(chan, '+', 'v', op);
-		 }
 	      }
 	    }
 	  }
@@ -993,7 +1195,7 @@ static void gotmode(char *from, char *msg)
 	case 'b':
 	  op = newsplit(&msg);
 	  fixcolon(op);
-	  check_tcl_mode(nick, from, u, chan->name, ms2, op);
+	  check_tcl_mode(nick, from, u, chan->dname, ms2, op);
 	  if (ms2[0] == '+')
 	    got_ban(chan, nick, from, op);
 	  else
@@ -1002,7 +1204,7 @@ static void gotmode(char *from, char *msg)
 	case 'e':
 	  op = newsplit(&msg);
 	  fixcolon(op);
-	  check_tcl_mode(nick, from, u, chan->name, ms2, op);
+	  check_tcl_mode(nick, from, u, chan->dname, ms2, op);
 	  if (ms2[0] == '+')
 	    got_exempt(chan, nick, from, op);
 	  else
@@ -1011,7 +1213,7 @@ static void gotmode(char *from, char *msg)
 	case 'I':
 	  op = newsplit(&msg);
 	  fixcolon(op);
-	  check_tcl_mode(nick, from, u, chan->name, ms2, op);
+	  check_tcl_mode(nick, from, u, chan->dname, ms2, op);
 	  if (ms2[0] == '+')
 	    got_invite(chan, nick, from, op);
 	  else
@@ -1019,7 +1221,7 @@ static void gotmode(char *from, char *msg)
 	  break;
 	}
 	if (todo) {
-	  check_tcl_mode(nick, from, u, chan->name, ms2, "");
+	  check_tcl_mode(nick, from, u, chan->dname, ms2, "");
 	  if (ms2[0] == '+')
 	    chan->channel.mode |= todo;
 	  else
@@ -1039,4 +1241,5 @@ static void gotmode(char *from, char *msg)
         chan->status |= CHAN_ASKEDMODES;
     }
   }
+  return 0;
 }

@@ -1,5 +1,5 @@
 # Makefile for src/mod/server.mod/
-# $Id: Makefile,v 1.11 1999/12/15 02:33:00 guppy Exp $
+# $Id: Makefile,v 1.6 1999/12/21 17:35:30 fabian Exp $
 
 doofus:
 	@echo ""

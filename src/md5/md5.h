@@ -2,7 +2,7 @@
  * md5.h
  *   header file for md5c.c
  * 
- * $Id: md5.h,v 1.3 1999/12/22 20:30:03 guppy Exp $
+ * $Id: md5.h,v 1.2 1999/12/21 17:35:10 fabian Exp $
  */
 /* 
  * Copyright (C) 1991, 1992  RSA Data Security, Inc.

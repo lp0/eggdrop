@@ -1,0 +1,129 @@
+
+
+Changes in eggdrop: (since v1.5.0)
+----------------------------------
+
+1.5.2 (Februar 04, 2000)
+Foundby   Fixedby   What....
+          Jason     Stopped flooding of partyline with channel juped messages.
+                     Added display to .status and a ischanjuped tcl command.
+Webbie    Fabian    tiny configure error caused version number search to fail
+          G`Quann   unlink message now shows information about how many bots
+                     and users got unlinked with the bot.
+          G`Quann   added protection to stop eggdrop from flooding off lagged
+                     IRC servers. Add new setting use-lagcheck.
+          Fabian    cleaned up all modules and the core. unified code style.
+          Eule      added set global-stopnethack-mode.
+          guppy     bind notc now handles channel notices, and bind part
+                     now handles part messages.
+          Wiktor    Updated NEWS file.
+Ian       Eule      ignore stopnethack and wasoptest in chanfile.
+          dw        dont flood us with nick is juped msges show it ones
+                     and in .status or $isjuped in tcl.
+          david     added reasons to several botnet quit messages
+          G`Quann   optimized kick sending.
+          Fabian    added 'outdone' to dcc_table structure - gets called as
+                     soon as the out buffer is emptied. Use sock_has_data() to
+                     check wether one of the sock buffers is empty.
+          Fabian    introduced new userfile feature system for userfile sharing
+
+1.5.1
+Foundby   Fixedby   What....
+          G`Quann   fixed the slightly broken penalty calculation code
+          Tothwolf  changed the -lbind and -lresolv check-order in configure
+          Eule      new stopnethack-mode
+Wiktor    Fabian    small transfer fix and two contexts for share debugging
+          Fabian    minor filesys fixes. transfer module detects empty files.
+          Wiktor    minor eggdrop.conf.dist fixes
+          Ian       seperate flood-nick counter to distinguish between nick
+                    and join floods.
+Wiktor    Fabian    added setting userfile-perm to specify userfile permissions
+          Fabian    made everything use bzero and my_memcpy instead of their
+                    variants
+          Fabian    added a pub flag to the tcl listen command
+          G`Quann   traffic for transfer.mod wasn't calculated correctly
+          Fabian    cleaned up irc.mod
+          Fabian    commented woobie, cleaned up transfer and seen
+          Olrick    added an md5 tcl command
+          dw        .strip can now handle the bold/highlite better
+Johnny-   dw        missing a way to get the users handle as it is saved in
+Mnemonic            the userfile. Added getuser ype HANDLE
+guppy     Fabian    fixed dns findhost() SEGV
+          Fabian    dnslookup now allows additional parameters that get passed
+                    to the proc later on.
+          Fabian    merged those two commands into one, dnslookup
+          Fabian    added async tcl commands dnsip2host and dnshost2ip
+          Fabian    minor language cleanup
+          toot      .channel was using NICKMAX instead of nick_len
+          Fabian    missing Tcl_UntraceVar for nick-len
+various   Fabian    nick length now set on-the-fly
+toot      Fabian    +nodesynch and +greet used the same flag bit and +nodesynch
+                    was read as -nodesynch from the chanfile.
+toot      G`Quann   fixed crash when sending a whois
+          Ian       added updates to the silence list in several places
+          Ian       added a new channel flag nodesynch which replaces the
+                    allow_desync setting
+toot      Fabian    fixed ASSERT failure in filesys. cleanups.
+          G`Quann   added '.traffic' command which shows traffic statistics
+          G`Quann   chan->name to chan->dname fixes in user definable channel
+                    flags code
+toot      Fabian    failed reverse lookups were taken too serious
+          Fabian    new option `override-bots' to define wether local bot
+                    records should be overriden by those provided by the hub.
+
+1.5.0
+Foundby   Fixedby   What....
+          Fabian    the transfer and filesys modules now support resume and
+                    reget to continue aborted file downloads
+Ehrenberg Fabian    tiny botlink return value fix
+          Fabian    a few filesys fixes
+          Fabian    not re-adding existant bans to the channel anymore
+Mixter    Fabian    duplicate rejections are now delayed to allow the botnet
+                    to overcome lags
+          G`Quann   adds optional -next parameter to putquick, putserv and
+                    puthelp to push messages to the front of the queue
+Jason/    Fabian    further filesys db3 engine fixes
+dw
+          G`Quann   fixes mem leak and stack corruption in udef chan settings
+          Fabian    dns module should now also compile statically
+several	  Fabian    several filesys db3 engine fixes
+          Tothwolf  fixed typos, auto-ident messups throughout the
+                    source, grammatical errors in tcl-commands.doc,
+                    renamed NEWTO1.5 to NEWS, other small fixes
+          Tothwolf  minor motd/telnet-banner update
+guppy     Fabian    minor filesys fixes
+          G`Quann   documents usage of the user definable channel settings
+          G`Quann   adds config variables to define which commands should be
+                    stacked. Includes default settings for IRCNet and Undernet.
+Jason     Fabian    the listening socket wasn't passed on correctly during the
+                    login procedure
+          Fabian    Rewritten filesys.mod to allow unlimited filename,
+                    description, etc. lengths.
+Wiktor    Fabian    block_dns_ipbyhost crashed on illegal hostnames/ips
+          Cybah     Fixed tcl_console getting confused between flags and +chans.
+          Cybah     Userfile functions need to use chan->dname.
+          Cybah     Changed most of the user-side findchan() calls to
+                    findchan_by_dname() so the commands can support !chans.
+          Cybah     initial !channel support.
+          G`Quann   optimizes irc command queue and stacks as many commands
+                    as possible
+          G`Quann   added user definable channel settings
+G`Quann   G`Quann   block_dns_hostbyip crashed on failed dns lookups
+          Fabian    The transfer module now supports almost unlimited file
+                    lengths, limited only by the system's max file name length.
+                    In addition, temporary files are created in a more race
+                    safe way.
+          G`Quann   added penalty calculation for all commands sent to the
+                    irc server to prevent flooding (IRCnet specific)
+          rtc       reintroduced the text/-dir, renamed telnet-banner to
+                    banner, set default config filename to eggdrop.conf,
+                    put logfiles to logs/-dir by default
+guppy     Fabian    numerical hostnames are now detected
+          Fabian    outgoing bot links weren't correctly initialised, autolink
+                    wasn't detecting active bot links and the dns module was
+                    still broken from the last byte order changes
+G`Quann	  Fabian    was deleting socket 0 if server connect failed
+arthur2	  Fabian    the dcc[].addr is now consistently host byte order and
+                    all async dns lookup functions accept host byte order IPs
+          Fabian    added an asynchronous DNS request module which prevents
+                    the bot from hanging on dns lookups.

@@ -3,12 +3,12 @@ of the normal Tcl built-in commands are still there, of course.  But you
 can also use these to manipulate features of the bot.  They are listed
 according to category.
 
-NOTICE:  This list is accurate for the v1.4 series of eggdrop! Scripts
-  written for v1.3 series of eggdrop should probably work with a few
+NOTICE:  This list is accurate for the v1.5 series of eggdrop! Scripts
+  written for v1.3/v1.4 series of eggdrop should probably work with a few
   minor modifications depending on the script.
 
 SCRIPTS WHICH WERE WRITTEN FOR v0.9 OR v1.0 OR v1.1 WILL PROBABLY NOT WORK
-WITHOUT MODIFICATION.  Commands which have been changed in the v1.4 series
+WITHOUT MODIFICATION.  Commands which have been changed in the v1.5 series
 (or are just new commands) are marked with vertical bars on the left.
 
 ***### CORE EGGDROP COMMANDS ###***
@@ -30,16 +30,16 @@ specific commands, see later.
       (intended for sending messages to channels or people)
     returns: nothing
 
-| putquick <text>
-|   sends text to the server, like 'dump' (intended for direct server
-|   commands); output is queued so that you won't flood yourself off
-|   the server, using the MODE queue (should be alot faster)
-|   returns: nothing
+  putquick <text>
+    sends text to the server, like 'dump' (intended for direct server
+    commands); output is queued so that you won't flood yourself off
+    the server, using the MODE queue (should be alot faster)
+    returns: nothing
 
-| putkick <channel> <nick,nick,...> [reason]
-|   sends kicks to the server and tries to put as many nicks into
-|   one kick command as possible.
-|   returns: nothing
+  putkick <channel> <nick,nick,...> [reason]
+    sends kicks to the server and tries to put as many nicks into
+    one kick command as possible.
+    returns: nothing
 
   putlog <text>
     sends text to the log for any channel, marked as 'misc' (o)
@@ -63,13 +63,13 @@ specific commands, see later.
       msg (one line per msg); the user has no flags, so the
       flag bindings wont work within the file.
 
-| queuesize [queue]
-|   returns: the number of msgs in all queues. If a queue is specified, only
-|     the size of this queue is returned. valid queues are: mode, server,
-|     help.
+  queuesize [queue]
+    returns: the number of msgs in all queues. If a queue is specified, only
+      the size of this queue is returned. valid queues are: mode, server,
+      help, or all.
 
-|  clearqueue <queue>
-|    returns: number of deleted lines from the specified queue
+   clearqueue <queue>
+     returns: number of deleted lines from the specified queue
 
 
 *** USER RECORD MANIPULATION COMMANDS ***
@@ -115,6 +115,7 @@ specific commands, see later.
       COMMENT - returns the master-visible only comment for the user
       EMAIL   - returns the users email address
       URL     - returns the users url address
+      HANDLE  - returns the users handle as it is saved in the userfile
 
   setuser <handle> <entry-type> [extra info]
     this is the counterpart of getuser, it lets you set the various values
@@ -155,9 +156,9 @@ specific commands, see later.
     returns: "1" if the specified user has the matching flags.
     (using the new matching system)
 
-  adduser <handle> [hostmask]
-    creates a new user entry with the handle and optional hostmask given (with 
-      no password, and the default flags)
+  adduser <handle> <hostmask>
+    creates a new user entry with the handle and hostmask given (with no pass-
+      word, and the default flags)
     returns: "1" if successful, "0" if it already existed
 
   addbot <handle> <address>
@@ -209,41 +210,41 @@ specific commands, see later.
       other arguments work exactly like newchanban
     returns: nothing
 
-| newchanexempt <channel> <exempt> <creator> <comment> [lifetime] [options]
-|   adds a exempt to the enforced exempt list of a channel; creator is
-|   given credit for the exempt in the exempt list; lifetime is specified
-|   in minutes; if lifetime is not specified, exempt-time (usually 60) is
-|   used; setting the lifetime to 0 makes it a permanent exempt; valid
-|   options are:
-|     sticky     forces the exempt to be always active on a channel, even
-|                with dynamicexempts on
-|     none       (no effect)
-|   returns: nothing
-|   N.B. The exempt will not be removed until the corresponding ban has been
-|   removed. For timed bans once the time period has expired the exempt will
-|   not be removed until the corresponding ban has either expired or removed
+  newchanexempt <channel> <exempt> <creator> <comment> [lifetime] [options]
+    adds a exempt to the enforced exempt list of a channel; creator is
+      given credit for the exempt in the exempt list; lifetime is specified
+      in minutes; if lifetime is not specified, exempt-time (usually 60) is
+      used; setting the lifetime to 0 makes it a permanent exempt; valid
+      options are:
+        sticky     forces the exempt to be always active on a channel, even
+                     with dynamicexempts on
+        none       (no effect)
+    returns: nothing
+    N.B. The exempt will not be removed until the corresponding ban has been
+    removed. For timed bans once the time period has expired the exempt will
+    not be removed until the corresponding ban has either expired or removed
 
-| newexempt <exempt> <creator> <comment> [lifetime] [options]
-|   adds a exempt to the global exempt list (which takes effect on all
-|   channels); other arguments work exactly like newchanexempt
-|   returns: nothing
+  newexempt <exempt> <creator> <comment> [lifetime] [options]
+    adds a exempt to the global exempt list (which takes effect on all
+    channels); other arguments work exactly like newchanexempt
+    returns: nothing
 
-| newchaninvite <channel> <invite> <creator> <comment> [lifetime] [options]
-|   adds a invite to the enforced invite list of a channel; creator is
-|   given credit for the invite in the invite list; lifetime is specified
-|   in minutes; if lifetime is not specified, invite-time (usually 60) is
-|   used; setting the lifetime to 0 makes it a permanent invite; valid
-|   options are:
-|     sticky     forces the invite to be always active on a channel, even
-|                with dynamicinvites on
-|     none       (no effect)
-|   returns: nothing
-|   N.B. The invite will not be removed until the channel has gone -i.
+  newchaninvite <channel> <invite> <creator> <comment> [lifetime] [options]
+    adds a invite to the enforced invite list of a channel; creator is
+      given credit for the invite in the invite list; lifetime is specified
+      in minutes; if lifetime is not specified, invite-time (usually 60) is
+      used; setting the lifetime to 0 makes it a permanent invite; valid
+      options are:
+        sticky     forces the invite to be always active on a channel, even
+                     with dynamicinvites on
+        none       (no effect)
+    returns: nothing
+    N.B. The invite will not be removed until the channel has gone -i.
 
-| newinvite <invite> <creator> <comment> [lifetime] [options]
-|   adds a invite to the global invite list (which takes effect on all
-|   channels); other arguments work exactly like newchaninvite
-|   returns: nothing
+  newinvite <invite> <creator> <comment> [lifetime] [options]
+    adds a invite to the global invite list (which takes effect on all
+    channels); other arguments work exactly like newchaninvite
+    returns: nothing
 
   stick <banmask> [channel]
     makes a ban sticky, or if a channel is specified, then it is set sticky
@@ -277,21 +278,25 @@ specific commands, see later.
     removes a ban from the global ban list
     returns: "1" if successful, "0" otherwise
 
-| killchanexempt <channel> <exempt>
-|   removes a exempt from the enforced exempt list for a channel
-|   returns: "1" if successful, "0" otherwise
+  killchanexempt <channel> <exempt>
+    removes a exempt from the enforced exempt list for a channel
+    returns: "1" if successful, "0" otherwise
 
-| killexempt <exempt>
-|   removes a exempt from the global exempt list
-|   returns: "1" if successful, "0" otherwise
+  killexempt <exempt>
+    removes a exempt from the global exempt list
+    returns: "1" if successful, "0" otherwise
 
-| killchaninvite <channel> <invite>
-|   removes a invite from the enforced invite list for a channel
-|   returns: "1" if successful, "0" otherwise
+  killchaninvite <channel> <invite>
+    removes a invite from the enforced invite list for a channel
+    returns: "1" if successful, "0" otherwise
 
-| killinvite <invite>
-|   removes a invite from the global invite list
-|   returns: "1" if successful, "0" otherwise
+  killinvite <invite>
+    removes a invite from the global invite list
+    returns: "1" if successful, "0" otherwise 
+
+  ischanjuped [channel]
+    returns: "1" if the channel is juped and bot is unable to join, "0"
+      otherwise
 
   isban <ban> [channel]
     returns: "1" if that ban is in the global ban list, "0" otherwise; if
@@ -302,53 +307,53 @@ specific commands, see later.
       permanent, "0" otherwise; if a channel is specified, that channel's
       ban list is checked too
 
-| isexempt <exempt> [channel]
-|   returns: "1" if that exempt is in the global exempt list, "0" otherwise; if
-|     a channel is specified, that channel's exempt list is checked too
+  isexempt <exempt> [channel]
+    returns: "1" if that exempt is in the global exempt list, "0" otherwise; if
+      a channel is specified, that channel's exempt list is checked too
 
-| ispermexempt <exempt> [channel]
-|   returns: "1" if that exempt is in the global exempt list AND is marked as
-|     permanent, "0" otherwise; if a channel is specified, that channel's
-|     exempt list is checked too
+  ispermexempt <exempt> [channel]
+    returns: "1" if that exempt is in the global exempt list AND is marked as
+      permanent, "0" otherwise; if a channel is specified, that channel's
+      exempt list is checked too
 
-| isinvite <invite> [channel]
-|   returns: "1" if that invite is in the global invite list, "0" otherwise; if
-|     a channel is specified, that channel's invite list is checked too
+  isinvite <invite> [channel]
+    returns: "1" if that invite is in the global invite list, "0" otherwise; if
+      a channel is specified, that channel's invite list is checked too
 
-| isperminvite <invite> [channel]
-|   returns: "1" if that invite is in the global invite list AND is marked as
-|     permanent, "0" otherwise; if a channel is specified, that channel's
-|     invite list is checked too
+  isperminvite <invite> [channel]
+    returns: "1" if that invite is in the global invite list AND is marked as
+      permanent, "0" otherwise; if a channel is specified, that channel's
+      invite list is checked too
 
   isbansticky <ban> [channel]
     returns: "1" if that ban is a sticky ban in the global ban list, "0"
       otherwise; if a channel is specified, that channel's ban list is checked
       too
 
-| isexemptsticky <exempt> [channel]
-|   returns: "1" if that exempt is a sticky exempt in the global exempt list,
-|     "0" otherwise; if a channel is specified, that channel's exempt list is
-|     checked too
+  isexemptsticky <exempt> [channel]
+    returns: "1" if that exempt is a sticky exempt in the global exempt list,
+      "0" otherwise; if a channel is specified, that channel's exempt list is
+      checked too
 
-| isinvitesticky <invite> [channel]
-|   returns: "1" if that invite is a sticky invite in the global invite list,
-|     "0" otherwise; if a channel is specified, that channel's invite list is
-|     checked too
+  isinvitesticky <invite> [channel]
+    returns: "1" if that invite is a sticky invite in the global invite list,
+      "0" otherwise; if a channel is specified, that channel's invite list is
+      checked too
 
   matchban <nick!user@host> [channel]
     returns: "1" if that user address matches a ban in the global ban list,
       "0" otherwise; if a channel is specified, that channel's ban list is
       checked too
 
-| matchexempt <nick!user@host> [channel]
-|   returns: "1" if that user address matches a exempt in the global exempt
-|     list, "0" otherwise; if a channel is specified, that channel's exempt
-|     list is checked too
+  matchexempt <nick!user@host> [channel]
+    returns: "1" if that user address matches a exempt in the global exempt
+      list, "0" otherwise; if a channel is specified, that channel's exempt
+      list is checked too
 
-| matchinvite <nick!user@host> [channel]
-|   returns: "1" if that user address matches a invite in the global invite
-|     list, "0" otherwise; if a channel is specified, that channel's invite
-|     list is checked too
+  matchinvite <nick!user@host> [channel]
+    returns: "1" if that user address matches a invite in the global invite
+      list, "0" otherwise; if a channel is specified, that channel's invite
+      list is checked too
 
   banlist [channel]
     returns: list of global bans, or (if a channel is specified) list of
@@ -356,17 +361,17 @@ specific commands, see later.
       hostmask, comment, expiration timestamp, time added, last time
       active, and creator (the three timestamps are in unixtime format)
 
-| exemptlist [channel]
-|   returns: list of global exempts, or (if a channel is specified) list of
-|     channel-specific exempts; each entry is itself a list, containing:
-|     hostmask, comment, expiration timestamp, time added, last time
-|     active, and creator (the three timestamps are in unixtime format)
+  exemptlist [channel]
+    returns: list of global exempts, or (if a channel is specified) list of
+      channel-specific exempts; each entry is itself a list, containing:
+      hostmask, comment, expiration timestamp, time added, last time
+      active, and creator (the three timestamps are in unixtime format)
 
-| invitelist [channel]
-|   returns: list of global invites, or (if a channel is specified) list of
-|     channel-specific invites; each entry is itself a list, containing:
-|     hostmask, comment, expiration timestamp, time added, last time
-|     active, and creator (the three timestamps are in unixtime format)
+  invitelist [channel]
+    returns: list of global invites, or (if a channel is specified) list of
+      channel-specific invites; each entry is itself a list, containing:
+      hostmask, comment, expiration timestamp, time added, last time
+      active, and creator (the three timestamps are in unixtime format)
 
   newignore <hostmask> <creator> <comment> [lifetime]
     adds an entry to the ignore list; creator is given credit for the
@@ -438,8 +443,8 @@ specific commands, see later.
   channels
     returns: list of the channels the bot is monitoring (or trying to)
 
-| isbotnick <nick>
-|   returns: "1" if the nick matches the botnick; "0" otherwise
+  isbotnick <nick>
+    returns: "1" if the nick matches the botnick; "0" otherwise
 
   botisop <channel>
     returns: "1" if the bot is an op on that channel; "0" otherwise
@@ -447,8 +452,8 @@ specific commands, see later.
   botisvoice <channel>
     returns: "1" if the bot is has a voice on that channel; "0" otherwise
 
-| botonchan <channel>
-|  returns: "1" if the bot is on that channel; "0" otherwise
+  botonchan <channel>
+   returns: "1" if the bot is on that channel; "0" otherwise
 
   isop <nickname> <channel>
     returns: "1" if someone by that nickname is on the channel and has chop;
@@ -457,7 +462,7 @@ specific commands, see later.
 | wasop <nickname> <channel>
 |   returns: "1" if someone that just got opped/deopped in the chan had op
 |     before the modechange; "0" otherwise
-  
+
   isvoice <nickname> <channel>
     returns: "1" if someone by that nickname is on the channel and has voice
       (+v); "0" otherwise
@@ -468,9 +473,9 @@ specific commands, see later.
 
   nick2hand <nickname> [channel]
     returns: handle of <nickname> on <channel>
-|   if <channel> is not specified, bot will check all of its channels
-|   if <nickname> not found, returns ""
-|   if <nickname> found but unknown, returns "*"
+    if <channel> is not specified, bot will check all of its channels
+    if <nickname> not found, returns ""
+    if <nickname> found but unknown, returns "*"
 
   handonchan <handle> <channel>
     returns: "1" if the the user@host for someone on the channel matches
@@ -479,43 +484,43 @@ specific commands, see later.
   hand2nick <handle> [channel]
     returns: nickname of the first person on the <channel> whose user@host
       matches that handle, if there is one; "" otherwise
-|   if <channel> is not specified, bot will check all of its channels
+    if <channel> is not specified, bot will check all of its channels
 
   ischanban <ban> <channel>
     returns: "1" if that is a ban on the bot's channel
 
-| ischanexempt <exempt> <channel>
-|   returns: "1" if that is an exemption (+e mode) on the bot's channel.
-|     this is only useful on networks that support +e
+  ischanexempt <exempt> <channel>
+    returns: "1" if that is an exemption (+e mode) on the bot's channel.
+      this is only useful on networks that support +e
 
-| ischaninvite <invite> <channel>
-|   returns: "1" if that is an invitation (+I mode) on the bot's channel.
-|     this is only useful on networks that support +I
+  ischaninvite <invite> <channel>
+    returns: "1" if that is an invitation (+I mode) on the bot's channel.
+      this is only useful on networks that support +I
 
   chanbans <channel>
     returns: a list of the current bans on the channel, each element is
      of the form {ban bywho age} age is seconds from the bots POV
 
-| chanexempts <channel>
-|   returns: a list of the current exemptions (+e mode) on the channel,
-|     each element is of the form {exemption bywho age} age is seconds
-|     from the bots POV. this is only useful on networks that support +e
+  chanexempts <channel>
+    returns: a list of the current exemptions (+e mode) on the channel,
+      each element is of the form {exemption bywho age} age is seconds
+      from the bots POV. this is only useful on networks that support +e
 
-| chaninvites <channel>
-|   returns: a list of the current invitations (+I modes) on the channel,
-|     each element is of the form {invitation bywho age} age is seconds
-|     from the bots POV. this is only useful on networks that support +I
+  chaninvites <channel>
+    returns: a list of the current invitations (+I modes) on the channel,
+      each element is of the form {invitation bywho age} age is seconds
+      from the bots POV. this is only useful on networks that support +I
 
   resetbans <channel>
     removes all bans on the channel that aren't in the bot's ban list, and
       refreshes any bans that should be on the channel but aren't
     returns: nothing
 
-| resetexempts <channel>
-|   removes all exemptions on the channel. this is an IRCNET feature.
+  resetexempts <channel>
+    removes all exemptions on the channel. this is an IRCNET feature.
 
-| resetinvites <channel>
-|   removes all invitations on the channel. this is an IRCNET feature.
+  resetinvites <channel>
+    removes all invitations on the channel. this is an IRCNET feature.
 
   resetchan <channel>
     rereads in the channel info from the server
@@ -523,8 +528,8 @@ specific commands, see later.
 
   getchanhost <nickname> [channel]
     returns: user@host of <nickname>
-|   if <channel> is not specified, bot will check all of its channels
-|   if <nickname> is not on the channel(s), returns ""
+    if <channel> is not specified, bot will check all of its channels
+    if <nickname> is not on the channel(s), returns ""
 
   getchanjoin <nickname> <channel>
     returns: timestamp of when that person joined the channel
@@ -575,6 +580,18 @@ specific commands, see later.
 
   isdynamic <channel>
     returns: 1 if the channel is an existing dynamic channel, 0 if not
+
+  setudef <flag/int> <name>
+    initializes a user defined channel flag or integer setting. You can use it
+      like any other flag/setting.
+    IMPORTANT: Don't forget to reinitialize your flags/settings after a restart,
+      or it'll be lost.
+
+  renudef <flag/int> <oldname> <newname>
+    renames a user defined channel flag or integer setting.
+
+  deludef <flag/int> <name>
+    deletes a user defined channel flag or integer setting.
 
 *** DCC COMMANDS ***
 
@@ -665,18 +682,18 @@ specific commands, see later.
   bots
     returns: list of the bots currently connected to the botnet
 
-| botlist
-|   returns: a list of bots currently on the botnet; each item in the list
-|     will be a sublist with four elements: bot, uplink, version, sharing
-|     status.
-|
-|     bot    : the bot's nickname
-|     uptlink: who the bot is connected through
-|     version: its current numeric version
-|     sharing: a "+" if the bot is sharing, "-" otherwise/
+  botlist
+    returns: a list of bots currently on the botnet; each item in the list
+      will be a sublist with four elements: bot, uplink, version, sharing
+      status.
 
-| islinked <bot>
-|   returns: "1" if the bot is currently linked, "0" otherwise
+      bot    : the bot's nickname
+      uptlink: who the bot is connected through
+      version: its current numeric version
+      sharing: a "+" if the bot is sharing, "-" otherwise/
+
+  islinked <bot>
+    returns: "1" if the bot is currently linked, "0" otherwise
 
   dccused
     returns: number of dcc connections currently in use
@@ -718,7 +735,7 @@ specific commands, see later.
       'connect' so no input is lost
     returns: idx of the new connection
 
-  listen <port> <type> [options]
+  listen <port> <type> [options] [flag]
     opens a listening port to accept incoming telnets; type must be one of
       "bots", "all", "users", "script", or "off":
   listen <port> bots [mask]
@@ -736,9 +753,11 @@ specific commands, see later.
       permitted nicknames/botnames; if the mask begins with '@' it is
       interpreted to be a mask of permitted hosts to accept connections from
     returns: port #
-  listen <port> script <proc>
+  listen <port> script <proc> [flag]
     accepts connections which are immediately routed to a proc; the proc
       is called with one parameter: the idx of the new connection
+    flag may currently only be 'pub', which makes the bot allow anyone to
+      connect.
     returns: port #
   listen <port> off
     stop listening at a port
@@ -769,11 +788,6 @@ specific commands, see later.
   unbind <type> <attr(s)> <command-name> <proc-name>
     removes a previously-made binding
     returns: name of the command that was removed
-
-| binds ?type/mask?
-|  returns: a list of tcl binds, each item in the list will be a sublist of
-|    five elements:
-|      {<type> <flags> <name> <hits> <proc>}
 
   logfile [<modes> <channel> <filename>]
     creates a new logfile, which will log the modes given for the channel
@@ -870,8 +884,8 @@ specific commands, see later.
   decrypt <key> <encrypted-base64-string>
     returns: decrypted string (using blowfish)
 
-| encpass <password>
-|   returns: encrypted string (using blowfish)
+  encpass <password>
+    returns: encrypted string (using blowfish)
 
   die [reason]
     causes the bot to log a fatal error and exit completely; if no reason
@@ -880,6 +894,15 @@ specific commands, see later.
   unames
    returns:  The current operating system the bot is using.
 
+| dnslookup <ip-address/hostname> <proc> [[arg1] [arg2] ... [argn]]
+|   Issues an asynchronous dns lookup request. The command will block if
+|   dns module is not loaded, otherwise it will either return immediately
+|   or immediately call the proc (e.g. if the lookup is already cached).
+|   As soon as the request completes, <proc> will be called as follows:
+|     <proc> ipaddress hostname status [[arg1] [arg2] ... [argn]]
+|   status is 1 if the lookup was successful and 0 if it wasn't. All
+|   additional parameters (called arg1, arg2 and argn above) get appended
+|   to the proc's other parameters.
 
 GLOBAL VARIABLES:
   (All config-file variables are global, too.  But these variables
@@ -900,9 +923,9 @@ GLOBAL VARIABLES:
       and any following items are the names of patches that have been added
 
   numversion
-|   current numeric bot version (ie: "1010201");
-|     Numerical version is "MNNRRPP" where:
-|       M  is the Major release number
+    current numeric bot version (ie: "1010201");
+      Numerical version is "MNNRRPP" where:
+        M  is the Major release number
         NN is the Minor release number
         RR is the sub-release number
         PP is the patch level for that sub-release
@@ -910,13 +933,15 @@ GLOBAL VARIABLES:
   uptime
     unixtime value for when the bot was started
 
-| server-online
-|    unixtime value for when the bot connected to its current server
+  server-online
+     unixtime value for when the bot connected to its current server
 
   lastbind
     The last command binding which triggered.   This allows you to
     identify which command triggered a tcl routine.
 
+| md5 <string>
+|   returns: the 128 bits MD5 "message-digest" of the specified string.
 
 COMMAND EXTENSION:
 
@@ -989,11 +1014,12 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
   (7)  NOTC   (stackable)
        bind notc <flags> <mask> <proc>
-       procname <nick> <user@host> <handle> <text>
+|      procname <nick> <user@host> <handle> <dest> <text>
 
-       matches the entire line of text from a /notice with the mask; it
-       is considered a breach of protocol to respond to a /notice on IRC,
-       so this is intended for internal use (ie, logging, etc) only
+|      destination will be a nickname (the bot's nickname, obviously) or
+|      a channel name; matches the entire line of text from a /notice with
+       the mask; it is considered a breach of protocol to respond to a
+       /notice on IRC, so this is intended for internal use (ie, logging, etc) only
 
   (8)  JOIN   (stackable)
        bind join <flags> <mask> <proc>
@@ -1005,11 +1031,11 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
   (9)  PART   (stackable)
        bind part <flags> <mask> <proc>
-       procname <nick> <user@host> <handle> <channel>
+|      procname <nick> <user@host> <handle> <channel> <msg>
 
        triggered by someone leaving the channel; as in JOIN, the <mask>
        is matched against "#channel nick!user@host" and can contain
-       wildcards
+       wildcards. if no part message is specified msg will be set to "".
 
   (10) SIGN   (stackable)
        bind sign <flags> <mask> <proc>
@@ -1046,7 +1072,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
   (14) MODE   (stackable)
        bind mode <flags> <mask> <proc>
-|      proc-name <nick> <user@host> <handle> <channel> <mode-change> <victim>
+       proc-name <nick> <user@host> <handle> <channel> <mode-change> <victim>
 
        mode changes are broken down into their component parts before being
        sent here, so the <mode-change> will always be a single mode, like
@@ -1055,24 +1081,24 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        response to a mode change will happen AFTER all matching Tcl procs
        are called; the <mask> will have the channel prefixed (ie, "#turtle +m")
 
-|      if it is a server mode <nick> will be "", <user@host> is the server
-|      address and handle is *
-|
-|      note that "victim" was added in 1.3.23 and that this will break
-|      tcl scripts that were written for pre-1.3.23 versions and use this
-|      binding. An easy fix (by guppy) is as follows (example):
+       if it is a server mode <nick> will be "", <user@host> is the server
+       address and handle is *
 
-|      Old script looks as follows:
-|      bind mode - * mode_proc
-|      proc mode_proc {nick uhost hand chan mc} { ... }
-|
-|      To make it work with 1.3.23+ and stay compatible with older bots, do:
-|      bind mode - * mode_proc_fix
-|      proc mode_proc_fix {nick uhost hand chan mc {victim ""}} {
-|        if {$victim != ""} { append mc " $victim" }
-|        mode_proc $nick $uhost $hand $chan $mc
-|      }
-|      proc mode_proc {nick uhost hand chan mc} { ... }
+       note that "victim" was added in 1.3.23 and that this will break
+       tcl scripts that were written for pre-1.3.23 versions and use this
+       binding. An easy fix (by guppy) is as follows (example):
+
+       Old script looks as follows:
+       bind mode - * mode_proc
+       proc mode_proc {nick uhost hand chan mc} { ... }
+
+       To make it work with 1.3.23+ and stay compatible with older bots, do:
+       bind mode - * mode_proc_fix
+       proc mode_proc_fix {nick uhost hand chan mc {victim ""}} {
+         if {$victim != ""} { append mc " $victim" }
+         mode_proc $nick $uhost $hand $chan $mc
+       }
+       proc mode_proc {nick uhost hand chan mc} { ... }
 
 
   (15) CTCP
@@ -1257,65 +1283,61 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
   (35) CHPT   (stackable)
        bind chpt <flags> <mask> <proc>
-|      proc-name <botname> <handle> <idx> <channel#>
+       proc-name <botname> <handle> <idx> <channel#>
 
        when someone parts a botnet channel, it invokes this binding;
        flags are ignored; the mask is checked against the channel
 
   (36) TIME   (stackable)
        bind time - <mask> <proc>
-|      proc-name <min> <hour> <day> <month> <year>
+       proc-name <min> <hour> <day> <month> <year>
 
        allows you to schedule procedure calls at certain times,
        mask matches 5 space seperated integers of the form:
        "min hour day month year"
 
-|      min, hour, day, month have a zero padding so they are
-|      exactly two characters long, year is extended to four characters
-|      in the same way if needed ;)
+       min, hour, day, month have a zero padding so they are
+       exactly two characters long, year is extended to four characters
+       in the same way if needed ;)
 
-| (37) AWAY   (stackable)
-|      bind away - <mask> <proc>
-|      proc-name <botname> <idx> <text>
-|
-|      triggers when a user goes away or comes back on the botnet, text
-|      is the reason than has been specified (text == "" when returning)
+  (37) AWAY   (stackable)
+       bind away - <mask> <proc>
+       proc-name <botname> <idx> <text>
 
-| (38) LOAD   (stackable)
-|      bind load - <mask> <proc>
-|      proc-name <module>
-|
-|      triggers when a module is loaded.
+       triggers when a user goes away or comes back on the botnet, text
+       is the reason than has been specified (text == "" when returning)
 
-| (38) UNLD   (stackable)
-|      bind unld - <mask> <proc>
-|      proc-name <module>
-|
-|      triggers when a module is unloaded.
+  (38) LOAD   (stackable)
+       bind load - <mask> <proc>
+       proc-name <module>
 
-| (39) NKCH   (stackable)
-|      bind nkch - <mask> <proc>
-|      proc-name <oldhandle> <newhandle>
-|
-|      triggered whenever a local users handle is changed (in the userfile)
+       triggers when a module is loaded.
 
-| (40) EVNT   (stackable)
-|      bind evnt - <type> <proc>
-|      proc-name <type>
-|
-|      triggered whenever one of these events happens. valid events are:
-|        sighup            (called on a kill -HUP <pid>)
-|        sigterm           (called on a kill -TERM <pid>)
-|        sigill            (called on a kill -ILL <pid>)
-|        sigquit           (called on a kill -QUIT <pid>)
-|        save              (called when the userfile is saved)
-|        rehash            (called just after a rehash)
-|        prerehash         (called just before a rehash)
-|        logfile           (called when the logs are switched daily)
-|
-|        connect-server    (called just before we connect to an irc server)
-|        init-server       (called when we actually get on our irc server)
-|        disconnect-server (called when we disconnect from our irc server)
+  (38) UNLD   (stackable)
+       bind unld - <mask> <proc>
+       proc-name <module>
+
+       triggers when a module is unloaded.
+
+  (39) NKCH   (stackable)
+       bind nkch - <mask> <proc>
+       proc-name <oldhandle> <newhandle>
+
+       triggered whenever a local users handle is changed (in the userfile)
+
+  (40) EVNT   (stackable)
+       bind evnt - <type> <proc>
+       proc-name <type>
+
+       triggered whenever one of these events happens. valid events are:
+         sighup            (called on a kill -HUP <pid>)
+         sigterm           (called on a kill -TERM <pid>)
+         sigill            (called on a kill -ILL <pid>)
+         sigquit           (called on a kill -QUIT <pid>)
+         save              (called when the userfile is saved)
+         rehash            (called just after a rehash)
+         prerehash         (called just before a rehash)
+         logfile           (called when the logs are switched daily)
 
 (A) RETURN VALUES
 
@@ -1354,9 +1376,9 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
           can affect the bot's performance (by causing it to miss things
           that it would normally act on) -- you have been warned.
 
-|   CHON  Return 1 to ask the bot not to process the partyline join event
+    CHON  Return 1 to ask the bot not to process the partyline join event
 
-|   CHOF  Return 1 to ask the bot not to process the partyline part event
+    CHOF  Return 1 to ask the bot not to process the partyline part event
 
     WALL  Return 1 to make the command get logged liked so:
           !nick! msg
@@ -1460,26 +1482,26 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 these commands are provided by notes.so to allow you to store notes for
 users to read later
 
-| notes <user> [numberlist]
-|   gets info on notes stored for a user
-|   returns: (if no numbers specified) number of notes for user,
-|            -1 if no such user, -2 if notefile failure
-|            (if a note numberlist specified) a list of notes,
-|            -1 if no such user, -2 if notefile failure, 0 if no
-|            such note. Each note of the list is also a list: first
-|            element from, 2nd element timestamp, 3rd element the
-|            note itself. (ex: 'notes mynick "2-4;8;16-"')
+  notes <user> [numberlist]
+    gets info on notes stored for a user
+    returns: (if no numbers specified) number of notes for user,
+             -1 if no such user, -2 if notefile failure
+             (if a note numberlist specified) a list of notes,
+             -1 if no such user, -2 if notefile failure, 0 if no
+             such note. Each note of the list is also a list: first
+             element from, 2nd element timestamp, 3rd element the
+             note itself. (ex: 'notes mynick "2-4;8;16-"')
 
-| erasenotes <user> <numberlist>
-|   erases some or all stored notes for a user
-|   returns: -1 if no such user, -2 if notefile failure, 0 if
-|            no such note, or number of erased notes.
-|            'erasenote mynick "-"' erase all notes for mynick.
+  erasenotes <user> <numberlist>
+    erases some or all stored notes for a user
+    returns: -1 if no such user, -2 if notefile failure, 0 if
+             no such note, or number of erased notes.
+             'erasenote mynick "-"' erase all notes for mynick.
 
-| listnotes <user> <numberlist>
-|   lists existing notes according to the numberlist (ex: "2-4;8;16-")
-|   returns: -1 if no such user, -2 if notefile failure, 0 if no
-|            such note, list of existing notes.
+  listnotes <user> <numberlist>
+    lists existing notes according to the numberlist (ex: "2-4;8;16-")
+    returns: -1 if no such user, -2 if notefile failure, 0 if no
+             such note, list of existing notes.
 
   storenote <from> <to> <msg> <idx>
     stores a note for later reading, notify idx of any results (use
@@ -1531,6 +1553,13 @@ users to read later
       current directory
     returns: "0" on failure; "1" on success (either an immediate send
       or a queued send)
+
+| fileresend <idx> <filename> [ircnick]
+|   like filesend, only that it starts a DCC RESEND instead of a DCC SEND,
+|     which allows people to resume aborted file transfers if their client
+|     supports that protocol. ircII/BitchX/etc. support it, mIRC does not.
+|   returns: "0" on failure; "1" on success (either an immediate send
+|     or a queued send)
 
   setdesc <dir> <file> <desc>
     sets the description for a file in a file system directory; the

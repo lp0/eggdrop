@@ -1,7 +1,7 @@
 /* 
  * module.h
  * 
- * $Id: module.h,v 1.26 2000/05/23 21:06:16 guppy Exp $
+ * $Id: module.h,v 1.24 2000/01/31 23:03:02 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -25,7 +25,7 @@
 #ifndef _EGG_MOD_MODULE_H
 #define _EGG_MOD_MODULE_H
 
-/* just include *all* the include files...it's slower but EASIER */
+/* Just include *all* the include files...it's slower but EASIER */
 #ifdef HAVE_CONFIG_H
 #  include "../../config.h"
 #endif
@@ -34,13 +34,15 @@
 #include "../tandem.h"
 
 /* 
- * this file contains all the orrible stuff required to do the lookup
- * table for symbols, rather than getting the OS to do it, since most OS's
- * require all symbols resolved, this can cause a problem with some modules
- * this is intimately related to the table in modules.c
- * don't change the files unless you have flamable underwear
- * do not read this file whilst unless heavily sedated, I will not be held
- * responsible for mental break-downs caused by this file <G>
+ * This file contains all the orrible stuff required to do the lookup
+ * table for symbols, rather than getting the OS to do it, since most
+ * OS's require all symbols resolved, this can cause a problem with
+ * some modules. This is intimately related to the table in modules.c.
+ *
+ * Don't change the files unless you have flamable underwear.
+ *
+ * Do not read this file whilst unless heavily sedated, I will not be
+ * held responsible for mental break-downs caused by this file <G>
  */
 
 #undef nmalloc
@@ -60,7 +62,8 @@
 #define EGG_IS_MIN_VER(ver) 		((ver) <= EGG_VERSION)
 #define EGG_IS_MAX_VER(ver)		((ver) >= EGG_VERSION)
 
-/* redefine for module-relevance */
+/* Redefine for module-relevance */
+
 /* 0 - 3 */
 #define nmalloc(x) ((void *)(global[0]((x),MODULE_NAME,__FILE__,__LINE__)))
 #define nfree(x) (global[1]((x),MODULE_NAME,__FILE__,__LINE__))
@@ -274,7 +277,7 @@
 #define in_chain ((int (*)(char *))global[163])
 /* 164 - 167 */
 #define add_note ((int (*)(char *,char*,char*,int,int))global[164])
-#define removedcc ((void (*) (int))global[165])
+#define del_lang_section ((int(*)(char *))global[165])
 #define detect_dcc_flood ((int (*) (time_t *,struct chat_info *,int))global[166])
 #define flush_lines ((void(*)(int,struct chat_info*))global[167])
 /* 168 - 171 */
@@ -364,19 +367,42 @@
 #  define ContextNote(note) {}
 #endif
 #ifdef DEBUG_ASSERT
-#  define Assert(expr) (global[233](__FILE__, __LINE__, MODULE_NAME, (int)(expr)))
+#  define Assert(expr)							\
+	(global[233](__FILE__, __LINE__, MODULE_NAME, (int)(expr)))
 #else
 #  define Assert(expr) {}
 #endif
-#define protect_readonly (*(int *)(global[234]))
-#define del_lang_section ((int(*)(char *))global[235])
+#define allocsock ((int(*)(int sock,int options))global[234])
+#define call_hostbyip ((void(*)(IP, char *, int))global[235])
 /* 236 - 239 */
-#define check_tcl_event ((void * (*) (char *))global[236])
-/* this is for blowfish module, couldnt be bothereed making a whole new .h
- * file for it ;) */
+#define call_ipbyhost ((void(*)(char *, IP, int))global[236])
+#define iptostr ((char *(*)(IP))global[237])
+#define DCC_DNSWAIT (*(struct dcc_table *)(global[238]))
+#define hostsanitycheck_dcc ((int(*)(char *, char *, IP, char *, char *))global[239])
+/* 240 - 243 */
+#define dcc_dnsipbyhost ((void (*)(char *))global[240])
+#define dcc_dnshostbyip ((void (*)(IP))global[241])
+#define changeover_dcc ((void (*)(int, struct dcc_table *, int))global[242])
+#define make_rand_str ((void (*) (char *, int))global[243])
+/* 244 - 247 */
+#define protect_readonly (*(int *)(global[244]))
+#define findchan_by_dname ((struct chanset_t *(*)(char *))global[245])
+#define removedcc ((void (*) (int))global[246])
+#define userfile_perm (*(int *)global[247])
+/* 248 - 251 */
+#define sock_has_data ((int(*)(int, int))global[248])
+#define bots_in_subtree ((int (*)(tand_t *))global[249])
+#define users_in_subtree ((int (*)(tand_t *))global[250])
+
+
+/* This is for blowfish module, couldnt be bothereed making a whole new .h
+ * file for it ;)
+ */
 #ifndef MAKING_BLOWFISH
-#define encrypt_string(a,b) (((char *(*)(char *,char*))blowfish_funcs[4])(a,b))
-#define decrypt_string(a,b) (((char *(*)(char *,char*))blowfish_funcs[5])(a,b))
+#  define encrypt_string(a, b)						\
+	(((char *(*)(char *,char*))blowfish_funcs[4])(a,b))
+#  define decrypt_string(a, b)						\
+	(((char *(*)(char *,char*))blowfish_funcs[5])(a,b))
 #endif
 
 #endif				/* _EGG_MOD_MODULE_H */

@@ -1,7 +1,7 @@
 /* 
  * files.h -- part of filesys.mod
  * 
- * $Id: files.h,v 1.4 2000/01/08 21:23:16 per Exp $
+ * $Id: files.h,v 1.5 2000/01/17 22:36:08 fabian Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -25,7 +25,7 @@
 #ifndef _EGG_MOD_FILESYS_FILES_H
 #define _EGG_MOD_FILESYS_FILES_H
 
-/* language file additions for the file area */
+/* Language file additions for the file area */
 #define FILES_CONVERT    get_language(0x300)
 #define FILES_NOUPDATE   get_language(0x301)
 #define FILES_NOCONVERT  get_language(0x302)
@@ -79,63 +79,5 @@
 #define FILES_ERASED     get_language(0x332)
 #define FILES_WELCOME    get_language(0x33a)
 #define FILES_WELCOME1   get_language(0x33b)
-
-/* structure for file database (per directory) */
-struct filler_old {
-  char xxx[1 + 61 + 301 + 10 + 11 + 61];
-  unsigned short int uuu[2];
-  time_t ttt[2];
-  unsigned int iii[2];
-};
-
-typedef struct {
-  char version;
-  unsigned short int stat;	/* misc */
-  time_t timestamp;		/* last time this db was updated */
-  char filename[61];
-  char desc[301];		/* should be plenty */
-  char uploader[10];		/* where this file came from */
-  unsigned char flags_req[11];	/* access flags required */
-  time_t uploaded;		/* time it was uploaded */
-  unsigned int size;		/* file length */
-  unsigned short int gots;	/* times the file was downloaded */
-  char sharelink[61];		/* points to where? */
-  char unused[512 - sizeof(struct filler_old)];
-} filedb_old;
-
-struct filler {
-  char xxx[1 + 61 + 186 + 81 + 33 + 22 + 61];
-  unsigned short int uuu[2];
-  time_t ttt[2];
-  unsigned int iii[1];
-};
-
-typedef struct {
-  char version;
-  unsigned short int stat;	/* misc */
-  time_t timestamp;		/* last time this db was updated */
-  char filename[61];
-  char desc[186];		/* should be plenty - shrink it, we need
-				 * the  space :) */
-  char chname[81];		/* channel for chan spec stuff */
-  char uploader[33];		/* where this file came from */
-  char flags_req[22];		/* access flags required */
-  time_t uploaded;		/* time it was uploaded */
-  unsigned int size;		/* file length */
-  unsigned short int gots;	/* times the file was downloaded */
-  char sharelink[61];		/* points to where? */
-  char unused[512 - sizeof(struct filler)];
-} filedb;
-
-#define FILEVERSION_OLD    0x01
-#define FILEVERSION        0x2
-
-#define FILE_UNUSED     0x0001	/* (deleted entry) */
-#define FILE_DIR        0x0002	/* it's actually a directory */
-#define FILE_SHARE      0x0004	/* can be shared on the botnet */
-#define FILE_HIDDEN     0x0008	/* hidden file */
-
-/* prototypes */
-static int findmatch(FILE *, char *, long *, filedb *);
 
 #endif				/* _EGG_MOD_FILESYS_FILES_H */
