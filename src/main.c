@@ -7,11 +7,11 @@
  * 
  * dprintf'ized, 15nov1995
  * 
- * $Id: main.c,v 1.29 1999/12/15 02:32:58 guppy Exp $
+ * $Id: main.c,v 1.40 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -59,31 +59,25 @@ BOOL FreeConsole(VOID);
 #define _POSIX_SOURCE 1
 #endif
 
-extern char origbotname[];
-extern int dcc_total;
+extern char origbotname[], userfile[], botnetnick[];
+extern int dcc_total, conmask, cache_hit, cache_miss, max_logs, quick_logs;
 extern struct dcc_t *dcc;
-extern int conmask;
 extern struct userrec *userlist;
-extern int cache_hit, cache_miss;
-extern char userfile[];
 extern struct chanset_t *chanset;
-extern char botnetnick[];
 extern log_t *logs;
 extern Tcl_Interp *interp;
-extern int max_logs;
 extern tcl_timer_t *timer, *utimer;
 extern jmp_buf alarmret;
-extern int quick_logs;		/* dw */
 
-/*
+/* 
  * Please use the PATCH macro instead of directly altering the version
  * string from now on (it makes it much easier to maintain patches).
  * Also please read the README file regarding your rights to distribute
  * modified versions of this bot.
  */
 
-char egg_version[1024] = "1.4.1";
-int egg_numver = 1040100;
+char egg_version[1024] = "1.4.2";
+int egg_numver = 1040200;
 
 char notify_new[121] = "";	/* person to send a note to for new users */
 int default_flags = 0;		/* default user flags and */
@@ -136,7 +130,8 @@ void fatal(char *s, int recoverable)
   putlog(LOG_MISC, "*", "* %s", s);
   flushlogs();
   for (i = 0; i < dcc_total; i++)
-    killsock(dcc[i].sock);
+    if (dcc[i].sock >= 0)
+      killsock(dcc[i].sock);
   unlink(pid_file);
   if (!recoverable)
     exit(1);
@@ -436,7 +431,7 @@ void backup_userfile()
 /* timer info: */
 static int lastmin = 99;
 static time_t then;
-static struct tm *nowtm;
+static struct tm nowtm;
 
 /* rally BB, this is not QUITE as bad as it seems <G> */
 /* ONCE A SECOND */
@@ -459,8 +454,8 @@ static void core_secondly()
     }
   }
   Context;
-  nowtm = localtime(&now);
-  if (nowtm->tm_min != lastmin) {
+  memcpy(&nowtm, localtime(&now), sizeof(struct tm));
+  if (nowtm.tm_min != lastmin) {
     int i = 0;
 
     /* once a minute */
@@ -469,9 +464,9 @@ static void core_secondly()
     check_expired_ignores();
     autolink_cycle(NULL);	/* attempt autolinks */
     /* in case for some reason more than 1 min has passed: */
-    while (nowtm->tm_min != lastmin) {
+    while (nowtm.tm_min != lastmin) {
       /* timer drift, dammit */
-      debug2("timer: drift (lastmin=%d, now=%d)", lastmin, nowtm->tm_min);
+      debug2("timer: drift (lastmin=%d, now=%d)", lastmin, nowtm.tm_min);
       Context;
       i++;
       lastmin = (lastmin + 1) % 60;
@@ -479,9 +474,9 @@ static void core_secondly()
     }
     if (i > 1)
       putlog(LOG_MISC, "*", "(!) timer drift -- spun %d minutes", i);
-    miltime = (nowtm->tm_hour * 100) + (nowtm->tm_min);
+    miltime = (nowtm.tm_hour * 100) + (nowtm.tm_min);
     Context;
-    if (((int) (nowtm->tm_min / 5) * 5) == (nowtm->tm_min)) {	/* 5 min */
+    if (((int) (nowtm.tm_min / 5) * 5) == (nowtm.tm_min)) {	/* 5 min */
       call_hook(HOOK_5MINUTELY);
       check_botnet_pings();
       Context;
@@ -505,7 +500,7 @@ static void core_secondly()
       }
     }
     Context;
-    if (nowtm->tm_min == notify_users_at)
+    if (nowtm.tm_min == notify_users_at)
       call_hook(HOOK_HOURLY);
     Context;			/* these no longer need checking since they are
 				 * all check vs minutely settings and we only
@@ -534,7 +529,7 @@ static void core_secondly()
 static void core_minutely()
 {
   Context;
-  check_tcl_time(nowtm);
+  check_tcl_time(&nowtm);
   do_check_timers(&timer);
   Context;
   if (quick_logs != 0) {
@@ -605,6 +600,16 @@ int main(int argc, char **argv)
   struct sigaction sv;
   struct chanset_t *chan;
 
+#ifdef DEBUG_MEM
+  {
+#include <sys/resource.h>
+    struct rlimit cdlim;
+    cdlim.rlim_cur = RLIM_INFINITY;
+    cdlim.rlim_max = RLIM_INFINITY;
+    setrlimit(RLIMIT_CORE, &cdlim);
+  }
+#endif
+
   /* initialise context list */
   for (i = 0; i < 16; i++) {
     Context;
@@ -612,7 +617,8 @@ int main(int argc, char **argv)
 #include "patch.h"
   /* version info! */
   sprintf(ver, "eggdrop v%s", egg_version);
-  sprintf(version, "Eggdrop v%s  (c)1997 Robey Pointer (c)1999 Eggheads", egg_version);
+  sprintf(version, "Eggdrop v%s  (c)1997 Robey Pointer (c)1999, 2000 Eggheads",
+      egg_version);
   /* now add on the patchlevel (for Tcl) */
   sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);
   strcat(egg_version, egg_xtra);
@@ -657,8 +663,8 @@ int main(int argc, char **argv)
   /* initialize variables and stuff */
   now = time(NULL);
   chanset = NULL;
-  nowtm = localtime(&now);
-  lastmin = nowtm->tm_min;
+  memcpy(&nowtm, localtime(&now), sizeof(struct tm));
+  lastmin = nowtm.tm_min;
   srandom(now);
   init_mem();
   init_language(1);
@@ -796,7 +802,7 @@ int main(int argc, char **argv)
     dcc[n].user = get_user_by_handle(userlist, "HQ");
     /* make sure there's an innocuous HQ user if needed */
     if (!dcc[n].user) {
-      adduser(userlist, "HQ", "none", "-", USER_PARTY);
+      userlist = adduser(userlist, "HQ", "none", "-", USER_PARTY);
       dcc[n].user = get_user_by_handle(userlist, "HQ");
     }
     setsock(STDOUT, 0);		/* entry in net table */
@@ -809,13 +815,13 @@ int main(int argc, char **argv)
   add_help_reference("cmds1.help");
   add_help_reference("cmds2.help");
   add_help_reference("core.help");
-  add_hook(HOOK_SECONDLY, core_secondly);
-  add_hook(HOOK_MINUTELY, core_minutely);
-  add_hook(HOOK_HOURLY, core_hourly);
-  add_hook(HOOK_REHASH, event_rehash);
-  add_hook(HOOK_PRE_REHASH, event_prerehash);
-  add_hook(HOOK_USERFILE, event_save);
-  add_hook(HOOK_DAILY, event_logfile);
+  add_hook(HOOK_SECONDLY, (Function) core_secondly);
+  add_hook(HOOK_MINUTELY, (Function) core_minutely);
+  add_hook(HOOK_HOURLY, (Function) core_hourly);
+  add_hook(HOOK_REHASH, (Function) event_rehash);
+  add_hook(HOOK_PRE_REHASH, (Function) event_prerehash);
+  add_hook(HOOK_USERFILE, (Function) event_save);
+  add_hook(HOOK_DAILY, (Function) event_logfile);
 
   debug0("main: entering loop");
   while (1) {
@@ -837,20 +843,12 @@ int main(int argc, char **argv)
     Context;
     /* only do this every so often */
     if (!socket_cleanup) {
-      /* clean up sockets that were just left for dead */
-      for (i = 0; i < dcc_total; i++) {
-	if (dcc[i].type == &DCC_LOST) {
-	  dcc[i].type = (struct dcc_table *) (dcc[i].sock);
-	  lostdcc(i);
-	  i--;
-	}
-      }
+      dcc_remove_lost();
       /* check for server or dcc activity */
       dequeue_sockets();
       socket_cleanup = 5;
     } else
       socket_cleanup--;
-    /* new net routines: help me mary! */
     xx = sockgets(buf, &i);
     if (xx >= 0) {		/* non-error */
       int idx;
@@ -896,8 +894,6 @@ int main(int argc, char **argv)
       putlog(LOG_MISC, "*", "* Socket error #%d; recovering.", errno);
       for (i = 0; i < dcc_total; i++) {
 	if ((fcntl(dcc[i].sock, F_GETFD, 0) == -1) && (errno = EBADF)) {
-	  if (dcc[i].type == &DCC_LOST)
-	    dcc[i].type = (struct dcc_table *) (dcc[i].sock);
 	  putlog(LOG_MISC, "*",
 		 "DCC socket %d (type %d, name '%s') expired -- pfft",
 		 dcc[i].sock, dcc[i].type, dcc[i].nick);

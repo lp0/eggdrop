@@ -8,11 +8,11 @@
  * 
  * dprintf'ized, 28aug1995
  * 
- * $Id: dccutil.c,v 1.8 1999/12/15 02:32:58 guppy Exp $
+ * $Id: dccutil.c,v 1.13 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -37,14 +37,9 @@
 #include "tandem.h"
 
 extern struct dcc_t *dcc;
-extern int dcc_total;
-extern char botnetnick[];
-extern char spaces[];
-extern char version[];
+extern int dcc_total, max_dcc, dcc_flood_thr, backgrd;
+extern char botnetnick[], spaces[], version[];
 extern time_t now;
-extern int max_dcc;
-extern int dcc_flood_thr;
-extern int backgrd;
 
 char motdfile[121] = "motd";	/* file where the motd is stored */
 int connect_timeout = 15;	/* how long to wait before a telnet
@@ -258,8 +253,26 @@ void dcc_chatter(int idx)
   }
 }
 
-/* remove entry from dcc list */
+/* Mark an entry as lost and deconstruct it's contents. It will be securely
+ * removed from the dcc list in the main loop.
+ */
 void lostdcc(int n)
+{
+  if (dcc[n].type && dcc[n].type->kill)
+    dcc[n].type->kill(n, dcc[n].u.other);
+  else if (dcc[n].u.other)
+    nfree(dcc[n].u.other);
+  bzero(&dcc[n], sizeof(struct dcc_t));
+
+  dcc[n].sock = (-1);
+  dcc[n].type = &DCC_LOST;
+}
+
+/* Remove entry from dcc list. Think twice before using this function,
+ * because it invalidates any variables that point to a specific dcc
+ * entry!
+ */
+void removedcc(int n)
 {
   if (dcc[n].type && dcc[n].type->kill)
     dcc[n].type->kill(n, dcc[n].u.other);
@@ -271,6 +284,23 @@ void lostdcc(int n)
 	      sizeof(struct dcc_t));
   else
     bzero(&dcc[n], sizeof(struct dcc_t)); /* drummer */
+}
+
+/* Clean up sockets that were just left for dead.
+ */
+void dcc_remove_lost(void)
+{
+  int i;
+
+  Context;
+  for (i = 0; i < dcc_total; i++) {
+    if (dcc[i].type == &DCC_LOST) {
+      dcc[i].type = NULL;
+      dcc[i].sock = (-1);
+      removedcc(i);
+      i--;
+    }
+  }
 }
 
 /* show list of current dcc's to a dcc-chatter */
@@ -486,8 +516,7 @@ void do_boot(int idx, char *by, char *reason)
   check_tcl_chof(dcc[idx].nick, dcc[idx].sock);
   if ((dcc[idx].sock != STDOUT) || backgrd) {
     killsock(dcc[idx].sock);
-    dcc[idx].sock = (long) dcc[idx].type;
-    dcc[idx].type = &DCC_LOST;
+    lostdcc(idx);
     /* entry must remain in the table so it can be logged by the caller */
   } else {
     dprintf(DP_STDOUT, "\n### SIMULATION RESET\n\n");

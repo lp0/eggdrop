@@ -2,11 +2,11 @@
  * lang.h
  *   Conversion definitions for language support
  * 
- * $Id: lang.h,v 1.6 1999/12/15 02:32:58 guppy Exp $
+ * $Id: lang.h,v 1.9 2000/01/08 21:23:14 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,6 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #ifndef _EGG_LANG_H
 #define _EGG_LANG_H
 
@@ -163,7 +164,7 @@
 #define MISC_ROOTWARN	get_language(0x533)
 #define MISC_NOCONFIGFILE get_language(0x534)
 #define MISC_NOUSERFILE	get_language(0x535)
-#define MISC_NOUSERFILE2 get_language(0x536)
+#define MISC_USERFCREATE get_language(0x536)
 #define MISC_USERFCREATE1 get_language(0x537)
 #define MISC_USERFCREATE2 get_language(0x538)
 #define MISC_USERFEXISTS get_language(0x539)
@@ -175,6 +176,7 @@
 #define MISC_CLOGS      get_language(0x53f)
 #define MISC_BANNER_STEALTH get_language(0x540)
 #define MISC_LOGREPEAT  get_language(0x541)
+#define MISC_NOUSERFILE2 get_language(0x542)
 
 /* IRC */
 #define IRC_BANNED	get_language(0x600)
@@ -297,7 +299,8 @@
 #define IRC_TELNETFLOOD         get_language(0x669)
 #define IRC_PREBANNED           get_language(0x66a)
 #define IRC_LEMMINGBOT          get_language(0x66b)
-#define IRC_PROTECT             get_language(0x66c)
+#define IRC_KICK_PROTECT        get_language(0x66c)
+#define IRC_DEOP_PROTECT        get_language(0x66f)
 #define IRC_COMMENTKICK         get_language(0x66d)
 #define IRC_GETALTNICK	get_language(0x66e)
 #define IRC_REMOVEDEXEMPT       get_language(0x670)

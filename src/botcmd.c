@@ -5,11 +5,11 @@
  * 
  * dprintf'ized, 10nov1995
  * 
- * $Id: botcmd.c,v 1.11 1999/12/16 04:03:46 guppy Exp $
+ * $Id: botcmd.c,v 1.16 2000/01/22 23:37:02 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,20 +32,14 @@
 #include "chan.h"
 #include "modules.h"
 
+extern char botnetnick[], ver[], admin[], network[], motdfile[];
+extern int dcc_total, remote_boots, noshare;
 extern struct dcc_t *dcc;
-extern char botnetnick[];
 extern struct chanset_t *chanset;
-extern int dcc_total;
-extern char ver[];
-extern char admin[];
+extern struct userrec *userlist;
 extern Tcl_Interp *interp;
 extern time_t now, online_since;
-extern char network[];
-extern struct userrec *userlist;
-extern int remote_boots;
-extern char motdfile[];
 extern party_t *party;
-extern int noshare;
 extern module_entry *module_list;
 
 static char TBUF[1024];		/* static buffer for goofy bot stuff */
@@ -318,11 +312,11 @@ static void remote_tell_who(int idx, char *nick, int chan)
       l = strlen(c->name);
       if (i + l < 1021) {
 	if (i > 10) {
-	  s[i++] = ',';
-	  s[i++] = ' ';
-	}
-	strcpy(s + i, c->name);
-	i += (l + 2);
+          sprintf(s, "%s, %s", s, c->name);
+	} else {
+          strcpy(s, c->name);
+	  i += (l + 2);
+        }
       }
     }
     c = c->next;
@@ -1461,7 +1455,7 @@ static void bot_versions(int sock, char *par)
 /* BOT COMMANDS */
 /* function call should be:
  * int bot_whatever(idx,"parameters");
- *
+ * 
  * SORT these, dcc_bot uses a shortcut which requires them sorted
  * 
  * yup, those are tokens there to allow a more efficient botnet as

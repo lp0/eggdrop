@@ -6,11 +6,11 @@
  * 
  * dprintf'ized, 27oct1995
  * 
- * $Id: dcc.c,v 1.20 1999/12/15 02:32:58 guppy Exp $
+ * $Id: dcc.c,v 1.24 2000/01/08 21:23:13 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -138,7 +138,6 @@ static void greet_new_bot(int idx)
     if (dcc[i].type == &DCC_FORK_BOT) {
       killsock(dcc[i].sock);
       lostdcc(i);
-      i--;
     }
 }
 
@@ -920,16 +919,16 @@ static void dcc_chat(int idx, char *buf, int i)
 	      botnet_send_part_idx(idx, buf);
 	  }
 	  if (dcc[idx].u.chat->su_nick) {
-	    dcc[idx].user = get_user_by_handle(userlist, dcc[idx].u.chat->su_nick);
+	    dcc[idx].user = get_user_by_handle(userlist,
+					       dcc[idx].u.chat->su_nick);
 	    strcpy(dcc[idx].nick, dcc[idx].u.chat->su_nick);
 	    dcc[idx].type = &DCC_CHAT;
-	    if (dcc[idx].u.chat->channel < 100000)
-	      botnet_send_join_idx(idx, -1);
-	    dprintf(idx, "Returning to real nick %s!\r\n", dcc[idx].u.chat->su_nick);
 	    nfree(dcc[idx].u.chat->su_nick);
 	    dcc[idx].u.chat->su_nick = NULL;
-	    /* chanout_but(-1, dcc[idx].u.chat->channel, "*** %s has rejoined the party line.\n", dcc[idx].nick); */
 	    dcc_chatter(idx);
+	    if (dcc[idx].u.chat->channel < 100000 &&		
+                dcc[idx].u.chat->channel >= 0)
+	      botnet_send_join_idx(idx, -1);
 	    return;
 	  } else if ((dcc[idx].sock != STDOUT) || backgrd) {
 	    killsock(dcc[idx].sock);
@@ -1092,7 +1091,6 @@ static void dcc_telnet(int idx, char *buf, int i)
   if (sock < 0) {
     neterror(s);
     putlog(LOG_MISC, "*", DCC_FAILED, s);
-    killsock(sock);
     return;
   }
   /* <bindle> [09:37] Telnet connection: 168.246.255.191/0
@@ -1797,7 +1795,7 @@ struct dcc_table DCC_IDENTWAIT =
 void dcc_ident(int idx, char *buf, int len)
 {
   char response[512], uid[512], buf1[UHOSTLEN];
-  int i, sock = dcc[idx].sock;
+  int i;
 
   Context;
   sscanf(buf, "%*[^:]:%[^:]:%*[^:]:%[^\n]\n", response, uid);
@@ -1814,7 +1812,6 @@ void dcc_ident(int idx, char *buf, int len)
       simple_sprintf(buf1, "%s@%s", uid, dcc[idx].host);
       dcc_telnet_got_ident(i, buf1);
     }
-  idx = findanyidx(sock);
   dcc[idx].u.other = 0;
   killsock(dcc[idx].sock);
   lostdcc(idx);
@@ -1823,7 +1820,7 @@ void dcc_ident(int idx, char *buf, int len)
 void eof_dcc_ident(int idx)
 {
   char buf[UHOSTLEN];
-  int i, sock = dcc[idx].sock;
+  int i;
 
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type == &DCC_IDENTWAIT) &&
@@ -1832,12 +1829,9 @@ void eof_dcc_ident(int idx)
       simple_sprintf(buf, "telnet@%s", dcc[idx].host);
       dcc_telnet_got_ident(i, buf);
     }
-  idx = findanyidx(sock);	/* sanity */
-  if (idx >= 0) {
-    killsock(dcc[idx].sock);
-    dcc[idx].u.other = 0;
-    lostdcc(idx);
-  }
+  killsock(dcc[idx].sock);
+  dcc[idx].u.other = 0;
+  lostdcc(idx);
 }
 
 static void display_dcc_ident(int idx, char *buf)

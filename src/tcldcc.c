@@ -4,11 +4,11 @@
  * 
  * dprintf'ized, 1aug1996
  * 
- * $Id: tcldcc.c,v 1.14 1999/12/15 02:32:58 guppy Exp $
+ * $Id: tcldcc.c,v 1.17 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -32,16 +32,12 @@
 extern Tcl_Interp *interp;
 extern tcl_timer_t *timer, *utimer;
 extern struct dcc_t *dcc;
-extern int dcc_total;
+extern int dcc_total, backgrd, parties, make_userfile;
+extern int do_restart, remote_boots, max_dcc;
 extern char botnetnick[];
-extern int backgrd;
 extern party_t *party;
-extern int parties;
-extern int make_userfile;
-extern int do_restart;
-extern int remote_boots;
 extern tand_t *tandbot;
-extern int max_dcc;
+
 int enable_simul = 0;
 extern time_t now;
 static struct portmap *root = NULL;
@@ -455,34 +451,61 @@ static int tcl_page STDVAR
 static int tcl_control STDVAR
 {
   int idx, i;
-  void *hold;
 
   Context;
-  BADARGS(3, 3, " idx command");
+  BADARGS(2, 3, " idx ?command?");
   i = atoi(argv[1]);
   idx = findidx(i);
   if (idx < 0) {
     Tcl_AppendResult(irp, "invalid idx", NULL);
     return TCL_ERROR;
   }
-  if (dcc[idx].type->flags & DCT_CHAT) {
-    if (dcc[idx].u.chat->channel >= 0) {
-      chanout_but(idx, dcc[idx].u.chat->channel, "*** %s has gone.\n",
-		  dcc[idx].nick);
-      check_tcl_chpt(botnetnick, dcc[idx].nick, dcc[idx].sock,
-		     dcc[idx].u.chat->channel);
-      botnet_send_part_idx(idx, "gone");
+  if (argc == 2) {
+    void *old;
+    if (dcc[idx].type != &DCC_SCRIPT) {
+      Tcl_AppendResult(irp, "invalid idx type", NULL);
+      return TCL_ERROR;
     }
-    check_tcl_chof(dcc[idx].nick, dcc[idx].sock);
+    old = dcc[idx].u.script->u.other;
+    dcc[idx].type = dcc[idx].u.script->type;
+    nfree(dcc[idx].u.script);
+    dcc[idx].u.other = old;
+    if (dcc[idx].type == &DCC_SOCKET) {
+      /* kill the whole thing off */
+      killsock(dcc[idx].sock);
+      lostdcc(idx);
+    }
+    if (dcc[idx].type == &DCC_CHAT) {
+      if (dcc[idx].u.chat->channel >= 0) {
+	chanout_but(-1, dcc[idx].u.chat->channel,DCC_JOIN, dcc[idx].nick);
+	Context;
+	if (dcc[idx].u.chat->channel < 10000)
+	  botnet_send_join_idx(idx, -1);
+	check_tcl_chjn(botnetnick, dcc[idx].nick, dcc[idx].u.chat->channel,
+		       geticon(idx), dcc[idx].sock, dcc[idx].host);
+      }
+      check_tcl_chon(dcc[idx].nick, dcc[idx].sock);
+    }
+  } else {
+    void *hold;
+    if (dcc[idx].type->flags & DCT_CHAT) {
+      if (dcc[idx].u.chat->channel >= 0) {
+        chanout_but(idx, dcc[idx].u.chat->channel, "*** %s has gone.\n",
+		    dcc[idx].nick);
+        check_tcl_chpt(botnetnick, dcc[idx].nick, dcc[idx].sock,
+		       dcc[idx].u.chat->channel);
+        botnet_send_part_idx(idx, "gone");
+      }
+      check_tcl_chof(dcc[idx].nick, dcc[idx].sock);
+    }
+    hold = dcc[idx].u.other;
+    dcc[idx].u.script = get_data_ptr(sizeof(struct script_info));
+    dcc[idx].u.script->u.other = hold;
+    dcc[idx].u.script->type = dcc[idx].type;
+    dcc[idx].type = &DCC_SCRIPT;
+    strncpy(dcc[idx].u.script->command, argv[2], 120);
+    dcc[idx].u.script->command[120] = 0;
   }
-  hold = dcc[idx].u.other;
-  dcc[idx].u.script = get_data_ptr(sizeof(struct script_info));
-
-  dcc[idx].u.script->u.other = hold;
-  dcc[idx].u.script->type = dcc[idx].type;
-  dcc[idx].type = &DCC_SCRIPT;
-  strncpy(dcc[idx].u.script->command, argv[2], 120);
-  dcc[idx].u.script->command[120] = 0;
   return TCL_OK;
 }
 

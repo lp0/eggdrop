@@ -1,11 +1,11 @@
 /* 
  * userchan.c -- part of channels.mod
  * 
- * $Id: userchan.c,v 1.27 1999/12/15 02:32:59 guppy Exp $
+ * $Id: userchan.c,v 1.29 2000/01/08 21:23:15 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -212,7 +212,7 @@ static int u_setsticky_mask(struct chanset_t *chan, maskrec *u, char *uhost, int
 
 /*        Merge of u_equals_ban(), u_equals_exempt() and u_equals_invite() to
  *      cut down on the duplication in the eggdrop code currently. <cybah>
- *
+ * 
  *      Returns:
  *              0       not a ban
  *              1       temporary ban

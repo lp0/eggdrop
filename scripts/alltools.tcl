@@ -197,9 +197,11 @@ proc inchain {bot} {
 proc randstring {length} {
   set chars abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
   set count [string length $chars]
+  set result ""
   for {set i 0} {$i < $length} {incr i} {
     append result [string index $chars [rand $count]]
   }
+  return $result
 }
 
 proc putdccall {text} {

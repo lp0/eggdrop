@@ -1,6 +1,6 @@
 /* 
  * misc.c -- handles:
- *   split() maskhost() copyfile() movefile() fixfrom()
+ *   split() maskhost() copyfile() movefile()
  *   dumplots() daysago() days() daysdur()
  *   logging things
  *   queueing output for the bot (msg and help)
@@ -10,11 +10,11 @@
  * 
  * dprintf'ized, 12dec1995
  * 
- * $Id: misc.c,v 1.21 1999/12/15 02:32:58 guppy Exp $
+ * $Id: misc.c,v 1.26 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -40,25 +40,13 @@
 #include <sys/utsname.h>
 #endif
 
-extern int dcc_total;
 extern struct dcc_t *dcc;
-extern char helpdir[];
-extern char version[];
-extern char origbotname[];
-extern char botname[];
-extern char admin[];
-extern int backgrd;
-extern int con_chan;
-extern int term_z;
-extern int use_stderr;
-extern char motdfile[];
-extern char ver[];
-extern int keep_all_logs;
-extern int quick_logs;
-extern char botnetnick[];
 extern struct chanset_t *chanset;
+extern char helpdir[], version[], origbotname[], botname[], admin[];
+extern char motdfile[], ver[], botnetnick[], bannerfile[];
+extern int backgrd, con_chan, term_z, use_stderr, dcc_total;
+extern int keep_all_logs, quick_logs, strict_host;
 extern time_t now;
-extern char bannerfile[];
 
 int shtime = 1;			/* whether or not to display the time
 				 * with console output */
@@ -68,15 +56,15 @@ int max_logsize = 0;		/* maximum logfile size, 0 for no limit */
 int conmask = LOG_MODES | LOG_CMDS | LOG_MISC;	/* console mask */
 int debug_output = 0;		/* disply output to server to LOG_SERVEROUT */
 
-struct help_list {
-  struct help_list *next;
+struct help_list_t {
+  struct help_list_t *next;
   char *name;
   int type;
 };
 
 static struct help_ref {
   char *name;
-  struct help_list *first;
+  struct help_list_t *first;
   struct help_ref *next;
 } *help_list = NULL;
 
@@ -84,14 +72,14 @@ static struct help_ref {
 int expmem_misc()
 {
   struct help_ref *current;
-  struct help_list *item;
+  struct help_list_t *item;
   int tot = 0;
 
   for (current = help_list; current; current = current->next) {
     tot += sizeof(struct help_ref) + strlen(current->name) + 1;
 
     for (item = current->first; item; item = item->next)
-      tot += sizeof(struct help_list) + strlen(item->name) + 1;
+      tot += sizeof(struct help_list_t) + strlen(item->name) + 1;
   }
   return tot + (max_logs * sizeof(log_t));
 }
@@ -224,8 +212,11 @@ void maskhost(char *s, char *nw)
     } else
       i = 0;
     while (*p != '@') {
-      if ((*p == '~') || (*p == '+') || (*p == '-'))
-	nw[i] = '?';
+      if (strchr("~+-^=", *p))
+        if (strict_host)
+	  nw[i] = '?';
+	else
+	  i--; 
       else
 	nw[i] = *p;
       p++;
@@ -467,7 +458,7 @@ void putlog EGG_VARARGS_DEF(int, arg1)
     ct[7] = 0;
     strcpy(&ct[2], &ct[4]);
     ct[24] = 0;
-    strcpy(&ct[5], &ct[22]);
+    strcpy(&ct[5], &ct[20]);
     if (ct[0] == ' ')
       ct[0] = '0';
   }
@@ -961,7 +952,7 @@ static void scan_help_file(struct help_ref *current, char *filename, int type)
 {
   FILE *f;
   char s[HELP_BUF_LEN + 1], *p, *q;
-  struct help_list *list;
+  struct help_list_t *list;
 
   if (is_file(filename) && (f = fopen(filename, "r"))) {
     while (!feof(f)) {
@@ -972,7 +963,7 @@ static void scan_help_file(struct help_ref *current, char *filename, int type)
 	  q += 7;
 	  if ((p = strchr(q, '}'))) {
 	    *p = 0;
-	    list = nmalloc(sizeof(struct help_list));
+	    list = nmalloc(sizeof(struct help_list_t));
 
 	    list->name = nmalloc(p - q + 1);
 	    strcpy(list->name, q);
@@ -1010,12 +1001,12 @@ void add_help_reference(char *file)
   scan_help_file(current, s, 1);
   simple_sprintf(s, "%sset/%s", helpdir, file);
   scan_help_file(current, s, 2);
-};
+}
 
 void rem_help_reference(char *file)
 {
   struct help_ref *current, *last = NULL;
-  struct help_list *item;
+  struct help_list_t *item;
 
   for (current = help_list; current; last = current, current = current->next)
     if (!strcmp(current->name, file)) {
@@ -1037,7 +1028,7 @@ void rem_help_reference(char *file)
 void reload_help_data(void)
 {
   struct help_ref *current = help_list, *next;
-  struct help_list *item;
+  struct help_list_t *item;
 
   help_list = NULL;
   while (current) {
@@ -1057,7 +1048,7 @@ void reload_help_data(void)
 void debug_help(int idx)
 {
   struct help_ref *current;
-  struct help_list *item;
+  struct help_list_t *item;
 
   for (current = help_list; current; current = current->next) {
     dprintf(idx, "HELP FILE(S): %s\n", current->name);
@@ -1073,7 +1064,7 @@ FILE *resolve_help(int dcc, char *file)
   char s[1024], *p;
   FILE *f;
   struct help_ref *current;
-  struct help_list *item;
+  struct help_list_t *item;
 
   /* somewhere here goes the eventual substituation */
   if (!(dcc & HELP_TEXT))
@@ -1190,7 +1181,7 @@ void tellhelp(int idx, char *file, struct flag_record *flags, int fl)
 void tellwildhelp(int idx, char *match, struct flag_record *flags)
 {
   struct help_ref *current;
-  struct help_list *item;
+  struct help_list_t *item;
   FILE *f;
   char s[1024];
 
@@ -1213,7 +1204,7 @@ void tellwildhelp(int idx, char *match, struct flag_record *flags)
 void tellallhelp(int idx, char *match, struct flag_record *flags)
 {
   struct help_ref *current;
-  struct help_list *item;
+  struct help_list_t *item;
   FILE *f;
   char s[1024];
 

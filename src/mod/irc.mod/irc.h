@@ -1,11 +1,11 @@
 /* 
  * irc.h -- part of irc.mod
  * 
- * $Id: irc.h,v 1.7 1999/12/15 02:32:59 guppy Exp $
+ * $Id: irc.h,v 1.10 2000/01/22 23:31:54 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #ifndef _EGG_MOD_IRC_IRC_H
 #define _EGG_MOD_IRC_IRC_H
 
@@ -66,7 +67,7 @@ static int detect_chan_flood(char *, char *, char *, struct chanset_t *, int, ch
 static void newmask(masklist *, char *, char *);
 static char *quickban(struct chanset_t *, char *);
 static void got_op(struct chanset_t *chan, char *nick, char *from,
-		   char *who, struct flag_record *opper);
+		   char *who, struct userrec *opu, struct flag_record *opper);
 static int killmember(struct chanset_t *chan, char *nick);
 static void check_lonely_channel(struct chanset_t *chan);
 static void gotmode(char *, char *);

@@ -2,11 +2,11 @@
  * main.h
  *   include file to include most other include files
  * 
- * $Id: main.h,v 1.10 1999/12/15 02:32:58 guppy Exp $
+ * $Id: main.h,v 1.13 2000/01/29 12:45:28 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -22,6 +22,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #ifndef _EGG_MAIN_H
 #define _EGG_MAIN_H
 
@@ -58,6 +59,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_STRINGS_H
+#  include <strings.h>
+#endif
 #include <sys/types.h>
 #include "lang.h"
 #include "eggdrop.h"

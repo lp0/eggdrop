@@ -2,6 +2,70 @@
 Changes in eggdrop: (since v1.4.0)
 ----------------------------------
 
+1.4.2 (January 30, 2000)
+Foundby   Fixedby   What....
+SuperS/   Fabian    missing header caused compile errors related to bzero()
+Joker                 also fixes problems with missing headers for
+                      strcasecmp and strncasecmp on some systems.
+          Wiktor    new trick to tricks file
+toot      dw        .who <bot> did only show first chan.
+          dw        handle got messed up in mode bindings.
+          Wiktor/   moved banned: to langfiles so it can be changed easy.
+          Tothwolf
+          dw        cleaned up a litle to save a few bytes
+david     Fabian    botattr was interpreting relay'ed bots as linked
+          Wiktor    fixed typo in transfer.mod
+          Rufus     fixed HQ user creation on eggdrop -nt
+mortmann  Jason	    +I modes used the wrong queue and was not stacked
+		      also fixed a minor +e prob.
+          Wiktor    updated INSTALL & compiling.FAQ documents
+toot      dw /      fixed problem with .adduser and strict-host = 0
+          drummer
+Nils      Fabian    `wire off' displayed the wrong nick. Also fixed a wire
+                     memory accounting bug
+DVS01     Fabian    transfer module now supports filenames with spaces
+          Fabian    added makros EGG_MIN_VER and EGG_MAX_VER so that modules
+                    can use one source file for various eggdrop versions
+Wiktor    Tothwolf  configure warning bug related to TCLLIB and TCLINC vars
+          Eule      updated copyright stuff
+          Fabian    as lostdcc deconstructs dcc entries, no need for
+                    dcc_remove_lost in many places anymore.
+SuperS/   Fabian    several warning fixes, increased compliance with ANSI C
+Shane
+Jz	  dw	    adduser could add +n even if n was in private-globals
+          Fabian    changed keep-all-logs to append yyyy instead of only yy
+	  dw	    +user w/o a host would get corrupted
+toot	  dw	    .quit from a su'd nick would always broadcast you as
+		    joining the party line even if you have .chat off
+          dw        wrong error msg in cmd_chpass
+slennox   dw /      pushmode wouldn't work on the victim in a mode binding
+          drummer   since it first run the binding then updated u->flags
+          Fabian    a few dcc fixes and lostdcc() now also deconstructs the
+                    entries instead of only marking them DCC_LOST.
+toot      Fabian    user_del_chan caused a SEGV
+          dw        minor doc fix in eggdrop.conf.dist
+NESS      Lucas     server-online was documented wrong
+          drummer   enforceban was kicking users that did not match a channel
+                    ban; solved by using fixfrom/strict-host more intelligently
+G`Quann   Fabian    nowtm now a structure instead of a pointer
+toot      Fabian    server module can't handle the new lostdcc() approach,
+                    so it now uses removedcc() instead.
+          Fabian    minor language cleanup
+toot      Fabian    bot crashed in punish_badguy()
+          Fabian    sockets lost during module *_close caused a SEGV 
+toot      Fabian    was not hiding socket num for DCC_LOST entries.
+          Tothwolf  more cleanups dealing with the GPL header
+          Fabian    lostdcc() caused corrupted dcc lists in many situations.
+                    using DCC_LOST instead now.
+          Fabian    lostdcc behaviour change caused lost sockets in server mod
+NetG0D    guppy     mucked up language entry if set userfile was missing
+	  dw	    Make sure a corefile can be written if you compile
+		    with debug symbols
+	  dw/Fabian unbind's from within a proc could cause a crash.
+          Fabian    killmember was deleting non-existant entries if the channel
+                    was still pending
+GTo	  Fabian    showing wrong message on revenge kick
+
 1.4.1 (December 17, 1999)
 Foundby   Fixedby   What....
           Fabian    tputs could crash in a "writing to nonexistent socket"

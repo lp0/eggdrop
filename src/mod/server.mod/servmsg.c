@@ -1,11 +1,11 @@
 /* 
  * servmsg.c -- part of server.mod
  * 
- * $Id: servmsg.c,v 1.22 1999/12/15 02:33:00 guppy Exp $
+ * $Id: servmsg.c,v 1.28 2000/01/08 21:23:17 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -300,6 +300,7 @@ static void nuke_server(char *reason)
     server_online = 0;
     if (reason && (servidx > 0))
       dprintf(servidx, "QUIT :%s\n", reason);
+    disconnect_server(servidx);
     lostdcc(servidx);
   }
 }
@@ -877,27 +878,6 @@ static int goterror(char *from, char *msg)
   return 1;
 }
 
-/* make nick!~user@host into nick!user@host if necessary */
-/* also the new form: nick!+user@host or nick!-user@host */
-static void fixfrom(char *s)
-{
-  char *p;
-
-  if (strict_host)
-    return;
-  if (s == NULL)
-    return;
-  if ((p = strchr(s, '!')))
-    p++;
-  else
-    p = s;			/* sometimes we get passed just a
-				 * user@host here... */
-  /* these are ludicrous. */
-  if (strchr("~+-^=", *p) && (p[1] != '@')) /* added check for @ - drummer */
-    strcpy(p, p + 1);
-  /* bug was: n!~@host -> n!@host  now: n!~@host */
-}
-
 /* nick change */
 static int gotnick(char *from, char *msg)
 {
@@ -965,9 +945,19 @@ static int gotmode(char *from, char *msg)
   return 0;
 }
 
+static void disconnect_server(int idx)
+{
+  server_online = 0;
+  if (dcc[idx].sock >= 0)
+    killsock(dcc[idx].sock);
+  dcc[idx].sock = (-1);
+  serv = (-1);
+}
+
 static void eof_server(int idx)
 {
   putlog(LOG_SERV, "*", "%s %s", IRC_DISCONNECTED, dcc[idx].host);
+  disconnect_server(idx);
   lostdcc(idx);
 }
 
@@ -982,10 +972,7 @@ static void kill_server(int idx, void *x)
 {
   module_entry *me;
 
-  server_online = 0;
-  if (dcc[idx].sock >= 0)
-    killsock(dcc[idx].sock);
-  serv = -1;
+  disconnect_server(idx);
   if ((me = module_find("channels", 0, 0)) && me->funcs) {
     struct chanset_t *chan;
 
@@ -998,6 +985,7 @@ static void kill_server(int idx, void *x)
 static void timeout_server(int idx)
 {
   putlog(LOG_SERV, "*", "Timeout: connect to %s", dcc[idx].host);
+  disconnect_server(idx);
   lostdcc(idx);
 }
 
@@ -1042,8 +1030,6 @@ static void server_activity(int idx, char *msg, int len)
     } else
       putlog(LOG_RAW, "*", "[@] %s %s %s", from, code, msg);
   }
-  if (from[0])
-    fixfrom(from);
   Context;
   /* this has GOT to go into the raw binding table, * merely because this
    * is less effecient */
@@ -1088,7 +1074,8 @@ static void connect_server(void)
 {
   char s[121], pass[121], botserver[UHOSTLEN];
   static int oldserv = -1;
-  int servidx, botserverport;
+  int servidx;
+  unsigned int botserverport;
 
   waiting_for_awake = 0;
   trying_server = now;

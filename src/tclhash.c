@@ -12,11 +12,11 @@
  * dprintf'ized, 15nov1995 (hash.c)
  * dprintf'ized, 4feb1996 (tclhash.c)
  * 
- * $Id: tclhash.c,v 1.10 1999/12/15 02:32:58 guppy Exp $
+ * $Id: tclhash.c,v 1.14 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -41,8 +41,7 @@
 extern Tcl_Interp *interp;
 extern struct dcc_t *dcc;
 extern struct userrec *userlist;
-extern int debug_tcl;
-extern int dcc_total;
+extern int debug_tcl, dcc_total;
 extern time_t now;
 
 static p_tcl_bind_list bind_table_list;
@@ -549,6 +548,21 @@ static int trigger_bind(char *proc, char *param)
     if (f != NULL)
       fprintf(f, "eval: %s%s\n", proc, param);
   }
+  {
+    /* 
+     * We now try to debug the Tcl_VarEval() call below by remembering both
+     * the called proc name and it's parameters. This should render us a bit
+     * less helpless when we see context dumps.
+     */
+    char *buf, *msg = "TCL proc: %s, param: %s";
+
+    Context;
+    buf = nmalloc(strlen(msg) + (proc ? strlen(proc) : 6)
+		  + (param ? strlen(param) : 6) + 1);
+    sprintf(buf, msg, proc ? proc : "<null>", param ? param : "<null>");
+    ContextNote(buf);
+    nfree(buf);
+  }
   Context;
   x = Tcl_VarEval(interp, proc, param, NULL);
   Context;
@@ -582,7 +596,8 @@ int check_tcl_bind(p_tcl_bind_list bind, char *match,
   int f = 0, atrok, x;
 
   Context;
-  for (hm = bind->first; hm && !f; ohm = hm, hm = hm->next) {
+  
+  for (hm = bind->first; hm && !f && bind->first; ohm = hm, hm = hm->next) {
     int ok = 0;
 
     switch (match_type & 0x03) {

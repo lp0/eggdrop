@@ -9,11 +9,11 @@
  * dprintf'ized, 27oct1995
  * multi-channel, 8feb1996
  * 
- * $Id: chan.c,v 1.48 1999/12/15 02:32:59 guppy Exp $
+ * $Id: chan.c,v 1.55 2000/01/22 23:31:54 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -394,7 +394,7 @@ static void refresh_ban_kick(struct chanset_t *chan, char *user, char *nick)
 	c[0] = 0;
 	if (u->desc && (u->desc[0] != '@')) {
 	  if (strcmp(IRC_PREBANNED, ""))
-	    sprintf(c, "%s: %s", IRC_PREBANNED, u->desc);
+	    sprintf(c, "%s%s", IRC_PREBANNED, u->desc);
 	  else
 	    sprintf(c, "%s", u->desc);
 	}
@@ -505,7 +505,7 @@ static void recheck_exempts(struct chanset_t * chan) {
       while (b && b->mask[0]) {
         if ((wild_match(b->mask, e->mask) || wild_match(e->mask, b->mask)) &&
             !isexempted(chan, e->mask))
-          do_mask(chan, chan->channel.exempt, e->mask, 'e');
+	  add_mode(chan,'+','e',e->mask);
         b = b->next;
       }
     }
@@ -523,7 +523,7 @@ static void recheck_invites(struct chanset_t * chan) {
        * only) or invite is sticky */
       if (!isinvited(chan, ir->mask) && ((!channel_dynamicinvites(chan) &&
           !(chan->channel.mode & CHANINV)) || ir->flags & MASKREC_STICKY))
-        do_mask(chan, chan->channel.invite, ir->mask, 'I');
+	add_mode(chan, '+', 'I', ir->mask);
     }
   }
 }
@@ -804,7 +804,6 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
   strcpy(m->nick, nick);	/* Store the nick in list */
   /* Store the userhost */
   simple_sprintf(m->userhost, "%s@%s", user, host);
-  fixfrom(m->userhost);		/* Dump non-identd ~ */
   simple_sprintf(userhost, "%s!%s", nick, m->userhost);
   /* Combine n!u@h */
   m->user = NULL;		/* No handle match (yet) */
@@ -814,9 +813,9 @@ static int got352or4(struct chanset_t *chan, char *user, char *host,
   }
   waschanop = me_op(chan);	/* Am I opped here? */
   if (strchr(flags, '@') != NULL)	/* Flags say he's opped? */
-    m->flags |= CHANOP;		/* Yes, so flag in my table */
+    m->flags |= (CHANOP | WASOP);	/* Yes, so flag in my table */
   else
-    m->flags &= ~CHANOP;
+    m->flags &= ~(CHANOP | WASOP);
   if (strchr(flags, '+') != NULL)	/* Flags say he's voiced? */
     m->flags |= CHANVOICE;	/* Yes */
   else
@@ -1338,7 +1337,7 @@ static void do_embedded_mode(struct chanset_t *chan, char *nick,
     switch (*mode) {
     case 'o':
       check_tcl_mode(dcc[servidx].host, "", NULL, chan->name, "+o", nick);
-      got_op(chan, "", dcc[servidx].host, nick, &fr);
+      got_op(chan, "", dcc[servidx].host, nick, NULL, &fr);
       break;
     case 'v':
       check_tcl_mode(dcc[servidx].host, "", NULL, chan->name, "+v", nick);

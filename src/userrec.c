@@ -6,11 +6,11 @@
  * 
  * dprintf'ized, 10nov1995
  * 
- * $Id: userrec.c,v 1.17 1999/12/15 02:32:58 guppy Exp $
+ * $Id: userrec.c,v 1.23 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -35,15 +35,10 @@
 #include "tandem.h"
 
 extern struct dcc_t *dcc;
-extern int dcc_total;
-extern char userfile[];
-extern int share_greet;
 extern struct chanset_t *chanset;
-extern char ver[];
-extern char botnetnick[];
+extern int default_flags, default_uflags, quiet_save, dcc_total, share_greet;
+extern char userfile[], ver[], botnetnick[];
 extern time_t now;
-extern int default_flags, default_uflags;
-extern int quiet_save;
 
 int noshare = 1;		/* don't send out to sharebots */
 int sort_users = 0;		/* sort the userlist when saving */
@@ -54,6 +49,8 @@ maskrec *global_bans = NULL,
         *global_invites = NULL;
 struct igrec *global_ign = NULL;
 int cache_hit = 0, cache_miss = 0;	/* temporary cache accounting */
+int strict_host = 1;
+char BUF[512]; /* lame buffer for get_user_by_host() */
 
 #ifdef DEBUG_MEM
 void *_user_malloc(int size, char *file, int line)
@@ -176,6 +173,31 @@ int count_users(struct userrec *bu)
     u = u->next;
   }
   return tot;
+}
+
+/* make nick!~user@host into nick!user@host if necessary */
+/* also the new form: nick!+user@host or nick!-user@host */
+/* new: returns a statically allocated buffer with the result (drummer) */
+static char* fixfrom(char *s)
+{
+  char *p;
+
+  if (s == NULL)
+    return NULL;
+  strncpy(BUF, s, 511);
+  BUF[511] = 0;
+  if (strict_host)
+    return BUF;
+  if ((p = strchr(BUF, '!')))
+    p++;
+  else
+    p = s;			/* sometimes we get passed just a
+				 * user@host here... */
+  /* these are ludicrous. */
+  if (strchr("~+-^=", *p) && (p[1] != '@')) /* added check for @ - drummer */
+    strcpy(p, p + 1);
+  /* bug was: n!~@host -> n!@host  now: n!~@host */
+  return BUF;
 }
 
 struct userrec *check_dcclist_hand(char *handle)
@@ -318,6 +340,7 @@ struct userrec *get_user_by_host(char *host)
     return ret;
   }
   cache_miss++;
+  host = fixfrom(host);
   while (u != NULL) {
     q = get_user(&USERENTRY_HOSTS, u);
     while (q != NULL) {
@@ -337,6 +360,7 @@ struct userrec *get_user_by_host(char *host)
   return ret;
 }
 
+/* use fixfrom() or dont? (drummer) */
 struct userrec *get_user_by_equal_host(char *host)
 {
   struct userrec *u = userlist;
@@ -614,8 +638,16 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
     set_user(&USERENTRY_XTRA, u, xk);
   }
   /* strip out commas -- they're illegal */
+  /* about this fixfrom():
+   * we should use this fixfrom before every call of adduser()
+   * but its much easier to use here...
+   * (drummer)
+   * only use it if we have a host :) (dw) 
+   */
   if (host && host[0]) {
-    char *p = strchr(host, ',');
+    char *p;
+    host = fixfrom(host);
+    p = strchr(host, ',');
 
     while (p != NULL) {
       *p = '?';
@@ -629,10 +661,11 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
   noshare = oldshare;
   if ((!noshare) && (handle[0] != '*') && (!(flags & USER_UNSHARED)) &&
       (bu == userlist)) {
-    struct flag_record fr =
-    {FR_GLOBAL, u->flags, u->flags_udef, 0, 0, 0};    
+    struct flag_record fr = {FR_GLOBAL, 0, 0, 0, 0, 0};    
     char x[100];
 
+    fr.global = u->flags;
+    fr.udef_global = u->flags_udef;
     build_flags(x, &fr, 0);
     shareout(NULL, "n %s %s %s %s\n", handle, host ? host : "none", pass, x);
   }
@@ -839,22 +872,26 @@ struct userrec *get_user_by_nick(char *nick)
 
 void user_del_chan(char *name)
 {
-  struct chanuserrec *ch, *z;
+  struct chanuserrec *ch, *och;
   struct userrec *u;
 
   for (u = userlist; u; u = u->next) {
     ch = u->chanrec;
-    while (ch)
+    och = NULL;
+    while (ch) {
       if (!rfc_casecmp(name, ch->channel)) {
-	z = ch;
-	ch = ch->next;
-	if (u->chanrec == z)
-	  u->chanrec = ch;
-	if (z->info != NULL)
-	  nfree(z->info);
-	nfree(z);
+	if (och)
+	  och->next = ch->next;
+	else
+	  u->chanrec = ch->next;
+
+	if (ch->info)
+	  nfree(ch->info);
+	nfree(ch);
 	break;
-      } else
-	ch = ch->next;
+      }
+      och = ch;
+      ch = ch->next;
+    }
   }
 }

@@ -1,11 +1,11 @@
 /* 
  * filesys.c -- part of filesys.mod
  * 
- * $Id: filesys.c,v 1.13 1999/12/15 02:32:59 guppy Exp $
+ * $Id: filesys.c,v 1.17 2000/01/11 13:37:19 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -351,7 +351,7 @@ static int cmd_files(struct userrec *u, int idx, char *par)
 static int _dcc_send(int idx, char *filename, char *nick, char *dir)
 {
   int x;
-  char *nfn;
+  char *nfn, *buf = NULL;
 
   Context;
   if (strlen(nick) > HANDLEN)
@@ -386,22 +386,31 @@ static int _dcc_send(int idx, char *filename, char *nick, char *dir)
     nfn = filename;
   else
     nfn++;
+  if (strchr(nfn, ' ')) {
+    char *p;
+
+    buf = nmalloc(strlen(nfn) + 1);
+    strcpy(buf, nfn);
+    p = nfn = buf;
+    while ((p = strchr(p, ' ')) != NULL)
+      *p = '_';
+  }
   if (strcasecmp(nick, dcc[idx].nick))
     dprintf(DP_HELP, "NOTICE %s :Here is a file from %s ...\n", nick, dcc[idx].nick);
   dprintf(idx, "Type '/DCC GET %s %s' to receive.\n", botname, nfn);
   dprintf(idx, "Sending: %s to %s\n", nfn, nick);
+  if (buf)
+    nfree(buf);
   return 1;
 }
 
-static int do_dcc_send(int idx, char *dir, char *nick)
+static int do_dcc_send(int idx, char *dir, char *fn, char *nick)
 {
-  char s[161], s1[161], *fn;
+  char s[161], s1[161];
   FILE *f;
   int x;
 
   Context;
-  /* nickname? */
-  fn = newsplit(&nick);
   if (strlen(nick) > NICKMAX)
     nick[NICKMAX] = 0;
   if (dccdir[0] == 0) {

@@ -1,6 +1,6 @@
 #! /bin/sh
 
-# From configure.in Id
+# From configure.in Revision 
 # Guess values for system-dependent variables and create Makefiles.
 # Generated automatically using autoconf version 2.13 
 # Copyright (C) 1992, 93, 94, 95, 96 Free Software Foundation, Inc.
@@ -2044,7 +2044,7 @@ EOF
 
 fi
 
-for ac_hdr in sys/select.h sys/rusage.h unistd.h dlfcn.h stdarg.h std_args.h
+for ac_hdr in sys/select.h sys/rusage.h unistd.h dlfcn.h stdarg.h std_args.h strings.h
 do
 ac_safe=`echo "$ac_hdr" | sed 'y%./+-%__p_%'`
 echo $ac_n "checking for $ac_hdr""... $ac_c" 1>&6
@@ -2325,7 +2325,7 @@ for ac_kw in inline __inline__ __inline; do
 #include "confdefs.h"
 
 int main() {
-} $ac_kw foo() {
+} int $ac_kw foo() {
 ; return 0; }
 EOF
 if { (eval echo configure:2332: \"$ac_compile\") 1>&5; (eval $ac_compile) 2>&5; }; then
@@ -2889,7 +2889,7 @@ else
 fi
 if test ${WARN} = 1
 then
-  cat << 'EOF' >&2
+  cat << EOF >&2
 configure: warning:
 
   Environment variable ${WVAR1} was set, but I did not detect ${WVAR2}.
@@ -3405,6 +3405,10 @@ fi
 
 
 EGGVERSION=`grep 'char egg_version' src/main.c | $AWK '{gsub(/(\"|\;)/, "", $4); print $4}'`
+egg_version_num=`echo ${EGGVERSION} | $AWK 'BEGIN { FS = "."; } { printf("%d%02d%02d", $1, $2, $3); }'`
+cat >> confdefs.h <<EOF
+#define EGG_VERSION $egg_version_num
+EOF
 
 if test "x$DEST" = "x"
 then

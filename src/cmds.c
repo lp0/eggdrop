@@ -5,11 +5,11 @@
  * 
  * dprintf'ized, 3nov1995
  * 
- * $Id: cmds.c,v 1.30 1999/12/15 02:32:58 guppy Exp $
+ * $Id: cmds.c,v 1.34 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -36,8 +36,7 @@ extern struct dcc_t *dcc;
 extern struct userrec *userlist;
 extern tcl_timer_t *timer, *utimer;
 extern int dcc_total, remote_boots, backgrd, make_userfile, do_restart;
-extern int conmask, require_p;
-extern int must_be_owner;
+extern int conmask, require_p, must_be_owner;
 extern Tcl_Interp *interp;
 extern char botnetnick[], origbotname[], ver[];
 extern char network[], owner[], spaces[];
@@ -905,7 +904,7 @@ static void cmd_chpass(struct userrec *u, int idx, char *par)
 	     strcasecmp(handle, dcc[idx].nick))
       dprintf(idx, "Can't change the bot owner's password.\n");
     else if (isowner(handle) && strcasecmp(dcc[idx].nick, handle))
-      dprintf(idx, "Can't change the permanent bot owner's handle.\n");
+      dprintf(idx, "Can't change the permanent bot owner's password.\n");
     else if (!par[0]) {
       putlog(LOG_CMDS, "*", "#%s# chpass %s [nothing]", dcc[idx].nick,
 	     handle);
@@ -1343,8 +1342,7 @@ int check_dcc_attrs(struct userrec *u, int oatr)
 	  }
 	} else {
 	  killsock(dcc[i].sock);
-	  dcc[i].sock = (long) dcc[i].type;
-	  dcc[i].type = &DCC_LOST;
+	  lostdcc(i);
 	}
       }
     }
@@ -1631,7 +1629,7 @@ static void cmd_botattr(struct userrec *u, int idx, char *par)
     return;
   }
   for (idx2 = 0; idx2 < dcc_total; idx2++)
-    if (!strcasecmp(dcc[idx2].nick, hand))
+    if ((dcc[idx2].type != &DCC_RELAY) && !strcasecmp(dcc[idx2].nick, hand))
       break;
   if (idx2 != dcc_total) {
     dprintf(idx, "You may not change the attributes of a directly linked bot.\n");

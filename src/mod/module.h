@@ -1,11 +1,11 @@
 /* 
  * module.h
  * 
- * $Id: module.h,v 1.19 1999/12/15 02:32:58 guppy Exp $
+ * $Id: module.h,v 1.25 2000/01/08 22:38:19 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #ifndef _EGG_MOD_MODULE_H
 #define _EGG_MOD_MODULE_H
 
@@ -32,7 +33,7 @@
 #include "modvals.h"
 #include "../tandem.h"
 
-/*
+/* 
  * this file contains all the orrible stuff required to do the lookup
  * table for symbols, rather than getting the OS to do it, since most OS's
  * require all symbols resolved, this can cause a problem with some modules
@@ -54,6 +55,10 @@
 #undef Context
 #undef ContextNote
 #undef Assert
+
+/* Version checks for modules. */
+#define EGG_IS_MIN_VER(ver) 		((ver) <= EGG_VERSION)
+#define EGG_IS_MAX_VER(ver)		((ver) >= EGG_VERSION)
 
 /* redefine for module-relevance */
 /* 0 - 3 */
@@ -269,7 +274,7 @@
 #define in_chain ((int (*)(char *))global[163])
 /* 164 - 167 */
 #define add_note ((int (*)(char *,char*,char*,int,int))global[164])
-/* global[165] is empty now, was cmd_note() */
+#define removedcc ((void (*) (int))global[165])
 #define detect_dcc_flood ((int (*) (time_t *,struct chat_info *,int))global[166])
 #define flush_lines ((void(*)(int,struct chat_info*))global[167])
 /* 168 - 171 */
@@ -278,8 +283,8 @@
 #define do_restart (*(int *)(global[170]))
 #define check_tcl_filt ((char *(*)(int, char *))global[171])
 /* 172 - 175 */
-#define add_hook(a,b) (((void (*) (int, void *))global[172])(a,b))
-#define del_hook(a,b) (((void (*) (int, void *))global[173])(a,b))
+#define add_hook(a,b) (((void (*) (int, Function))global[172])(a,b))
+#define del_hook(a,b) (((void (*) (int, Function))global[173])(a,b))
 #define H_dcc (*(p_tcl_bind_list *)(global[174]))
 #define H_filt (*(p_tcl_bind_list *)(global[175]))
 /* 176 - 179 */
@@ -365,6 +370,7 @@
 #endif
 #define protect_readonly (*(int *)(global[234]))
 #define del_lang_section ((int(*)(char *))global[235])
+/* 236 - 239 */
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h
  * file for it ;) */

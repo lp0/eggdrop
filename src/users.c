@@ -10,11 +10,11 @@
  * 
  * dprintf'ized, 9nov1995
  * 
- * $Id: users.c,v 1.14 1999/12/16 04:03:46 guppy Exp $
+ * $Id: users.c,v 1.17 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -44,14 +44,12 @@ char spaces[33] = "                                 ";
 char spaces2[33] = "                                 ";
 
 extern struct dcc_t *dcc;
-extern int dcc_total;
-extern int noshare;
 extern struct userrec *userlist, *lastuser;
-extern char botnetnick[];
 extern struct chanset_t *chanset;
+extern int dcc_total, noshare, use_silence;
+extern char botnetnick[];
 extern Tcl_Interp *interp;
 extern time_t now;
-extern int use_silence;
 
 char userfile[121] = "";	/* where the user records are stored */
 int ignore_time = 10;		/* how many minutes will ignores last? */
@@ -650,7 +648,7 @@ void tell_users_match(int idx, char *mtch, int start, int limit,
   dprintf(idx, MISC_FOUNDMATCH, cnt, cnt == 1 ? "" : "es");
 }
 
-/*
+/* 
  * tagged lines in the user file:
  * * OLD:
  * #  (comment)

@@ -7,11 +7,11 @@
  * 
  * dprintf'ized, 5aug1996
  * 
- * $Id: notes.c,v 1.13 1999/12/15 02:32:59 guppy Exp $
+ * $Id: notes.c,v 1.16 2000/01/08 21:23:16 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -453,7 +453,7 @@ static int tcl_listnotes STDVAR
   return TCL_OK;
 }
 
-/*
+/* 
  * srd="+" : index
  * srd="-" : read all msgs
  * else    : read msg in list : (ex: .notes read 5-9;12;13;18-)
@@ -564,7 +564,7 @@ static void notes_read(char *hand, char *nick, char *srd, int idx)
   }
 }
 
-/*
+/* 
  * sdl="-" : erase all msgs
  * else    : erase msg in list : (ex: .notes erase 2-4;8;16-)
  * idx=-1  : /msg
@@ -1183,8 +1183,8 @@ static char *notes_close()
   rem_builtins(H_nkch, notes_nkch);
   rem_builtins(H_load, notes_load);
   rem_help_reference("notes.help");
-  del_hook(HOOK_MATCH_NOTEREJ, match_note_ignore);
-  del_hook(HOOK_HOURLY, notes_hourly);
+  del_hook(HOOK_MATCH_NOTEREJ, (Function) match_note_ignore);
+  del_hook(HOOK_HOURLY, (Function) notes_hourly);
   del_entry_type(&USERENTRY_FWD);
   module_undepend(MODULE_NAME);
   return NULL;
@@ -1227,8 +1227,8 @@ char *notes_start(Function * global_funcs)
   module_register(MODULE_NAME, notes_table, 2, 1);
   if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
     return "This module requires eggdrop1.4.0 or later";
-  add_hook(HOOK_HOURLY, notes_hourly);
-  add_hook(HOOK_MATCH_NOTEREJ, match_note_ignore);
+  add_hook(HOOK_HOURLY, (Function) notes_hourly);
+  add_hook(HOOK_MATCH_NOTEREJ, (Function) match_note_ignore);
   add_tcl_ints(notes_ints);
   add_tcl_strings(notes_strings);
   add_tcl_commands(notes_tcls);

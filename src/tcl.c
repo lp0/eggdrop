@@ -6,11 +6,11 @@
  * 
  * dprintf'ized, 4feb1996
  * 
- * $Id: tcl.c,v 1.24 1999/12/15 02:32:58 guppy Exp $
+ * $Id: tcl.c,v 1.27 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -58,15 +58,12 @@ extern char origbotname[], botuser[], motdfile[], admin[], userfile[],
 extern int die_on_sighup, die_on_sigterm, max_logs, max_logsize, enable_simul;
 extern int dcc_total, debug_output, identtimeout, protect_telnet;
 extern int egg_numver, share_unlinks, dcc_sanitycheck, sort_users;
+extern int tands, resolve_timeout, default_uflags, strict_host;
 extern struct dcc_t *dcc;
-extern char egg_version[];
+extern char egg_version[], natip[];
 extern tcl_timer_t *timer, *utimer;
 extern time_t online_since;
 extern log_t *logs;
-extern int tands;
-extern int resolve_timeout;
-extern char natip[];
-extern int default_uflags; /* drummer */
 
 /* confvar patch by aaronwl */
 extern char configfile[];
@@ -440,6 +437,7 @@ static tcl_ints def_tcl_ints[] =
   {"use-invites", &use_invites, 0}, /* Jason/drummer */
   {"quiet-save", &quiet_save, 0}, /* Lucas */
   {"force-expire", &force_expire, 0}, /* Rufus */
+  {"strict-host", &strict_host, 0}, /* moved from server.mod & irc.mod */
   {0, 0, 0}			/* arthur2 */
 };
 

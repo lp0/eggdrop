@@ -5,11 +5,11 @@
  * 
  * dprintf'ized, 1aug1996
  * 
- * $Id: tclmisc.c,v 1.8 1999/12/15 02:32:58 guppy Exp $
+ * $Id: tclmisc.c,v 1.10 2000/01/17 16:14:45 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -36,11 +36,10 @@
 
 extern tcl_timer_t *timer, *utimer;
 extern struct dcc_t *dcc;
-extern char origbotname[];
+extern char origbotname[], botnetnick[];
 extern struct userrec *userlist;
 extern time_t now;
 extern module_entry *module_list;
-extern char botnetnick[];
 
 /***********************************************************************/
 

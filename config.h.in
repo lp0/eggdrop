@@ -72,6 +72,9 @@
 /* Define for Tcl that has threads  */
 #undef HAVE_TCL_THREADS
 
+/* Defines the current eggdrop version */
+#undef EGG_VERSION
+
 /* The number of bytes in a char.  */
 #undef SIZEOF_CHAR
 
@@ -149,6 +152,9 @@
 
 /* Define if you have the <stdarg.h> header file.  */
 #undef HAVE_STDARG_H
+
+/* Define if you have the <strings.h> header file.  */
+#undef HAVE_STRINGS_H
 
 /* Define if you have the <sys/dir.h> header file.  */
 #undef HAVE_SYS_DIR_H

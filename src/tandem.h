@@ -1,11 +1,11 @@
 /* 
  * tandem.h
  * 
- * $Id: tandem.h,v 1.3 1999/12/15 02:32:58 guppy Exp $
+ * $Id: tandem.h,v 1.5 2000/01/08 21:23:14 per Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999  Eggheads
+ * Copyright (C) 1999, 2000  Eggheads
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -21,6 +21,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
+
 #ifndef _EGG_TANDEM_H
 #define _EGG_TANDEM_H
 
