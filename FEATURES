@@ -74,33 +74,45 @@ MODULE - dynamic
 
    The base loadable modules distributed with this Eggdrop version
    are:
-        compat          Compatibility stuff for old TCL scripts which
-                        access user info via the old TCL calls.
-	filesys		This module performs the file-system
-			operation for DCC file transfers to and from
-			the BOT over via IRC DCC commands.
-	transfer	This module performs the bot-to-bot userfile
-			sharing necessary for sharebots.  It is
-			loaded automatically when filesys is loaded.
-	blowfish	The standard Eggdrop encrypting routines
-			for passwords and other encrytions.  This
-			can be replaced with a user-written module
-			to perform their own encrypting algorithms.
-	assoc		This is the functionality of the `assoc'
-			command for naming party `chat' lines.  It 
-			also serves as an example for writing your
-			own modules.
-        woobie          This is a example/skeletal module for writing
-                        your own module.
-        server          This allows eggdrop to connect to a server, but
-                        that's about it.
-        channel         This allows eggdrop to have channel info stored
+        assoc           This is the functionality of the `assoc'
+                        command for naming party `chat' lines.  It
+                        also serves as an example for writing your
+                        own modules.
+        blowfish        The standard Eggdrop encrypting routines
+                        for passwords and other encrytions.  This
+                        can be replaced with a user-written module
+                        to perform their own encrypting algorithms.
+        channels        This allows eggdrop to have channel info stored
                         and used on that server that you allowed for with
                         the server module.
+        console         This provides storage of console settings when you
+                        exit the bot (or .store).
+        ctcp            This provides the normal ctcp replies that you'd
+                        expect.
+        filesys         This module performs the file-system
+                        operation for DCC file transfers to and from
+                        the BOT over via IRC DCC commands.
         irc             This controls all other irc related stuff. Not
                         loading it is the equivalent of the old NO_IRC
                         setting.
-
+        notes           This provides support for storing of notes for
+                        users from each other. Notes between currently
+                        online users is supported in the core, this is
+                        only for storing the notes for later retrieval,
+                        direct user->user notes are built-in.
+        seen            This provides seen commands via msg, on channel or
+                        via dcc, similar to the various scripts.
+        server          This allows eggdrop to connect to a server, but
+                        that's about it.
+        share           This provides the userfile sharing support (this
+                        requires the channels & transfer modules).
+        transfer        This module performs the bot-to-bot userfile
+                        sharing necessary for sharebots.  It is
+                        loaded automatically when filesys is loaded.  
+        wire            This provides an encrypted partyline
+                        communication.
+        woobie          This is a example/skeletal module for writing
+                        your own module.
 
 MODULE - static
 

@@ -17,6 +17,8 @@
  * COPYING that was distributed with this code.
  */
 
+extern int net_type;
+
 /* returns a pointer to a new channel member structure */
 static memberlist *newmember (struct chanset_t * chan) {
    memberlist *x;
@@ -264,7 +266,8 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 static char *quickban (struct chanset_t * chan, char * uhost) {
    static char s1[512];
    maskhost(uhost, s1);
-   s1[2] = '*';
+/*   s1[2] = '*'; */ /* removed by Crotale,
+                        because it's buggy for 1 letter logins */
    do_ban(chan, s1);
    return s1;
 }
@@ -288,6 +291,7 @@ static void kick_all (struct chanset_t * chan, char * hostmask, char * comment) 
       if (!chan_sentkick(m) && wild_match(hostmask, s) &&
 	  !match_my_nick(m->nick) &&
 	  !glob_friend(fr) && !chan_friend(fr) &&
+	  !isexempted(chan,s) &&  /* Crotale - don't kick +e users */
 	  !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) { /* arthur2 */
 	 if (!flushed) {
 	    /* we need to kick someone, flush eventual bans first */
@@ -304,7 +308,11 @@ static void kick_all (struct chanset_t * chan, char * hostmask, char * comment) 
 	 strcat(kicknick, m->nick);
 	 k += 1;
 	 l = strlen(kickchan) + strlen(kicknick) + strlen(IRC_BANNED) + strlen(comment) + 5;
-	 if ((kick_method != 0 && k == kick_method) || l > 480) {
+         if (net_type == 2)
+            kick_method = 0;
+	 if ((kick_method != 0 && k == kick_method) || (l > 480) ||
+             ((net_type == 0 || net_type == 3) && k == 1) ||
+              (net_type == 1 && k == 4)) {
 	    dprintf(DP_SERVER, "KICK %s %s :%s\n", kickchan, kicknick, comment);
 	    k = 0; kickchan[0] = 0; kicknick[0] = 0;
 	 }
@@ -399,6 +407,32 @@ static void resetbans (struct chanset_t * chan) {
    }
    /* make sure the intended bans are still there */
    recheck_bans(chan);
+}
+
+/* resets the exemptions on the channel */
+static void resetexempts (struct chanset_t * chan) {
+   exemptlist *e = chan->channel.exempt;
+
+   if (!me_op(chan))
+      return;                   /* can't do it */
+   /* remove all exemptions */
+   while (e->exempt[0]) {
+      add_mode(chan, '-', 'e', e->exempt);
+      e = e->next;
+   }
+}
+
+/* resets the invitations on the channel */
+static void resetinvites (struct chanset_t * chan) {
+   invitelist *inv = chan->channel.invite;
+
+   if (!me_op(chan))
+      return;                   /* can't do it */
+   /* remove all invitations */                    
+   while (inv->invite[0]) {
+      add_mode(chan, '-', 'I', inv->invite);
+      inv = inv->next;
+   }
 }
 
 /* things to do when i just became a chanop: */
@@ -586,7 +620,9 @@ static int got324 (char * from, char * msg) {
       if (msg[i] == 'l') {
 	 p = strchr(msg, ' ');
 	 p++;
-	 q = strchr(p, ' ');
+         context; /* a2 */
+	 q = strchr(p, ' '); /* the bot crashes here when +l is not set */
+         context; /* a2 */
 	 if (q != NULL) {
 	    *q = 0;
 	    chan->channel.maxmembers = atoi(p);
@@ -710,7 +746,7 @@ static int got354 (char * from, char * msg)
    struct chanset_t *chan;
 
    context;
-   if (use_354) {
+   if ((net_type == 2 ) || (use_354)) {
       newsplit(&msg);				/* Skip my nick - effeciently*/
       if ((msg[0] == '#') || (msg[0] == '&')) {
 	 chname = newsplit(&msg);		/* Grab the channel */
@@ -743,7 +779,7 @@ static int got315 (char * from, char * msg)
    chan->status |= CHAN_ACTIVE;
    chan->status &= ~CHAN_PEND;
    /* am *I* on the channel now? if not, well d0h. */
-   if (!ismember(chan, botname)) {
+   if (!ismember(chan, botname) && !ismember(chan, newbotname)) {
       putlog(LOG_MISC | LOG_JOIN, chan->name, "Oops, I'm not really on %s",
 	     chan->name);
       clear_channel(chan, 1);
@@ -825,10 +861,86 @@ static int got368 (char * from, char * msg)
    return 0;
 }
 
+/* got 348: ban exemption info */
+/* <server> 348 <to> <chan> <exemption>  */
+static int got348 (char * from, char * msg) {
+   char * ban, *chname;
+   struct chanset_t *chan;
+
+   if (net_type) {
+      newsplit(&msg);
+      chname = newsplit(&msg);
+   
+      chan = findchan(chname);
+      if (!chan || !(channel_pending(chan) || channel_active(chan)))
+         return 0;
+      ban = newsplit(&msg);
+      newexempt(chan, ban, "*exempt");
+   }
+   return 0;
+}
+
+/* got 349: end of ban exemption list */
+/* <server> 349 <to> <chan> :etc */
+static int got349 (char * from, char * msg)
+{
+   struct chanset_t *chan;
+   char * chname;
+
+   if (net_type) {
+      newsplit(&msg);
+      chname = newsplit(&msg);
+      chan = findchan(chname);
+      if (chan)
+         chan->ircnet_status &= ~CHAN_ASKED_EXEMPTS;
+   }
+   return 0;
+}
+
+/* got 346: invite exemption info */
+/* <server> 346 <to> <chan> <exemption> */
+static int got346 (char * from, char * msg) {
+   char * ban, *chname;
+   struct chanset_t *chan;
+
+   if (net_type) {
+      newsplit(&msg);
+      chname = newsplit(&msg);
+   
+      chan = findchan(chname);
+      if (!chan || !(channel_pending(chan) || channel_active(chan)))
+         return 0;
+      ban = newsplit(&msg);
+      newinvite(chan, ban, "*invite");
+   }
+   return 0;
+}
+
+/* got 347: end of invite exemption list */
+/* <server> 347 <to> <chan> :etc */
+static int got347 (char * from, char * msg)
+{
+   struct chanset_t *chan;
+   char * chname;
+
+   if (net_type) {
+      newsplit(&msg);
+      chname = newsplit(&msg);
+      chan = findchan(chname);
+      if (chan)
+         chan->ircnet_status &= ~CHAN_ASKED_INVITED;
+   }
+   return 0;
+}
+
+
 /* too many channels */
 static int got405 (char * from, char * msg)
 {
-   putlog(LOG_MISC, "*", IRC_TOOMANYCHANS);
+   char * chname;
+   newsplit(&msg);
+   chname = newsplit(&msg);
+   putlog(LOG_MISC, "*", "%s %s", IRC_TOOMANYCHANS, chname);
    return 0;
 }
 
@@ -840,7 +952,7 @@ static int got471 (char * from, char * msg)
    
    newsplit(&msg);
    chname = newsplit(&msg);
-   putlog(LOG_JOIN, chname, IRC_CHANFULL, chname);
+   putlog(LOG_JOIN, chname, "%s %s", IRC_CHANFULL, chname);
    chan = findchan(chname);
    if (chan && chan->need_limit[0])
      do_tcl("need-limit", chan->need_limit);
@@ -855,7 +967,7 @@ static int got473 (char * from, char * msg)
    
    newsplit(&msg);
    chname = newsplit(&msg);
-   putlog(LOG_JOIN, chname, IRC_CHANINVITEONLY, chname);
+   putlog(LOG_JOIN, chname, "%s %s", IRC_CHANINVITEONLY, chname);
    chan = findchan(chname);
    if (chan && chan->need_invite[0])
      do_tcl("need-invite", chan->need_invite);
@@ -870,7 +982,7 @@ static int got474 (char * from, char * msg)
    
    newsplit(&msg);
    chname = newsplit(&msg);
-   putlog(LOG_JOIN, chname, IRC_BANNEDFROMCHAN, chname);
+   putlog(LOG_JOIN, chname, "%s %s", IRC_BANNEDFROMCHAN, chname);
    chan = findchan(chname);
    if (chan && chan->need_unban[0])
      do_tcl("need-unban", chan->need_unban);
@@ -887,7 +999,7 @@ static int got442 (char * from, char * msg)
    chname = newsplit(&msg);
    chan = findchan(chname);
    if (chan) {
-      putlog(LOG_MISC, chname, IRC_SERVNOTONCHAN, chname);
+      putlog(LOG_MISC, chname, "%s %s", IRC_SERVNOTONCHAN, chname);
       clear_channel(chan, 1);
       chan->status &= ~CHAN_ACTIVE;
       dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
@@ -903,7 +1015,7 @@ static int got475 (char * from, char * msg)
    
    newsplit(&msg);
    chname = newsplit(&msg);
-   putlog(LOG_JOIN, chname, IRC_BADCHANKEY, chname);
+   putlog(LOG_JOIN, chname, "%s %s", IRC_BADCHANKEY, chname);
    chan = findchan(chname);
    if (chan && chan->need_key[0])
       do_tcl("need-key", chan->need_key);
@@ -1131,11 +1243,15 @@ static int gotjoin (char * from, char * chname) {
 			"%s (%s) joined %s.", nick, uhost, chname);
 	       if (me_op(chan)) 
 		 for (p = m->userhost; *p; p++)
-		   if ((((unsigned char )*p) < 32) && kick_bogus) {
-		      dprintf(DP_MODE, "KICK %s %s :%s\n",
-			      chname, nick, CHAN_BOGUSUSERNAME);
-		      return 0;
-		   }
+                    if (((unsigned char )*p) < 32) {
+                       if (ban_bogus)
+                          u_addban(chan, quickban(chan, uhost), origbotname,
+                             CHAN_BOGUSUSERNAME, now + (60 * ban_time),0);
+                       if (kick_bogus)
+                          dprintf(DP_MODE, "KICK %s %s :%s\n",
+                             chname, nick, CHAN_BOGUSUSERNAME);
+                       return 0;
+                    }
 	       /* ok, the op-on-join,etc, tests...first only both if Im opped */
 	       if (me_op(chan)) {
 		  /* are they a chan op, or global op without chan deop */
@@ -1437,12 +1553,16 @@ static int gotmsg (char * from, char * msg)
 	  !chan_friend(fr) && !glob_friend(fr) &&
           !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) { /* arthur2 */
 	 m = ismember(chan, nick);
-	 if (m && !chan_sentkick(m)) {
-	    m->flags |= SENTKICK;
-	    dprintf(DP_SERVER, "KICK %s %s :I %s\n",
-		    realto, nick, IRC_FUNKICK);
-	 }
-      }
+         if (m && !chan_sentkick(m)) {
+            m->flags |= SENTKICK;
+            if (ban_fun)
+               u_addban(chan, quickban(chan, uhost), origbotname,
+                  IRC_FUNKICK, now + (60 * ban_time),0);
+            if (kick_fun)
+               dprintf(DP_SERVER, "KICK %s %s :I %s\n",
+                  realto, nick, IRC_FUNKICK); /* this can induce kickflood - arthur2 */
+         } 
+      }     
       if (!ignoring) {
 	 putlog(LOG_MODES, "*", "Avalanche from %s!%s in %s - ignoring",
 		nick, uhost, realto);
@@ -1547,11 +1667,15 @@ static int gotnotice (char * from, char * msg)
           !chan_friend(fr) && !glob_friend(fr) &&
           !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) { /* arthur2 */
 	 m = ismember(chan, nick);
-	 if (m || !chan_sentkick(m)) {
-	   m->flags |= SENTKICK;
-           dprintf(DP_SERVER, "KICK %s %s :II %s\n",
-		   realto, nick, IRC_FUNKICK);
-	 }
+         if (m || !chan_sentkick(m)) {
+            m->flags |= SENTKICK;
+            if (ban_fun)
+               u_addban(chan, quickban(chan, uhost), origbotname,
+                  IRC_FUNKICK, now + (60 * ban_time),0);
+            if (kick_fun)
+               dprintf(DP_SERVER, "KICK %s %s :I %s\n",
+                  realto, nick, IRC_FUNKICK); /* this can induce kickflood - arthur2 */
+         }
       }
       if (!ignoring)
 	putlog(LOG_MODES, "*", "Avalanche from %s", from);
@@ -1599,7 +1723,7 @@ static int gotnotice (char * from, char * msg)
    return 0;
 }
 
-static cmd_t irc_raw [24] = {
+static cmd_t irc_raw [28] = {
      { "324", "", (Function)got324, "irc:324" },
      { "352", "", (Function)got352, "irc:352" },
      { "354", "", (Function)got354, "irc:354" },
@@ -1624,4 +1748,10 @@ static cmd_t irc_raw [24] = {
      { "PRIVMSG", "", (Function)gotmsg, "irc:msg" },
      { "NOTICE", "", (Function)gotnotice, "irc:notice" },
      { "MODE", "", (Function)gotmode, "irc:mode" },
+/*      Added for IRCnet +e/+I support - Daemus 2/4/99 */
+     { "346", "", (Function)got346, "irc:346" },
+     { "347", "", (Function)got347, "irc:347" },
+     { "348", "", (Function)got348, "irc:348" },
+     { "349", "", (Function)got349, "irc:349" },
 };
+/* update the add/rem_builtins in irc.c if you add to this list!! */

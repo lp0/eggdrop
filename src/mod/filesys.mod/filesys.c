@@ -561,7 +561,13 @@ static void filesys_dcc_send (char * nick, char * from, struct userrec * u,
    } else {
       ip = newsplit(&msg);
       prt = newsplit(&msg);
-      if (atoi(msg) == 0) {
+      if ((atoi(prt) < 1024) || (atoi(prt) > 65535)) {
+       /* invalid port range, do clients even use over 5000?? */
+       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
+         DCC_CONNECTFAILED1);
+       putlog(LOG_FILES, "*", "Refused dcc send %s (%s): invalid port", param,
+         nick);
+      } else if (atoi(msg) == 0) {
 	 dprintf(DP_HELP, 
 		   "NOTICE %s :Sorry, file size info must be included.\n",
 		   nick);
@@ -684,6 +690,12 @@ static int filesys_DCC_CHAT(char * nick, char * from, char * handle,
 		nick, from);
 	 putlog(LOG_MISC, "*", "    (%s)", buf);
 	 killsock(sock);
+    } else if ((atoi(prt) < 1024) || (atoi(prt) > 65535)) {
+      /* invalid port range, do clients even use over 5000?? */
+      dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
+         DCC_CONNECTFAILED1);
+      putlog(LOG_FILES, "*", "%s: %s!%s", DCC_REFUSED7, nick, from);
+
       } else {
 	 i = new_dcc(&DCC_FILES_PASS,sizeof(struct file_info));
 	 dcc[i].addr = my_atoul(ip);

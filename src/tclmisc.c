@@ -1,4 +1,3 @@
-
 /*
    tclmisc.c -- handles:
    Tcl stubs for file system commands
@@ -34,6 +33,25 @@ extern module_entry * module_list;
 
 /***********************************************************************/
 
+/* DP_MODE gets dump'd faster (guppy 12Jan99) */
+static int tcl_putquick STDVAR
+{
+   char s[511], *p;
+
+   context;
+   BADARGS(2, 2, " text");
+   strncpy(s, argv[1], 510);
+   s[510] = 0;
+   p = strchr(s, '\n');
+   if (p != NULL)
+      *p = 0;
+    p = strchr(s, '\r');
+   if (p != NULL)  
+      *p = 0;
+    dprintf(DP_MODE, "%s\n", s);
+    return TCL_OK;
+}
+   
 static int tcl_putserv STDVAR
 {
    char s[511], *p;
@@ -482,6 +500,7 @@ static int tcl_reloadhelp STDVAR
 tcl_cmds tclmisc_cmds [] = {
    { "putserv", tcl_putserv },
    { "puthelp", tcl_puthelp },
+   { "putquick", tcl_putquick },
    { "putlog", tcl_putlog },
    { "putcmdlog", tcl_putcmdlog },
    { "putxferlog", tcl_putxferlog },

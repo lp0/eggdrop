@@ -198,6 +198,40 @@ int expmem_chanprog()
    return tot;
 }
 
+/* dump uptime info out to dcc (guppy 9Jan99) */ 
+void tell_verbose_uptime (int idx, int showchan)
+{
+   char s[256], s1[121];
+   time_t now2, hr, min;
+    
+   now2 = now - online_since;
+   s[0] = 0;
+   if (now2 > 86400) {
+      /* days */
+      sprintf(s, "%d day", (int) (now2 / 86400));
+      if ((int) (now2 / 86400) >= 2)
+        strcat(s, "s");
+      strcat(s, ", ");
+      now2 -= (((int) (now2 / 86400)) * 86400);
+   }
+   hr = (time_t) ((int) now2 / 3600);
+   now2 -= (hr * 3600);
+   min = (time_t) ((int) now2 / 60);
+   sprintf(&s[strlen(s)], "%02d:%02d", (int) hr, (int) min);
+   s1[0] = 0;
+   if (backgrd)
+      strcpy(s1, MISC_BACKGROUND);
+   else {
+      if (term_z)
+        strcpy(s1, MISC_TERMMODE);
+      else if (con_chan)
+        strcpy(s1, MISC_STATMODE);
+      else
+        strcpy(s1, MISC_LOGMODE);
+   }
+   dprintf(idx, "%s %s  (%s)\n", MISC_ONLINEFOR, s, s1);
+}
+
 /* dump status info out to dcc */
 void tell_verbose_status (int idx, int showchan)
 {
@@ -545,3 +579,36 @@ void list_timers (Tcl_Interp * irp, tcl_timer_t * stack)
       mark = mark->next;
    }
 }
+
+/* Oddly enough, written by proton (Emech's coder) */
+
+int isowner(char *name)
+{
+        char    *pa,*pb;
+        char    nl,pl;  
+                 
+        if (!owner || !*owner) return(0);
+        if (!name || !*name) return(0);
+        nl = strlen(name);
+ 
+        pa = owner;
+        pb = owner;
+        while(1)
+        {
+                while(1)
+                {
+                        if ((*pb == 0) || (*pb == ',') || (*pb == ' ')) break;
+                        pb++;
+                }
+                pl = (unsigned int)pb - (unsigned int)pa;
+                if ((pl == nl) && (!strncasecmp(pa,name,nl))) return(1);
+                while(1)
+                {
+                        if ((*pb == 0) || ((*pb != ',') && (*pb != ' '))) break;
+                        pb++;
+                }
+                if (*pb == 0) return(0);
+                pa = pb; 
+        }
+}
+

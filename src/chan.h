@@ -48,10 +48,27 @@ typedef struct banstruct {
   struct banstruct *next;
 } banlist;
 
+/* Next 2 structures created for IRCnet server module - Daemus - 2/1/99 */
+typedef struct exbanstruct {
+    char *exempt;
+    char *who;
+    time_t timer;
+    struct exbanstruct *next;
+} exemptlist;
+
+typedef struct exinvitestruct {
+    char *invite;
+    char *who;
+    time_t timer;
+    struct exinvitestruct *next;
+} invitelist;
+
 /* for every channel i join */
 struct chan_t {
   memberlist *member;
   banlist *ban;
+  exemptlist *exempt;
+  invitelist *invite;
   char *topic;
   char *key;
   unsigned short int mode;
@@ -91,6 +108,7 @@ struct chanset_t {
    int flood_ctcp_thr;
    int flood_ctcp_time;
    int status;
+   int ircnet_status;
    int idle_kick;
    struct banrec *bans;      /* temporary channel bans */
    /* desired channel modes: */
@@ -141,6 +159,9 @@ struct chanset_t {
 #define CHAN_SHARED        0x10000000    /* channel is being shared */
 #define CHAN_ASKEDBANS     0x20000000
 #define CHAN_SEEN          0x40000000
+
+#define CHAN_ASKED_EXEMPTS 0x0001
+#define CHAN_ASKED_INVITED 0x0002
 
 /* prototypes */
 memberlist *ismember(struct chanset_t *, char *);

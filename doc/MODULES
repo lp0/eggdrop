@@ -24,25 +24,40 @@ How:  run ./configure as normal, then 'make' to make the eggdrop
 
 CURRENT MODULES:
 
-assoc       : assoc support happily load & unload at will
+assoc       : assoc support happily load & unload at will.
 blowfish    : use it (or some other encryption module someone might 
               write) FROM THE VERY BEGINNING, the first password you make
 	      will be invalid if load this later
 	      use 'loadmodule blowfish' in your config file,
 	      it's relatively safe to load&unload once your running, but
 	      remember, whilst it's unloaded, no-one can login.
+channels    : provides channel related support for the bot, without it, it
+              will just sit on irc, it can respond to msg & ctcp commands,
+              but that's all.
+console     : this module provides storage of console settings when you exit
+              the bot (or .store).
+ctcp        : this provides the normal ctcp replies that you'd expect.
+filesys     : the file system, this is relatively stable and you should be  
+              able to load & unload at will, with the following restriction.
+              and users in the file area will currently just hang when you
+              unload the module and resume when it's reloaded, if they EOF
+              before then, and unexplained eof will occur and the bot will
+              clean it up.
+irc         : this module provides ALL NORMAL IRC INTERACTION, if you want
+              the normal join & maintain channels stuff, this is the module.
+notes       : this provides support for storing of notes for users from each
+              other. notes between currently online users is supported in
+              the core, this is only for storing the notes for later
+              retrieval, direct user->user notes are built-in.
+seen        : this module provides seen commands via msg, on channel or via
+              dcc, similar to the various scripts.
+server      : this provides the core server support (removing this is
+              equivalent to the old NO_IRC define).
+share       : userfile sharing.
 transfer    : handles the transfer of files via botnet or dcc, this is
               REQUIRED for file sharing.
-filesys     : the file system, this is relatively stable and you should be
-              able to load & unload at will, with the following restriction.
-	      and users in the file area will currently just hang when you
-	      unload the module and resume when it's reloaded, if they EOF
-	      before then, and unexplained eof will occur and the bot will
-	      clean it up.
-share       : userfile sharing
-compat      : in 1.2.1, the userfile was upgraded. info is accessed
-              differently. this modules provides support for old scripts.
-woobie      : just a fun, bizarre test module
+wire        : an encrypted partyline communication.
+woobie      : just a fun, bizarre test module.
 	      
 This is VERY experimental at this stage, so be wary :)
 

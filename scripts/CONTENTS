@@ -14,6 +14,10 @@ alltools.tcl
    toolkit.tcl
       a few useful proc's that may be required by other Tcl scripts
 
+autobotchk
+   tcl script used to crontab your Eggdrop
+   usage: ./autobotchk eggdrop.conf.dist
+
 botchk
    A shell script which can be used for auto-starting the bot via 'cron'.
 
@@ -21,7 +25,7 @@ compat.tcl
    maps old tcl functions to new ones, for lazy people who can't be bothered
    updating their scripts
    
-getops-2.0.1.tcl
+getops-2.2d.tcl
    a way to get ops from other bots on the botnet (if they're on the
    same channel)
 

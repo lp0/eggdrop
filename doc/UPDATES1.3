@@ -1,5 +1,116 @@
-Changes in eggdrop: (since v1.3.0)
+UChanges in eggdrop: (since v1.3.0)
 ----------------------------------
+
+1.3.24
+Foundby   Fixedby   What....
+          arthur2   Adds a ban-fun flag.
+          vod       Adds a ban-bogus flag.
+          Tothwolf  Fixes a problem in #define CLIENTINFO, in CTCP module.
+Shayne    arthur2   Most efnet servers only allow 4 kicks per command.
+                    This may change to 1 for most servers when they
+                    upgrade to hybrid 6.0. net_type = 0 now sets
+                    kick-method to 1. 
+Daemus    arthur2/  Adds a tcl variable: net-type. 0 = EfNet, 1 = IrcNet,
+          Daemus    2 = Undernet, 3 = Dalnet, 4 = other networks.
+          TiTi/     Adds core.french.language to /language. Use '.language
+          arthur2   core.french' to load it.
+          arthur2   Reorganisation of the eggdrop.conf.dist SERVER and IRC
+                    module sections.
+          Dude      In cmds1.help, %{+B} should be %{+t}, since +B is no
+                    longer the flag for botnet masters.
+slennox   guppy     Added two new tcl commands, "stick" and "unstick"
+deadgrrrl guppy     .fwd user user doesn't work anymore, must supply
+                    a botname.
+paralyse  guppy     action.fix.tcl didn't like quotes in the text.
+          arthur2   If set ban-time 0, bot never removes bans.
+          arthur2   Updates some of the doc files (CONTENTS and so on).
+          arthur2   Adds resetexempts and resetinvites tcl functions.
+          guppy     Fixed the jupe nickname bug crashing the bot :)
+          guppy     Bug in bogus key checking, would only kick the bot.
+          guppy     dcc chat/send's must use a port between 1024 and 65535.
+          guppy     Fixes a bug that caused the bot to loose track of its
+                    own nickname.
+          arthur2   +stopnethack won't massdeop regular ops after long splits
+                    (unless they have +w user flag - see below).
+          Daemus    Adds support for +/- e and I modes.
+          arthur2   Bot won't try to add more than max-bans bans, max-exempts +e
+                    modes, max-invites +I modes on a channel.
+          arthur2   Bot won't try to add more than max-modes +b/+e/+I modes on a
+                    channel (global limit for a channel).
+          arthur2   Adds a bounce-modes flag to bounce +/- i p s m t n a q l k
+                    server modes. Is also stricter with +b +e +I server
+                    mode bounces.
+          arthur2   Adds a bounce-exempts flag to bounce +e server modes.
+          arthur2   Adds a bounce-invites flag to bounce +I server modes.
+          arthur2   Adds a kick-fun flag to avoid "that was fun, let's do
+                    it again!" kickflood.
+          Crotale   Adds an isexempted function.
+          Crotale   kick_all won't kick +e users anymore.
+          Crotale   got_ban won't deban +e users anymore.
+          Niggurath bot was really confused if it joins channel while
+                    trying to regain its nick.
+         TheUnknown |o should be able to voice, as they are allowed to op
+         TheUnknown There was a missing |m check in protectops procedure
+Lobo^Loco arthur2   Adds a new user flag: +w (wasop-needed flag)
+                    If a user is +w, then +stopnethack procedure will do a
+                    wasop test (for "untrusted" spoofable hostmasks).
+                    If a user isn't +w, then +stopnethack procedure won't 
+                    do this wasop test, but an isop test (for "safe" 
+                    static hosts).
+          guppy     Fixes /msg <bot> voice <pass> [channel].
+          guppy     Adds .uptime.
+          guppy     Adds [isbansticky <ban> [channel]].
+          guppy     Makes /msg <bot> status/memory/reset require a password.
+          guppy     Allows /msg <bot> die <pass> [message] to have a kill
+                    message.
+          guppy     Doesn't allow +n people to remove permanent owners via
+                    .-user/.deluser.
+          guppy     Adds botonchan <chan>.
+          guppy     Adds putquick <text>.
+          guppy     Makes I'm on too many channels show the channel it
+                    can't join.
+          guppy     Fixes the +i/l/b/k console warnings for a channel,
+                    shows the channel name.
+          guppy     Fixes .die from sending QUIT :<nick> to the partyline
+                    if the bot didn't have a server.
+          guppy     +ban will now show if you try to add bans to
+                    non-existant channels.
+          guppy     +ban will now show if you don't have access to add the
+                    ban on the chan.
+          guppy     chanset/chaninfo were missing "\n" ?? (someone on the
+                    list found these).
+          guppy     botinfo now returns your bots uptime.
+          guppy     '.whom *' can be used if your chat is off (suggested
+                    by dw@undernet).
+          guppy     .simul cannot be used to simul other permanent owners
+                    now.
+          guppy     Adds a new config option, must-be-owner, if set, only
+                    permanent owners will be able to use .tcl/.set.
+          guppy     Adds a 'set must-be-owner 0' option to
+                    eggdrop.conf.dist.
+Bass      guppy     Fixes a typo in share.mod/share.c (line 592).
+          Crotale   maskhost() now replaces '~' '+' and '-' (in username) 
+                    by '?'. quickban() doesn't replace the first letter of
+                    the username by a '*' anymore. This was a problem when
+                    quickbanning nick!s@host for instance, resulting in +b
+                    *!*@host. Now it results in +b *!?@host.
+          Beige     Fixes a bug in proxy_connect(), in net.c. Bot crashed
+                    when establishing a connection through a proxy with a
+                    numeric IP address.
+          Niggurath botnet away-msg now goes to the correct channel
+          Tothwolf  Modifies eggdrop to support +shared on dynamic
+                    channels.
+          Whicked   Prevents SEGFAULT when eggdrop attempts to commit a
+                    long filename to the bots .filedb. Aborts the file
+                    move from temp to incoming and filename commit. NOTE,
+                    the file remains in temp where it can be retrieved.
+Daemus    arthur2   Adds the following tcl commands: chanexempts, chaninvites,
+                    ischanexempt and ischaninvite.
+          arthur2   Fixes old typos in eggdrop.conf.dist. allow-desync and
+                    not allow_desync, check-mode-r and not handle-mode_r.
+          arthur2   Adds some missing entries in help. But there is a lot
+                    more to do.
+          arthur2   Adds exempt-time and invite-time to the config file.
 
 1.3.23
 Foundby   Fixedby   What....

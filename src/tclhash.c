@@ -104,11 +104,11 @@ void init_bind () {
    H_bcst = add_bind_table("bcst",HT_STACKABLE,builtin_chat);
    H_away = add_bind_table("away",HT_STACKABLE,builtin_chat); 
    H_act = add_bind_table("act",HT_STACKABLE,builtin_chat);
-   add_builtins(H_dcc, C_dcc,63);
+   add_builtins(H_dcc, C_dcc,64);
 }
 
 void kill_bind () {
-   rem_builtins(H_dcc, C_dcc,63);
+   rem_builtins(H_dcc, C_dcc,64);
    while (bind_table_list) {
       del_bind_table(bind_table_list);
    }  

@@ -26,9 +26,44 @@
 %{help=set bounce-bans}%{+n}
 ### %bset bounce-bans%b 0/1
    do you want the bot to unban any bans set by servers?
+%{help=set bounce-exempts}%{+n}
+### %bset bounce-exempts%b 0/1
+   do you want the bot to reverse any +e modes set by servers?
+   this is an IRCNET feature.
+%{help=set bounce-invites}%{+n}
+### %bset bounce-invites%b 0/1
+   do you want the bot to reverse any +I modes set by servers?
+   this is an IRCNET feature.
+%{help=set bounce-modes}%{+n}
+### %bset bounce-modes%b 0/1
+   do you want the bot to reverse all server modes?
+%{help=set max-bans}%{+n}
+### %bset max-bans%b <#>
+   if there are more than max-bans active bans on a channel, then   
+   the bot won't try to put more bans. thus it won't flood the irc
+   server.
+%{help=set max-exempts}%{+n}
+### %bset max-exempts%b <#>
+   if there are more than max-exempts active +e modes on a channel,
+   then the bot won't try to put more exemptions. thus it won't flood
+   the irc server. this is an IRCNET feature.
+%{help=set max-invites}%{+n}
+### %bset max-invites%b <#>
+   if there are more than max-invites active +I modes on a channel,
+   then the bot won't try to put more invitations. thus it won't flood
+   the irc server. this is an IRCNET feature.
+%{help=set max-modes}%{+n}
+### %bset max-modes%b <#>
+   there is a global limit for +b/+e/+I modes. this limit is set to
+   30 on 2.10 irc servers. this is an IRCNET feature.
 %{help=set kick-bogus}%{+n}
 ### %bset kick-bogus%b 0/1
    do you want the bot to kick bogus usernames?
+%{help=set kick-bogus}%{+n}  
+### %bset kick-bogus%b 0/1
+   do you want the bot to kick for ctcp avalanches to a channel?
+   remember that if it does, as it won't ban them, it can be at the
+   origin of a nice kick-flood.
 %{help=set use-354}%{+n}
 ### %bset use-354%b 0/1
    ircu has a new format for /who channel (which returns 354 numeric)

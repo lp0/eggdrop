@@ -580,6 +580,34 @@ static void cmd_resetbans (struct userrec * u, int idx, char * par)
    }
 }
 
+static void cmd_resetexempts (struct userrec * u, int idx, char * par)
+{
+   struct chanset_t *chan = findchan(dcc[idx].u.chat->con_chan);
+
+   get_user_flagrec(u,&user,dcc[idx].u.chat->con_chan);
+   if (!chan)
+     dprintf(idx, "Invalid console channel.\n");
+   else if (glob_op(user) || chan_op(user)) {
+      putlog(LOG_CMDS, "*", "#%s# (%s) resetexempts", dcc[idx].nick, chan->name);
+      dprintf(idx, "Resetting exemptions on %s...\n", chan->name);
+      resetexempts(chan);
+   }
+}
+
+static void cmd_resetinvites (struct userrec * u, int idx, char * par)
+{   
+   struct chanset_t *chan = findchan(dcc[idx].u.chat->con_chan);
+
+   get_user_flagrec(u,&user,dcc[idx].u.chat->con_chan);
+   if (!chan)
+     dprintf(idx, "Invalid console channel.\n");
+   else if (glob_op(user) || chan_op(user)) {
+      putlog(LOG_CMDS, "*", "#%s# (%s) resetinvites", dcc[idx].nick, chan->name);
+      dprintf(idx, "Resetting invitations on %s...\n", chan->name);
+      resetinvites(chan);
+   }
+}
+
 static void cmd_adduser (struct userrec * u, int idx, char * par)
 {
    char *nick, *hand;
@@ -697,7 +725,8 @@ static void cmd_deluser (struct userrec * u, int idx, char * par)
     * like that - beldin */
    /* checks vs channel owner/master ANYWHERE now -
     * so deluser on a channel they're not on should work */
-   if (glob_owner(victim) && strcasecmp(dcc[idx].nick, nick)) {
+   /* Shouldn't allow people to remove permanent owners (guppy 9Jan99) */
+   if ((glob_owner(victim) && strcasecmp(dcc[idx].nick, nick)) || isowner(u->handle)) { 
       dprintf(idx, "Can't remove the bot owner!\n");
    } else if (glob_botmast(victim) && !glob_owner(user)) {
       dprintf(idx, "Can't delete a master!\n");
@@ -755,11 +784,13 @@ static void cmd_reset (struct userrec * u, int idx, char * par)
    }
 }
 
-static cmd_t irc_dcc[16]={
+static cmd_t irc_dcc[18]={
   { "adduser", "m|m", (Function)cmd_adduser, NULL },
   { "deluser", "m|m", (Function)cmd_deluser, NULL },
   { "reset", "m|m", (Function)cmd_reset, NULL },
   { "resetbans", "o|o", (Function)cmd_resetbans, NULL },
+  { "resetexempts", "o|o", (Function)cmd_resetexempts, NULL },
+  { "resetinvites", "o|o", (Function)cmd_resetinvites, NULL },
   { "act", "o|o", (Function)cmd_act, NULL },
   { "channel", "o|o", (Function)cmd_channel, NULL },
   { "deop", "o|o", (Function)cmd_deop, NULL },
@@ -767,9 +798,10 @@ static cmd_t irc_dcc[16]={
   { "kick", "o|o", (Function)cmd_kick, NULL },
   { "kickban", "o|o", (Function)cmd_kickban, NULL },
   { "msg", "o", (Function)cmd_msg, NULL },
-  { "voice", "o", (Function)cmd_voice, NULL },
-  { "devoice", "o", (Function)cmd_devoice, NULL },
+  { "voice", "o|o", (Function)cmd_voice, NULL },
+  { "devoice", "o|o", (Function)cmd_devoice, NULL },
   { "op", "o|o", (Function)cmd_op, NULL },
   { "say", "o|o", (Function)cmd_say, NULL },
   { "topic", "o|o", (Function)cmd_topic, NULL },
 };
+/* update the add/rem_builtins in irc.c if you add to this list!! */

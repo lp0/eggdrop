@@ -339,12 +339,34 @@ static void eof_dcc_send (int idx)
 	 lostdcc(idx);
 	 return;
       }
+
       putlog(LOG_FILES, "*", "Completed dcc send %s from %s!%s",
 	     dcc[idx].u.xfer->filename, dcc[idx].nick, dcc[idx].host);
       simple_sprintf(s, "%s!%s", dcc[idx].nick, dcc[idx].host);
       u = get_user_by_host(s);
       hand = u ? u->handle : "*";
       /* move the file from /tmp */
+
+      /* slwstub - filenames to long segfault and kill the eggdrop  */
+      /* NOTE: This is NOT A PTF. Its a circumvention, a workaround */
+      /* I'm not moving the file from the receiving area. You may   */
+      /* Want to inspect it, shorten the name, give credit or NOT!  */
+
+      if ( strlen(dcc[idx].u.xfer->filename) > MAX_FILENAME_LENGTH ) {
+         /* the filename is to long... blow it off */
+         putlog(LOG_FILES, "*", "Filename %d length. Way To LONG.", 
+                strlen(dcc[idx].u.xfer->filename) );
+	 dprintf(DP_HELP, "NOTICE %s :Filename %d length Way To LONG!\n",
+		   dcc[idx].nick, strlen(dcc[idx].u.xfer->filename) );
+         putlog(LOG_FILES, "*", "To Bad So Sad Your Dad!" ); 
+	 dprintf(DP_HELP, "NOTICE %s :To Bad So Sad Your Dad!\n",
+		   dcc[idx].nick );
+	 killsock(dcc[idx].sock);
+	 lostdcc(idx);
+	 return;
+      }
+      /* slwstub - filenames to long segfault and kill the eggdrop */
+
       simple_sprintf(ofn, "%s%s", tempdir, dcc[idx].u.xfer->filename);
       simple_sprintf(nfn, "%s%s", dcc[idx].u.xfer->dir,
 		     dcc[idx].u.xfer->filename);
@@ -376,7 +398,7 @@ static void eof_dcc_send (int idx)
       return;
    }
    /* failure :( */
-   fclose(dcc[idx].u.xfer->f);
+   fclose(dcc[idx].u.xfer->f); /* this line is buggy */
    if (strcmp(dcc[idx].nick, "*users") == 0) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)

@@ -16,9 +16,9 @@ struct flag_record {
 #define FR_ALL    0x0fffffff
 
 /* userflags:                              */
-/*   ???????? x?vut??q ponm?kj? h?f?dcba   */
+/*   ???????? xwvut??q ponm?kj? h?f?dcba   */
 /* + user defined A-Z                      */
-/*   unused letters: eglrwyz               */
+/*   unused letters: eglryz                */
 /* botflags soon to be:                    */
 /*   ?9876543 210??sr? p???l??i hg????ba   */
 /*   unused letters: cdefjkmnoqtuvwxyz     */
@@ -56,7 +56,8 @@ struct flag_record {
 #define USER_BOTMAST  0x00080000  /* t   user is botnet master */
 #define USER_UNSHARED 0x00100000  /* u   not shared with sharebots */
 #define USER_VOICE    0x00200000  /* v   auto-voice on join */
-#define USER_W        0x00400000  /* w   unused */
+#define USER_WASOPTEST 0x00400000  /* w   wasop test needed for
+stopnethack */
 #define USER_XFER     0x00800000  /* x   user has file area access */
 #define USER_Y        0x01000000  /* y   unused */
 #define USER_Z        0x02000000  /* z   unused */
@@ -118,6 +119,8 @@ struct flag_record {
 #define glob_kick(x) ((x).global & USER_KICK)
 #define chan_voice(x) ((x).chan & USER_VOICE)
 #define glob_voice(x) ((x).global & USER_VOICE)
+#define chan_wasoptest(x) ((x).chan & USER_WASOPTEST)
+#define glob_wasoptest(x) ((x).global & USER_WASOPTEST)
 #define chan_quiet(x) ((x).chan & USER_QUIET)
 #define glob_quiet(x) ((x).global & USER_QUIET)
 #define chan_friend(x) ((x).chan & USER_FRIEND)

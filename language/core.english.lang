@@ -1,4 +1,3 @@
-
 # General stuff
 
 0x001,Usage
@@ -8,17 +7,17 @@
 
 0x100,Created
 0x101,last used
-0x102,inactive 
+0x102,inactive
 0x103,placed by
 0x104,Global bans
 0x105,not active on
-0x106,Channel bans for 
+0x106,Channel bans for
 0x107,not active
 0x108,not placed by bot
 0x109,Use '.bans all' to see the total list
 0x10A,No longer banning
 
-# MOD_ 
+# MOD_
 
 0x200,Already loaded.
 0x201,Can't determine current directory.
@@ -26,10 +25,10 @@
 0x203,Module loaded:
 0x204,Needed by another module
 0x205,No close function
-0x206,Module unloaded: 
+0x206,Module unloaded:
 0x207,No such module
-0x208,No infor for module: 
-0x209,Error loading module: 
+0x208,No infor for module:
+0x209,Error loading module:
 0x20A,Error unloading module:
 0x20B,Can't load modules
 0x20C,Stagnant module; there WILL be memory leaks!
@@ -157,7 +156,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x616,Please use at least 6 characters.
 0x617,Password set to:
 0x618,Incorrect password.
-0x619,Password changed to: 
+0x619,Password changed to:
 0x61a,You're at a common site; you can't IDENT.
 0x61b,NOTICE %s :You're not %s, you're %s.\n
 0x61c,Access denied.
@@ -189,7 +188,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x636,Server says my nickname is invalid.
 0x637,NICK IN USE: Trying '%s'
 0x638,Can't change nickname on %s.  Is my nickname banned?
-0x639,Nickname has been juped.
+0x639,Nickname has been juped
 0x63a,Channel %s is juped. :(
 0x63b,%s says I'm not registered, trying next one.
 0x63c,You have a fucked up server.
@@ -223,12 +222,12 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x658,...and thank you for playing.
 0x659,Jumping servers (need %d servers, only have %d)
 0x65a,changing servers
-0x65b,I'm on too many channels.
+0x65b,I'm on too many channels--can't join:
 0x65c,Channel full--can't join:
 0x65d,Channel invite only--can't join:
 0x65e,Banned from channel--can't join:
-0x65f,Server says I'm not on channel: 
-0x660,Bad key--can't join:
+0x65f,Server says I'm not on channel:
+0x660,Bad key--can't join: %s
 0x661,NOTICE %s :All commands are done via /MSG. For the complete list, /MSG %s help   Cya!\n
 0x662,NOTICE %s :I don't recognize you from that host.\n
 0x663,NOTICE %s :Either you are using someone else's nickname or you need to type: /MSG %s IDENT (password)\n
@@ -413,6 +412,8 @@ use .-ban' in dcc chat if you want it gone for good.
 0xc1e,-=- poof -=-\n
 0xc1f,You've been booted from the %s by %s%s%s\n
 0xc20,%s booted %s from the party line%s%s\n
+0xc21,Refused DCC chat (invalid port)
+0xc22,DCC invalid port
 
 0xd00,Floating in limbo (no IRC interaction)
 

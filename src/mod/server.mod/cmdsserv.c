@@ -10,6 +10,8 @@
  * COPYING that was distributed with this code.
  */
 
+/* extern int must_be_owner; */ /* needs to be fixed */
+
 static void cmd_servers (struct userrec * u, int idx, char * par)
 {
    struct server_list *x = serverlist;
@@ -36,6 +38,12 @@ static void cmd_servers (struct userrec * u, int idx, char * par)
 
 static void cmd_dump (struct userrec * u, int idx, char * par)
 {
+
+/*   if (!(isowner(dcc[idx].nick)) && (must_be_owner)) {
+      dprintf(idx, MISC_NOSUCHCMD);
+      return;
+   } */ /* needs to be fixed */
+
    if (!par[0]) {
       dprintf(idx, "Usage: dump <server stuff>\n");
       return;
@@ -68,11 +76,14 @@ static void cmd_jump (struct userrec * u, int idx, char * par)
 }
 
 /* this overrides the default die, handling extra server stuff */
+/* send a QUIT if on the server */
 static void my_cmd_die (struct userrec * u, int idx, char * par)
 {
    cycle_time = 100;
+   if (server_online) {
    dprintf(-serv,"QUIT :%s\n", par[0] ? par : dcc[idx].nick);
    sleep(3);			/* give the server time to understand */
+}
    nuke_server(NULL);
    cmd_die(u,idx,par);
 }
@@ -82,9 +93,10 @@ static void my_cmd_die (struct userrec * u, int idx, char * par)
    int cmd_whatever(idx,"parameters");
    as with msg commands, function is responsible for any logging
 */
-static cmd_t C_dcc_serv[]={
+static cmd_t C_dcc_serv[4]={
   { "die", "n", (Function)my_cmd_die, "server:die" },
   { "dump", "m", (Function)cmd_dump, NULL },
   { "jump", "m", (Function)cmd_jump, NULL },
   { "servers", "o", (Function)cmd_servers, NULL },
 };
+/* update the add/rem_builtins in server.c if you add to this list!! */

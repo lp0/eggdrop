@@ -79,8 +79,8 @@ extern jmp_buf alarmret;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.23";
-int egg_numver = 1032300;
+char egg_version[1024] = "1.3.24i";
+int egg_numver = 1032400;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -582,10 +582,12 @@ int main (int argc, char ** argv)
       for (i = 1; i < argc; i++)
 	 do_arg(argv[i]);
    printf("\n%s\n", version);
+
    init_dcc_max();
    init_userent();
    init_misc();
    init_bots();
+   context; /* arthur2 */
    init_net();
    init_modules();
    init_tcl();

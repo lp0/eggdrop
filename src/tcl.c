@@ -44,7 +44,7 @@ extern int shtime, share_users, share_greet, require_p,
 extern int min_servs, default_flags, conmask, newserverport,
  switch_logfiles_at, server_timeout, connect_timeout,
  firewallport, reserved_port, notify_users_at;
-extern int flood_thr, flood_nick_thr, ban_time, ignore_time,
+extern int flood_thr, flood_nick_thr, ban_time, exempt_time, ignore_time,
  flood_ctcp_thr, flood_time, flood_nick_time, flood_ctcp_time;
 extern char origbotname[], botuser[],
  motdfile[], admin[], userfile[], altnick[], firewall[], helpdir[],
@@ -72,6 +72,7 @@ int debug_tcl = 0;
 int use_silence = 0;
 int remote_boots = 2;
 int allow_dk_cmds = 1;
+int must_be_owner = 1;
 /* needs at least 4 or 5 just to get started */
 /* 20 should be enough */
 int max_dcc = 20;
@@ -392,6 +393,7 @@ static tcl_ints def_tcl_ints[] =
    {"log-time", &shtime, 0},
    {"allow-dk-cmds", &allow_dk_cmds, 0},
    {"resolve-timeout", &resolve_timeout, 0},
+   {"must-be-owner", &must_be_owner, 0},
    {0, 0}
 };
 

@@ -201,7 +201,14 @@ void maskhost (char * s, char * nw)
 	 } else
 	i = 0;
       while (*p != '@')
-	nw[i++] = *p++;
+        {
+          if ( (*p=='~') || (*p=='+') || (*p=='-') )
+            nw[i]='?';  
+          else
+            nw[i]=*p;
+          p++;
+          i++;
+        }
       nw[i++] = '@';
       q++;
    } else {

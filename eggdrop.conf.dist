@@ -46,7 +46,7 @@ set timezone "EST"
 
 
 # you can specify how many log files you can have upto.  at midnight every
-# day, the old log files are renamed and a new log file begins.  by default, 
+# day, the old log files are renamed and a new log file begins.  by default,
 # the old one is called "(logfilename).yesterday", and any logfiles before
 # yesterday are erased.
 
@@ -126,8 +126,6 @@ set temp-path "/tmp"
 # check 'help set motd' for tons of motd options.
 set motd "motd"
 
-
-
 #####  BOTNET  #####
 
 # you probably shouldn't deal with this until reading 'botnet.doc' or
@@ -143,7 +141,7 @@ set motd "motd"
 listen 3333 all
 
 # This setting will drop telnet connections not matching a known host
-# It greatly improves protection from IRCOPs, but makes it impossible 
+# It greatly improves protection from IRCOPs, but makes it impossible
 # for NOIRC bots to add hosts or have NEW as a valid login
 set protect-telnet 0
 
@@ -184,7 +182,7 @@ set dcc-flood-thr 3
 # host constitutes a flood?
 set telnet-flood 5:60
 
-# how long should I wait (seconds) before giving up on hostname/address 
+# how long should I wait (seconds) before giving up on hostname/address
 # lookup?
 set resolve-timeout 15
 
@@ -221,7 +219,7 @@ set ignore-time 15
 set debug-output 0
 
 # this setting affects what part of the hour the 'hourly' calls occur
-# on the bot, this includes such things as note notifying, 
+# on the bot, this includes such things as note notifying,
 # You can change that here (for example, "15" means to
 # notify every hour at 15 minutes past the hour)
 # this now includes when the bot will save its userfile
@@ -244,8 +242,8 @@ set default-flags "hpx"
 # which provides commands for changing all of these.
 set whois-fields "url birthday"
 
-# allow people from other bots (in your bot-net) to boot people off 
-# your bot's party line? 
+# allow people from other bots (in your bot-net) to boot people off
+# your bot's party line?
 # values:
 #   0 - allow *no* outside boots
 #   1 - allow boots from sharebots
@@ -271,7 +269,11 @@ set die-on-sigterm 0
 # (In previous versions, this was enabled by default in eggdrop.h)
 unbind dcc n tcl *dcc:tcl
 unbind dcc n set *dcc:set
-  
+
+# only let permanent owners use .tcl/.set if binded?
+# (the people must set the $owner variable)
+set must-be-owner 0
+
 # to add the 'simul' command (owners can manipulate other people on
 # the party line)? comment out this line to add
 # Please select owners wisely! Use this command ethically!
@@ -325,8 +327,17 @@ loadmodule channels
 # the chanfile: where dynamic channel settings are stored
 set chanfile "LamestBot.chan"
 
-# temporary bans will last how many minutes?
+# temporary bans will last how many minutes? if set to 0, bot never removes
+# them.
 set ban-time 120
+
+# temporary exemptions (+e modes) will last how many minutes? if set to 0,
+# bot never removes them. This is an IRCNET feature.
+set exempt-time 0
+
+# temporary invitations (+I modes) will last how many minutes? if set to
+# 0, bot never removes them. This is an IRCNET feature.
+set invite-time 0
 
 # [0/1] share user greets with other bots on the channel if sharing user data?
 set share-greet 0
@@ -479,7 +490,11 @@ channel set #botcentral +bitch +clearbans +enforcebans -greet +revenge
 # the old NO_IRC define)
 loadmodule server
 
-##### variables: 
+# [0/1/2/3/4] What is your network? 0 = Efnet, 1 = IRCnet, 2 = Undernet,  
+# 3 = Dalnet, 4 = Others
+set net-type 0
+
+##### variables:
 # the nick of the bot, that which it uses on IRC, and on the botnet
 # unless you specify a sperate botnet-nick
 set nick "Lamestbot"
@@ -499,7 +514,7 @@ set init-server { putserv "MODE $botnick +iw-s" }
 # (please note: you need to change these servers to YOUR network's servers)
 set servers {
   raistlin.toledolink.com:6667
-}  
+}
 
 # [0/1] if the bot's nickname is changed (for example, if the intended
 # nickname is already in use) keep trying to get the nick back?
@@ -518,10 +533,10 @@ set quiet-reject 1
 # mIRC will do this, most other clients will NOT
 set lowercase-ctcp 0
 
-# answer HOW MANY stacked ctcp's at once 
+# answer HOW MANY stacked ctcp's at once
 set answer-ctcp 3
 
-# *NOTE* due to lazyness on beldin's behalf, these must be set *after* 
+# *NOTE* due to lazyness on beldin's behalf, these must be set *after*
 # server.so is loaded
 # setting any of the following with howmany == 0 will turn them off
 # how many msgs in how many seconds from the same host constitutes a flood?
@@ -558,12 +573,12 @@ set server-timeout 15
 set servlimit 0
 
 # Check for stoned servers? (i.e. Where the server connection has
-# died, but eggdrop hasn't been notified yet).  
+# died, but eggdrop hasn't been notified yet).
 set check-stoned 1
 
-# enable console mode 'r'?  this mode shows every raw message from the 
-# server to owners with console 'r' selected -- will take a bit more 
-# cpu.  
+# enable console mode 'r'?  this mode shows every raw message from the
+# server to owners with console 'r' selected -- will take a bit more
+# cpu.
 # NOTE: This is a large security hole, allowing people to see mis-sent
 #       messages to the bot containing passwords
 # This is now restricted to +n users only. Please choose your owners with care.
@@ -580,14 +595,21 @@ set max-queue-msg 300
 # trigger bindings for ignored users?
 set trigger-on-ignore 0
 
-# some IRC Networks use the ircdu's SILENCE command 
-# else it is useless to use this
-set use-silence 0
+##### SERVER MODULE - net-type 4 specific features (other networks) #####
 
-# IRCNET uses umode +r to mean a restricted connection, DALnet
-# uses it to mean a registered nick, use this to enable handling of
-# it as an IRCNET umode
-set handle-mode_r 1
+# some IRC Networks use the ircdu's SILENCE command
+# else it is useless to use this
+# Automatically set to 0 for net-type 0/1/3, set to 1 for net-type 2.
+# Only use this if you set net-type 4
+#set use-silence 1
+
+# some nets use umode +r to mean a restricted connection. If this is your
+# case, then set it to 1
+# Automatically set to 0 for net-type 0/2/3, set to 1 for net-type 1.
+# Only use this if you set net-type 4
+#set check-mode-r 1
+
+
 
 ##### CTCP MODULE #####
 
@@ -603,33 +625,47 @@ loadmodule ctcp
 ##### IRC MODULE #####
 
 # this module provides ALL NORMAL IRC INTERACTION, if you want the normal
-# join & maintain channels stuff, this is the module. 
+# join & maintain channels stuff, this is the module.
 loadmodule irc
 
-# [0/1] define this if you want to bounce all server bans 
-set bounce-bans 0
+# [0/1] define this if you want to bounce all server bans
+set bounce-bans 1
+
+# [0/1] define this if you want to bounce all the server modes
+set bounce-modes 0
+
+# If there are more than max-bans active bans on a channel, then the
+# bot won't try to put more bans. Thus it won't flood the irc server.
+# ircd 2.9.5 allows 20 bans. ircd 2.10 allows 30 bans (max).
+set max-bans 20
+
+# There is a global limit for +b/+e/+I modes. This limit is set to 30 on
+# 2.10 irc servers.
+set max-modes 30
 
 # [0/1] define this to allow modes from non-op users (ChanServ)
-set allow_desync 0
+set allow-desync 0
 
-# kick-method defines how kicks (when enforcing bans) should be made:
-#    0 = kick all nicks at once in one command
-#    X = kick X users at a time
-# This option depends on what your IRC network allows.  If you are not sure,
-# leave the value "1".  Some values that you may try (not certain):
-#  Dalnet   = 1	  <- kick one at a time (just like it always has been)
-#  Efnet    = 0	  <- kick the whole bunch at one time
-#  IRCnet   = 4   <- kick 4 nicks per bunch (new in ircd 2.9.5)
-#  Undernet = 0
-set kick-method 1
-
-# [0/1] Do you want the bot to kick bogus usernames ?
+# [0/1] Do you want the bot to kick bogus usernames?
 # Remember that if it does, as it won't ban them, it can be at the origin
 # of a nice kick-flood
-set kick-bogus 1
+set kick-bogus 0
+
+# [0/1] Do you want the bot to ban bogus usernames?
+# Can prevent the above described kick-flood, but can also fill the banlist
+set ban-bogus 0
+
+# [0/1] Do you want the bot to kick for ctcp avalanches to a channel?
+# Remember that if it does, as it won't ban them, it can be at the origin
+# of a nice kick-flood
+set kick-fun 0
+
+# [0/1] Do you want the bot to ban for ctcp avalanches to a channel?
+# Can prevent the above described kick-flood, but can also fill the banlist
+set ban-fun 0
 
 # [0/1] let users introduce themselves to the bot via 'hello'?
-set learn-users 1
+set learn-users 0
 
 # time (in seconds) to wait for someone to return from a netsplit
 set wait-split 300
@@ -638,25 +674,10 @@ set wait-split 300
 # re-displaying their info
 set wait-info 180
 
-# some networks allow you to stack lots of channel modes into one
-# line.  as of november 1996, the major networks allowed:
-#    EFnet      4
-#    IRCnet     3
-#    Undernet   6
-#    Dalnet     6
-# they're all guaranteed to support at least 3, so that's the default,
-# but if you know your network supports more, you may want to adjust
-# this value. this value must be less than or equal to 6.
-set modes-per-line 3
-
 # this is the maximum number of bytes to send in the arguments to mode's
 # sent to the server, most servers default this to 200, so it should
 # be sufficient
 set mode-buf-length 200
-
-# use ircu2.10.01 specific /who requests, therefore only asking for
-# exactly what's needed 
-set use-354 0
 
 # many irc ops check for bots that respond to 'hello'.  you can change this
 # to another word by uncommenting the following two lines, and changing
@@ -665,20 +686,76 @@ set use-354 0
 # novice users are not expected to understand what these two lines do; they
 # are just here to help you.  for more information on 'bind', check the file
 # 'tcl-commands.doc'
-#unbind msg - hello *msg:hello
-#bind msg - myword *msg:hello
+unbind msg - hello *msg:hello
+bind msg - myword *msg:hello
 
 # Many takeover attempts occur due to lame users blindy /msg ident'n to
 # the bot without checking if the bot is the bot.
 # We now unbind this command by default to discourage them
 unbind msg - ident *msg:ident
+unbind msg - addhost *msg:addhost
 
 # If you are so lame you want the bot to display peoples info lines, even
 # when you are too lazy to add their chanrecs to a channel, set this to 1
 # *NOTE* This means *every* user with an info line will have their info
 # display on EVERY channel they join (provided they have been gone longer than
-# wait-info) 
+# wait-info)
 set no-chanrec-info 0
+
+##### IRC MODULE - net-type 1 specific features (IRCnet) #####
+
+# Don't modify the following settings if you don't use IRCnet. The defaults following
+# values are harmless for you.
+
+# [0/1] define this if you want to bounce all server exemptions (+e modes)
+#  * This is an IRCNET feature
+set bounce-exempts 0
+
+# [0/1] define this if you want to bounce all server invitations (+I modes)
+#  * This is an IRCNET feature
+set bounce-invites 0
+
+# If there are more than max-exempts active +e modes on a channel, then
+# the bot won't try to put more exemptions. Thus it won't flood the irc
+# server. Only 2.10 servers are concerned by these +e modes.
+#  * This is an IRCNET feature
+set max-exempts 0
+
+# If there are more than max-invites active +I modes on a channel, then
+# the bot won't try to put more invitations. Thus it won't flood the irc
+# server. Only 2.10 irc servers are concerned by these +I modes.
+#  * This is an IRCNET feature
+set max-invites 0
+
+##### IRC MODULE - net-type 4 specific features (other networks) #####
+
+# kick-method defines how kicks (when enforcing bans) should be made:
+#    0 = kick all nicks at once in one command
+#    X = kick X users at a time
+# This option depends on what your IRC network allows.  If you are not sure,
+# leave the value "1".
+# Automatically set to 0 for net-type 2, set to 4 for net-type 1, set
+# to 1 for net-type 0/3.
+# Only use this if you set net-type 4
+#set kick-method 1
+
+# some networks allow you to stack lots of channel modes into one
+# line.
+# they're all guaranteed to support at least 3, so that's the default,
+# but if you know your network supports more, you may want to adjust  
+# this value. this value must be less than or equal to 6.
+# Automatically set to 4 for net-type 0, set to 3 for net-type 1, set to
+# 6 for net-type 2/3. 
+# Only use this if you set net-type 4
+#set modes-per-line 3
+
+# use ircu2.10.01 specific /who requests, therefore only asking for
+# exactly what's needed
+# Automatically set to 0 for net-type 0/1/3, set to 1 for net-type 2.
+# Only use this if you set net-type 4
+#set use-354 0
+
+
 
 ##### TRANSFER MODULE #####
 
@@ -686,7 +763,7 @@ set no-chanrec-info 0
 # dcc send/get support and bot userfile transfer support (not sharing)
 loadmodule transfer
 
-##### variables: 
+##### variables:
 # set maximum number of simultaneous downloads to allow for each user
 set max-dloads 3
 
@@ -714,21 +791,21 @@ set xfer-timeout 300
 # (this requires the channels & transfer modules)
 #loadmodule share
 
-##### variables: 
+##### variables:
 # there are situations where sharebot userfile resynchronization
-# can fail to work correctly.  because of this, it is no longer 
+# can fail to work correctly.  because of this, it is no longer
 # advised to turn this feature on.  i've lost the mail from the
-# person that spelled out the flaw, so i can't give him/her credit 
-# right now or explain it (sorry). 
+# person that spelled out the flaw, so i can't give him/her credit
+# right now or explain it (sorry).
 #set allow-resync 0
 
-# this specifies how long to hold another bots resync data for before 
+# this specifies how long to hold another bots resync data for before
 # flushing it
 #set resync-time 900
 
 # when sharing user lists, ignore +n modes from other bots?
 #
-# PLEASE NOTE!  
+# PLEASE NOTE!
 #
 # With the addition of private-globals, private-owner is now redundant,
 # and therefore deprecated.  It may be removed soon.  Put the global
@@ -743,7 +820,7 @@ set xfer-timeout 300
 # any global flag changes from other bots
 #set private-global 0
 
-# when sharing user lists, if private-global isn't set, which global flag 
+# when sharing user lists, if private-global isn't set, which global flag
 # changes from other bots should be ignored ?
 #set private-globals "mnot"
 
@@ -821,7 +898,7 @@ die "You didn't edit your config file like you were told, did you?"
 
 ##### CONSOLE MODULE #####
 
-# this module provides storage of console settings when you exit the bot 
+# this module provides storage of console settings when you exit the bot
 # (or .store)
 loadmodule console
 
@@ -842,7 +919,7 @@ set info-party 0
 ##### WOOBIE MODULE #####
 
 # this serves absolutely no purpose and is for demonstrative
-# purposes only 
+# purposes only
 #loadmodule woobie
 
 
@@ -891,3 +968,4 @@ source scripts/action.fix.tcl
 # and help/msg/userinfo.help to change the help files
 source scripts/userinfo1.0.tcl
 loadhelp userinfo.help
+

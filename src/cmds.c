@@ -24,9 +24,11 @@ extern struct userrec *userlist;
 extern tcl_timer_t *timer, *utimer;
 extern int dcc_total, remote_boots, backgrd, make_userfile, do_restart;
 extern int conmask, require_p;
+extern int must_be_owner;
 extern Tcl_Interp *interp;
 extern char botnetnick[], ver[], network[], origbotname[], owner[], spaces[];
 extern time_t now, cycle_time;
+extern time_t now, online_since;
 
 /* add hostmask to a bot's record if possible */
 static int add_bot_hostmask (int idx, char * nick)
@@ -205,10 +207,28 @@ static void tell_who (struct userrec * u,int idx, int chan)
 
 static void cmd_botinfo (struct userrec * u, int idx, char * par)
 {
-   char s[1024];
+   char s[1024], s2[32];
    struct chanset_t *chan;
+   time_t now2;
+   int hr, min;   
    
+   context;
    chan = chanset;
+   now2 = now - online_since;
+   s2[0] = 0;
+   if (now2 > 86400) {
+      int days = now2 / 86400;
+      /* days */
+      sprintf(s2, "%d day", days);
+      if (days >= 2)
+        strcat(s2, "s");
+      strcat(s2, ", ");
+      now2 -= days * 86400;
+   }
+   hr = (time_t) ((int) now2 / 3600);
+   now2 -= (hr * 3600);
+   min = (time_t) ((int) now2 / 60);
+   sprintf(&s2[strlen(s2)], "%02d:%02d", (int) hr, (int) min);
    putlog(LOG_CMDS, "*", "#%s# botinfo", dcc[idx].nick);
    simple_sprintf(s, "%d:%s@%s",dcc[idx].sock,dcc[idx].nick,botnetnick);
    botnet_send_infoq(-1,s);
@@ -223,25 +243,27 @@ static void cmd_botinfo (struct userrec * u, int idx, char * par)
       }
       if (s[0]) {
 	 s[strlen(s) - 2] = 0;
-	 dprintf(idx, "*** [%s] %s <%s> (%s)\n", botnetnick, ver,network, s);
+        dprintf(idx, "*** [%s] %s <%s> (%s) [UP %s]\n", botnetnick, ver,network, s, s2);
       } else
-	dprintf(idx, "*** [%s] %s <%s> (no channels)\n", botnetnick,ver, network);
+       dprintf(idx, "*** [%s] %s <%s> (no channels) [UP %s]\n", botnetnick,ver, network, s2);
    } else 
-	dprintf(idx, "*** [%s] %s <NO_IRC>\n", botnetnick,ver);
+       dprintf(idx, "*** [%s] %s <NO_IRC> [UP %s]\n", botnetnick,ver, s2);
 }
 
 static void cmd_whom (struct userrec * u, int idx, char * par)
 {
-   if (dcc[idx].u.chat->channel < 0) {
+   if (par[0] == '*') {
+      putlog(LOG_CMDS, "*", "#%s# whom %s", dcc[idx].nick, par);
+      answer_local_whom(idx, -1);
+      return;
+   } else if (dcc[idx].u.chat->channel < 0) {
       dprintf(idx, "You have chat turned off.\n");
       return;
    }
    putlog(LOG_CMDS, "*", "#%s# whom %s", dcc[idx].nick, par);
-   if (!par[0])
+   if (!par[0]) {
       answer_local_whom(idx, dcc[idx].u.chat->channel);
-   else if (par[0] == '*')
-      answer_local_whom(idx, -1);
-   else {
+   } else {
       int chan = -1;
       if ((par[0] < '0') || (par[0] > '9')) {
 	 Tcl_SetVar(interp,"chan",par,0);
@@ -484,6 +506,12 @@ static void cmd_match (struct userrec * u, int idx, char * par)
    }
    tell_users_match(idx, s, start, limit, u ? (u->flags & USER_MASTER) : 0,
 		    chname);
+}
+
+static void cmd_uptime (struct userrec * u, int idx, char * par)
+{
+      putlog(LOG_CMDS, "*", "#%s# uptime", dcc[idx].nick);   
+      tell_verbose_uptime(idx, 1);
 }
 
 static void cmd_status (struct userrec * u, int idx, char * par)
@@ -1008,6 +1036,10 @@ static void cmd_simul (struct userrec * u, int idx, char * par)
    if (!par[0]) {
       dprintf(idx, "Usage: simul <nick> <text>\n");
       return;
+   }
+   if (isowner(nick)) {
+    dprintf(idx, "Unable to '.simul' permanent owners.\n");
+    return;
    }
    for (i = 0; i < dcc_total; i++)
       if (!strcasecmp(nick, dcc[i].nick) && !ok &&
@@ -1941,6 +1973,11 @@ static void cmd_tcl (struct userrec * u, int idx, char * msg)
 {
    int code;
    
+   if (!(isowner(dcc[idx].nick)) && (must_be_owner)) {
+    dprintf(idx, MISC_NOSUCHCMD);
+       return;
+   }
+
    debug1("tcl: evaluate (.tcl): %s", msg);
    set_tcl_vars();
    code = Tcl_GlobalEval(interp, msg);
@@ -1956,6 +1993,11 @@ static void cmd_set (struct userrec * u, int idx, char * msg)
    int code;
    char s[512];
    
+   if (!(isowner(dcc[idx].nick)) && (must_be_owner)) {
+    dprintf(idx, MISC_NOSUCHCMD);
+       return;
+   }
+
    putlog(LOG_CMDS, "*", "#%s# set %s", dcc[idx].nick, msg);
    set_tcl_vars();
    strcpy(s, "set ");
@@ -2114,6 +2156,10 @@ static void cmd_mns_user (struct userrec * u, int idx, char * par)
       dprintf(idx, "No such user!\n");
       return;
    }
+   if (isowner(u2->handle)) {
+      dprintf(idx, "Can't remove the permanent bot owner!\n");
+      return;
+   }
    if ((u2->flags & USER_OWNER) && !(u->flags & USER_OWNER)) {
       dprintf(idx, "Can't remove the bot owner!\n");
       return;
@@ -2250,7 +2296,7 @@ static void cmd_modules (struct userrec * u, int idx, char * par) {
    int cmd_whatever(idx,"parameters");
    as with msg commands, function is responsible for any logging
 */
-cmd_t C_dcc[63]={
+cmd_t C_dcc[64]={
   { "+bot", "t", (Function)cmd_pls_bot, NULL },
   { "+host", "tm|m", (Function)cmd_pls_host, NULL },
   { "+ignore", "m", (Function)cmd_pls_ignore, NULL },
@@ -2310,6 +2356,7 @@ cmd_t C_dcc[63]={
   { "trace", "", (Function)cmd_trace, NULL },
   { "unlink", "t", (Function)cmd_unlink, NULL },
   { "unloadmod", "n", (Function)cmd_unloadmod, NULL },
+  { "uptime", "m|m", (Function)cmd_uptime, NULL },
   { "vbottree", "t", (Function)cmd_vbottree, NULL },
   { "who", "", (Function)cmd_who, NULL },
   { "whois", "to|o", (Function)cmd_whois, NULL },

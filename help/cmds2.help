@@ -308,6 +308,7 @@ see also: whom
       v   global voice (user get +v automatically on +autovoice channels)
       a   global auto-op (always op this user on join)
       h   high-light flag, user sees highlighting in text output
+      w   wasop-test (needs wasop test for +stopnethack procedure)
       (plus 26 user-defined flags, A-Z)
    
    each channel that the user has joined will have a specific record
@@ -322,6 +323,7 @@ see also: whom
       v   voice (user gets +v automatically on +autovoice channels)
       q   quiet (user never gets +v on +autovoice channels)
       a   auto-op (always op this user on join)
+      w   wasop-test (needs wasop test for +stopnethack procedure)
       (plus 26 user-defined flags, A-Z)
    
    hostmasks for the user are displayed on the following lines.
@@ -404,3 +406,9 @@ see also: match
    it should be self-explanatory to anyone who needs to use it.
 
 see also: set, channel, debug
+%{help=uptime}%{+m|m}
+###  %buptime%b
+   displays the bot's current uptime like .status would show.
+
+see also: status
+

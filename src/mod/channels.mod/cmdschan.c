@@ -51,8 +51,14 @@ static void cmd_pls_ban (struct userrec * u, int idx, char * par)
 	   chname = dcc[idx].u.chat->con_chan;
 	 get_user_flagrec(u,&user,chname);
 	 chan = findchan(chname);
-	 if (!chan || !((glob_op(user) && !chan_deop(user)) || chan_op(user)))
+      /* *shrug* ??? (guppy:10Feb99) */  
+      if (!chan) {
+       dprintf(idx, "That channel doesnt exist!\n");
 	   return;
+      } else if (!((glob_op(user) && !chan_deop(user)) || chan_op(user))) {
+       dprintf(idx, "You dont have access to set bans on %s.\n", chname);
+       return;
+      }
       } else 
 	chan = 0;
       /* Added by Q and Solal  - Requested by Arty2, special thanx :) */
@@ -600,7 +606,7 @@ static void cmd_chaninfo (struct userrec * u, int idx, char * par) {
       chname = newsplit(&par);
       get_user_flagrec(u,&user,chname);
       if (!glob_master(user) && !chan_master(user)) {
-	 dprintf(idx,"You dont have access to %s.",chname);
+	 dprintf(idx,"You dont have access to %s. \n",chname);
 	 return;
       }
    }
@@ -674,7 +680,7 @@ static void cmd_chanset (struct userrec * u, int idx, char * par) {
 	 chname = newsplit(&par);
 	 get_user_flagrec(u,&user,chname);
 	 if (!glob_master(user) && !chan_master(user)) {
-	    dprintf(idx,"You dont have access to %s.",chname);
+	    dprintf(idx,"You dont have access to %s. \n",chname);
 	    return;
 	 }  else if (!(chan = findchan(chname)) && (chname[0] != '+')) {
 	    dprintf(idx, "That channel doesnt exist!\n");
@@ -694,9 +700,7 @@ static void cmd_chanset (struct userrec * u, int idx, char * par) {
 	 while (list[0][0]) {
 	    if (list[0][0] == '+' || list[0][0] == '-' ||
 		(strcmp(list[0], "dont-idle-kick") == 0)) {
-	       if (strcmp(list[0]+1, "shared") == 0) {
-		  dprintf(idx, "You can't change shared settings on the fly\n");
-	       } else if (tcl_channel_modify(0, chan, 1, list) == TCL_OK) {
+               if (tcl_channel_modify(0, chan, 1, list) == TCL_OK) {
 		  strcat(answers, list[0]);
 		  strcat(answers, " ");
 	       } else
@@ -774,3 +778,4 @@ static cmd_t C_dcc_irc[15]={
   { "stick", "o|o", (Function)cmd_stick, NULL },
   { "unstick", "o|o", (Function)cmd_unstick, NULL },
 };
+/* update the add/rem_builtins in channels.c if you add to this list!! */

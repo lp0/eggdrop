@@ -589,7 +589,7 @@ static void share_userfileq (int idx, char * par) {
 	      ok = 0;
 	 }
       if (!ok)
-	 dprintf(idx, "s un Already sharing sharing.\n");
+	 dprintf(idx, "s un Already sharing.\n");
       else {
 	 dprintf(idx, "s uy\n");
 	 /* set stat-getting to astatic void race condition (robey 23jun96) */

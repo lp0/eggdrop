@@ -83,6 +83,8 @@ static char bothost[81];
 /* check for IRCNET +r modes */
 static int check_mode_r;
 int use_ison;
+/* net-type: 0 = efnet, 1 = ircnet, 2 = undernet, 3 = dalnet, 4 = others */
+int net_type = 0;
 
 static Function * global = NULL;
 
@@ -522,6 +524,7 @@ static tcl_ints my_tcl_ints[] =
    {"default-port", &default_port, 0},
    {"check-mode-r", &check_mode_r, 0},
    {"use-ison", &use_ison, 0},
+   {"net-type", &net_type, 0},
    { 0, 0, 0}
 };
 
@@ -620,6 +623,12 @@ static int ctcp_DCC_CHAT(char * nick, char * from, char * handle,
    } else if (u_pass_match(u,"-")) {
       dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
       putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
+   } else if ((atoi(prt) < 1024) || (atoi(prt) > 65535)) {
+      /* invalid port range, do clients even use over 5000?? */
+      dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
+         DCC_CONNECTFAILED1);
+      putlog(LOG_MISC, "*", "%s: CHAT (%s!%s)", DCC_CONNECTFAILED3,
+         nick, from);
    } else {
       if (!sanitycheck_dcc(nick, from, ip, prt))
 	 return 1;
@@ -815,7 +824,7 @@ static cmd_t my_ctcps[1] =
 {
    { "DCC", "", ctcp_DCC_CHAT, "server:DCC" }
 };
-
+/* update the add/rem_builtins in server.c if you add to this list!! */
 
 static int tcl_jump STDVAR {
    BADARGS(1, 4, " ?server? ?port? ?pass?");
@@ -986,7 +995,7 @@ char *server_start (Function * global_funcs)
    answer_ctcp = 1;
    lowercase_ctcp = 0;
    bothost[0] = 0;
-   check_mode_r = 1;
+   check_mode_r = 0;
    maxqmsg = 300;
    burst = 0;
    use_ison = 1;

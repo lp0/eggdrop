@@ -27,6 +27,12 @@ specific commands, see later.
       (intended for sending messages to channels or people)
     returns: nothing
 
+  putquick <text>
+    sends text to the server, like 'dump' (intended for direct server
+    commands); output is queued so that you won't flood yourself off
+    the server, using the MODE queue (should be alot faster)
+    returns: nothing
+
   putlog <text>
     sends text to the log for any channel, marked as 'misc' (o)
     returns: nothing
@@ -46,7 +52,7 @@ specific commands, see later.
 
   dumpfile <nick> <filename>
     dumps out a file from the help/text directory to a user on IRC via
-      msg (one line per msg); the user has no flags, so the 
+      msg (one line per msg); the user has no flags, so the
       flag bindings wont work within the file.
 
 
@@ -69,7 +75,7 @@ specific commands, see later.
 |     matchs the flags relvantly, (chan matches vs anywhere), & specifies
 |     and when match, | specifies or, only the first of these is relevant
 |     the default is or.
-      
+
   passwdok <handle> <pass>
     checks the password given against the user's password -- if the user has
       not set a password, will always return "1"; check against the password
@@ -79,7 +85,7 @@ specific commands, see later.
 | getuser <handle> <entry-type> [extra info]
 |   this is a generic interface to the new generic userfile support, it
 |   return info specific to each entry-type, valid entry types are:
-|     BOTFL - returns the current bot-specific flags for the user 
+|     BOTFL - returns the current bot-specific flags for the user
 |             (if it's a bot :)
 |     BOTADDR - (another bot-only thing :) returns a list containing
 |             the bots address, the bots telnet port, and it's relay port.
@@ -92,8 +98,8 @@ specific commands, see later.
 |     XTRA   - returns the old xtra info
 |     COMMENT - returns the master-visible only comment for the user
 |     EMAIL  - returns the users email address
-|     URL    - returns the users url address 
-  
+|     URL    - returns the users url address
+
 | setuser <handle> <entry-type> [extra info]
 |   this is the counterpart of getuser, it lets you set the various values
 |   extra ones not supported about :
@@ -101,10 +107,10 @@ specific commands, see later.
 |     HOSTS - for setting hosts, no extra info = clear, otherwise
 |             *1* hostmask is added :P
 |     LASTON - 2 forms:
-|              setuser <handle> laston <unixtime> <place> 
+|              setuser <handle> laston <unixtime> <place>
 |                 sets global laston time
 |              setuser <handle> laston <unixtime> <channel> *
-|                 will set a users laston time in a channel record 
+|                 will set a users laston time in a channel record
 |                 (if it already exists)
 
   chnick <old-handle> <new-handle>
@@ -114,7 +120,7 @@ specific commands, see later.
 
   chattr <handle> [changes [channel]]
     changes the attributes for a user record, if you include any -- changes
-      are of the form "+f", "-o", "+dk", "-o+d", etc; if a channel is 
+      are of the form "+f", "-o", "+dk", "-o+d", etc; if a channel is
       specified, the channel-specific flags for that channel are altered
 |     you can now use the +o|-o #channel format here too.
     returns: new flags for the user (if you made no changes, returns current
@@ -124,14 +130,14 @@ specific commands, see later.
 | botattr <handle> [changes [channel]]
 |   similar to chattr except for bot attributes rather than normal user
 |   attributes, this includes the channel-specific +s share flag
-    
+
   matchattr <handle> <flags> [channel]
 |   returns: "1" if the specified user has the matching flags.
-|     (using the new matching system)   
+|     (using the new matching system)
 
   matchchanattr <handle> <flags> <channel>
-|   returns: identical to previous command with a channel argument, 
-|            heck they're the same command now :) dont rely on this 
+|   returns: identical to previous command with a channel argument,
+|            heck they're the same command now :) dont rely on this
 |            command in new scripts it will go eventually :)
 
   adduser <handle> <hostmask>
@@ -187,6 +193,14 @@ specific commands, see later.
       other arguments work exactly like newchanban
     returns: nothing
 
+| stick <ban> [channel]
+|   makes a ban sticky, or if a channel is specified, then it is set sticky
+|   on that channel. returns: "1" is successful, "0" otherwise
+
+| unstick <ban> [channel]
+|   makes a ban unstuck, or if a channel is specified, then it is unstuck
+|   on that channel. returns: "1" is successful, "0" otherwise
+
   killchanban <channel> <ban>
     removes a ban from the enforced ban list for a channel
     returns: "1" if successful, "0" otherwise
@@ -198,11 +212,15 @@ specific commands, see later.
   isban <ban> [channel]
     returns: "1" if that ban is in the global ban list, "0" otherwise; if
       a channel is specified, that channel's ban list is checked too
-  
+
   ispermban <ban> [channel]
     returns: "1" if that ban is in the global ban list AND is marked as
       permanent, "0" otherwise; if a channel is specified, that channel's
       ban list is checked too
+
+  isbansticky <ban> [channel]
+    returns: "1" if that ban is a sticky ban in the global ban list, "0" otherwise;
+      if a channel is specified, that channel's ban list is checked too
 
   matchban <nick!user@host> [channel]
     returns: "1" if that user address matches a ban in the global ban list,
@@ -277,16 +295,19 @@ specific commands, see later.
   savechannels
     saves the channel settings to the channel-file if one is defined.
     returns: nothing
-    
+
   loadchannels
     reloads the channel settings from the channel-file if one is defined.
     returns: nothing
-    
+
   channels
     returns: list of the channels the bot is monitoring (or trying to)
 
   botisop <channel>
     returns: "1" if the bot is an op on that channel; "0" otherwise
+
+  botonchan <channel>
+    returns: "1" if the bot is on that channel; "0" otherwise
 
   isop <nickname> <channel>
     returns: "1" if someone by that nickname is on the channel and has chop;
@@ -315,14 +336,38 @@ specific commands, see later.
   ischanban <ban> <channel>
     returns: "1" if that is a ban on the bot's channel
 
+  ischanexempt <exempt> <channel>
+    returns: "1" if that is an exemption (+e mode) on the bot's channel.
+      this is an IRCNET feature.
+
+  ischaninvite <invite> <channel>
+    returns: "1" if that is an invitation (+I mode) on the bot's channel.
+      this is an IRCNET feature.
+
   chanbans <channel>
     returns: a list of the current bans on the channel, each element is
       of the form {ban bywho age} age is seconds from the bots POV
+
+  chanexempts <channel>
+    returns: a list of the current exemptions (+e mode) on the channel,
+      each element is of the form {exemption bywho age} age is seconds
+      from the bots POV. this is an IRCNET feature.
+
+  chaninvites <channel>
+    returns: a list of the current invitations (+I modes) on the channel,
+      each element is of the form {invitation bywho age} age is seconds
+      from the bots POV. this is an IRCNET feature.
 
   resetbans <channel>
     removes all bans on the channel that aren't in the bot's ban list, and
       refreshes any bans that should be on the channel but aren't
     returns: nothing
+
+  resetexempts <channel>
+    removes all exemptions on the channel. this is an IRCNET feature.
+
+  resetinvites <channel>
+    removes all invitations on the channel. this is an IRCNET feature.
 
   resetchan <channel>
     rereads in the channel info from the server
@@ -332,7 +377,7 @@ specific commands, see later.
     returns: user@host of that person if they are on the channel; {} otherwise
 
   getchanjoin <nickname> <channel>
-    returns: timestamp of when that person joined the channel    
+    returns: timestamp of when that person joined the channel
 
   onchansplit <nick> <channel>
     returns: "1" if that nick is split from the channel; "0" otherwise
@@ -377,7 +422,7 @@ specific commands, see later.
   validchan <channel>
     checks if the bot is monitoring that channel
     returns: 1 if the channel exists, 0 if not
- 
+
   isdynamic <channel>
     returns: 1 if the channel is an existing dynamic channel, 0 if not
 
@@ -391,7 +436,7 @@ specific commands, see later.
     sends your message to everyone on the party line on the bot net, in the
       form "*** <message>" for local users, and "*** [Bot] <message>" for
       users on other bots
- 
+
   dccputchan <channel> <message>
     sends your message to everyone on a certain channel on the bot net, in
       a form exactly like dccbroadcast does -- valid channels are 0 thru 99999
@@ -619,7 +664,7 @@ specific commands, see later.
       appear in (for example) a DCC request
 
   rand <limit>
-    returns: a random integer between 0 and limit-1  
+    returns: a random integer between 0 and limit-1
 
   control <idx> <command>
     removes a user from the party line and sends all future input from them
@@ -658,7 +703,7 @@ specific commands, see later.
   die [reason]
     causes the bot to log a fatal error and exit completely; if no reason
     is given, "EXIT" is used
-  
+
 | unames
 |  returns:  The current operating system the bot is using.
 
@@ -684,18 +729,18 @@ GLOBAL VARIABLES:
   numversion
     current numeric bot version (ie: "1010201");
       Numerical version is "MMNNRRPP" where:
-		MM is the Major release number
-		NN is the Minor release number
-		RR is the sub-release number
-		PP is the patch level for that sub-release
+        MM is the Major release number
+        NN is the Minor release number
+        RR is the sub-release number
+        PP is the patch level for that sub-release
 
   uptime
     unixtime value for when the bot was started
 
   lastbind
-    The last command binding which triggered.   This allows you to 
+    The last command binding which triggered.   This allows you to
     identify which command triggered a tcl routine.
-  
+
 
 COMMAND EXTENSION:
 
@@ -715,7 +760,7 @@ binding is triggered, ALL the Tcl procs that are bound to it will be
 called, one after another.
 
 To remove a binding, use "unbind".  For example, to remove that binding
-for the msg-command "stop", use "unbind msg - stop msg_stop". 
+for the msg-command "stop", use "unbind msg - stop msg_stop".
 
 
   (1)  MSG
@@ -741,7 +786,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        the same as DCC, except this is triggered if the user is in the file
        area instead of the party line
        (THIS IS ONLY AVALIABLE WHEN THE filesys.so MODULE IS LOADED)
-       
+
   (4)  PUB
        bind pub <flags> <command> <proc>
        procname <nick> <user@host> <handle> <channel> <args>
@@ -760,7 +805,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (6)  PUBM   (stackable)
        bind pubm <flags> <mask> <proc>
        procname <nick> <user@host> <handle> <channel> <text>
-  
+
        just like MSGM, except it's triggered by things said on a channel
        instead of things /msg'd to the bot; the mask is matched against
        the channel name followed by the text, ie, "#nowhere hello there!",
@@ -777,7 +822,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (8)  JOIN   (stackable)
        bind join <flags> <mask> <proc>
        procname <nick> <user@host> <handle> <channel>
-  
+
        triggered by someone joining the channel; the <mask> in the bind
        is matched against "#channel nick!user@host" and can contain
        wildcards
@@ -793,7 +838,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (10) SIGN   (stackable)
        bind sign <flags> <mask> <proc>
        procname <nick> <user@host> <handle> <channel> <reason>
-  
+
        triggered by a signoff, or possibly by someone who got netsplit and
        never returned; the signoff message is the last argument to the proc;
        wildcards can be used in <mask>, which contains the channel name
@@ -808,7 +853,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (12) KICK   (stackable)
        bind kick <flags> <mask> <proc>
        procname <nick> <user@host> <handle> <channel> <kicked-nick> <reason>
-  
+
        triggered when someone is kicked off the channel; the <mask> is
        matched against "#channel nick" where the nickname is of the person
        who got kicked off (can use wildcards); the proc is called with
@@ -819,14 +864,14 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (13) NICK   (stackable)
        bind nick <flags> <mask> <proc>
        procname <nick> <user@host> <handle> <channel> <newnick>
-  
+
        triggered when someone changes nicknames; wildcards are allowed;
        the mask is matched against "#channel newnick"
 
   (14) MODE   (stackable)
        bind mode <flags> <mask> <proc>
        proc-name <nick> <user@host> <handle> <channel> <mode-change> <victim>
-  
+
        mode changes are broken down into their component parts before being
        sent here, so the <mode-change> will always be a single mode, like
        "+m" or "-o" and victim will show the value of the mode change
@@ -837,7 +882,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (15) CTCP
        bind ctcp <flags> <keyword-mask> <proc>
        proc-name <nick> <user@host> <handle> <dest> <keyword> <args...>
-    
+
        destination will be a nickname (the bot's nickname, obviously) or
        a channel name; keyword is the ctcp command and args may be empty;
        if the proc returns 0, the bot will attempt its own processing of
@@ -846,24 +891,24 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (16) CTCR
        bind ctcr <flags> <keyword-mask> <proc>
        proc-name <nick> <user@host> <handle> <dest> <keyword> <args...>
- 
+
        just like ctcp, but this is triggered for a ctcp-reply (ie, ctcp
        embedded in a notice instead of a privmsg)
 
   (17) RAW   (stackable)
        bind raw <flags> <keyword-mask> <proc>
        procname <from> <keyword> <args...>
- 
+
        previous versions of eggdrop required a special compile option to
        enable this binding, but it's now standard; the mask is checked
        against the keyword (either a numeric like "368" or a keyword like
        "PRIVMSG"); from will be the server name or the source user (depending
-       on the keyword); flags are ignored; the order of the arguments is 
+       on the keyword); flags are ignored; the order of the arguments is
        identical to the order that the IRC server sends to the bot -- the
        pre-processing only splits it apart enough to determine the keyword;
        if the proc returns 1, eggdrop will not process the line any further
        (THIS COULD CAUSE YOUR BOT TO BEHAVE ODDLY IN SOME CASES)
-       
+
   (18) BOT
        bind bot <flags> <command> <proc>
        proc-name <from-bot> <command> <args>
@@ -902,17 +947,17 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        transfer was started by a script call to 'dccsend', in which case the
        path is the exact path given in the call to 'dccsend')
        (THIS IS ONLY AVALIABLE WHEN THE transfer.so MODULE IS LOADED)
-       
+
   (22) RCVD   (stackable)
        bind rcvd <flags> <mask> <proc>
        proc-name <handle> <nick> <path/to/file>
- 
+
        triggered after a user uploads a file successfully; mask is matched
        against the user's handle; nick is the nickname on IRC that the file
        transfer originated from; the path is where the file ended up,
        relative to the dcc directory (usually this is your incoming dir)
        (THIS IS ONLY AVALIABLE WHEN THE transfer.so MODULE IS LOADED)
-       
+
   (23) CHAT   (stackable)
        bind chat <flags> <mask> <proc>
        proc-name <nick> <channel#> <text>
@@ -941,7 +986,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (26) SPLT   (stackable)
        bind splt <flags> <mask> <proc>
        procname <nick> <user@host> <handle> <channel>
-  
+
        triggered when someone gets netsplit on the channel; be aware that
        this may be a false alarm (it's easy to fake a netsplit signoff
        message); <mask> may contain wildcards, and is matched against the
@@ -958,7 +1003,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (28) FILT   (stackable)
        bind filt <flags> <mask> <proc>
        procname <idx> <text>
- 
+
        DCC party line and file system users have their text sent through
        filt before being processed; if the proc a blank string, the text
        is considered parsed; otherwise the bot will use the text returned
@@ -1024,36 +1069,36 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
   (36) TIME   (stackable)
        bind time - <mask> <proc>
        proc-name <min> <hour> <day> <month> <year>
-       
+
        allows you to schedule procedure calls at certain times,
        mask matches 5 space seperated integers of the form:
        "min hour day month year"
- 
+
   (37) AWAY   (stackable)
        bind away - <mask> <proc>
        proc-name <bot> <idx> <msg>
-       
+
        triggers when a user goes away or comes back on the botnet
        (msg == "" when returning)
-       
+
   (38) LOAD   (stackable)
        bind load - <mask> <proc>
        proc-name <module>
-       
+
        triggers when a module is loaded.
 
   (38) UNLD   (stackable)
        bind unld - <mask> <proc>
        proc-name <module>
-       
+
        triggers when a module is unloaded.
 
   (39) NKCH   (stackable)
        bind nkch - <mask> <proc>
        proc-name <oldnick> <newnick>
-       
+
        triggered whenever a local users nick is changed (in the userfile)
-       
+
 (A) RETURN VALUES
 
     Several bindings pay attention to the value you return from the proc
@@ -1151,7 +1196,7 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
     the control of a script.  If you ever return "1" from the control
     proc (indicating that you want control to return to eggdrop), the bot
     will just close the connection and dispose of it.  Other commands
-    that work on normal DCC connections, like 'killdcc' and 'putdcc', 
+    that work on normal DCC connections, like 'killdcc' and 'putdcc',
     will work on this idx too.
 
     To create a listening port, use:
@@ -1184,10 +1229,10 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
           single word)
     ~  matches 1 or more space characters (can be used for whitespace
           between words)
- 
+
 ***### NOTES MODULE COMMANDS ###***
 
-these commands are provided by notes.so to allow you to store notes for 
+these commands are provided by notes.so to allow you to store notes for
 users to read later
 
 | notes <user> [numberlist]
@@ -1296,20 +1341,20 @@ users to read later
     sets a user's statistics on the number of files uploaded and the total
       kilobytes uploaded
     returns: nothing
- 
+
   getuploads <handle>
     returns: list containing upload statistics for a user: the first
       element is the number of files uploaded; the second element is the
       total kilobytes uploaded
- 
+
   setdnloads <handle> <#dnloads> <size-in-k>
     like setuploads, but sets the download statistics
     returns: nothing
- 
+
   getdnloads <handle>
     returns: list containing download statistics, in the same format
       as getuploads
- 
+
   mkdir <directory> [required-flags]
     creates a directory in the files system, only users with the
     required flags may access
@@ -1317,11 +1362,11 @@ users to read later
       0 on success
       1 on can't create directory
       2 on directory exists but is not a directory
- 
+
   rmdir <directory>
     removes a directory from the file system.
     return: 0 on success, 1 on failure
- 
+
   mv <file> <destination>
     moves the file from it's source to the given destination, file
     can also be a mask, eg /incoming/* provided the destination is
@@ -1329,15 +1374,15 @@ users to read later
     returns: number of files copied on success or negative numbers
       to indicat errors: -1 = invalid source file, -2 = invalid desto
       -3 = you're trying to copy onto itself (duh!) -4 = no matchs found
- 
+
   cp <file> <destination>
     exactly the same as mv except it leaves the original file there
     aswell
     returns: same as mv
- 
+
   getflags <dir>
     returns: the flags required to access this directory
- 
+
   setflags <dir> [flags]
     sets the flags required to access the directory
     returns: 0 on success, -1 on failure

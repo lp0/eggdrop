@@ -32,7 +32,7 @@ See also: -ignore, ignores
    Creates a new user record for the nickname given, with one entry
    in the hostmask table.  The new user record will have no flags
    (i.e. not be a master, op, friend, etc) and no password.
-%{help=-bot}%{+B}
+%{help=-bot}%{+t}
 ###  %b-bot%b <bot>
    Exactly the same as %b'-user'%b, but is included for convenience.
    It erases a user record.
@@ -40,7 +40,7 @@ See also: -ignore, ignores
 See also: +bot, +user, -user
 %{help=-host}
 ###  %b-host%b <hostmask>
-   Allows you to remove a host for youself.
+   Allows you to remove a host for yourself.
 %{+m|m}
 ###  %b-host%b <nickname> <hostmask>
    Removes a hostmask from another user's record on the bot.

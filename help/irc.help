@@ -38,6 +38,14 @@ see also: adduser, +user, -user
    be added.
    
 see also: bans, reset, console
+%{help=resetexempts}%{+o|o}
+###  %bresetexempts%b
+   resets the exemption list on the channel you're currently viewing
+   in the console. this is an IRCNET feature.
+%{help=resetinvites}%{+o|o}
+###  %bresetinvites%b
+   resets the invitation list on the channel you're currently viewing   
+   in the console. this is an IRCNET feature.
 %{help=act}%{+o|o}
 ###  %bact%b [channel] <text>
    Performs an action on the current console channel (or otherwise
@@ -146,6 +154,7 @@ see also: console
      for channel ops:
        %bresetbans%b %bact%b      %bchannel%b    %bdeop%b     %bsay%b
        %binvite%b    %bkick%b     %bkickban%b    %bop%b       %btopic%b
+       %bresetexempts%b           %resetinvites%b
 %{+o}
      for global ops:
        %bmsg%b 
@@ -161,4 +170,7 @@ see also: console
       %blearn-users%b      %bwait-split%b
       %bwait-info%b        %bmodes-per-line%b
       %bmode-buf-length%b  %bbounce-bans%b
-      %buse-354%b
+      %bbounce-exempts%b   %bbounce-invites%b
+      %bbounce-modes%b     %bmax-bans%b
+      %bmax-exempts%b      %bmax-invites%b
+      %max-modes%b         %buse-354%b

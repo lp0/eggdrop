@@ -12,6 +12,8 @@
 static int setstatic = 0;
 static int use_info = 1;
 static int ban_time = 60;
+static int exempt_time = 0; /* if exempt_time = 0, never remove them */
+static int invite_time = 0; /* if invite_time = 0, never remove them */
 static char chanfile [121] = "chanfile";
 static Function * global = NULL;
 static int chan_hack = 0;
@@ -165,6 +167,34 @@ static int isbanned (struct chanset_t * chan, char * user)
    while (b->ban[0] && strcasecmp(b->ban, user))
      b = b->next;
    if (!b->ban[0])
+      return 0;
+   return 1;
+}
+
+/* returns true if this is one of the channel exemptions */
+/* Crotale */
+static int isexempted (struct chanset_t * chan, char * user)
+{
+   exemptlist * e;
+
+   e = chan->channel.exempt;
+   while (e->exempt[0] && !wild_match(e->exempt, user))
+     e = e->next;
+   if (!e->exempt[0])
+      return 0;
+   return 1;
+}
+
+/* returns true if this is one of the channel +I */
+/* arthur2 */
+static int isinvited (struct chanset_t * chan, char * user)
+{
+   invitelist * inv;
+
+   inv = chan->channel.invite;
+   while (inv->invite[0] && !wild_match(inv->invite, user))
+     inv = inv->next;   
+   if (!inv->invite[0])
       return 0;
    return 1;
 }
@@ -327,6 +357,8 @@ static void write_channels()
 	      channel_autovoice(chan) ? '+' : '-');
       fprintf(f, "%csecret ", 
 	      channel_secret(chan) ? '+' : '-');
+      fprintf(f, "%cshared ",
+             channel_shared(chan) ? '+' : '-');
       fprintf(f, "%ccycle ", 
 	      channel_cycle(chan) ? '+' : '-');
       fprintf(f, "%cseen ", 
@@ -420,9 +452,10 @@ static void channels_rehash () {
 
 }
 
-static cmd_t my_chon[] = {
+static cmd_t my_chon[1] = {
      { "*", "", (Function) channels_chon, "channels:chon" },
 };
+/* update the add/rem_builtins in channels.c if you add to this list!! */
    
 static void channels_report (int idx, int details) {
    struct chanset_t * chan;
@@ -509,8 +542,11 @@ static void channels_report (int idx, int details) {
       }
       chan = chan->next;
    }
-   if (details)
+   if (details) {
      dprintf(idx, "    Bans last %d mins.\n", ban_time);
+     dprintf(idx, "    Exemptions last %d mins.\n", exempt_time);
+     dprintf(idx, "    Invitations last %d mins.\n", invite_time);
+   }
 }
 
 static int channels_expmem ()
@@ -543,6 +579,8 @@ static tcl_ints my_tcl_ints [] = {
      {"share-greet", 0, 0},
      {"use-info", &use_info, 0},
      {"ban-time", &ban_time, 0},
+     {"exempt-time", &exempt_time, 0},
+     {"invite-time", &invite_time, 0},
      { 0, 0, 0 }
 };
 
@@ -603,6 +641,11 @@ static Function channels_table[] =
      (Function) u_sticky_ban,
      (Function) isbanned,
      (Function) add_chanrec_by_handle,
+     (Function) isexempted,
+     /* 24 - 27 */
+     (Function) &exempt_time,
+     (Function) isinvited,
+     (Function) &invite_time,
 };
 
 char *channels_start (Function * global_funcs)

@@ -19,7 +19,14 @@ static Function * global = NULL, *channels_funcs = NULL, *server_funcs = NULL;
 
 /* time to wait for user to return for net-split */
 static int wait_split = 300;
-static int bounce_bans = 0;
+static int max_bans = 20;
+static int max_exempts = 0;
+static int max_invites = 0;
+static int max_modes = 30;
+static int bounce_bans = 1;
+static int bounce_exempts = 0;
+static int bounce_invites = 0;
+static int bounce_modes = 0;
 static int learn_users = 0;
 static int wait_info = 15;
 static int invite_key = 1;
@@ -33,7 +40,10 @@ static int use_354 = 0;
 /* how many kicks does the irc network support at once?
    0 = as many as possible.  Ernst 18/3/98 */
 static int kick_method = 1;
-static int kick_bogus = 1;
+static int kick_bogus = 0;
+static int ban_bogus = 0;
+static int kick_fun = 0;
+static int ban_fun = 0;
 static int allow_desync = 0;
 
 #include "chan.c"
@@ -181,6 +191,50 @@ static void newban (struct chanset_t * chan, char * s, char * who)
    b->timer = now;
 }
 
+/* add a ban exemption to the list - Daemus - 2/3/99 */
+static void newexempt (struct chanset_t * chan, char * s, char * who)
+{
+   exemptlist *e;
+   context;
+   e = chan->channel.exempt;
+   while (e->exempt[0] && strcasecmp(e->exempt, s))
+      e = e->next;
+   if (e->exempt[0])
+      return;			/* already existent exemption */
+   e->next = (exemptlist *) channel_malloc(sizeof(exemptlist));
+   e->next->next = NULL;
+   e->next->exempt = (char *) channel_malloc(1);
+   e->next->exempt[0] = 0;
+   nfree(e->exempt);
+   e->exempt = (char *) channel_malloc(strlen(s) + 1);
+   strcpy(e->exempt, s);
+   e->who = (char *) channel_malloc(strlen(who) + 1);
+   strcpy(e->who, who);
+   e->timer = now;
+}
+
+/* add an invite exemption to the list - Daemus - 2/3/99 */
+static void newinvite (struct chanset_t * chan, char * s, char * who)
+{
+   invitelist *inv;
+   context;
+   inv = chan->channel.invite;
+   while (inv->invite[0] && strcasecmp(inv->invite, s))
+      inv = inv->next;
+   if (inv->invite[0])
+      return;			/* already existent invitation */
+   inv->next = (invitelist *) channel_malloc(sizeof(invitelist));
+   inv->next->next = NULL;
+   inv->next->invite = (char *) channel_malloc(1);
+   inv->next->invite[0] = 0;
+   nfree(inv->invite);
+   inv->invite = (char *) channel_malloc(strlen(s) + 1);
+   strcpy(inv->invite, s);
+   inv->who = (char *) channel_malloc(strlen(who) + 1);
+   strcpy(inv->who, who);
+   inv->timer = now;
+}
+
 /* removes a nick from the channel member list (returns 1 if successful) */
 static int killmember (struct chanset_t * chan, char * nick)
 {
@@ -245,6 +299,14 @@ static void reset_chan_info (struct chanset_t * chan)
       if (!(chan->status & CHAN_ASKEDBANS)) {
 	 chan->status |= CHAN_ASKEDBANS;
 	 dprintf(DP_MODE, "MODE %s +b\n", chan->name);
+      }
+      if (!(chan->ircnet_status & CHAN_ASKED_EXEMPTS)) {
+        chan->ircnet_status |= CHAN_ASKED_EXEMPTS;
+        dprintf(DP_MODE, "MODE %s +e\n", chan->name);
+      }
+      if (!(chan->ircnet_status & CHAN_ASKED_INVITED)) {
+        chan->ircnet_status |= CHAN_ASKED_INVITED;
+        dprintf(DP_MODE, "MODE %s +I\n", chan->name);
       }
       /* these 2 need to get out asap, so into the mode queue */
       if (use_354) 
@@ -364,6 +426,8 @@ static void check_lonely_channel (struct chanset_t * chan)
 static void check_expired_chanstuff()
 {
    banlist *b;
+   exemptlist *e;
+   invitelist *inv;
    memberlist *m, *n;
    char s[UHOSTLEN];
    struct chanset_t *chan;
@@ -380,9 +444,9 @@ static void check_expired_chanstuff()
 	dprintf(DP_MODE, "JOIN %s\n", chan->name);
       if (channel_dynamicbans(chan) && me_op(chan)) {
 	 for (b = chan->channel.ban; b->ban[0]; b = b->next) {
-	    if (((now - b->timer) > (60 * ban_time)) &&
+	    if ((ban_time != 0) && (((now - b->timer) > (60 * ban_time)) &&
 		!u_sticky_ban(chan->bans, b->ban) && 
-		!u_sticky_ban(global_bans,b->ban)) {
+		!u_sticky_ban(global_bans,b->ban))) {
 	       putlog(LOG_MODES, chan->name, 
 		      "(%s) Channel ban on %s expired.",
 		      chan->name, b->ban);
@@ -390,6 +454,28 @@ static void check_expired_chanstuff()
 	       b->timer = now;
 	    }
 	 }
+      }
+      if (me_op(chan)) {
+         for (e = chan->channel.exempt; e->exempt[0]; e = e->next) {
+            if ((exempt_time != 0) && (((now - e->timer) > (60 * exempt_time)))) {
+               putlog(LOG_MODES, chan->name,
+                      "(%s) Channel exemption on %s expired.",
+                      chan->name, e->exempt);
+               add_mode(chan, '-', 'e', e->exempt);
+               e->timer = now;
+            }
+         }
+      }
+      if (me_op(chan)) {
+         for (inv = chan->channel.invite; inv->invite[0]; inv = inv->next) {
+            if ((invite_time != 0) && (((now - inv->timer) > (60 * invite_time)))) {
+               putlog(LOG_MODES, chan->name,
+                      "(%s) Channel invitation on %s expired.",
+                      chan->name, inv->invite);
+               add_mode(chan, '-', 'I', inv->invite);
+               inv->timer = now;
+            }
+         }
       }
       m = chan->channel.member;
       while (m->nick[0]) {
@@ -598,14 +684,24 @@ static tcl_ints myints[] =
      {"wait-split", &wait_split, 0},
      {"wait-info", &wait_info, 0},
      {"bounce-bans", &bounce_bans, 0},
+     {"bounce-exempts", &bounce_exempts, 0},
+     {"bounce-invites", &bounce_invites, 0},
+     {"bounce-modes", &bounce_modes, 0},
      {"modes-per-line", &modesperline, 0},
      {"mode-buf-length" , &mode_buf_len, 0},
      {"use-354", &use_354, 0},
      {"kick-method", &kick_method, 0},
      {"kick-bogus", &kick_bogus, 0},
+     {"ban-bogus", &ban_bogus, 0},
+     {"kick-fun", &kick_fun, 0},
+     {"ban-fun", &ban_fun, 0},
      {"invite-key", &invite_key, 0},
      {"allow-desync", &allow_desync, 0},
      {"no-chanrec-info", &no_chanrec_info, 0},
+     {"max-bans", &max_bans, 0},
+     {"max-exempts", &max_exempts, 0},
+     {"max-invites", &max_invites, 0},
+     {"max-modes", &max_modes, 0},
      {0,0}
 };
 
@@ -686,9 +782,9 @@ static char *irc_close()
    del_bind_table(H_pub);
    context;
    rem_tcl_ints(myints);
-   rem_builtins(H_dcc,irc_dcc,16);
+   rem_builtins(H_dcc,irc_dcc,18);
    rem_builtins(H_msg,C_msg,19);
-   rem_builtins(H_raw,irc_raw,24);
+   rem_builtins(H_raw,irc_raw,28);
    rem_tcl_commands(tclchan_cmds);
    rem_help_reference("irc.help");
    context;
@@ -749,6 +845,7 @@ char *irc_start (Function* global_funcs)
    for (chan = chanset; chan; chan = chan->next) {
       dprintf(DP_MODE,"JOIN %s\n",chan->name);
       chan->status &= ~(CHAN_ACTIVE|CHAN_PEND|CHAN_ASKEDBANS);
+      chan->ircnet_status &= ~(CHAN_ASKED_INVITED|CHAN_ASKED_EXEMPTS);
    }
    context;
    add_hook(HOOK_MINUTELY,check_expired_chanstuff);
@@ -757,9 +854,9 @@ char *irc_start (Function* global_funcs)
    add_hook(HOOK_IDLE,flush_modes);
    context;
    add_tcl_ints(myints);
-   add_builtins(H_dcc,irc_dcc,16);
+   add_builtins(H_dcc,irc_dcc,18);
    add_builtins(H_msg,C_msg,19);
-   add_builtins(H_raw,irc_raw,24);
+   add_builtins(H_raw,irc_raw,28);
    add_tcl_commands(tclchan_cmds);
    add_help_reference("irc.help");
    context;

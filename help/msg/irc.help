@@ -1,5 +1,5 @@
 %{help=die}%{+m}
-%b/MSG%b %B %bDIE%b <password>
+%b/MSG%b %B %bDIE%b <password> [message]
    This makes me die (go away) -- not something you will
    probably be doing very often.
 %{help=go}%{+o|o}
@@ -74,7 +74,7 @@ There may also be additional commands provided by other modules.
    optionally tell me a server to jump to, in the form of
    'new.server.com' or 'new.server.com 6667'.
 %{help=memory}%{+m}
-%b/MSG%b %B %bMEMORY%b
+%b/MSG%b %B %bMEMORY%b <password>
    This makes me tell you info about how much memory I'm
    using.  Pretty boring stuff.
 %{help=op}%{+o|o}
@@ -106,12 +106,12 @@ There may also be additional commands provided by other modules.
 %b/MSG%b %B %bREHASH%b <password>
    This makes me reload my config file.
 %{help=reset}%{+m}
-%b/MSG%b %B %bRESET%b [channel]
+%b/MSG%b %B %bRESET%b <password> [channel]
    This makes the me reset my channel information, in case
    I'm out of sync with reality.  It isn't used much any
    more.
 %{help=status}%{+m|m}
-%b/MSG%b %B %bSTATUS%b
+%b/MSG%b %B %bSTATUS%b <password>
    This gives you a little three line display of my current
    status.  The status command in dcc chat is much better.
 %{help=who}

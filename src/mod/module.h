@@ -292,11 +292,11 @@
 #define add_tcl_coups ((void (*) (tcl_coups *))global[209])
 #define rem_tcl_coups ((void (*) (tcl_coups *))global[210])
 #define botname ((char *)(global[211]))
-/* 212 - ??? */
+/* 212 - 215 */
 #define remove_gunk ((void(*)(char *))global[212])
 #define check_tcl_chjn ((void (*) (char *,char *,int,char,int,char *))global[213])
 #define sanitycheck_dcc ((int (*)(char *, char *, char *, char *))global[214])
-
+#define isowner ((int (*)(char *))global[215])
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */
 #ifndef MAKING_BLOWFISH

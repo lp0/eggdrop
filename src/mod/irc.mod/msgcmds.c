@@ -651,6 +651,11 @@ static int msg_key (char * nick, char * host, struct userrec * u, char * par)
    return 1;
 }
 
+/*
+ * dont have to specify a channel now and can use this command
+ * regardless of +autovoice or being a chanop. (guppy 7Jan99)
+ *
+ */
 static int msg_voice (char * nick, char * host, struct userrec * u, char * par)
 {
    struct chanset_t *chan;
@@ -668,15 +673,27 @@ static int msg_voice (char * nick, char * host, struct userrec * u, char * par)
 	    if (chan && channel_active(chan)) {
 	       get_user_flagrec(u,&fr,par);	       
 	       if (hand_on_chan(chan, u) && (mx = ismember(chan,nick))
-		   && chan_hasvoice(mx) &&
-		   channel_autovoice(chan) &&
-		   (chan_voice(fr) || (glob_voice(fr) && !chan_quiet(fr)))) {
+                  && !chan_hasvoice(mx) &&
+                  (chan_voice(fr) || (glob_voice(fr)))) {
 		  add_mode(chan, '+', 'v', nick);
 		  putlog(LOG_CMDS, "*", "(%s!%s) !%s! VOICE %s",
 			 nick, host, u->handle, par);
 	       }
 	       return 1;
 	    }
+        } else {
+           chan = chanset;
+           while (chan != NULL) {
+               get_user_flagrec(u,&fr,chan->name);
+               if (hand_on_chan(chan, u) && (mx = ismember(chan,nick))
+                   && !chan_hasvoice(mx) &&
+                   (chan_voice(fr) || (glob_voice(fr)))) {
+                  add_mode(chan, '+', 'v', nick);
+               }
+               chan = chan->next;
+           }
+           putlog(LOG_CMDS, "*", "(%s!%s) !%s! VOICE", nick, host, u->handle);
+           return 1;
 	 }
       }
    }
@@ -733,6 +750,7 @@ static int msg_status (char * nick,
 {
    char s[256], p[160];
    char * ve_t, * un_t;
+   char *pass;
    int i, k, l;
    struct chanset_t *chan;
 #ifdef HAVE_UNAME
@@ -750,6 +768,13 @@ static int msg_status (char * nick,
    
    if (match_my_nick(nick))
      return 1;
+   if (!u_pass_match(u,"-")) {
+      pass = newsplit(&par);
+      if (!u_pass_match(u,pass)) {
+        putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed STATUS", nick, host, u->handle);
+        return 1;
+      }
+   }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! STATUS", nick, host, u->handle);
    dprintf(DP_HELP, "NOTICE %s :I am %s, running %s.\n", nick, botname,
 	   Version);
@@ -793,8 +818,16 @@ static int msg_status (char * nick,
 
 static int msg_memory (char * nick, char * host, struct userrec * u, char * par)
 {
+   char *pass;   
    if (match_my_nick(nick))
       return 1;
+   if (!u_pass_match(u,"-")) {
+      pass = newsplit(&par);
+      if (!u_pass_match(u,pass)) {
+        putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed MEMORY", nick, host, u->handle);
+        return 1;
+      }
+   }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! MEMORY", nick, host, u->handle);
    tell_mem_status(nick);
    return 1;
@@ -803,22 +836,32 @@ static int msg_memory (char * nick, char * host, struct userrec * u, char * par)
 static int msg_die (char * nick, char * host, struct userrec * u, char * par)
 {
    char s[1024];
+   char *pass;   
    if (match_my_nick(nick))
      return 1;
-   if (u_pass_match(u,par)) {
+   if (!u_pass_match(u,"-")) {
+      pass = newsplit(&par);
+      if (!u_pass_match(u,pass)) {
+        putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed DIE", nick, host, u->handle);
+        return 1;
+      }
+   }
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! DIE", nick, host, u->handle);
       dprintf(-serv, "NOTICE %s :%s\n", nick, BOT_MSGDIE);
       simple_sprintf(s,"BOT SHUTDOWN (authorized by %s)",u->handle);
       chatout("*** %s\n", s);
       botnet_send_chat(-1, botnetnick, s);
       botnet_send_bye();
+
+   if (!par[0]) {
       nuke_server(nick);
+   } else {
+      nuke_server(par);
+   }
       write_userfile(-1);
       sleep(1);			/* give the server time to understand */
       sprintf(s, "DEAD BY REQUEST OF %s!%s", nick, host);
       fatal(s, 0);
-   }
-   putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed DIE", nick, host, u->handle);
    return 1;
 }
 
@@ -839,8 +882,16 @@ static int msg_rehash (char * nick, char * host, struct userrec * u, char * par)
 static int msg_reset (char * nick, char * host, struct userrec * u, char * par)
 {
    struct chanset_t *chan;
+   char *pass;
    if (match_my_nick(nick))
       return 1;
+   if (!u_pass_match(u,"-")) {
+      pass = newsplit(&par);
+      if (!u_pass_match(u,pass)) {
+        putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed RESET", nick, host, u->handle);
+        return 1;
+      }
+   }
    if (par[0]) {
       chan = findchan(par);
       if (!chan) {
@@ -973,3 +1024,4 @@ static cmd_t C_msg[19]={
    { "who", "", (Function)msg_who, NULL },
    { "whois", "", (Function)msg_whois, NULL },
 };
+/* update the add/rem_builtins in irc.c if you add to this list!! */

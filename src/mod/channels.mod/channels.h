@@ -24,6 +24,8 @@ static void clear_channel(struct chanset_t *,int);
 static void get_mode_protect (struct chanset_t * chan, char * s);
 static void set_mode_protect (struct chanset_t * chan, char * set);
 static int isbanned (struct chanset_t * chan, char *);
+static int isexempted (struct chanset_t * chan, char *); /* Crotale */
+static int isinvited (struct chanset_t * chan, char *); /* arthur2 */
 static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
 			int items, char ** item);
 static int tcl_channel_add (Tcl_Interp * irp, char *, char *);
@@ -53,4 +55,9 @@ static int tcl_channel_add (Tcl_Interp * irp, char *, char *);
 #define u_sticky_ban ((int(*)(struct banrec *, char *))channels_funcs[20])
 #define isbanned ((int(*)(struct chanset_t *,char *))channels_funcs[21])
 #define add_chanrec_by_handle ((void (*)(struct userrec *, char *, char *))channels_funcs[22])
+#define isexempted ((int(*)(struct chanset_t *,char *))channels_funcs[23]) /* Crotale */
+/* 24 -27 */
+#define exempt_time (*(int *)(channels_funcs[24]))
+#define isinvited ((int(*)(struct chanset_t *,char *))channels_funcs[25]) /* arthur2 */
+#define invite_time (*(int *)(channels_funcs[26]))
 #endif

@@ -175,6 +175,10 @@ see also: default-port
 %{help=set server}%{+n}
 ###  %bset server%b
    This read-only variable returns the current server of the bot.
+%{help=set net-type}%{+n}
+###  %bset net-type%b
+   Defines the network the bot uses. 0 = Efnet, 1 = IRCnet, 2 = Undernet,
+   3 = Dalnet, 4 = Others.
 %{help=server settings}%{+n}
 ###  Settings for the %bserver module%b
    This is a list of the tcl variables the can be used to setup
@@ -189,3 +193,4 @@ see also: default-port
      %btrigger-on-ignore%b    %bdefault-port%b   %brealname%b
      %bserver-cycle-wait%b    %bcheck-stoned%b   %bflood-msg%b
      %bstrict-servernames%b   %bquiet-reject%b   %bkeep-nick%b
+     %bnet-type
