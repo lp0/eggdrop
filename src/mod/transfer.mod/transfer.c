@@ -1,7 +1,7 @@
 /*
  * transfer.c -- part of transfer.mod
  *
- * $Id: transfer.c,v 1.51 2002/06/06 18:52:25 wcc Exp $
+ * $Id: transfer.c,v 1.54 2002/09/22 18:10:21 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -609,8 +609,14 @@ static int tcl_dccsend STDVAR
   }
   if (copy_to_tmp) {
     sys = nmalloc(strlen(tempdir) + strlen(nfn) + 1);
-    sprintf(sys, "%s%s", tempdir, nfn);		/* New filename, in /tmp */
-    copyfile(argv[1], sys);
+    sprintf(sys, "%s%s", tempdir, nfn);
+    f = fopen(sys, "r");
+    if (f) {
+      fclose(f);
+      Tcl_AppendResult(irp, "5", NULL);
+      return TCL_OK;
+    } else
+      copyfile(argv[1], sys);
   } else {
     sys = nmalloc(strlen(argv[1]) + 1);
     strcpy(sys, argv[1]);
@@ -828,14 +834,12 @@ static void eof_dcc_send(int idx)
 		   dcc[y].nick);
       botnet_send_unlinked(y, dcc[y].nick, s);
       chatout("*** %s\n", dcc[y].nick, s);
-      if (y < idx) {
-	int t = y;
-
-	y = idx;
-	idx = t;
+      if (y != idx) {
+	killsock(dcc[y].sock);
+	lostdcc(y);
       }
-      killsock(dcc[y].sock);
-      lostdcc(y);
+      killsock(dcc[idx].sock);
+      lostdcc(idx);
     }
   } else {
     putlog(LOG_FILES, "*",TRANSFER_LOST_DCCSEND,
@@ -1059,14 +1063,12 @@ static void eof_dcc_get(int idx)
 		 dcc[y].nick);
     botnet_send_unlinked(y, dcc[y].nick, s);
     chatout("*** %s\n", s);
-    if (y < idx) {
-      int t = y;
-
-      y = idx;
-      idx = t;
+    if (y != idx) {
+      killsock(dcc[y].sock);
+      lostdcc(y);
     }
-    killsock(dcc[y].sock);
-    lostdcc(y);
+    killsock(dcc[idx].sock);
+    lostdcc(idx);
     return;
   } else {
     struct userrec *u;
@@ -1477,8 +1479,8 @@ static int raw_dcc_resend_send(char *filename, char *nick, char *from,
     nfn = buf = replace_spaces(nfn);
   dcc[i].u.xfer->origname = get_data_ptr(strlen(nfn) + 1);
   strcpy(dcc[i].u.xfer->origname, nfn);
-  strcpy(dcc[i].u.xfer->from, from);
-  strcpy(dcc[i].u.xfer->dir, dir);
+  strncpyz(dcc[i].u.xfer->from, from, NICKLEN);
+  strncpyz(dcc[i].u.xfer->dir, dir, DIRLEN);
   dcc[i].u.xfer->length = dccfilesize;
   dcc[i].timeval = now;
   dcc[i].u.xfer->f = f;

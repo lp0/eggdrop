@@ -2,7 +2,7 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  *
- * $Id: channels.c,v 1.67 2002/07/18 19:01:44 guppy Exp $
+ * $Id: channels.c,v 1.72 2002/11/21 23:53:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -32,11 +32,6 @@ static Function *global		= NULL;
 
 static int  setstatic;
 static int  use_info;
-static int  ban_time;
-static int  exempt_time;		/* If exempt_time = 0, never remove
-					   them */
-static int  invite_time;		/* If invite_time = 0, never remove
-					   them */
 static char chanfile[121];
 static int  chan_hack;
 static int  quiet_save;
@@ -47,6 +42,9 @@ static int global_revenge_mode;
 static int global_idle_kick;		/* Default idle-kick setting. */
 static int global_aop_min;
 static int global_aop_max;
+static int global_ban_time;
+static int global_exempt_time;
+static int global_invite_time;
 
 /* Global channel settings (drummer/dw) */
 static char glob_chanset[512];
@@ -412,6 +410,7 @@ revenge-mode %d \
 need-op %s need-invite %s need-key %s need-unban %s need-limit %s \
 flood-chan %d:%d flood-ctcp %d:%d flood-join %d:%d \
 flood-kick %d:%d flood-deop %d:%d flood-nick %d:%d aop-delay %d:%d \
+ban-time %d exempt-time %d invite-time %d \
 %cenforcebans %cdynamicbans %cuserbans %cautoop %cautohalfop %cbitch \
 %cgreet %cprotectops %cprotecthalfops %cprotectfriends %cdontkickops \
 %cstatuslog %crevenge %crevengebot %cautovoice %csecret \
@@ -432,6 +431,9 @@ flood-kick %d:%d flood-deop %d:%d flood-nick %d:%d aop-delay %d:%d \
         chan->flood_deop_thr, chan->flood_deop_time,
 	chan->flood_nick_thr, chan->flood_nick_time,
 	chan->aop_min, chan->aop_max,
+	chan->ban_time,
+	chan->exempt_time,
+	chan->invite_time,
 	PLSMNS(channel_enforcebans(chan)),
 	PLSMNS(channel_dynamicbans(chan)),
 	PLSMNS(!channel_nouserbans(chan)),
@@ -682,13 +684,11 @@ static void channels_report(int idx, int details)
         if (chan->revenge_mode)
           dprintf(idx, "      revenge-mode %d\n",
                   chan->revenge_mode);
+	dprintf(idx, "    Bans last %d mins.\n", chan->ban_time);
+	dprintf(idx, "    Exemptions last %d mins.\n", chan->exempt_time);
+	dprintf(idx, "    Invitations last %d mins.\n", chan->invite_time);
       }
     }
-  }
-  if (details) {
-    dprintf(idx, "    Bans last %d mins.\n", ban_time);
-    dprintf(idx, "    Exemptions last %d mins.\n", exempt_time);
-    dprintf(idx, "    Invitations last %d mins.\n", invite_time);
   }
 }
 
@@ -734,22 +734,22 @@ static int channels_expmem()
   return tot;
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
 static char *traced_globchanset(ClientData cdata, Tcl_Interp * irp,
-				char *name1, CONST char *name2, int flags)
+				CONST char *name1, CONST char *name2,
+                                int flags)
 #else
 static char *traced_globchanset(ClientData cdata, Tcl_Interp * irp, 
                                 char *name1, char *name2, int flags)
 #endif
 {
-  char *s;
-  char *t;
+  char *t, *s;
   int i;
   int items;
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-  CONST char **item;
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+  CONST char **item, *s2;
 #else
-  char **item;
+  char **item, *s2;
 #endif
 
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
@@ -759,8 +759,8 @@ static char *traced_globchanset(ClientData cdata, Tcl_Interp * irp,
 	    TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 	    traced_globchanset, NULL);
   } else { /* Write */
-    s = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
-    Tcl_SplitList(interp, s, &items, &item);
+    s2 = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
+    Tcl_SplitList(interp, s2, &items, &item);
     for (i = 0; i<items; i++) {
       if (!(item[i]) || (strlen(item[i]) < 2)) continue;
       s = glob_chanset;
@@ -787,13 +787,17 @@ static tcl_ints my_tcl_ints[] =
 {
   {"share-greet",		NULL,				0},
   {"use-info",			&use_info,			0},
-  {"ban-time",			&ban_time,			0},
-  {"exempt-time",		&exempt_time,			0},
-  {"invite-time",		&invite_time,			0},
   {"quiet-save",		&quiet_save,			0},
   {"global-stopnethack-mode",	&global_stopnethack_mode,	0},
   {"global-revenge-mode",       &global_revenge_mode,           0},
   {"global-idle-kick",		&global_idle_kick,		0},
+  {"global-ban-time",		&global_ban_time,		0},
+  {"global-exempt-time",	&global_exempt_time,		0},
+  {"global-invite-time",	&global_invite_time,		0},
+  /* keeping [ban|exempt|invite]-time for compatability <Wcc[07/20/02]> */
+  {"ban-time",			&global_ban_time,		0},
+  {"exempt-time",		&global_exempt_time,		0},
+  {"invite-time",		&global_invite_time,		0},
   {NULL,			NULL,				0}
 };
 
@@ -868,7 +872,7 @@ static Function channels_table[] =
   (Function) clear_channel,
   /* 16 - 19 */
   (Function) set_handle_laston,
-  (Function) & ban_time,
+  (Function) NULL, /* [17] used to be ban_time <Wcc[07/19/02]> */
   (Function) & use_info,
   (Function) get_handle_chaninfo,
   /* 20 - 23 */
@@ -877,9 +881,9 @@ static Function channels_table[] =
   (Function) add_chanrec_by_handle,
   (Function) NULL, /* [23] used to be isexempted() <cybah> */
   /* 24 - 27 */
-  (Function) & exempt_time,
+  (Function) NULL, /* [24] used to be exempt_time <Wcc[07/19/02]> */
   (Function) NULL, /* [25] used to be isinvited() <cybah> */
-  (Function) & invite_time,
+  (Function) NULL, /* [26] used to be ban_time <Wcc[07/19/02]> */
   (Function) NULL,
   /* 28 - 31 */
   (Function) NULL, /* [28] used to be u_setsticky_exempt() <cybah> */
@@ -904,6 +908,10 @@ static Function channels_table[] =
   /* 44 - 47 */
   (Function) expired_mask,
   (Function) remove_channel,
+  (Function) & global_ban_time,
+  (Function) & global_exempt_time,
+  /* 48 - 51 */
+  (Function) & global_invite_time,
 };
 
 char *channels_start(Function * global_funcs)
@@ -925,9 +933,6 @@ char *channels_start(Function * global_funcs)
   global_aop_max = 30;
   setstatic = 0;
   use_info = 1;
-  ban_time = 60;
-  exempt_time = 0;
-  invite_time = 0;
   strcpy(chanfile, "chanfile");
   chan_hack = 0;
   quiet_save = 0;
@@ -935,6 +940,9 @@ char *channels_start(Function * global_funcs)
   udef = NULL;
   global_stopnethack_mode = 0;
   global_revenge_mode = 1;
+  global_ban_time = 120;
+  global_exempt_time = 60;
+  global_invite_time = 60;
   strcpy(glob_chanset,
          "-enforcebans "
 	 "+dynamicbans "

@@ -4,7 +4,7 @@
  *
  *   IF YOU ALTER THIS FILE, YOU NEED TO RECOMPILE THE BOT.
  *
- * $Id: eggdrop.h,v 1.38 2002/01/02 03:46:35 guppy Exp $
+ * $Id: eggdrop.h,v 1.40 2002/09/21 21:32:05 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -41,6 +41,13 @@
 #define DEBUG_CONTEXT
 
 /*
+ * Set the following to the timestamp for the logfile entries.
+ * Popular times might be "[%H:%M]" (hour, min), or "[%H:%M:%S]" (hour, min, sec)
+ * Read `man strftime' for more formatting options.  Keep it below 32 chars.
+ */
+#define LOG_TS "[%H:%M]"
+
+/*
  * HANDLEN note:
  *       HANDLEN defines the maximum length a handle on the bot can be.
  *       Standard (and minimum) is 9 characters long.
@@ -61,7 +68,7 @@
 /* Handy string lengths */
 
 #define UHOSTMAX	160	/* reasonable, i think?			*/
-#define DIRMAX		256	/* paranoia				*/
+#define DIRMAX		512	/* paranoia				*/
 #define LOGLINEMAX	767	/* for misc.c/putlog() <cybah>		*/
 #define BADHANDCHARS	"-,+*=:!.@#;$%&"
 
@@ -301,7 +308,7 @@ struct file_info {
 struct xfer_info {
   char *filename;
   char *origname;
-  char dir[121];		/* used when uploads go to the current dir */
+  char dir[DIRLEN];		/* used when uploads go to the current dir */
   unsigned long length;
   unsigned long acked;
   char buf[4];			/* you only need 5 bytes!		   */

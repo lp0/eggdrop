@@ -2,7 +2,7 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.75 2002/07/26 02:18:28 wcc Exp $
+ * $Id: irc.c,v 1.81 2002/11/21 23:53:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -224,7 +224,7 @@ static void punish_badguy(struct chanset_t *chan, char *whobad,
     splitnick(&whobad);
     maskhost(whobad, s1);
     simple_sprintf(s, "(%s) %s", ct, reason);
-    u_addban(chan, s1, botnetnick, s, now + (60 * ban_time), 0);
+    u_addban(chan, s1, botnetnick, s, now + (60 * chan->ban_time), 0);
     if (!mevictim && (me_op(chan) || me_halfop(chan))) {
       add_mode(chan, '+', 'b', s1);
       flush_mode(chan, QUICK);
@@ -608,9 +608,9 @@ static void check_expired_chanstuff()
   for (chan = chanset; chan; chan = chan->next) {
     if (channel_active(chan)) {
       if (me_op(chan) || me_halfop(chan)) {
-	if (channel_dynamicbans(chan) && ban_time)
+	if (channel_dynamicbans(chan) && chan->ban_time)
 	  for (b = chan->channel.ban; b->mask[0]; b = b->next)
-	    if (now - b->timer > 60 * ban_time &&
+	    if (now - b->timer > 60 * chan->ban_time &&
 		!u_sticky_mask(chan->bans, b->mask) &&
 		!u_sticky_mask(global_bans, b->mask) &&
 		expired_mask(chan, b->who)) {
@@ -621,9 +621,9 @@ static void check_expired_chanstuff()
 	      b->timer = now;
 	    }
 
-	if (use_exempts && channel_dynamicexempts(chan) && exempt_time)
+	if (use_exempts && channel_dynamicexempts(chan) && chan->exempt_time)
 	  for (e = chan->channel.exempt; e->mask[0]; e = e->next)
-	    if (now - e->timer > 60 * exempt_time &&
+	    if (now - e->timer > 60 * chan->exempt_time &&
 		!u_sticky_mask(chan->exempts, e->mask) &&
 		!u_sticky_mask(global_exempts, e->mask) &&
 		expired_mask(chan, e->who)) {
@@ -653,9 +653,9 @@ static void check_expired_chanstuff()
 	    }
 
 	if (use_invites && channel_dynamicinvites(chan) &&
-	    invite_time && !(chan->channel.mode & CHANINV))
+	    chan->invite_time && !(chan->channel.mode & CHANINV))
 	  for (b = chan->channel.invite; b->mask[0]; b = b->next)
-	    if (now - b->timer > 60 * invite_time &&
+	    if (now - b->timer > 60 * chan->invite_time &&
 		!u_sticky_mask(chan->invites, b->mask) &&
 		!u_sticky_mask(global_invites, b->mask) &&
 		expired_mask(chan, b->who)) {
@@ -919,8 +919,8 @@ static void flush_modes()
   struct chanset_t *chan;
   memberlist *m;
 
-  if (modesperline > 6)
-    modesperline = 6; 
+  if (modesperline > MODES_PER_LINE_MAX)
+    modesperline = MODES_PER_LINE_MAX; 
   for (chan = chanset; chan; chan = chan->next) {
     for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
       if (m->delay && m->delay <= now) {
@@ -929,6 +929,10 @@ static void flush_modes()
         if (chan_sentop(m)) {
           m->flags &= ~SENTOP;
           add_mode(chan, '+', 'o', m->nick);
+        }
+        if (chan_senthalfop(m)) {
+          m->flags &= ~SENTHALFOP;
+          add_mode(chan, '+', 'h', m->nick);
         }
         if (chan_sentvoice(m)) {
           m->flags &= ~SENTVOICE;
@@ -961,7 +965,7 @@ static void irc_report(int idx, int details)
 	  p = MISC_TRYING;
 	else if (chan->status & CHAN_PEND)
 	  p = MISC_PENDING;
-	else if (!me_op(chan))
+	else if ((chan->dname[0] != '+') && !me_op(chan))
 	  p = MISC_WANTOPS;
       }
       l = simple_sprintf(ch, "%s%s%s%s, ", chan->dname, p ? "(" : "",
@@ -1045,9 +1049,9 @@ static void do_nettype()
   add_hook(HOOK_RFC_CASECMP, (Function) rfc_compliant);
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *traced_nettype(ClientData cdata, Tcl_Interp *irp,
+                            CONST char *name1, CONST char *name2, int flags)
 #else
 static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
                             char *name2, int flags)
@@ -1057,9 +1061,10 @@ static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
   return NULL;
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
 static char *traced_rfccompliant(ClientData cdata, Tcl_Interp *irp,
-				 char *name1, CONST char *name2, int flags)
+                                 CONST char *name1, CONST char *name2,
+                                 int flags)
 #else
 static char *traced_rfccompliant(ClientData cdata, Tcl_Interp *irp,
                                  char *name1, char *name2, int flags)

@@ -2,7 +2,7 @@
  * server.c -- part of server.mod
  *   basic irc server support
  *
- * $Id: server.c,v 1.81 2002/07/19 05:25:33 wcc Exp $
+ * $Id: server.c,v 1.84 2002/11/21 23:53:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -113,6 +113,7 @@ static void parse_q(struct msgq_head *, char *, char *);
 static void purge_kicks(struct msgq_head *);
 static int deq_kick(int);
 static void msgq_clear(struct msgq_head *qh);
+static int stack_limit;
 
 #include "servmsg.c"
 
@@ -394,7 +395,7 @@ static int fast_deq(int which)
   struct msgq *m, *nm;
   char msgstr[511], nextmsgstr[511], tosend[511], victims[511], stackable[511],
        *msg, *nextmsg, *cmd, *nextcmd, *to, *nextto, *stckbl;
-  int len, doit = 0, found = 0, who_count =0, stack_method = 1;
+  int len, doit = 0, found = 0, cmd_count =0, stack_method = 1;
 
   if (!use_fastdeq)
     return 0;
@@ -460,9 +461,8 @@ static int fast_deq(int which)
         && !strcmp(cmd, nextcmd) && !strcmp(msg, nextmsg)
         && ((strlen(cmd) + strlen(victims) + strlen(nextto)
 	     + strlen(msg) + 2) < 510)
-        && (egg_strcasecmp(cmd, "WHO") || who_count < MAXPENALTY - 1)) {
-      if (!egg_strcasecmp(cmd, "WHO"))
-        who_count++;
+        && (!stack_limit || cmd_count < stack_limit - 1)) {
+      cmd_count++;
       if (stack_method == 1)
       	simple_sprintf(victims, "%s,%s", victims, nextto);
       else
@@ -1122,15 +1122,19 @@ static int server_raw STDVAR
 /* Read/write normal string variable.
  */
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *nick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *nick_change(ClientData cdata, Tcl_Interp *irp, CONST char *name1,
 			 CONST char *name2, int flags)
 #else
 static char *nick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
                          char *name2, int flags)
 #endif
 {
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+  CONST char *new;
+#else
   char *new;
+#endif
 
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
     Tcl_SetVar2(interp, name1, name2, origbotname, TCL_GLOBAL_ONLY);
@@ -1139,7 +1143,7 @@ static char *nick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
         	   TCL_TRACE_UNSETS, nick_change, cdata);
   } else {			/* writes */
     new = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
-    if (rfc_casecmp(origbotname, new)) {
+    if (rfc_casecmp(origbotname, (char *)new)) {
       if (origbotname[0]) {
 	putlog(LOG_MISC, "*", "* IRC NICK CHANGE: %s -> %s",
 	       origbotname, new);
@@ -1180,9 +1184,9 @@ static char *get_altbotnick(void)
     return altnick;
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *altnick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *altnick_change(ClientData cdata, Tcl_Interp *irp,
+                            CONST char *name1, CONST char *name2, int flags)
 #else
 static char *altnick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
                             char *name2, int flags)
@@ -1193,9 +1197,9 @@ static char *altnick_change(ClientData cdata, Tcl_Interp *irp, char *name1,
   return NULL;
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
-			   CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *traced_server(ClientData cdata, Tcl_Interp *irp,
+                           CONST char *name1, CONST char *name2, int flags)
 #else
 static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
                            char *name2, int flags)
@@ -1216,9 +1220,9 @@ static char *traced_server(ClientData cdata, Tcl_Interp *irp, char *name1,
   return NULL;
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *traced_botname(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *traced_botname(ClientData cdata, Tcl_Interp *irp,
+                            CONST char *name1, CONST char *name2, int flags)
 #else
 static char *traced_botname(ClientData cdata, Tcl_Interp *irp, char *name1,
                             char *name2, int flags)
@@ -1271,9 +1275,9 @@ static void do_nettype(void)
   }
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *traced_nettype(ClientData cdata, Tcl_Interp *irp,
+                            CONST char *name1, CONST char *name2, int flags)
 #else
 static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
                             char *name2, int flags)
@@ -1283,9 +1287,9 @@ static char *traced_nettype(ClientData cdata, Tcl_Interp *irp, char *name1,
   return NULL;
 }
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp, char *name1,
-			    CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp,
+                            CONST char *name1, CONST char *name2, int flags)
 #else
 static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp, char *name1,
                             char *name2, int flags)
@@ -1301,7 +1305,11 @@ static char *traced_nicklen(ClientData cdata, Tcl_Interp *irp, char *name1,
       Tcl_TraceVar(irp, name1, TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		   traced_nicklen, cdata);
   } else {
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+    CONST char *cval = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
+#else
     char *cval = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
+#endif
     long lval = 0;
 
     if (cval && Tcl_ExprLong(interp, cval, &lval) != TCL_ERROR) {
@@ -1362,6 +1370,7 @@ static tcl_ints my_tcl_ints[] =
   {"nick-len",			&nick_len,			0},
   {"optimize-kicks",		&optimize_kicks,		0},
   {"isjuped",			&nick_juped,			0},
+  {"stack-limit",		&stack_limit,			0},
   {NULL,			NULL,				0}
 };
 
@@ -1373,22 +1382,22 @@ static tcl_ints my_tcl_ints[] =
 /* Read or write the server list.
  */
 
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-static char *tcl_eggserver(ClientData cdata, Tcl_Interp *irp, char *name1,
-			   CONST char *name2, int flags)
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+static char *tcl_eggserver(ClientData cdata, Tcl_Interp *irp,
+                           CONST char *name1, CONST char *name2, int flags)
 #else
 static char *tcl_eggserver(ClientData cdata, Tcl_Interp *irp, char *name1,
                            char *name2, int flags)
 #endif
 {
   Tcl_DString ds;
-  char *slist, x[1024];
+  char x[1024];
   struct server_list *q;
   int lc, code, i;
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
-  CONST char **list;
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+  CONST char **list, *slist;
 #else
-  char **list;
+  char **list, *slist;
 #endif
 
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
@@ -1829,7 +1838,11 @@ static Function server_table[] =
 
 char *server_start(Function *global_funcs)
 {
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+  CONST char *s;
+#else
   char *s;
+#endif
 
   global = global_funcs;
 
@@ -1888,6 +1901,7 @@ char *server_start(Function *global_funcs)
   nick_len = 9;
   kick_method = 1;
   optimize_kicks = 0;
+  stack_limit = 4;
 
   server_table[4] = (Function) botname;
   module_register(MODULE_NAME, server_table, 1, 2);

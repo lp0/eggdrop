@@ -7,7 +7,7 @@
  *   telling the current programmed settings
  *   initializing a lot of stuff and loading the tcl scripts
  *
- * $Id: chanprog.c,v 1.32 2002/07/18 20:28:32 guppy Exp $
+ * $Id: chanprog.c,v 1.35 2002/11/21 23:53:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -166,8 +166,10 @@ void clear_chanlist(void)
   register struct chanset_t	*chan;
 
   for (chan = chanset; chan; chan = chan->next)
-    for (m = chan->channel.member; m && m->nick[0]; m = m->next)
+    for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
       m->user = NULL;
+      m->tried_getuser = 0;
+    }
 }
 
 /* Clear the user pointer of a specific nick in the chanlists.
@@ -184,6 +186,7 @@ void clear_chanlist_member(const char *nick)
     for (m = chan->channel.member; m && m->nick[0]; m = m->next)
       if (!rfc_casecmp(m->nick, nick)) {
 	m->user = NULL;
+	m->tried_getuser = 0;
 	break;
       }
 }
@@ -395,12 +398,12 @@ void reaffirm_owners()
   char *p, *q, s[121];
   struct userrec *u;
 
-  /* Make sure default owners are +n */
+  /* Please stop breaking this function. */
   if (owner[0]) {
     q = owner;
     p = strchr(q, ',');
     while (p) {
-      strncpyz(s, q, p - q);
+      strncpyz(s, q, (p - q) + 1);
       rmspace(s);
       u = get_user_by_handle(userlist, s);
       if (u)
@@ -630,7 +633,7 @@ void list_timers(Tcl_Interp *irp, tcl_timer_t *stack)
 {
   tcl_timer_t *mark;
   char mins[10], id[16], *x;
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
   CONST char *argv[3];
 #else
   char *argv[3];

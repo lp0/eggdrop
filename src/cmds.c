@@ -3,7 +3,7 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.81 2002/07/09 05:40:55 guppy Exp $
+ * $Id: cmds.c,v 1.84 2002/09/11 02:14:44 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -126,12 +126,12 @@ static void tell_who(struct userrec *u, int idx, int chan)
     if (dcc[i].type == &DCC_CHAT)
       if (dcc[i].u.chat->channel == chan) {
 	if (atr & USER_OWNER) {
-	  snprintf(format, sizeof format, "  [%%.2lu]  %%c%%-%us %%s", nicklen);
+	  egg_snprintf(format, sizeof format, "  [%%.2lu]  %%c%%-%us %%s", nicklen);
 	  sprintf(s, format,
 		  dcc[i].sock, (geticon(i) == '-' ? ' ' : geticon(i)),
 		  dcc[i].nick, dcc[i].host);
 	} else {
-	  snprintf(format, sizeof format, "  %%c%%-%us %%s", nicklen);
+	  egg_snprintf(format, sizeof format, "  %%c%%-%us %%s", nicklen);
 	  sprintf(s, format,
 		  (geticon(i) == '-' ? ' ' : geticon(i)),
 		  dcc[i].nick, dcc[i].host);
@@ -166,14 +166,14 @@ static void tell_who(struct userrec *u, int idx, int chan)
       }
       egg_strftime(s, 14, "%d %b %H:%M", localtime(&dcc[i].timeval));
       if (atr & USER_OWNER) {
-        snprintf(format, sizeof format, "  [%%.2lu]  %%s%%c%%-%us (%%s) %%s\n", 
+        egg_snprintf(format, sizeof format, "  [%%.2lu]  %%s%%c%%-%us (%%s) %%s\n", 
 			    nicklen);
 	dprintf(idx, format,
 		dcc[i].sock, dcc[i].status & STAT_CALLED ? "<-" : "->",
 		dcc[i].status & STAT_SHARE ? '+' : ' ',
 		dcc[i].nick, s, dcc[i].u.bot->version);
       } else {
-        snprintf(format, sizeof format, "  %%s%%c%%-%us (%%s) %%s\n", nicklen);
+        egg_snprintf(format, sizeof format, "  %%s%%c%%-%us (%%s) %%s\n", nicklen);
 	dprintf(idx, format,
 		dcc[i].status & STAT_CALLED ? "<-" : "->",
 		dcc[i].status & STAT_SHARE ? '+' : ' ',
@@ -188,11 +188,11 @@ static void tell_who(struct userrec *u, int idx, int chan)
 	dprintf(idx, "Other people on the bot:\n");
       }
       if (atr & USER_OWNER) {
-	snprintf(format, sizeof format, "  [%%.2lu]  %%c%%-%us ", nicklen);
+	egg_snprintf(format, sizeof format, "  [%%.2lu]  %%c%%-%us ", nicklen);
 	sprintf(s, format, dcc[i].sock,
 		(geticon(i) == '-' ? ' ' : geticon(i)), dcc[i].nick);
       } else {
-	snprintf(format, sizeof format, "  %%c%%-%us ", nicklen);
+	egg_snprintf(format, sizeof format, "  %%c%%-%us ", nicklen);
 	sprintf(s, format,
 		(geticon(i) == '-' ? ' ' : geticon(i)), dcc[i].nick);
       }
@@ -228,13 +228,13 @@ static void tell_who(struct userrec *u, int idx, int chan)
 	dprintf(idx, "Other people on the bot:\n");
       }
       if (atr & USER_OWNER) {
-	snprintf(format, sizeof format, "  [%%.2lu]  %%c%%-%us (files) %%s", 
+	egg_snprintf(format, sizeof format, "  [%%.2lu]  %%c%%-%us (files) %%s", 
 				nicklen);
 	sprintf(s, format,
 		dcc[i].sock, dcc[i].status & STAT_CHAT ? '+' : ' ',
 		dcc[i].nick, dcc[i].host);
       } else {
-	snprintf(format, sizeof format, "  %%c%%-%us (files) %%s", nicklen);
+	egg_snprintf(format, sizeof format, "  %%c%%-%us (files) %%s", nicklen);
 	sprintf(s, format,
 		dcc[i].status & STAT_CHAT ? '+' : ' ',
 		dcc[i].nick, dcc[i].host);
@@ -2464,7 +2464,8 @@ static void cmd_pls_host(struct userrec *u, int idx, char *par)
   char *handle, *host;
   struct userrec *u2;
   struct list_type *q;
-  struct flag_record fr = {FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  struct flag_record fr2 = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0},
+                     fr  = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
   module_entry *me;
 
   if (!par[0]) {
@@ -2486,33 +2487,34 @@ static void cmd_pls_host(struct userrec *u, int idx, char *par)
     dprintf(idx, "No such user.\n");
     return;
   }
+  get_user_flagrec(u, &fr, NULL);
   if (egg_strcasecmp(handle, dcc[idx].nick)) {
-    get_user_flagrec(u, &fr, NULL);
-    if ((u->flags & USER_BOTMAST) && !(u->flags & USER_MASTER) &&
-	!(u2->flags & USER_BOT) && !chan_master(fr)) {
+    get_user_flagrec(u2, &fr2, NULL);
+    if (!glob_master(fr) && !glob_bot(fr2) && !chan_master(fr)) {
       dprintf(idx, "You can't add hostmasks to non-bots.\n");
       return;
     }
-    if (!(u->flags & USER_OWNER) && (u2->flags & USER_BOT) &&
-	(bot_flags(u2) & BOT_SHARE)) {
+    if (!glob_owner(fr) && glob_bot(fr2) && (bot_flags(u2) & BOT_SHARE)) {
       dprintf(idx, "You can't add hostmasks to share bots.\n");
       return;
     }
-    if ((u2->flags & (USER_OWNER|USER_MASTER)) &&
-	!(u->flags & USER_OWNER) && egg_strcasecmp(handle, dcc[idx].nick)) {
+    if ((glob_owner(fr2) || glob_master(fr2)) && !glob_owner(fr)) {
       dprintf(idx, "You can't add hostmasks to a bot owner/master.\n");
       return;
     }
-    if (!(u->flags & USER_BOTMAST) && !chan_master(fr)) {
+    if ((chan_owner(fr2) || chan_master(fr2)) && !glob_master(fr) &&
+        !glob_owner(fr) && !chan_owner(fr)) {
+      dprintf(idx, "You can't add hostmasks to a channel owner/master.\n");
+      return;
+    }
+    if (!glob_botmast(fr) && !glob_master(fr) && !chan_master(fr)) {
       dprintf(idx, "Permission denied.\n");
       return;
     }
   }
-  if (!(u->flags & USER_BOTMAST) && !chan_master(fr)) {
-    if (get_user_by_host(host)) {
-      dprintf(idx, "You cannot add a host matching another user!\n");
-      return;
-    }
+  if (!glob_botmast(fr) && !chan_master(fr) && get_user_by_host(host)) {
+    dprintf(idx, "You cannot add a host matching another user!\n");
+    return;
   }
   for (q = get_user(&USERENTRY_HOSTS, u); q; q = q->next)
     if (!egg_strcasecmp(q->extra, host)) {
@@ -2533,7 +2535,8 @@ static void cmd_mns_host(struct userrec *u, int idx, char *par)
 {
   char *handle, *host;
   struct userrec *u2;
-  struct flag_record fr = {FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  struct flag_record fr2 = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0},
+                     fr  = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
   module_entry *me;
 
   if (!par[0]) {
@@ -2555,27 +2558,33 @@ static void cmd_mns_host(struct userrec *u, int idx, char *par)
   }
 
   get_user_flagrec(u, &fr, NULL);
+  get_user_flagrec(u2, &fr2, NULL);
   /* check to see if user is +d or +k and don't let them remove hosts */
-  if ((u->flags & USER_DEOP) || (u->flags & USER_KICK) || chan_deop(fr) || chan_kick (fr))
-    {
-      dprintf(idx, "You can't remove hosts while having the +d or +k flag.\n");
-      return;
-    }
+  if (glob_deop(fr) || glob_kick(fr) || chan_deop(fr) || chan_kick (fr)) {
+    dprintf(idx, "You can't remove hostmasks while having the +d or +k "
+            "flag.\n");
+    return;
+  }
 
   if (egg_strcasecmp(handle, dcc[idx].nick)) {
-    if (!(u2->flags & USER_BOT) && !(u->flags & USER_MASTER) &&
-	!chan_master(fr)) {
+    if (!glob_master(fr) && !glob_bot(fr2) && !chan_master(fr)) {
       dprintf(idx, "You can't remove hostmasks from non-bots.\n");
       return;
-    } else if ((u2->flags & USER_BOT) && (bot_flags(u2) & BOT_SHARE) &&
-	       !(u->flags & USER_OWNER)) {
+    }
+    if (glob_bot(fr2) && (bot_flags(u2) & BOT_SHARE) && !glob_owner(fr)) {
       dprintf(idx, "You can't remove hostmasks from a share bot.\n");
       return;
-    } else if ((u2->flags & (USER_OWNER|USER_MASTER)) &&
-	       !(u->flags & USER_OWNER) && (u2 != u)) {
+    }
+    if ((glob_owner(fr2) || glob_master(fr2)) && !glob_owner(fr)) {
       dprintf(idx, "You can't remove hostmasks from a bot owner/master.\n");
       return;
-    } else if (!(u->flags & USER_BOTMAST) && !chan_master(fr)) {
+    }
+    if ((chan_owner(fr2) || chan_master(fr2)) && !glob_master(fr) &&
+        !glob_owner(fr) && !chan_owner(fr)) {
+      dprintf(idx, "You can't remove hostmasks from a channel owner/master.\n");
+      return;
+    }
+    if (!glob_botmast(fr) && !glob_master(fr) && !chan_master(fr)) {
       dprintf(idx, "Permission denied.\n");
       return;
     }

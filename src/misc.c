@@ -7,7 +7,7 @@
  *   help system
  *   motd display and %var substitution
  *
- * $Id: misc.c,v 1.48 2002/07/09 05:43:27 guppy Exp $
+ * $Id: misc.c,v 1.52 2002/10/11 01:37:14 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -481,30 +481,32 @@ void daysdur(time_t now, time_t then, char *out)
  */
 void putlog EGG_VARARGS_DEF(int, arg1)
 {
-  int i, type;
-  char *format, *chname, s[LOGLINELEN], s1[256], *out;
-  time_t tt;
-  char ct[81], *s2;
-  struct tm *t = localtime(&now);
+  int i, type, tsl;
+  char *format, *chname, s[LOGLINELEN], s1[256], *out, ct[81], *s2, stamp[33];
   va_list va;
+  struct tm *t = localtime(&now);
 
   type = EGG_VARARGS_START(int, arg1, va);
   chname = va_arg(va, char *);
   format = va_arg(va, char *);
 
-  /* Format log entry at offset 8, then i can prepend the timestamp */
-  out = &s[8];
+  /* Create the timestamp */
+  egg_strftime(&stamp[0], 32, LOG_TS, t);
+  sprintf(&stamp[0], "%s ", stamp);
+  tsl = strlen(stamp);
+
+  /* Format log entry at offset 'tsl,' then i can prepend the timestamp */
+  out = &s[tsl];
   /* No need to check if out should be null-terminated here,
    * just do it! <cybah>
    */
-  egg_vsnprintf(out, LOGLINEMAX - 8, format, va);
-  out[LOGLINEMAX - 8] = 0;
-  tt = now;
+  egg_vsnprintf(out, LOGLINEMAX - tsl, format, va);
+  out[LOGLINEMAX - tsl] = 0;
   if (keep_all_logs) {
     if (!logfile_suffix[0])
-      egg_strftime(ct, 12, ".%d%b%Y", localtime(&tt));
+      egg_strftime(ct, 12, ".%d%b%Y", t);
     else {
-      egg_strftime(ct, 80, logfile_suffix, localtime(&tt));
+      egg_strftime(ct, 80, logfile_suffix, t);
       ct[80] = 0;
       s2 = ct;
       /* replace spaces by underscores */
@@ -515,9 +517,9 @@ void putlog EGG_VARARGS_DEF(int, arg1)
       }
     }
   }
+  /* Place the timestamp in the string to be printed */
   if ((out[0]) && (shtime)) {
-    egg_strftime(s1, 9, "[%H:%M] ", localtime(&tt));
-    strncpy(&s[0], s1, 8);
+    strncpy(&s[0], stamp, tsl);
     out = s;
   }
   strcat(out, "\n");
@@ -538,7 +540,7 @@ void putlog EGG_VARARGS_DEF(int, arg1)
 	  /* Check if this is the same as the last line added to
 	   * the log. <cybah>
 	   */
-	  if (!egg_strcasecmp(out + 8, logs[i].szlast)) {
+	  if (!egg_strcasecmp(out + tsl, logs[i].szlast)) {
 	    /* It is a repeat, so increment repeats */
 	    logs[i].repeats++;
 	  } else {
@@ -550,20 +552,15 @@ void putlog EGG_VARARGS_DEF(int, arg1)
 	       * then reset repeats. We want the current time here,
 	       * so put that in the file first.
 	       */
-	      if (t) {
-		fprintf(logs[i].f, "[%2.2d:%2.2d] ", t->tm_hour, t->tm_min);
-		fprintf(logs[i].f, MISC_LOGREPEAT, logs[i].repeats);
-	      } else {
-		fprintf(logs[i].f, "[??:??] ");
-		fprintf(logs[i].f, MISC_LOGREPEAT, logs[i].repeats);
-	      }
+	      fprintf(logs[i].f, stamp);
+	      fprintf(logs[i].f, MISC_LOGREPEAT, logs[i].repeats);
 	      logs[i].repeats = 0;
 	      /* No need to reset logs[i].szlast here
 	       * because we update it later on...
 	       */
 	    }
 	    fputs(out, logs[i].f);
-	    strncpyz(logs[i].szlast, out + 8, LOGLINEMAX);
+	    strncpyz(logs[i].szlast, out + tsl, LOGLINEMAX);
 	  }
 	}
       }
@@ -579,7 +576,7 @@ void putlog EGG_VARARGS_DEF(int, arg1)
     dprintf(DP_STDOUT, "%s", out);
   else if ((type & LOG_MISC) && use_stderr) {
     if (shtime)
-      out += 8;
+      out += tsl;
     dprintf(DP_STDERR, "%s", s);
   }
   va_end(va);
@@ -646,7 +643,6 @@ void check_logsize()
 void flushlogs()
 {
   int i;
-  struct tm *t = localtime(&now);
 
   /* Logs may not be initialised yet. */
   if (!logs)
@@ -661,13 +657,10 @@ void flushlogs()
          /* Repeat.. if quicklogs used then display 'last message
           * repeated x times' and reset repeats.
 	  */
-	if (t) {
-	  fprintf(logs[i].f, "[%2.2d:%2.2d] ", t->tm_hour, t->tm_min);
-	  fprintf(logs[i].f, MISC_LOGREPEAT, logs[i].repeats);
-	} else {
-	  fprintf(logs[i].f, "[??:??] ");
-	  fprintf(logs[i].f, MISC_LOGREPEAT, logs[i].repeats);
-	}
+        char stamp[32];
+        egg_strftime(&stamp[0], 32, LOG_TS, localtime(&now));
+	fprintf(logs[i].f, "%s ", stamp);
+	fprintf(logs[i].f, MISC_LOGREPEAT, logs[i].repeats);
 	/* Reset repeats */
 	logs[i].repeats = 0;
       }

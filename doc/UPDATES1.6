@@ -1,7 +1,60 @@
-$Id: UPDATES1.6,v 1.382 2002/07/26 17:55:18 guppy Exp $
+$Id: UPDATES1.6,v 1.428 2002/11/18 05:38:19 wcc Exp $
 
 Changes in Eggdrop: (since v1.6.0)
 ----------------------------------
+
+1.6.13 (22 November 2002)
+Found by  Fixed by  What...
+          BarkerJr  doc/MODULES updates
+          stdarg    fixed utf-8 handling for config file strings (such as realname)
+          Souperman added a proc to alltools that returns the ordinal number
+                    for a number
+          Wcc       added support for EMFILE (errno 24 - Too many files open)
+                    in neterror()
+          MC_8      fixed the list format returned by tcl_channel_info()
+          Eule      don't ban users when not going to kick in refresh_ban_kick()
+          Eule      added a stacking limit for fastdeq
+          Eule      made the modes-per-line limit definable in src/chan.h
+          BarkerJr  [ban/exempt/invite]-time were not being saved to the channel file
+Eule      Wcc       halfops were not honored in flush_modes()
+          NeoN      fixed cosmetic problems with logging in some irc module commands
+          Mo-Ize    exported tell_bottree() to modues
+          BarkerJr  optimized logging functions
+various   Wcc       removed eggdrop.advanced.conf and eggdrop.simple.conf
+TaKeDa    Eule      adding a missing killsock and lostdcc in eof_dcc_send() and
+                    eof_dcc_get()
+          Wcc       fixed the logic in check_this_member()
+          BarkerJr  made the timestamp style definable in src/eggdrop.h
+          Eule      added a missing return in bot_actchan()
+various   [sL]      fixed a problem with 'connect' and 'control' where the script
+                    would abort prematurely
+          BarkerJr  don't "want ops" in modeless (+) channels
+guppy     Wcc       tell the user to set 'my-ip' when hostname self-lookup fails
+ridens    Wcc       improved access checking in -host/+host
+Jerome    Wcc       fixed a possible buffer overflow in raw_dcc_resend_send()
+          darko``   fixed a missing escape in some regexps in misc/modconfig
+[sL]      Wcc       channel set #chan chanmode $var corrupted $var in Tcl8.x
+          blaster^  don't log "joined #chan but didn't want to" in certain cases where
+                    the channel was newly removed or set inactive
+          Wcc       cosmetic changes to share_stick_[exempt/invite/ban]
+J Lehto   TaKeDa    msg_key and msg_invite did not work properly for !channels
+          BarkerJr  show the number of hops in .trace's output
+          Mo-Ize    use the proper dynamic lib extention on Mac OSX
+          Wiktor    return 5 from dccsend if the file exists in the temp directory and
+                    copy-to-tmp is enabled
+          poptix    fixed a possible exploit in reaffirm_owners()
+KuNgFo0   Wcc/      friends/ops/bots are now correctly unbanned when a ban is set on a
+          [sL]      channel that matches their host
+          BHAB      compile fix for systems that do not support snprintf()
+various   Wcc/      fixed a bug where if the bot is kicked while channel information is
+          [sL]      still being received, the bot will think it's still on the channel and
+                    not rejoin
+ble       Wcc       removed names parsing, as it causes many problems and was only
+                    added for compatability with an old version of unrealircd
+[sL]      Wcc       more broken dprintf's in irc commands
+ble       Wcc       fixed a broken dprintf in cmd_kick()
+          Wcc       made [ban/invite/exempt]-time a channel int
+          BarkerJr  documentation updates related to the PUBM bind
 
 1.6.12 (26 July 2002)
 Found by  Fixed by  What...

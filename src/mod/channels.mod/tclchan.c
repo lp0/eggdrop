@@ -1,7 +1,7 @@
 /*
  * tclchan.c -- part of channels.mod
  *
- * $Id: tclchan.c,v 1.61 2002/07/18 19:01:44 guppy Exp $
+ * $Id: tclchan.c,v 1.68 2002/11/21 23:53:08 wcc Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -509,8 +509,12 @@ static int tcl_newchanban STDVAR
   strncpyz(ban, argv[2], sizeof ban);
   strncpyz(from, argv[3], sizeof from);
   strncpyz(cmt, argv[4], sizeof cmt);
-  if (argc == 5)
-    expire_time = now + (60 * ban_time);
+  if (argc == 5) {
+    if (chan->ban_time == 0)
+      expire_time = 0L;
+    else
+      expire_time = now + (60 * chan->ban_time);
+  }
   else {
     if (atoi(argv[5]) == 0)
       expire_time = 0L;
@@ -545,8 +549,12 @@ static int tcl_newban STDVAR
   strncpyz(ban, argv[1], sizeof ban);
   strncpyz(from, argv[2], sizeof from);
   strncpyz(cmt, argv[3], sizeof cmt);
-  if (argc == 4)
-    expire_time = now + (60 * ban_time);
+  if (argc == 4) {
+    if (global_ban_time == 0)
+      expire_time = 0L;
+    else
+      expire_time = now + (60 * global_ban_time);
+  }
   else {
     if (atoi(argv[4]) == 0)
       expire_time = 0L;
@@ -586,8 +594,12 @@ static int tcl_newchanexempt STDVAR
   strncpyz(exempt, argv[2], sizeof exempt);
   strncpyz(from, argv[3], sizeof from);
   strncpyz(cmt, argv[4], sizeof cmt);
-  if (argc == 5)
-    expire_time = now + (60 * exempt_time);
+  if (argc == 5) {
+    if (chan->exempt_time == 0)
+      expire_time = 0L;
+    else
+      expire_time = now + (60 * chan->exempt_time);
+  }
   else {
     if (atoi(argv[5]) == 0)
       expire_time = 0L;
@@ -620,8 +632,12 @@ static int tcl_newexempt STDVAR
   strncpyz(exempt, argv[1], sizeof exempt);
   strncpyz(from, argv[2], sizeof from);
   strncpyz(cmt, argv[3], sizeof cmt);
-  if (argc == 4)
-    expire_time = now + (60 * exempt_time);
+  if (argc == 4) {
+    if (global_exempt_time == 0)
+      expire_time = 0L;
+    else
+      expire_time = now + (60 * global_exempt_time);
+  }
   else {
     if (atoi(argv[4]) == 0)
       expire_time = 0L;
@@ -660,8 +676,12 @@ static int tcl_newchaninvite STDVAR
   strncpyz(invite, argv[2], sizeof invite);
   strncpyz(from, argv[3], sizeof from);
   strncpyz(cmt, argv[4], sizeof cmt);
-  if (argc == 5)
-    expire_time = now + (60 * invite_time);
+  if (argc == 5) {
+    if (chan->invite_time == 0)
+      expire_time = 0L;
+    else
+      expire_time = now + (60 * chan->invite_time);
+  }
   else {
     if (atoi(argv[5]) == 0)
       expire_time = 0L;
@@ -694,8 +714,12 @@ static int tcl_newinvite STDVAR
   strncpyz(invite, argv[1], sizeof invite);
   strncpyz(from, argv[2], sizeof from);
   strncpyz(cmt, argv[3], sizeof cmt);
-  if (argc == 4)
-     expire_time = now + (60 * invite_time);
+  if (argc == 4) {
+    if (global_invite_time == 0)
+      expire_time = 0L;
+    else
+      expire_time = now + (60 * global_invite_time);
+  }
   else {
     if (atoi(argv[4]) == 0)
       expire_time = 0L;
@@ -710,7 +734,12 @@ static int tcl_newinvite STDVAR
 
 static int tcl_channel_info(Tcl_Interp * irp, struct chanset_t *chan)
 {
-  char s[121];
+  char a[121], b[121], s[121];
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+  CONST char *args[2];
+#else
+  char *args[2];
+#endif
   struct udef_struct *ul;
 
   get_mode_protect(chan, s);
@@ -739,6 +768,12 @@ static int tcl_channel_info(Tcl_Interp * irp, struct chanset_t *chan)
   simple_sprintf(s, "%d:%d", chan->flood_nick_thr, chan->flood_nick_time);
   Tcl_AppendElement(irp, s);
   simple_sprintf(s, "%d:%d", chan->aop_min, chan->aop_max);
+  Tcl_AppendElement(irp, s);
+  simple_sprintf(s, "%d", chan->ban_time);
+  Tcl_AppendElement(irp, s);
+  simple_sprintf(s, "%d", chan->exempt_time);
+  Tcl_AppendElement(irp, s);
+  simple_sprintf(s, "%d", chan->invite_time);
   Tcl_AppendElement(irp, s);
   if (chan->status & CHAN_ENFORCEBANS)
     Tcl_AppendElement(irp, "+enforcebans");
@@ -849,7 +884,11 @@ static int tcl_channel_info(Tcl_Interp * irp, struct chanset_t *chan)
 		       ul->name);
         Tcl_AppendElement(irp, s);
       } else if (ul->type == UDEF_INT) {
-        simple_sprintf(s, "%s %d", ul->name, getudef(ul->values, chan->dname));
+        egg_snprintf(a, sizeof a, "%s", ul->name);
+        egg_snprintf(b, sizeof b, "%d", getudef(ul->values, chan->dname));
+        args[0] = a;
+        args[1] = b;
+        egg_snprintf(s, sizeof s, "%s", Tcl_Merge(2, args));
         Tcl_AppendElement(irp, s);
       } else
         debug1("UDEF-ERROR: unknown type %d", ul->type);
@@ -884,6 +923,9 @@ static int tcl_channel_get(Tcl_Interp * irp, struct chanset_t *chan, char *setti
   else if (CHECK("idle-kick"))     simple_sprintf(s, "%d", chan->idle_kick);
   else if (CHECK("stop-net-hack")) simple_sprintf(s, "%d", chan->stopnethack_mode);
   else if (CHECK("revenge-mode"))  simple_sprintf(s, "%d", chan->revenge_mode);
+  else if (CHECK("ban-time"))  simple_sprintf(s, "%d", chan->ban_time);
+  else if (CHECK("exempt-time"))  simple_sprintf(s, "%d", chan->exempt_time);
+  else if (CHECK("invite-time"))  simple_sprintf(s, "%d", chan->invite_time);
   else if (CHECK("flood-pub"))     simple_sprintf(s, "%d %d", chan->flood_pub_thr, chan->flood_pub_time);
   else if (CHECK("flood-ctcp"))    simple_sprintf(s, "%d %d", chan->flood_ctcp_thr, chan->flood_ctcp_time);
   else if (CHECK("flood-join"))    simple_sprintf(s, "%d %d", chan->flood_join_thr, chan->flood_join_time);
@@ -1009,6 +1051,7 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
       old_mode_mns_prot = chan->mode_mns_prot,
       old_mode_pls_prot = chan->mode_pls_prot;
   struct udef_struct *ul = udef;
+  char s[121];
   module_entry *me;
 
   for (i = 0; i < items; i++) {
@@ -1064,9 +1107,9 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
 	  Tcl_AppendResult(irp, "channel chanmode needs argument", NULL);
 	return TCL_ERROR;
       }
-      if (strlen(item[i]) > 120)
-	item[i][120] = 0;
-      set_mode_protect(chan, item[i]);
+      strncpy(s, item[i], 120);
+      s[120] = 0;
+      set_mode_protect(chan, s);
     } else if (!strcmp(item[i], "idle-kick")) {
       i++;
       if (i >= items) {
@@ -1093,6 +1136,30 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
         return TCL_ERROR;
       }
       chan->revenge_mode = atoi(item[i]);
+    } else if (!strcmp(item[i], "ban-time")) {
+      i++;
+      if (i >= items) {
+        if (irp)
+          Tcl_AppendResult(irp, "channel ban-time needs argument", NULL);
+        return TCL_ERROR;
+      }
+      chan->ban_time = atoi(item[i]);
+    } else if (!strcmp(item[i], "exempt-time")) {
+      i++;
+      if (i >= items) {
+        if (irp)
+          Tcl_AppendResult(irp, "channel exempt-time needs argument", NULL);
+        return TCL_ERROR;
+      }
+      chan->exempt_time = atoi(item[i]);
+    } else if (!strcmp(item[i], "invite-time")) {
+      i++;
+      if (i >= items) {
+        if (irp)
+          Tcl_AppendResult(irp, "channel invite-time needs argument", NULL);
+        return TCL_ERROR;
+      }
+      chan->invite_time = atoi(item[i]);
     }
     else if (!strcmp(item[i], "+enforcebans"))
       chan->status |= CHAN_ENFORCEBANS;
@@ -1341,7 +1408,7 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
 static int tcl_do_masklist(maskrec *m, Tcl_Interp *irp)
 {
   char ts[21], ts1[21], ts2[21], *p;
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
   CONST char *list[6];
 #else
   char *list[6];
@@ -1419,7 +1486,7 @@ static int tcl_channels STDVAR
   struct chanset_t *chan;
 
   BADARGS(1, 1, "");
-  for (chan = chanset; chan; chan = chan->next) 
+  for (chan = chanset; chan; chan = chan->next)
     Tcl_AppendElement(irp, chan->dname);
   return TCL_OK;
 }
@@ -1680,7 +1747,7 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
   int ret = TCL_OK;
   int join = 0;
   char buf[2048], buf2[256];
-#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4))
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
   CONST char **item;
 #else
   char **item;
@@ -1731,6 +1798,9 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
     chan->flood_nick_time = gfld_nick_time;
     chan->stopnethack_mode = global_stopnethack_mode;
     chan->revenge_mode = global_revenge_mode;
+    chan->ban_time = global_ban_time;
+    chan->exempt_time = global_exempt_time;
+    chan->invite_time = global_invite_time;
     chan->idle_kick = global_idle_kick;
     chan->aop_min = global_aop_min;
     chan->aop_max = global_aop_max;
@@ -1755,7 +1825,11 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
    * if a user goes back to an eggdrop that no-longer supports certain
    * (channel) options.
    */
+#if (((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 4)) || (TCL_MAJOR_VERSION > 8))
+  if ((tcl_channel_modify(irp, chan, items, (char **)item) != TCL_OK) && !chan_hack) {
+#else
   if ((tcl_channel_modify(irp, chan, items, item) != TCL_OK) && !chan_hack) {
+#endif
     ret = TCL_ERROR;
   }
   Tcl_Free((char *) item);
