@@ -1,7 +1,7 @@
 dnl aclocal.m4
 dnl   macros autoconf uses when building configure from configure.in
 dnl
-dnl $Id: aclocal.m4,v 1.6 2000/01/08 22:38:19 per Exp $
+dnl $Id: aclocal.m4,v 1.11 2000/03/26 17:11:36 guppy Exp $
 dnl
 AC_DEFUN(EGG_MSG_CONFIGURE_START, [dnl
 AC_MSG_RESULT()
@@ -109,20 +109,31 @@ fi
 
 case "$egg_cv_var_system" in
   BSD/OS)
-    if test "x`${UNAME} -r | cut -d . -f 1`" = "x2"
-    then
-      AC_MSG_RESULT(BSD/OS 2! statically linked modules are the only choice)
+    bsd_version=`${UNAME} -r | cut -d . -f 1` 
+    case "$bsd_version" in 
+      2) 
+      AC_MSG_RESULT(BSD/OS 2 statically linked modules are the only choice)
       NEED_DL=0
       DEFAULT_MAKE=static
-    else
-      AC_MSG_RESULT(BSD/OS 3+! ok I spose)
+      ;;
+      3)
+      AC_MSG_RESULT(BSD/OS 3 stuck with an old OS ...)
       MOD_CC=shlicc
       MOD_LD=shlicc
       MOD_STRIP="${STRIP} -d"
       SHLIB_LD="shlicc -r"
       SHLIB_STRIP=touch
       AC_DEFINE(MODULES_OK)dnl
-    fi
+      ;;
+      *)
+      AC_MSG_RESULT(BSD/OS 4+ Eat your heart out Linux!)
+      CFLAGS="$CFLAGS -Wall"
+      MOD_LD="${CC} "
+      MOD_STRIP="${STRIP} -d"
+      SHLIB_LD="${CC} -shared -nostartfiles"
+      AC_DEFINE(MODULES_OK)dnl  
+      ;;	
+    esac
     ;;
   CYGWIN*)
     AC_MSG_RESULT(Cygwin)
@@ -132,7 +143,7 @@ case "$egg_cv_var_system" in
   HP-UX)
     AC_MSG_RESULT([HP-UX, just shoot yourself now])
     HPUX=yes
-    MOD_LD="gcc -Wl,-E"
+    MOD_LD="gcc -fPIC -shared"
     SHLIB_CC="gcc -fPIC"
     SHLIB_LD="ld -b"
     NEED_DL=0
@@ -156,6 +167,18 @@ case "$egg_cv_var_system" in
     SHLIB_STRIP=strip
     NEED_DL=0
     DEFAULT_MAKE=static
+    ;;
+  Ultrix)
+    AC_MSG_RESULT(Ultrix)
+    NEED_DL=0
+    SHLIB_STRIP=touch
+    DEFUALT_MAKE=static
+    ;;
+  BeOS)
+    AC_MSG_RESULT(BeOS)
+    NEED_DL=0
+    SHLIB_STRIP=strip
+    DEFUALT_MAKE=static
     ;;
   Linux)
     AC_MSG_RESULT(Linux! The choice of the GNU generation)
@@ -352,7 +375,7 @@ else
 #include "confdefs.h"
 #include <stdio.h>
 #include <sys/time.h>
-#include "src/mod/filesys.mod/files.h"
+#include "$srcdir/src/mod/filesys.mod/files.h"
 int main() {
   fprintf(stdout, "%d/%d %s\n", 512 - sizeof(struct filler), sizeof(filedb), "bytes");
   return 0;
@@ -676,6 +699,7 @@ dnl
 dnl
 AC_DEFUN(EGG_TCL_CHECK_VERSION, [dnl
 # Both TCLLIBFN & TCLINCFN must be set, or we bail
+TCL_FOUND=0
 if test ! "x${TCLLIBFN}" = "x" && test ! "x${TCLINCFN}" = "x"
 then
   TCL_FOUND=1
@@ -741,7 +765,7 @@ dnl
 AC_DEFUN(EGG_TCL_CHECK_PRE70, [dnl
 # Is this version of Tcl too old for us to use ?
 TCL_VER_PRE70=`echo $egg_cv_var_tcl_version | $AWK '{split([$]1, i, "."); if (i[[1]] < 7) print "yes"; else print "no"}'`
-if test "$TCL_VER_PRE70" = "xyes"
+if test "x$TCL_VER_PRE70" = "xyes"
 then
   cat << EOF >&2
 configure: error:
@@ -986,7 +1010,7 @@ fi
 dnl
 dnl
 AC_DEFUN(EGG_SUBST_EGGVERSION, [dnl
-EGGVERSION=`grep 'char egg_version' src/main.c | $AWK '{gsub(/(\"|\;)/, "", [$]4); print [$]4}'`
+EGGVERSION=`grep 'char egg_version' $srcdir/src/main.c | $AWK '{gsub(/(\"|\;)/, "", [$]4); print [$]4}'`
 egg_version_num=`echo ${EGGVERSION} | $AWK 'BEGIN { FS = "."; } { printf("%d%02d%02d", [$]1, [$]2, [$]3); }'`
 AC_SUBST(EGGVERSION)dnl
 AC_DEFINE_UNQUOTED(EGG_VERSION, $egg_version_num)dnl

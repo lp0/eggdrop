@@ -9,7 +9,7 @@
  * dprintf'ized, 27oct1995
  * multi-channel, 8feb1996
  * 
- * $Id: chan.c,v 1.55 2000/01/22 23:31:54 per Exp $
+ * $Id: chan.c,v 1.60 2000/03/04 18:57:42 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -262,8 +262,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
       u_addban(chan, h, origbotname, ftype, now + (60 * ban_time), 0);
       Context;
       /* don't kick user if exempted */
-      if (!channel_enforcebans(chan) && me_op(chan) && !isexempted(chan, h))
-	{
+      if (!channel_enforcebans(chan) && me_op(chan) && !isexempted(chan, h)) {
 	  char s[UHOSTLEN];
 	  m = chan->channel.member;
 	  
@@ -273,8 +272,12 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
 		(m->joined >= chan->floodtime[which]) &&
 		   !chan_sentkick(m) && !match_my_nick(m->nick)) {
 	      m->flags |= SENTKICK;
+	      if (which == FLOOD_JOIN)
 	      dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
-		      IRC_LEMMINGBOT);
+		      IRC_JOIN_FLOOD);
+	      else
+	        dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
+		      IRC_NICK_FLOOD);
 	    }
 	    m = m->next;
 	  }
@@ -336,7 +339,7 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
     get_user_flagrec(m->user, &fr, chan->name);
     sprintf(s, "%s!%s", m->nick, m->userhost);
     if (!chan_sentkick(m) && wild_match(hostmask, s) &&
-	!match_my_nick(m->nick) &&
+	!match_my_nick(m->nick) && !chan_issplit(m) &&
 	!glob_friend(fr) && !chan_friend(fr) &&
 	!isexempted(chan, s) &&	/* Crotale - don't kick +e users */
 	!(channel_dontkickops(chan) &&
@@ -423,7 +426,6 @@ static void refresh_exempt (struct chanset_t * chan, char * user) {
             if (e->lastactive < now - 60 && !isexempted(chan, e->mask)) {
               do_mask(chan, chan->channel.exempt, e->mask, 'e');
               e->lastactive = now;
-              return;
             }
           }
           b = b->next;
@@ -615,11 +617,13 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
 	refresh_ban_kick(chan, s, m->nick);
       }
       /* ^ will use the ban comment */
-      if (u_match_mask(global_exempts,s) || u_match_mask(chan->exempts, s)){
+      if (use_exempts &&
+	  (u_match_mask(global_exempts,s) || u_match_mask(chan->exempts, s))) {
 	refresh_exempt(chan, s);
-      }      
+      }
       /* check vs invites */
-      if (u_match_mask(global_invites,s) || u_match_mask(chan->invites, s))
+      if (use_invites &&
+	  (u_match_mask(global_invites,s) || u_match_mask(chan->invites, s)))
 	refresh_invite(chan, s);
       /* are they +k ? */
       if (chan_kick(fr) || glob_kick(fr)) {
@@ -646,8 +650,10 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
     m = m->next;
   }
   if (dobans) {
-      recheck_bans(chan);
+    recheck_bans(chan);
+    if (use_invites)
       recheck_invites(chan);
+    if (use_exempts)
       recheck_exempts(chan);
   }
   if (dobans && channel_enforcebans(chan))
@@ -1008,7 +1014,6 @@ static int got368(char *from, char *msg)
 	    add_mode(chan, '-', 'b', b->mask);
 	  b = b->next;
 	}
-      recheck_bans(chan);
     }
   }
   /* if i sent a mode -b on myself (deban) in got367, either */
@@ -1070,7 +1075,6 @@ static int got349(char *from, char *msg)
 	      add_mode(chan, '-', 'e', e->mask);
 	    e = e->next;
 	  }
-	recheck_exempts(chan);
       }
     }  
     
@@ -1131,7 +1135,6 @@ static int got347(char *from, char *msg)
 	      add_mode(chan, '-', 'I', inv->mask);
 	    inv = inv->next;
 	  }
-	recheck_invites(chan);
       }
     }
   }

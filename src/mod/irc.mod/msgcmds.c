@@ -4,7 +4,7 @@
  * 
  * dprintf'ized, 4feb1996
  * 
- * $Id: msgcmds.c,v 1.18 2000/01/08 21:23:16 per Exp $
+ * $Id: msgcmds.c,v 1.20 2000/03/18 19:22:37 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -42,7 +42,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
   if (u)
     atr = u->flags;
   if (u && !(atr & USER_COMMON)) {
-    dprintf(DP_HELP, "NOTICE %s :%s, %s.\n", IRC_HI, nick, u->handle);
+    dprintf(DP_HELP, "NOTICE %s :%s, %s.\n", nick, IRC_HI, u->handle);
     return 1;
   }
   if (get_user_by_handle(userlist, nick)) {
@@ -693,17 +693,22 @@ static int msg_voice(char *nick, char *host, struct userrec *u, char *par)
 	chan = findchan(par);
 	if (chan && channel_active(chan)) {
 	  get_user_flagrec(u, &fr, par);
-	  if (chan_voice(fr) || glob_voice(fr))
+	  if (chan_voice(fr) || glob_voice(fr) ||
+	      chan_op(fr) || glob_op(fr)) {
 	    add_mode(chan, '+', 'v', nick);
 	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! VOICE %s",
 		   nick, host, u->handle, par);
+	  } else
+	    putlog(LOG_CMDS, "*", "(%s!%s) !*! failed VOICE %s",
+		nick, host, par);
 	  return 1;
 	}
       } else {
 	chan = chanset;
 	while (chan != NULL) {
 	  get_user_flagrec(u, &fr, chan->name);
-	  if (chan_voice(fr) || glob_voice(fr))
+	  if (chan_voice(fr) || glob_voice(fr) ||
+	      chan_op(fr) || glob_op(fr))
 	    add_mode(chan, '+', 'v', nick);
 	  chan = chan->next;
 	}

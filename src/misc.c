@@ -10,7 +10,7 @@
  * 
  * dprintf'ized, 12dec1995
  * 
- * $Id: misc.c,v 1.26 2000/01/17 16:14:45 per Exp $
+ * $Id: misc.c,v 1.29 2000/04/04 23:43:08 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -205,6 +205,7 @@ void maskhost(char *s, char *nw)
   p = (q = strchr(s, '!')) ? q + 1 : s;
   /* strip of any nick, if a username is found, use last 8 chars */
   if ((q = strchr(p, '@'))) {
+    int fl = 0;
     if ((q - p) > 9) {
       nw[0] = '*';
       p = q - 7;
@@ -212,13 +213,14 @@ void maskhost(char *s, char *nw)
     } else
       i = 0;
     while (*p != '@') {
-      if (strchr("~+-^=", *p))
+      if (!fl && strchr("~+-^=", *p))
         if (strict_host)
 	  nw[i] = '?';
 	else
 	  i--; 
       else
 	nw[i] = *p;
+      fl++;
       p++;
       i++;
     }
@@ -1315,11 +1317,13 @@ char *extracthostname(char *hostmask)
 void show_banner(int idx) {
    FILE *vv;
    char s[1024];
-   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
+   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
-   get_user_flagrec(dcc[idx].user,&fr,dcc[idx].u.chat->con_chan);
+   if (!is_file(bannerfile))
+      return;
+   get_user_flagrec(dcc[idx].user, &fr,dcc[idx].u.chat->con_chan);
    vv = fopen(bannerfile, "r");
-   if (!vv || !is_file(bannerfile))
+   if (!vv)
       return;
    while(!feof(vv)) {
       fgets(s, 120, vv);
@@ -1330,6 +1334,7 @@ void show_banner(int idx) {
         dprintf(idx, "%s", s);
       }
    }
+   fclose(vv);
 }
 
 /* create a string with random letters and digits */
