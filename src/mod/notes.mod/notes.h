@@ -1,11 +1,11 @@
 /*
  * notes.h -- part of notes.mod
  *
- * $Id: notes.h,v 1.6 2001/04/12 02:39:47 guppy Exp $
+ * $Id: notes.h,v 1.8 2002/01/02 08:06:15 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -85,4 +85,3 @@ static void fwd_display(int, struct user_entry *);
 #endif				/* MAKING_NOTES */
 
 #endif				/* _EGG_MOD_NOTES_H */
-

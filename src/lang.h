@@ -2,11 +2,11 @@
  * lang.h
  *   Conversion definitions for language support
  *
- * $Id: lang.h,v 1.23 2001/09/24 04:25:39 guppy Exp $
+ * $Id: lang.h,v 1.26 2002/01/02 03:46:35 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -181,7 +181,6 @@
 #define IRC_DONTKNOWYOU		get_language(0x630)
 #define IRC_NOHELP		get_language(0x631)
 #define IRC_NOHELP2		get_language(0x632)
-#define IRC_NOTNORMFILE		get_language(0x633)
 #define IRC_NOTONCHAN		get_language(0x634)
 #define IRC_GETORIGNICK		get_language(0x635)
 #define IRC_BADBOTNICK		get_language(0x636)
@@ -480,7 +479,7 @@
 #define DCC_CLOSED		get_language(0xe16)
 #define DCC_FAILED		get_language(0xe17)
 #define DCC_BADSRC		get_language(0xe18)
-#define DCC_BADIP		get_language(0xe19)
+/* was: DCC_BADIP 0xe19 */
 #define DCC_BADHOST		get_language(0xe1a)
 #define DCC_TELCONN		get_language(0xe1b)
 #define DCC_IDENTFAIL		get_language(0xe1c)

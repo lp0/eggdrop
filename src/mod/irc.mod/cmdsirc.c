@@ -1,12 +1,12 @@
 /*
  * chancmds.c -- part of irc.mod
- *   handles commands direclty relating to channel interaction
+ *   handles commands directly relating to channel interaction
  *
- * $Id: cmdsirc.c,v 1.27 2001/12/04 19:58:07 guppy Exp $
+ * $Id: cmdsirc.c,v 1.30 2002/01/02 03:46:39 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -704,7 +704,7 @@ static void cmd_resetbans(struct userrec *u, int idx, char *par)
   if (chname[0]) {
     chan = findchan_by_dname(chname);
     if (!chan) {
-      dprintf(idx, "That channel doesnt exist!\n");
+      dprintf(idx, "That channel doesn't exist!\n");
       return;
     }
     get_user_flagrec(u, &user, chname);
@@ -733,7 +733,7 @@ static void cmd_resetexempts(struct userrec *u, int idx, char *par)
   if (chname[0]) {
     chan = findchan_by_dname(chname);
     if (!chan) {
-      dprintf(idx, "That channel doesnt exist!\n");
+      dprintf(idx, "That channel doesn't exist!\n");
       return;
     }
     get_user_flagrec(u, &user, chname);
@@ -762,7 +762,7 @@ static void cmd_resetinvites(struct userrec *u, int idx, char *par)
   if (chname[0]) {
     chan = findchan_by_dname(chname);
     if (!chan) {
-      dprintf(idx, "That channel doesnt exist!\n");
+      dprintf(idx, "That channel doesn't exist!\n");
       return;
     }
     get_user_flagrec(u, &user, chname);
@@ -868,7 +868,7 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
     dprintf(idx, "Added hostmask %s to %s.\n", p1, u->handle);
     addhost_by_handle(hand, p1);
     get_user_flagrec(u, &user, chan->dname);
-    check_this_user(hand);
+    check_this_user(hand, 0, NULL);
   }
   putlog(LOG_CMDS, "*", "#%s# adduser %s %s", dcc[idx].nick, nick,
 	 hand == nick ? "" : hand);

@@ -4,11 +4,11 @@
  *
  * Rewritten by Fabian Knittel <fknittel@gmx.de>
  *
- * $Id: filedb3.c,v 1.19 2001/10/09 10:55:07 tothwolf Exp $
+ * $Id: filedb3.c,v 1.21 2002/01/02 03:55:20 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1019,7 +1019,7 @@ static void filedb_ls(FILE *fdb, int idx, char *mask, int showall)
   else {
     filelist_sort(flist);
     filelist_idxshow(flist, idx);
-    dprintf(idx, "--- %d file%s.\n", cnt, cnt > 1 ? "s" : "");
+    dprintf(idx, "--- %d file%s.\n", cnt, cnt != 1 ? "s" : "");
   }
   filelist_free(flist);
 }

@@ -2,11 +2,11 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.59 2001/12/06 04:57:17 guppy Exp $
+ * $Id: irc.c,v 1.65 2002/01/02 03:46:39 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -42,10 +42,10 @@ static int net_type;
 static int strict_host;
 static int wait_split = 300;		/* Time to wait for user to return from
 					   net-split. */
-static int max_bans = 20;
+static int max_bans = 20;		/* Modified by net-type 1-4 */
 static int max_exempts = 20;
 static int max_invites = 20;
-static int max_modes = 30;
+static int max_modes = 20;		/* Modified by net-type 1-4 */
 static int bounce_bans = 1;
 static int bounce_exempts = 0;
 static int bounce_invites = 0;
@@ -224,7 +224,7 @@ static void punish_badguy(struct chanset_t *chan, char *whobad,
     splitnick(&whobad);
     maskhost(whobad, s1);
     simple_sprintf(s, "(%s) %s", ct, reason);
-    u_addban(chan, s1, origbotname, s, now + (60 * ban_time), 0);
+    u_addban(chan, s1, botnetnick, s, now + (60 * ban_time), 0);
     if (!mevictim && me_op(chan)) {
       add_mode(chan, '+', 'b', s1);
       flush_mode(chan, QUICK);
@@ -348,8 +348,6 @@ static int killmember(struct chanset_t *chan, char *nick)
    * them though, to keep the bot from crashing.
    */
   if (chan->channel.members < 0) {
-     putlog(LOG_MISC, "*", "(!) BUG: number of members is negative: %d",
-	    chan->channel.members);
      chan->channel.members = 0;
      for (x = chan->channel.member; x && x->nick[0]; x = x->next)
        chan->channel.members++;
@@ -357,7 +355,6 @@ static int killmember(struct chanset_t *chan, char *nick)
 	    chan->channel.members);
   }
   if (!chan->channel.member) {
-    putlog(LOG_MISC, "*", "(!) BUG: memberlist is NULL");
     chan->channel.member = (memberlist *) channel_malloc(sizeof(memberlist));
     chan->channel.member->nick[0] = 0;
     chan->channel.member->next = NULL;
@@ -971,6 +968,8 @@ static void do_nettype()
     use_354 = 0;
     use_exempts = 0;
     use_invites = 0;
+    max_bans = 20;
+    max_modes = 20;
     rfc_compliant = 1;
     include_lk = 0;
     break;
@@ -980,6 +979,8 @@ static void do_nettype()
     use_354 = 0;
     use_exempts = 1;
     use_invites = 1;
+    max_bans = 30;
+    max_modes = 30;
     rfc_compliant = 1;
     include_lk = 1;
     break;
@@ -989,6 +990,8 @@ static void do_nettype()
     use_354 = 1;
     use_exempts = 0;
     use_invites = 0;
+    max_bans = 30;
+    max_modes = 30;
     rfc_compliant = 1;
     include_lk = 1;
     break;
@@ -998,6 +1001,8 @@ static void do_nettype()
     use_354 = 0;
     use_exempts = 0;
     use_invites = 0;
+    max_bans = 100;
+    max_modes = 100;
     rfc_compliant = 0;
     include_lk = 1;
     break;
@@ -1007,6 +1012,8 @@ static void do_nettype()
     use_354 = 0;
     use_exempts = 1;
     use_invites = 0;
+    max_bans = 20;
+    max_modes = 20;
     rfc_compliant = 1;
     include_lk = 0;
     break;

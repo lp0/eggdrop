@@ -7,11 +7,11 @@
  *   telling the current programmed settings
  *   initializing a lot of stuff and loading the tcl scripts
  *
- * $Id: chanprog.c,v 1.26 2001/09/24 04:25:39 guppy Exp $
+ * $Id: chanprog.c,v 1.28 2002/01/02 03:46:35 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -448,6 +448,11 @@ void chanprog()
   /* We should be safe now */
   call_hook(HOOK_REHASH);
   protect_readonly = 1;
+  if (!botnetnick[0]) {
+    strncpyz(botnetnick, origbotname, HANDLEN + 1);
+  }
+  if (!botnetnick[0])
+    fatal("I don't have a botnet nick!!\n", 0);
   if (!userfile[0])
     fatal(MISC_NOUSERFILE2, 0);
   if (!readuserfile(userfile, &userlist)) {
@@ -459,7 +464,7 @@ void chanprog()
     }
     printf("\n\n%s\n", MISC_NOUSERFILE2);
     if (module_find("server", 0, 0))
-      printf(MISC_USERFCREATE1, origbotname);
+      printf(MISC_USERFCREATE1, botnetnick);
     printf("%s\n\n", MISC_USERFCREATE2);
   } else if (make_userfile) {
      make_userfile = 0;
@@ -471,11 +476,6 @@ void chanprog()
   if (tempdir[0])
     if (tempdir[strlen(tempdir) - 1] != '/')
       strcat(tempdir, "/");
-  if (!botnetnick[0]) {
-    strncpyz(botnetnick, origbotname, HANDLEN + 1);
-  }
-  if (!botnetnick[0])
-    fatal("I don't have a botnet nick!!\n", 0);
   /* Test tempdir: it's vital */
   {
     FILE *f;

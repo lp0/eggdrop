@@ -5,11 +5,11 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.74 2001/11/16 05:01:32 guppy Exp $
+ * $Id: main.c,v 1.78 2002/01/02 03:46:35 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -81,8 +81,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.6.7";
-int	egg_numver = 1060700;
+char	egg_version[1024] = "1.6.8";
+int	egg_numver = 1060800;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -714,7 +714,7 @@ int main(int argc, char **argv)
 #include "patch.h"
   /* Version info! */
   egg_snprintf(ver, sizeof ver, "eggdrop v%s", egg_version);
-  egg_snprintf(version, sizeof version, "Eggdrop v%s (C)1997 Robey Pointer (C)2001 Eggheads",
+  egg_snprintf(version, sizeof version, "Eggdrop v%s (C) 1997 Robey Pointer (C) 2002 Eggheads",
 	       egg_version);
   /* Now add on the patchlevel (for Tcl) */
   sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);
@@ -815,7 +815,7 @@ int main(int argc, char **argv)
     kill(xx, SIGCHLD);		/* Meaningless kill to determine if pid
 				   is used */
     if (errno != ESRCH) {
-      printf(EGG_RUNNING1, origbotname);
+      printf(EGG_RUNNING1, botnetnick);
       printf(EGG_RUNNING2, pid_file);
       bg_send_quit(BG_ABORT);
       exit(1);
@@ -1041,7 +1041,7 @@ int main(int argc, char **argv)
 	    }
 	    if (ok) {
 	      strcpy(xx, p->name);
-	      if (module_unload(xx, origbotname) == NULL) {
+	      if (module_unload(xx, botnetnick) == NULL) {
 		f = 1;
 		break;
 	      }

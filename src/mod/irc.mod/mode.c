@@ -1,14 +1,14 @@
 /*
  * mode.c -- part of irc.mod
- *   queueing and flushing mode changes made by the bot
+ *   queuing and flushing mode changes made by the bot
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  *
- * $Id: mode.c,v 1.51 2001/11/28 23:26:05 guppy Exp $
+ * $Id: mode.c,v 1.54 2002/01/02 03:46:39 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -329,13 +329,13 @@ static void real_add_mode(struct chanset_t *chan,
   for (i = 0; i < modesperline; i++)
     if (chan->cmode[i].type)
       modes--;
-  if (include_lk && chan->limit != -1)
+  if (include_lk && chan->limit)
     modes--;
   if (include_lk && chan->rmkey)
     modes--;
   if (include_lk && chan->key)
     modes--;
-  if (modes < 0)
+  if (modes < 1)
     flush_mode(chan, NORMAL);		/* Full buffer! Flush modes. */
 }
 

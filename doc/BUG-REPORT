@@ -2,7 +2,7 @@
               Eggheads Eggdrop 1.6 Bug Report Form
 =====================================================================
 
-By reporting bugs, you help to improve the quality of eggdrop which
+By reporting bugs, you help to improve the quality of Eggdrop which
 naturally results in a more stable bot. The more information you
 provide, the easier and more likely it is for the dev team to fix the
 bug. Please add everything that you think is important, in addition
@@ -88,8 +88,8 @@ Instructions:
 4.1) The logged last context (example: Last context: userent.c/973 []):
 
 4.2) If the bot wrote to the file DEBUG, copy the text -contents- of
-     that file here (NOTE: It should be about 20 lines of info, could
-     be a few lines more):
+     that file here (NOTE: It should be about 20 lines of info, but it
+     could be a few lines more):
 
 4.3) Your comments and a description of the bug:
 

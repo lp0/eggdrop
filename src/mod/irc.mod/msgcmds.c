@@ -2,11 +2,11 @@
  * msgcmds.c -- part of irc.mod
  *   all commands entered via /MSG
  *
- * $Id: msgcmds.c,v 1.25 2001/12/04 19:58:07 guppy Exp $
+ * $Id: msgcmds.c,v 1.28 2002/01/02 03:46:39 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -94,7 +94,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
     putlog(LOG_MISC, "*", IRC_INIT1, handle);
     make_userfile = 0;
     write_userfile(-1);
-    add_note(handle, origbotname, IRC_INITNOTE, -1, 0);
+    add_note(handle, botnetnick, IRC_INITNOTE, -1, 0);
   } else {
     fr.global = default_flags;
 
@@ -114,7 +114,7 @@ static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
 	rmspace(p1);
       }
       rmspace(s1);
-      add_note(s1, origbotname, s, -1, 0);
+      add_note(s1, botnetnick, s, -1, 0);
       if (p1 == NULL)
 	s1[0] = 0;
       else
@@ -216,7 +216,7 @@ static int msg_ident(char *nick, char *host, struct userrec *u, char *par)
       maskhost(s, s1);
       dprintf(DP_HELP, "NOTICE %s :%s: %s\n", nick, IRC_ADDHOSTMASK, s1);
       addhost_by_handle(who, s1);
-      check_this_user(who);
+      check_this_user(who, 0, NULL);
       return 1;
     }
   }
@@ -256,7 +256,7 @@ static int msg_addhost(char *nick, char *host, struct userrec *u, char *par)
       putlog(LOG_CMDS, "*", "(%s!%s) !*! ADDHOST %s", nick, host, par);
       dprintf(DP_HELP, "NOTICE %s :%s: %s\n", nick, IRC_ADDHOSTMASK, par);
       addhost_by_handle(u->handle, par);
-      check_this_user(u->handle);
+      check_this_user(u->handle, 0, NULL);
       return 1;
     }
   }

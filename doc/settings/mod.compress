@@ -1,19 +1,36 @@
-##### COMPRESS MODULE #####
+Compress Module
+Last revised: January 1, 2002
+     _________________________________________________________________
 
-This module provides provides support for file compression. This allows the
-bot to transfer compressed user files and therefore save a significant amount
-of bandwidth.
+                             Compress Module
 
-Put this line into your eggdrop configuration file file to load compress module:
+This module provides provides support for file compression. It can be used to
+compress files via Tcl or to transfer the userfile compressed during the
+share process, saving bandwidth.
+  
+  This module requires: share
+  
+Put this line into your Eggdrop configuration file to load the compress 
+module:
+  
+  loadmodule compress
+  
+There are also some variables you can set in your config file:
+  
+  set share-compressed 1 (Disabled by default)
+      Allow compressed sending of user files? The user files are
+      compressed with the compression level defined in `compress-level'.
+  
+  set compress-level 9
+     This is the default compression level used.
 
-loadmodule compress
+Tcl commands provided by the compress module:
 
+See doc/tcl-commands.doc for information on each command.
 
-There are also some variables you can to set in your config file:
+  * compressfile [-level <level>] <src-file> [target-file]
 
-set share-compressed 1 (Disabled by default)
-# [0/1] allow compressed sending of user files. The user files
-# are compressed with the compression level defined in `compress-level'.
+  * uncompressfile <src-file> [target-file]
+     _________________________________________________________________
 
-set compress-level 9
-    Set here the gzip compression level you want to use
+   Copyright (C) 2000, 2001, 2002 Eggheads Development Team

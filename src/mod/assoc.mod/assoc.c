@@ -2,11 +2,11 @@
  * assoc.c -- part of assoc.mod
  *   the assoc code, moved here mainly from botnet.c for module work
  *
- * $Id: assoc.c,v 1.17 2001/07/17 19:53:39 guppy Exp $
+ * $Id: assoc.c,v 1.19 2002/01/02 08:06:14 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -423,4 +423,3 @@ char *assoc_start(Function * global_funcs)
   add_help_reference("assoc.help");
   return NULL;
 }
-

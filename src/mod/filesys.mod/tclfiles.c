@@ -2,11 +2,11 @@
  * tclfiles.c -- part of filesys.mod
  *   Tcl stubs for file system commands moved here to support modules
  *
- * $Id: tclfiles.c,v 1.14 2001/06/10 00:11:51 poptix Exp $
+ * $Id: tclfiles.c,v 1.16 2002/01/02 08:06:15 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -670,4 +670,3 @@ static tcl_cmds mytcls[] =
   {"setflags",		tcl_setflags},
   {NULL,		NULL}
 };
-

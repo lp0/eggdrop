@@ -1,7 +1,79 @@
-$Id: UPDATES1.6,v 1.241 2001/12/06 04:57:17 guppy Exp $
+$Id: UPDATES1.6,v 1.290 2002/01/02 20:23:39 guppy Exp $
 
-Changes in eggdrop: (since v1.6.0)
+Changes in Eggdrop: (since v1.6.0)
 ----------------------------------
+
+1.6.8 (2 January 2002)
+Found by  Fixed by  What...
+PPSlim    guppy     removed a legacy tcl hack that probably no one but old eggdrop users
+                    knew about <g>
+          Tothwolf  more copyright updates and documentation changes
+          blaster^  raised the kick reason length to 307 for dalnet
+          Wcc       fixed some cosmetic bugs relating to either 1 user or X users, stuff
+                    like that
+          Wcc       updated slennox's sentinel.tcl to the latest version
+          Wcc       updated the html docs to be in sync with the text ones
+          Wcc       updated the copyright info for 2002
+          guppy     removed the checks for ips with 0 or 255 in them
+various   guppy     when a leaf is thinking that uses a different HANDLEN then ours log
+                    it and then drop the connection instead of just silently dropping
+                    the connection
+          guppy     changed checkmodule to loadmodule in the configs (checkmodule still
+                    works for backwards compat)
+          guppy     renamed nick-len to nicklen (nick-len still exists for backwards
+                    compat) to follow the standard that handlen uses
+          Wcc       updated doc/BOTNET and added doc/first_script.txt
+          Wcc       removed some old debugging information
+various   zip       prevent the bot from losing channel flags when allow-resync is set
+          Wcc       some small cosmetic changes
+          Wcc       added handlen for scripters to get the current length of handles from
+                    src/eggdrop.h (this setting does not adjust handle lengths however)
+          BarkerJr  cmd_whom now displays a sum of all the partyline users
+          Tothwolf  copyright updates
+jedis     guppy     fixed tcl_boot when kicking someone on another bot without a reason from
+                    screwing up the boot reason
+          Wcc       max-modes and max-modes are automatically set by net-type now
+          guppy     origbotname was being wrongly used in some locations
+          guppy     fixed a bug that prevented MODE from being sent when we get ops on a
+                    channel to retrieve the proper channel key
+VYOinlove guppy     don't try to open a dcc chat when people do /ctcp <bot> chat without a
+                    a password set, instead send an error message
+          quest/    fixed a problem on osx with files being shown as bytecount/-1
+          stdarg
+          BarkerJr  log the remote .who command
+          BarkerJr  fixed a small bug in guppy's last patch
+various   guppy     tcl_botisvoice, tcl_botisop, tcl_botonchan, tcl_onchansplit, tcl_isop,
+                    tcl_isvoice, and tcl_handonchan all take channel as an optional argument
+                    now
+Abraham   guppy     tcl_onchan can now be used without a channel to check all the bot's 
+                    channels
+various   stdarg/   added tcl_traffic (a modified copy of stdarg's original patch)
+          guppy/
+Tothwolf  guppy     .servers doesn't trunicate server names anymore
+Wcc       guppy     made cmd_modules work locally as well as remotely
+          guppy     made show_banner reset the help_subst arguments like show_motd does
+                    and if the motd isn't a regular file, just return instead of giving
+                    an error like show_banner does
+          guppy     tcl_jump could easily crash the bot
+various   guppy     tcl_pushmode now accepts any irc modes instead of the standard ones
+          guppy     made tcl_chanlist (when matching chanflags), tcl_handonchan, and
+                    tcl_nick2hand much faster
+          Eule      a bunch of small fixes to gotjoin, gotkick, got367, a
+                    modes-per-line calcuation, and to include_lk
+          Wcc       yet more documentation updates
+ziffie    BHAB      Documentation doesn't cover how to connect to servers with 
+                    a password; documentation added to sample config files.
+|^Raven^| guppy     made tcl_hand2nick _a lot_ faster
+          Eule      more membercheck fixes for nick bans, nick +k users, -user, and
+                    -host.
+          BarkerJr  only show fake alerts once every 10 seconds to prevent flooding
+DFrank    guppy     small make install bug related to doc cleanups
+          Wcc       major cleanup of config files and related documents
+          BarkerJr  updated doc/MODULES a bit
+RandomAPB Wcc       show the user port as users instead of telnet and the bot port
+                    as a bot port instead of a relay port
+various   stdarg    small fix to the notes module
+          BarkerJr  updated the uptime url
 
 1.6.7 (7 December 2001)
 Found by  Fixed by  What...

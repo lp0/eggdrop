@@ -1,11 +1,11 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.54 2001/10/20 19:03:09 guppy Exp $
+ * $Id: module.h,v 1.56 2002/01/02 03:46:37 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -437,7 +437,8 @@
 #define str_unescape ((void (*)(char *, register const char))global[264])
 #define egg_strcatn ((int (*)(char *dst, const char *src, size_t max))global[265])
 #define clear_chanlist_member ((void (*)(const char *nick))global[266])
-/* 168 - 271 */
+#define fixfrom ((char *(*)(char *))global[267])
+/* 268 - 271 */
 /* Please don't modify socklist directly, unless there's no other way.
  * Its structure might be changed, or it might be completely removed,
  * so you can't rely on it without a version-check.

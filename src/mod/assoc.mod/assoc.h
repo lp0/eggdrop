@@ -1,10 +1,10 @@
 /*
  * assoc.h -- part of assoc.mod
  *
- * $Id: assoc.h,v 1.2 2001/04/12 02:39:44 guppy Exp $
+ * $Id: assoc.h,v 1.4 2002/01/02 08:06:14 tothwolf Exp $
  */
 /*
- * Copyright (C) 2000, 2001 Eggheads Development Team
+ * Copyright (C) 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -43,4 +43,3 @@
 #define ASSOC_CHNAME_FIRSTCHAR	get_language(0xb00f)
 
 #endif				/* _EGG_MOD_ASSOC_ASSOC_H */
-

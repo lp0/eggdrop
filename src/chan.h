@@ -3,11 +3,11 @@
  *   stuff common to chan.c and mode.c
  *   users.h needs to be loaded too
  *
- * $Id: chan.h,v 1.22 2001/11/28 23:17:41 guppy Exp $
+ * $Id: chan.h,v 1.24 2002/01/02 03:46:35 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -56,6 +56,7 @@ typedef struct memstruct {
 #define WASOP       0x0100	/* was an op before a split		*/
 #define STOPWHO     0x0200
 #define FULL_DELAY  0x0400
+#define STOPCHECK   0x0800
 
 #define chan_hasvoice(x) (x->flags & CHANVOICE)
 #define chan_hasop(x) (x->flags & CHANOP)
@@ -67,6 +68,7 @@ typedef struct memstruct {
 #define chan_sentdevoice(x) (x->flags & SENTDEVOICE)
 #define chan_issplit(x) (x->split > 0)
 #define chan_wasop(x) (x->flags & WASOP)
+#define chan_stopcheck(x) (x->flags & STOPCHECK)
 
 /* Why duplicate this struct for exempts and invites only under another
  * name? <cybah>

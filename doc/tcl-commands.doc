@@ -1,10 +1,10 @@
-This is an exhaustive list of all the Tcl commands added to eggdrop. All
+This is an exhaustive list of all the Tcl commands added to Eggdrop. All
 of the normal Tcl built-in commands are still there, of course. But you
 can also use these to manipulate features of the bot. They are listed
 according to category.
 
-NOTICE: This list is accurate for eggdrop v1.6.0! Scripts written for
-  v1.3/v1.4 series of eggdrop should probably work with a few minor
+NOTICE: This list is accurate for Eggdrop v1.6.8! Scripts written for
+  v1.3/v1.4 series of Eggdrop should probably work with a few minor
   modifications depending on the script.
 
 Scripts which were written for v0.9, v1.0, v1.1 or v1.2 will probably not work
@@ -13,7 +13,7 @@ without modification. Commands which have been changed in the v1.6 series
 
 ***### CORE EGGDROP COMMANDS ###***
 
-these are commands provided in the core part of eggdrop, for module
+these are commands provided in the core part of Eggdrop, for module
 specific commands, see later.
 
 
@@ -477,30 +477,33 @@ specific commands, see later.
   isbotnick <nick>
     returns: "1" if the nick matches the botnick; "0" otherwise
 
-  botisop <channel>
-    returns: "1" if the bot is an op on that channel; "0" otherwise
+  botisop [channel]
+    returns: "1" if the bot is an op on that channel (or a channel if no
+      channel is specified); "0" otherwise
 
-  botisvoice <channel>
-    returns: "1" if the bot is has a voice on that channel; "0" otherwise
+  botisvoice [channel]
+    returns: "1" if the bot is has a voice on that channel (or a channel if 
+     no channel is specified); "0" otherwise
 
-  botonchan <channel>
-   returns: "1" if the bot is on that channel; "0" otherwise
+  botonchan [channel]
+   returns: "1" if the bot is on that channel (or a channel if no channel is
+     specified); "0" otherwise
 
-  isop <nickname> <channel>
-    returns: "1" if someone by that nickname is on the channel and has chop;
-      "0" otherwise
+  isop <nickname> [channel]
+    returns: "1" if someone by that nickname is on the channel (or a channel
+      if no channel name is specified) and has chop; "0" otherwise
 
   wasop <nickname> <channel>
     returns: "1" if someone that just got opped/deopped in the chan had op
       before the modechange; "0" otherwise
 
-  isvoice <nickname> <channel>
-    returns: "1" if someone by that nickname is on the channel and has voice
-      (+v); "0" otherwise
+  isvoice <nickname> [channel]
+    returns: "1" if someone by that nickname is on the channel (or a channel
+      if no channel is specified) and has voice (+v); "0" otherwise
 
-  onchan <nickname> <channel>
-    returns: "1" if someone by that nickname is on the bot's channel; "0"
-      otherwise
+  onchan <nickname> [channel]
+    returns: "1" if someone by that nickname is on the bot's channel (or 
+      channels if none is specified); "0" otherwise
 
   nick2hand <nickname> [channel]
     returns: handle of <nickname> on <channel>
@@ -508,9 +511,9 @@ specific commands, see later.
     if <nickname> not found, returns ""
     if <nickname> found but unknown, returns "*"
 
-  handonchan <handle> <channel>
-    returns: "1" if the the user@host for someone on the channel matches
-      for the handle given; "0" otherwise
+  handonchan <handle> [channel]
+    returns: "1" if the the user@host for someone on the channel (or a channel
+      if no channel name is specified) matches for the handle given; "0" otherwise
 
   hand2nick <handle> [channel]
     returns: nickname of the first person on the <channel> whose user@host
@@ -565,8 +568,9 @@ specific commands, see later.
   getchanjoin <nickname> <channel>
     returns: timestamp of when that person joined the channel
 
-  onchansplit <nick> <channel>
-    returns: "1" if that nick is split from the channel; "0" otherwise
+  onchansplit <nick> [channel]
+    returns: "1" if that nick is split from the channel (or a channel if no
+      channel is specified); "0" otherwise
 
   chanlist <channel> [flags[&chanflags]]
     flags are any flags that are global flags, the '&' denotes to look for
@@ -935,22 +939,31 @@ specific commands, see later.
   unames
    returns:  The current operating system the bot is using.
 
-  dnslookup <ip-address/hostname> <proc> [[arg1] [arg2] ... [argn]]
-    Issues an asynchronous dns lookup request. The command will block if
-    dns module is not loaded, otherwise it will either return immediately
-    or immediately call the proc (e.g. if the lookup is already cached).
+  dnslookup <ip-address/hostname> <proc> [[arg1] [arg2] ... [argN]]
+    This issues an asynchronous dns lookup request. The command will block
+    if dns module is not loaded; otherwise it will either return immediately
+    or immediately call the specified proc (e.g. if the lookup is already 
+    cached).
+
     As soon as the request completes, <proc> will be called as follows:
-      <proc> ipaddress hostname status [[arg1] [arg2] ... [argn]]
-    status is 1 if the lookup was successful and 0 if it wasn't. All
-    additional parameters (called arg1, arg2 and argn above) get appended
-    to the proc's other parameters.
+
+     <proc> ipaddress hostname status [[arg1] [arg2] [argN]]
+
+     status is 1 if the lookup was successful and 0 if it wasn't. All 
+     additional parameters (called arg1, arg2 and argN above) get
+     appended to the proc's other parameters.
 
   md5 <string>
     returns: the 128 bit MD5 message-digest of the specified string.
 
- callevent <event>
-   Triggers the evnt bind manually for a certain event. For example:
-     callevent rehash
+  callevent <event>
+    Triggers the evnt bind manually for a certain event. For example:
+    callevent rehash
+
+| traffic
+|   returns: a list of sublists containing information about the bot's
+|     traffic usage in bytes. Each sublist contains five elements: type, 
+|     in-traffic today, in-traffic total, out-traffic today, out-traffic total.
 
 GLOBAL VARIABLES:
   (All config-file variables are global, too. But these variables
@@ -988,8 +1001,11 @@ GLOBAL VARIABLES:
     The last command binding which triggered. This allows you to
     identify which command triggered a Tcl routine.
 
- isjuped
-   value is 1 if bot's nick is juped(437) 0 otherwise.
+  isjuped
+    value is 1 if bot's nick is juped(437) 0 otherwise.
+
+  hand-len
+    the value of the HANDLEN setting in src/eggdrop.h
 
 COMMAND EXTENSION:
 
@@ -1181,14 +1197,14 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        bind raw <flags> <keyword-mask> <proc>
        procname <from> <keyword> <text...>
 
-       previous versions of eggdrop required a special compile option to
+       previous versions of Eggdrop required a special compile option to
        enable this binding, but it's now standard; the mask is checked
        against the keyword (either a numeric like "368" or a keyword like
        "PRIVMSG"); from will be the server name or the source user (depending
        on the keyword); flags are ignored; the order of the arguments is
        identical to the order that the IRC server sends to the bot -- the
        pre-processing only splits it apart enough to determine the keyword;
-       if the proc returns 1, eggdrop will not process the line any further
+       if the proc returns 1, Eggdrop will not process the line any further
        (This could cause your bot to behave oddly in some cases.)
 
   (18) BOT
@@ -1291,17 +1307,17 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        is considered parsed; otherwise the bot will use the text returned
        from the proc and continue parsing that
 
-| (29) NEED   (stackable)
-|      bind need <flags> <mask> <proc>
-|      procname <channel> <type>
-|
-|      this bind is triggered on certain events, like when the bot needs
-|      operator status or the key for a channel; the types are: op, unban,
-|      invite, and key; the <mask> in the bind is matched against 
-|      "#channel type" and can contain wildcards; flags are ignored
-|
-|      example: bind need - "% op" needop < handles only need op
-|               bind need - "*" needall   < handles all needs
+ (29) NEED   (stackable)
+      bind need <flags> <mask> <proc>
+      procname <channel> <type>
+
+      this bind is triggered on certain events, like when the bot needs
+      operator status or the key for a channel; the types are: op, unban,
+|     invite, limit, and key; the <mask> in the bind is matched against 
+      "#channel type" and can contain wildcards; flags are ignored
+
+      example: bind need - "% op" needop < handles only need op
+               bind need - "*" needall   < handles all needs
 
   (30) FLUD   (stackable)
        bind flud <flags> <type> <proc>
@@ -1409,9 +1425,9 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
          save              (called when the userfile is saved)
          rehash            (called just after a rehash)
          prerehash         (called just before a rehash)
-        prerestart        (called just before a restart)
+         prerestart        (called just before a restart)
          logfile           (called when the logs are switched daily)
-        loaded            (called when the bot is done loading itself)
+         loaded            (called when the bot is done loading itself)
 
         connect-server    (called just before we connect to an irc server)
         init-server       (called when we actually get on our irc server)
@@ -1504,7 +1520,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
     call killdcc on the idx when text is blank, it will always fail with
     "invalid idx".
 
-    If you want to hand control of your connection back to eggdrop, your
+    If you want to hand control of your connection back to Eggdrop, your
     proc should return 1. Otherwise, return 0 to retain control.
 
 
@@ -1541,7 +1557,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
     the new idx (see the section above). From then on, the connection
     will act just like a normal DCC connection that has been put under
     the control of a script. If you ever return "1" from the control
-    proc (indicating that you want control to return to eggdrop), the bot
+    proc (indicating that you want control to return to Eggdrop), the bot
     will just close the connection and dispose of it. Other commands
     that work on normal DCC connections, like 'killdcc' and 'putdcc',
     will work on this idx too. 'killdcc' will fail with "invalid idx" if
@@ -1552,7 +1568,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
     which will create a new listening port at 6667, and assign it to the
     script 'grabproc'.
 
-    When a new connection arrives, eggdrop will connect it up and create
+    When a new connection arrives, Eggdrop will connect it up and create
     a new idx for the connection. That idx is sent to 'grabproc'. The
     proc will generally want to immediately put this idx under control:
        proc grabproc {newidx} {
@@ -1745,3 +1761,6 @@ users to read later
   setflags <dir> [<flags> [channel]]
     sets the flags required to access the directory
     returns: 0 on success, -1 on failure
+     _________________________________________________________________
+
+   Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team

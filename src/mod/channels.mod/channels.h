@@ -1,11 +1,11 @@
 /*
  * channels.h -- part of channels.mod
  *
- * $Id: channels.h,v 1.17 2001/06/28 19:01:14 guppy Exp $
+ * $Id: channels.h,v 1.19 2002/01/02 05:04:53 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -29,7 +29,7 @@
 #define UDEF_FLAG 1
 #define UDEF_INT 2
 
-#define MASKREASON_MAX	160	/* Max length of ban/invite/exempt/etc.
+#define MASKREASON_MAX	307	/* Max length of ban/invite/exempt/etc.
 				   reasons.				*/
 #define MASKREASON_LEN	(MASKREASON_MAX + 1)
 

@@ -2,11 +2,11 @@
  * cmdsnote.c -- part of notes.mod
  *   handles all notes interaction over the party line
  *
- * $Id: cmdsnote.c,v 1.12 2001/04/12 02:44:23 guppy Exp $
+ * $Id: cmdsnote.c,v 1.14 2002/01/02 08:06:15 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -245,4 +245,3 @@ static cmd_t notes_cmds[] =
   {"note",	"",	(Function) cmd_note,		NULL},
   {NULL,	NULL,	NULL,				NULL}
 };
-

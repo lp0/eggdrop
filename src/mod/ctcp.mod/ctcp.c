@@ -2,11 +2,11 @@
  * ctcp.c -- part of ctcp.mod
  *   all the ctcp handling (except DCC, it's special ;)
  *
- * $Id: ctcp.c,v 1.15 2001/07/17 19:53:41 guppy Exp $
+ * $Id: ctcp.c,v 1.17 2002/01/02 03:46:38 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -148,6 +148,11 @@ static int ctcp_CHAT(char *nick, char *uhost, char *handle, char *object,
   if ((atr & (USER_PARTY | USER_XFER)) ||
       ((atr & USER_OP) && !require_p)) {
 
+    if (u_pass_match(u, "-")) {
+      simple_sprintf(ctcp_reply, "%s\001ERROR no password set\001", ctcp_reply);
+      return 1;
+    }
+
     for (i = 0; i < dcc_total; i++) {
       if ((dcc[i].type->flags & DCT_LISTEN) &&
 	  (!strcmp(dcc[i].nick, "(telnet)") ||
@@ -162,8 +167,7 @@ static int ctcp_CHAT(char *nick, char *uhost, char *handle, char *object,
         return 1;
       }
     }
-    simple_sprintf(ctcp_reply, "%s\001ERROR no telnet port\001",
-                   ctcp_reply);
+    simple_sprintf(ctcp_reply, "%s\001ERROR no telnet port\001", ctcp_reply);
   }
   return 1;
 }

@@ -4,11 +4,11 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.59 2001/10/21 07:06:08 guppy Exp $
+ * $Id: modules.c,v 1.63 2002/01/02 03:46:36 guppy Exp $
  */
 /* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  * 
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -528,7 +528,7 @@ Function global_table[] =
   (Function) str_unescape,
   (Function) egg_strcatn,
   (Function) clear_chanlist_member,
-  (Function) 0,
+  (Function) fixfrom,
   /* 268 - 271 */
   (Function) & socklist,	/* sock_list *				*/
   (Function) sockoptions,

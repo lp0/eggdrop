@@ -2,11 +2,11 @@
  * userent.c -- handles:
  *   user-entry handling, new stylem more versatile.
  *
- * $Id: userent.c,v 1.21 2001/11/13 22:55:20 guppy Exp $
+ * $Id: userent.c,v 1.23 2002/01/02 03:46:36 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -595,7 +595,7 @@ static void botaddr_display(int idx, struct user_entry *e)
   register struct bot_addr *bi = (struct bot_addr *) e->u.extra;
 
   dprintf(idx, "  ADDRESS: %.70s\n", bi->address);
-  dprintf(idx, "     telnet: %d, relay: %d\n", bi->telnet_port, bi->relay_port);
+  dprintf(idx, "     users: %d, bots: %d\n", bi->relay_port, bi->telnet_port);
 }
 
 static int botaddr_gotshare(struct userrec *u, struct user_entry *e,

@@ -1,11 +1,11 @@
 /*
  * transfer.c -- part of transfer.mod
  *
- * $Id: transfer.c,v 1.44 2001/12/05 04:12:07 guppy Exp $
+ * $Id: transfer.c,v 1.50 2002/01/02 08:06:16 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -540,7 +540,7 @@ static void fileq_cancel(int idx, char *par)
   if (!matches)
     dprintf(idx,TRANSFER_NO_MATCHES);
   else
-    dprintf(idx, TRANSFER_CANCELLED_FILE, matches, matches > 1 ? "s" : "");
+    dprintf(idx, TRANSFER_CANCELLED_FILE, matches, (matches != 1) ? "s" : "");
   for (i = 0; i < atot; i++)
     if (!at_limit(dcc[idx].nick))
       send_next_file(dcc[idx].nick);
@@ -711,8 +711,6 @@ static void eof_dcc_fork_send(int idx)
     if (y != 0) {
       dcc[y].status &= ~STAT_GETTING;
       dcc[y].status &= ~STAT_SHARE;
-      debug0("(!) Could not find bot responsible for sending us the userfile "
-	     "for which the transfer failed.");
     }
     putlog(LOG_BOTS, "*", USERF_FAILEDXFER);
     unlink(dcc[idx].u.xfer->filename);
@@ -1430,18 +1428,21 @@ static void dcc_get_pending(int idx, char *buf, int len)
  *
  * Use raw_dcc_resend() and raw_dcc_send() instead of this function.
  */
+
 static int raw_dcc_resend_send(char *filename, char *nick, char *from,
 			       char *dir, int resend)
 {
   int zz, port, i;
   char *nfn, *buf = NULL;
-  struct stat ss;
-  FILE *f;
-
+  long dccfilesize;
+  FILE *f, *dccfile;
   zz = (-1);
-  stat(filename, &ss);
+  dccfile = fopen(filename,"r");
+  fseek(dccfile, 0, SEEK_END);
+  dccfilesize = ftell(dccfile);
+  fclose(dccfile);
   /* File empty?! */
-  if (ss.st_size == 0)
+  if (dccfilesize == 0)
     return DCCSEND_FEMPTY;
   if (reserved_port_min > 0 && reserved_port_min < reserved_port_max) {
     for (port = reserved_port_min; port <= reserved_port_max; port++) {
@@ -1478,7 +1479,7 @@ static int raw_dcc_resend_send(char *filename, char *nick, char *from,
   strcpy(dcc[i].u.xfer->origname, nfn);
   strcpy(dcc[i].u.xfer->from, from);
   strcpy(dcc[i].u.xfer->dir, dir);
-  dcc[i].u.xfer->length = ss.st_size;
+  dcc[i].u.xfer->length = dccfilesize;
   dcc[i].timeval = now;
   dcc[i].u.xfer->f = f;
   dcc[i].u.xfer->type = resend ? XFER_RESEND_PEND : XFER_SEND;
@@ -1486,7 +1487,7 @@ static int raw_dcc_resend_send(char *filename, char *nick, char *from,
     dprintf(DP_HELP, "PRIVMSG %s :\001DCC %sSEND %s %lu %d %lu\001\n", nick,
 	    resend ? "RE" :  "", nfn,
 	    iptolong(natip[0] ? (IP) inet_addr(natip) : getmyip()), port,
-	    ss.st_size);
+	    dccfilesize);
     putlog(LOG_FILES, "*",TRANSFER_BEGIN_DCC, resend ? TRANSFER_RE :  "",
 	   nfn, nick);
   }
@@ -1986,4 +1987,3 @@ char *transfer_start(Function *global_funcs)
   add_lang_section("transfer");
   return NULL;
 }
-

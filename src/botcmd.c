@@ -3,11 +3,11 @@
  *   commands that comes across the botnet
  *   userfile transfer and update commands from sharebots
  *
- * $Id: botcmd.c,v 1.21 2001/06/30 06:29:55 guppy Exp $
+ * $Id: botcmd.c,v 1.24 2002/01/02 03:46:35 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -79,16 +79,22 @@ static int fakesock = 2300;
 
 static void fake_alert(int idx, char *item, char *extra)
 {
+  static unsigned long lastfake;	/* The last time fake_alert was used */
+
+  if (now - lastfake > 10) {	
+    /* Don't fake_alert more than once every 10secs */
 #ifndef NO_OLD_BOTNET
-  if (b_numver(idx) < NEAT_BOTNET)
-    dprintf(idx, "chat %s NOTICE: %s (%s != %s).\n",
+    if (b_numver(idx) < NEAT_BOTNET)
+      dprintf(idx, "chat %s NOTICE: %s (%s != %s).\n",
 	    botnetnick, NET_FAKEREJECT, item, extra);
-  else
+    else
 #endif
-    dprintf(idx, "ct %s NOTICE: %s (%s != %s).\n",
+      dprintf(idx, "ct %s NOTICE: %s (%s != %s).\n",
 	    botnetnick, NET_FAKEREJECT, item, extra);
-  putlog(LOG_BOTS, "*", "%s %s (%s != %s).", dcc[idx].nick, NET_FAKEREJECT,
+    putlog(LOG_BOTS, "*", "%s %s (%s != %s).", dcc[idx].nick, NET_FAKEREJECT,
 	 item, extra);
+    lastfake = now;
+  }
 }
 
 /* chan <from> <chan> <text>
@@ -306,9 +312,15 @@ static void bot_bye(int idx, char *par)
 static void remote_tell_who(int idx, char *nick, int chan)
 {
   int i = 10, k, l, ok = 0;
-  char s[1024];
+  char s[1024], *realnick;
   struct chanset_t *c;
 
+  realnick = strchr(nick, ':');
+  if (realnick)
+    realnick++;
+  else
+    realnick = nick;
+  putlog(LOG_BOTS, "*", "#%s# who", realnick);
   strcpy(s, "Channels: ");
   for (c = chanset; c; c = c->next)
     if (!channel_secret(c)) {

@@ -3,11 +3,11 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.66 2001/12/04 19:58:06 guppy Exp $
+ * $Id: cmds.c,v 1.69 2002/01/02 03:46:35 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -50,7 +50,7 @@ extern Tcl_Interp	*interp;
 extern char		 botnetnick[], origbotname[], ver[], network[],
 			 owner[], spaces[], quit_msg[];
 extern time_t		 now, online_since;
-
+extern module_entry	*module_list;
 
 static char	*btos(unsigned long);
 
@@ -366,6 +366,12 @@ static void cmd_motd(struct userrec *u, int idx, char *par)
     putlog(LOG_CMDS, "*", "#%s# motd", dcc[idx].nick);
     show_motd(idx);
   }
+}
+
+static void cmd_sex(struct userrec *u, int idx, char *par)
+{
+  dprintf(idx, "* %s says not today, I have a headache :(\n", botnetnick);
+  return;
 }
 
 static void cmd_away(struct userrec *u, int idx, char *par)
@@ -1586,7 +1592,7 @@ static void cmd_chattr(struct userrec *u, int idx, char *par)
   if (chg && (me = module_find("irc", 0, 0))) {
     Function *func = me->funcs;
 
-    (func[IRC_CHECK_THIS_USER]) (hand);
+    (func[IRC_CHECK_THIS_USER]) (hand, 0, NULL);
   }
   if (tmpchg)
     nfree(tmpchg);
@@ -2390,6 +2396,7 @@ static void cmd_mns_user(struct userrec *u, int idx, char *par)
   int idx2;
   char *handle;
   struct userrec *u2;
+  module_entry *me;
 
   if (!par[0]) {
     dprintf(idx, "Usage: -user <hand>\n");
@@ -2427,6 +2434,11 @@ static void cmd_mns_user(struct userrec *u, int idx, char *par)
       !(u2->flags & USER_BOT)) {
     dprintf(idx, "Can't remove users who aren't bots!\n");
     return;
+  }
+  if ((me = module_find("irc", 0, 0))) {
+    Function *func = me->funcs;
+
+   (func[IRC_CHECK_THIS_USER]) (handle, 1, NULL);
   }
   if (deluser(handle)) {
     putlog(LOG_CMDS, "*", "#%s# -user %s", dcc[idx].nick, handle);
@@ -2501,7 +2513,7 @@ static void cmd_pls_host(struct userrec *u, int idx, char *par)
   if ((me = module_find("irc", 0, 0))) {
     Function *func = me->funcs;
 
-   (func[IRC_CHECK_THIS_USER]) (handle);
+   (func[IRC_CHECK_THIS_USER]) (handle, 0, NULL);
   }
 }
 
@@ -2510,6 +2522,7 @@ static void cmd_mns_host(struct userrec *u, int idx, char *par)
   char *handle, *host;
   struct userrec *u2;
   struct flag_record fr = {FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  module_entry *me;
 
   if (!par[0]) {
     dprintf(idx, "Usage: -host [handle] <hostmask>\n");
@@ -2558,6 +2571,11 @@ static void cmd_mns_host(struct userrec *u, int idx, char *par)
   if (delhost_by_handle(handle, host)) {
     putlog(LOG_CMDS, "*", "#%s# -host %s %s", dcc[idx].nick, handle, host);
     dprintf(idx, "Removed '%s' from %s\n", host, handle);
+    if ((me = module_find("irc", 0, 0))) {
+      Function *func = me->funcs;
+
+     (func[IRC_CHECK_THIS_USER]) (handle, 2, host);
+    }
   } else
     dprintf(idx, "Failed.\n");
 }
@@ -2565,13 +2583,20 @@ static void cmd_mns_host(struct userrec *u, int idx, char *par)
 static void cmd_modules(struct userrec *u, int idx, char *par)
 {
   int ptr;
+  char *bot;
+  module_entry *me;
 
-  if (!par[0])
-    dprintf(idx, "Usage: modules <bot>\n");
-  else {
     putlog(LOG_CMDS, "*", "#%s# modules %s", dcc[idx].nick, par);
-    if ((ptr = nextbot(par)) >= 0)
-      dprintf(ptr, "v %s %s %d:%s\n", botnetnick, par, dcc[idx].sock,
+
+  if (!par[0]) {  
+    dprintf(idx, "Modules loaded:\n");
+    for (me = module_list; me; me = me->next)
+      dprintf(idx, "  Module: %s (v%d.%d)\n", me->name, me->major, me->minor);
+    dprintf(idx, "End of modules list.\n");
+  } else {
+    bot = newsplit(&par);
+    if ((ptr = nextbot(bot)) >= 0)
+      dprintf(ptr, "v %s %s %d:%s\n", botnetnick, bot, dcc[idx].sock,
 	      dcc[idx].nick);
     else
       dprintf(idx, "No such bot online.\n");
@@ -2730,6 +2755,7 @@ cmd_t C_dcc[] =
   {"module",		"m",	(Function) cmd_module,		NULL},
   {"modules",		"n",	(Function) cmd_modules,		NULL},
   {"motd",		"",	(Function) cmd_motd,		NULL},
+  {"sex",		"",	(Function) cmd_sex,		NULL},
   {"newpass",		"",	(Function) cmd_newpass,		NULL},
   {"handle",		"",	(Function) cmd_handle,		NULL},
   {"nick",		"",	(Function) cmd_handle,		NULL},

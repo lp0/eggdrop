@@ -2,11 +2,11 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  *
- * $Id: channels.c,v 1.57 2001/11/28 23:17:41 guppy Exp $
+ * $Id: channels.c,v 1.59 2002/01/02 03:46:37 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -387,7 +387,7 @@ static void write_channels()
   if (!quiet_save)
     putlog(LOG_MISC, "*", "Writing channel file ...");
   fprintf(f, "#Dynamic Channel File for %s (%s) -- written %s\n",
-	  origbotname, ver, ctime(&now));
+	  botnetnick, ver, ctime(&now));
   for (chan = chanset; chan; chan = chan->next) {
     convert_element(chan->dname, name);
     get_mode_protect(chan, w);

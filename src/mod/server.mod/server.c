@@ -2,11 +2,11 @@
  * server.c -- part of server.mod
  *   basic irc server support
  *
- * $Id: server.c,v 1.73 2001/11/29 04:43:38 guppy Exp $
+ * $Id: server.c,v 1.75 2002/01/02 03:46:40 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1321,6 +1321,7 @@ static tcl_ints my_tcl_ints[] =
   {"double-help",		&double_help,			0},
   {"use-penalties",		&use_penalties,			0},
   {"use-fastdeq",		&use_fastdeq,			0},
+  {"nicklen",			&nick_len,			0},
   {"nick-len",			&nick_len,			0},
   {"optimize-kicks",		&optimize_kicks,		0},
   {"isjuped",			&nick_juped,			0},

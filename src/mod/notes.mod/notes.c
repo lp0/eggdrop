@@ -5,11 +5,11 @@
  *   note cmds
  *   note ignores
  *
- * $Id: notes.c,v 1.33 2001/11/14 16:25:48 guppy Exp $
+ * $Id: notes.c,v 1.37 2002/01/02 08:06:15 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -311,7 +311,7 @@ static int tcl_storenote STDVAR
 	    from = p + 1;
 	}
 	fprintf(f, "%s %s %lu %s%s\n", to, from, now,
-		l ? work : "", argv[3]);
+		l ? work : "", blah);
 	fclose(f);
 	if (idx >= 0)
 	  dprintf(idx, "%s.\n", NOTES_STORED_MESSAGE);
@@ -651,10 +651,10 @@ static void notes_del(char *hand, char *nick, char *sdl, int idx)
     } else {
       if (idx >= 0)
 	dprintf(idx, "%s %d note%s; %d %s.\n", NOTES_ERASED, er,
-		er > 1 ? "s" : "", in - 1 - er, NOTES_LEFT);
+		(er != 1) ? "s" : "", in - 1 - er, NOTES_LEFT);
       else
 	dprintf(DP_HELP, "NOTICE %s :%s %d note%s; %d %s.\n", nick, MISC_ERASED,
-		er, (er > 1) ? "s" : "", in - 1 - er, NOTES_LEFT);
+		er, (er != 1) ? "s" : "", in - 1 - er, NOTES_LEFT);
     }
   }
 }
@@ -1243,4 +1243,3 @@ char *notes_start(Function * global_funcs)
   add_entry_type(&USERENTRY_FWD);
   return NULL;
 }
-

@@ -1,13 +1,12 @@
 /*
  * tclmisc.c -- handles:
- *   Tcl stubs for file system commands
  *   Tcl stubs for everything else
  *
- * $Id: tclmisc.c,v 1.26 2001/09/29 06:33:21 guppy Exp $
+ * $Id: tclmisc.c,v 1.29 2002/01/02 03:46:36 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -485,7 +484,7 @@ static int tcl_loadmodule STDVAR
 static int tcl_unloadmodule STDVAR
 {
   BADARGS(2, 2, " module-name");
-  Tcl_AppendResult(irp, module_unload(argv[1], origbotname), NULL);
+  Tcl_AppendResult(irp, module_unload(argv[1], botnetnick), NULL);
   return TCL_OK;
 }
 

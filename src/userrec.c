@@ -4,11 +4,11 @@
  *   a bunch of functions to find and change user records
  *   change and check user (and channel-specific) flags
  *
- * $Id: userrec.c,v 1.35 2001/10/14 18:10:31 poptix Exp $
+ * $Id: userrec.c,v 1.37 2002/01/02 03:46:36 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -172,7 +172,7 @@ int count_users(struct userrec *bu)
 /* Convert "nick!~user@host", "nick!+user@host" and "nick!-user@host"
  * to "nick!user@host" if necessary. (drummer)
  */
-static char *fixfrom(char *s)
+char *fixfrom(char *s)
 {
   char *p;
   static char buf[512];

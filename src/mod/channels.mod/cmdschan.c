@@ -2,11 +2,11 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  *
- * $Id: cmdschan.c,v 1.46 2001/11/15 14:11:02 poptix Exp $
+ * $Id: cmdschan.c,v 1.48 2002/01/02 03:46:37 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1203,7 +1203,7 @@ static void cmd_chaninfo(struct userrec *u, int idx, char *par)
       if (chan->need_key[0])
 	dprintf(idx, "To get key (need-key):\n%s\n", chan->need_key);
       if (chan->need_unban[0])
-	dprintf(idx, "If Im banned (need-unban):\n%s\n", chan->need_unban);
+	dprintf(idx, "If I'm banned (need-unban):\n%s\n", chan->need_unban);
       if (chan->need_limit[0])
 	dprintf(idx, "When channel full (need-limit):\n%s\n", chan->need_limit);
     }

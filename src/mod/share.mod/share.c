@@ -1,11 +1,11 @@
 /*
  * share.c -- part of share.mod
  *
- * $Id: share.c,v 1.58 2001/12/03 03:02:41 guppy Exp $
+ * $Id: share.c,v 1.63 2002/01/02 08:06:16 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1240,7 +1240,7 @@ static void share_endstartup(int idx, char *par)
 
 static void share_end(int idx, char *par)
 {
-  putlog(LOG_BOTS, "*", "Ending sharing with %s, (%s).", dcc[idx].nick, par);
+  putlog(LOG_BOTS, "*", "Ending sharing with %s (%s).", dcc[idx].nick, par);
   cancel_user_xfer(-idx, 0);
   dcc[idx].status &= ~(STAT_SHARE | STAT_GETTING | STAT_SENDING |
 		       STAT_OFFERED | STAT_AGGRESSIVE);
@@ -1600,7 +1600,7 @@ static int write_tmp_userfile(char *fn, struct userrec *bu, int idx)
     putlog(LOG_MISC, "*", USERF_ERRWRITE2);
   else {
     chmod(fn, 0600);		/* make it -rw------- */
-    fprintf(f, "#4v: %s -- %s -- transmit\n", ver, origbotname);
+    fprintf(f, "#4v: %s -- %s -- transmit\n", ver, botnetnick);
     ok = 1;
     for (u = bu; u && ok; u = u->next)
       ok = write_user(u, f, idx);
@@ -1824,6 +1824,7 @@ static void finish_share(int idx)
 
 	u->flags = (u2->flags & pgbm) | (u->flags & ~pgbm);
       }
+      noshare = 1;
       for (cr = u2->chanrec; cr; cr = cr_next) {
 	struct chanset_t *chan = findchan_by_dname(cr->channel);
 
@@ -1857,6 +1858,7 @@ static void finish_share(int idx)
 	  }
 	}
       }
+      noshare = 0;
       /* Any unshared user entries need copying over */
       for (ue = u2->entries; ue; ue = ue->next)
 	if (ue->type && !ue->type->got_share && ue->type->dup_user)
@@ -2225,4 +2227,3 @@ int private_globals_bitmask()
   break_down_flags(private_globals, &fr, 0);
   return fr.global;
 }
-

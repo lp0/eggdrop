@@ -7,11 +7,11 @@
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
  *
- * $Id: proto.h,v 1.46 2001/09/23 20:17:47 guppy Exp $
+ * $Id: proto.h,v 1.48 2002/01/02 03:46:36 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
- * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ * Copyright (C) 1999, 2000, 2001, 2002 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -291,6 +291,7 @@ void write_userfile(int);
 struct userrec *check_dcclist_hand(char *);
 void touch_laston(struct userrec *, char *, time_t);
 void user_del_chan(char *);
+char *fixfrom(char *);
 
 /* users.c */
 void addignore(char *, char *, char *, time_t);
