@@ -84,7 +84,7 @@ struct chanset_t {
   struct {
     char *op;
     char type;
-  } cmode[MODES_PER_LINE];  /* parameter-type mode changes */
+  } cmode[6];  /* parameter-type mode changes - */
   /* detect mass-deop */
   char deopnick[NICKLEN];   /* last person to deop */
   char deopd[NICKLEN];      /* last person deop'd (must change) */
@@ -115,6 +115,8 @@ struct chanset_t {
 #define CHANPEND    0x2000  /* just joined; waiting for end of WHO list */
 #define CHANFLAGGED 0x4000  /* flagged during rehash for delete */
 #define CHANSTATIC  0x8000  /* channels that are NOT dynamic */
+#define CHAN_SHARED  0x10000 /* channel is being shared */
+
 
 /* prototypes */
 memberlist *ismember();

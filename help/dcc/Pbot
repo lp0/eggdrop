@@ -1,5 +1,5 @@
 %{+B}
-###  +bot <bot> <address:botport#/userport#>
+###  +bot <bot> <address:botport#[/userport#]>
    creates a user record for a new bot with the nickname given.
    the hostmask table have one entry ("none"), and the bot (b)
    flag will be set for the user.  the internet address field of

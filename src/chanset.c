@@ -40,6 +40,8 @@ extern int nulluser;
 struct chanset_t *chanset=NULL;
 /* where channel records are stored */
 char chanfile[121]="";
+/* time to wait for user to return for net-split */
+int wait_split = 300;
 
 
 /* memory expected to be used by this module */
@@ -63,7 +65,7 @@ int expmem_chan()
 }    
 
 /* find a chanset by channel name */
-struct chanset_t *findchan(char *name)
+struct chanset_t *findchan PROTO1(char *,name)
 {
   struct chanset_t *chan=chanset;
   while (chan!=NULL) {
@@ -82,7 +84,7 @@ struct chanset_t *newchanset()
 }
 
 /* add a chanset pointer to the list */
-void addchanset(struct chanset_t *chan)
+void addchanset PROTO1(struct chanset_t *,chan)
 {
   struct chanset_t *c=chanset,*old=NULL;
   chan->next=NULL;
@@ -95,7 +97,7 @@ void addchanset(struct chanset_t *chan)
 
 /* destroy a chanset in the list */
 /* does NOT free up memory associated with channel data inside the chanset! */
-int killchanset(char *name)
+int killchanset PROTO1(char *,name)
 {
   struct chanset_t *c=chanset,*old=NULL;
   while (c!=NULL) {
@@ -110,7 +112,7 @@ int killchanset(char *name)
 }
 
 /* get channels list */
-void getchanlist(char *s, int maxlen)
+void getchanlist PROTO2(char *,s,int,maxlen)
 {
   struct chanset_t *chan=chanset;
   s[0]=0;
@@ -123,7 +125,7 @@ void getchanlist(char *s, int maxlen)
 }
 
 /* set the key */
-void set_key(struct chanset_t *chan, char *k)
+void set_key PROTO2(struct chanset_t *,chan, char *,k)
 {
   nfree(chan->channel.key);
   if (k==NULL) {
@@ -135,18 +137,18 @@ void set_key(struct chanset_t *chan, char *k)
 }
 
 /* is this channel +s/+p? */
-int channel_hidden(struct chanset_t *chan)
+int channel_hidden PROTO1(struct chanset_t *,chan)
 {
   return (chan->channel.mode&(CHANPRIV|CHANSEC));
 }
 
 /* is this channel +t? */
-int channel_optopic(struct chanset_t *chan)
+int channel_optopic PROTO1(struct chanset_t *,chan)
 {
   return (chan->channel.mode&CHANTOPIC);
 }
 
-int hand_on_chan(struct chanset_t *chan, char *handle)
+int hand_on_chan PROTO2(struct chanset_t *,chan, char *,handle)
 {
   char s[UHOSTLEN],h[10];
   memberlist *m=chan->channel.member;
@@ -160,7 +162,7 @@ int hand_on_chan(struct chanset_t *chan, char *handle)
 }
 
 /* initialize out the channel record */
-void init_channel(struct chanset_t *chan)
+void init_channel PROTO1(struct chanset_t *,chan)
 {
   chan->channel.maxmembers=(-1);  
   chan->channel.mode=0; chan->channel.members=0;
@@ -175,7 +177,7 @@ void init_channel(struct chanset_t *chan)
 }
 
 /* clear out channel data from memory */
-void clear_channel(struct chanset_t *chan, int reset)
+void clear_channel PROTO2(struct chanset_t *,chan, int,reset)
 {
   memberlist *m,*m1; banlist *b,*b1;
   nfree(chan->channel.key);
@@ -203,7 +205,7 @@ void clear_channels()
 
 /* shortcut for get_user_by_host -- might have user record in one */
 /* of the channel caches */
-struct userrec *check_chanlist(char *host)
+struct userrec *check_chanlist PROTO1(char *,host)
 {
   char nick[NICKLEN],uhost[UHOSTLEN],s1[NICKLEN]; memberlist *m;
   struct chanset_t *chan;
@@ -224,7 +226,7 @@ struct userrec *check_chanlist(char *host)
 }
 
 /* shortcut for get_user_by_handle -- might have user record in channels */
-struct userrec *check_chanlist_hand(char *hand)
+struct userrec *check_chanlist_hand PROTO1(char *,hand)
 {
   struct chanset_t *chan=chanset; memberlist *m;
   while (chan!=NULL) {
@@ -255,7 +257,7 @@ void clear_chanlist()
 }
 
 /* if this user@host is in a channel, set it (it was null) */
-void set_chanlist(char *host, struct userrec *rec)
+void set_chanlist PROTO2(char *,host, struct userrec *,rec)
 {
   char nick[NICKLEN],uhost[UHOSTLEN]; memberlist *m;
   struct chanset_t *chan=chanset;
@@ -271,7 +273,7 @@ void set_chanlist(char *host, struct userrec *rec)
   }
 }
 
-int defined_channel(char *name)
+int defined_channel PROTO1(char *,name)
 {
   struct chanset_t *chan;
   chan=findchan(name);
@@ -279,7 +281,7 @@ int defined_channel(char *name)
   return 1;
 }
 
-int active_channel(char *name)
+int active_channel PROTO1(char *,name)
 {
   struct chanset_t *chan;
   chan=findchan(name);
@@ -289,7 +291,7 @@ int active_channel(char *name)
 }
 
 /* returns a pointer to a new channel member structure */
-memberlist *newmember(struct chanset_t *chan)
+memberlist *newmember PROTO1(struct chanset_t *,chan)
 {
   memberlist *x;
   x=chan->channel.member;
@@ -304,7 +306,7 @@ memberlist *newmember(struct chanset_t *chan)
 }
 
 /* adds a ban to the list */
-void newban(struct chanset_t *chan, char *s, char *who)
+void newban PROTO3(struct chanset_t *,chan, char *,s, char *,who)
 {
   banlist *b;
   b=chan->channel.ban;
@@ -321,7 +323,7 @@ void newban(struct chanset_t *chan, char *s, char *who)
 }
 
 /* removes a nick from the channel member list (returns 1 if successful) */
-int killmember(struct chanset_t *chan, char *nick)
+int killmember PROTO2(struct chanset_t *,chan, char *,nick)
 {
   memberlist *x,*old;
   x=chan->channel.member; old=NULL;
@@ -336,7 +338,7 @@ int killmember(struct chanset_t *chan, char *nick)
 }
 
 /* removes a ban from the list */
-int killban(struct chanset_t *chan, char *s)
+int killban PROTO2(struct chanset_t *,chan, char *,s)
 {
   banlist *b,*old;
   b=chan->channel.ban; old=NULL;
@@ -348,7 +350,7 @@ int killban(struct chanset_t *chan, char *s)
 }
 
 /* returns memberfields if the nick is in the member list */
-memberlist *ismember(struct chanset_t *chan, char *nick)
+memberlist *ismember PROTO2(struct chanset_t *,chan, char *,nick)
 {
   memberlist *x;
   x=chan->channel.member;
@@ -358,7 +360,7 @@ memberlist *ismember(struct chanset_t *chan, char *nick)
 }
 
 /* boolean form for other modules to use */
-int ischanmember(char *chname,char *nick)
+int ischanmember PROTO2(char *,chname,char *,nick)
 {
   struct chanset_t *chan;
   chan=findchan(chname); if (chan==NULL) return 0;
@@ -366,7 +368,7 @@ int ischanmember(char *chname,char *nick)
 }
 
 /* am i a chanop? */
-int me_op(struct chanset_t *chan)
+int me_op PROTO1(struct chanset_t *,chan)
 {
   memberlist *mx=NULL;
   if (newbotname[0]) mx=ismember(chan,newbotname);
@@ -376,7 +378,7 @@ int me_op(struct chanset_t *chan)
 }
 
 /* are there any ops on the channel? */
-int any_ops(struct chanset_t *chan)
+int any_ops PROTO1(struct chanset_t *,chan)
 {
   memberlist *x=chan->channel.member;
   while ((x->nick[0]) && (!(x->flags&CHANOP))) x=x->next;
@@ -385,7 +387,7 @@ int any_ops(struct chanset_t *chan)
 }
 
 /* returns true if this is one of the channel bans */
-int isbanned(struct chanset_t *chan, char *user)
+int isbanned PROTO2(struct chanset_t *,chan, char *,user)
 {
   banlist *b;
   b=chan->channel.ban;
@@ -394,7 +396,7 @@ int isbanned(struct chanset_t *chan, char *user)
   return 1;
 }
 
-void getchanhost(char *chname,char *nick,char *host)
+void getchanhost PROTO3(char *,chname,char *,nick,char *,host)
 {
   struct chanset_t *chan; memberlist *m;
   host[0]=0;
@@ -403,7 +405,7 @@ void getchanhost(char *chname,char *nick,char *host)
   strcpy(host,m->userhost);
 }
 
-int is_split(char *chname,char *nick)
+int is_split PROTO2(char *,chname,char *,nick)
 {
   memberlist *m; struct chanset_t *chan;
   chan=findchan(chname); if (chan==NULL) return 0;
@@ -434,7 +436,7 @@ void check_expired_chanbans()
 }
 
 /* kick anyone off the channel who matches a ban */
-void kick_match_ban(struct chanset_t *chan, char *ban)
+void kick_match_ban PROTO2(struct chanset_t *,chan, char *,ban)
 {
   memberlist *m; char s[UHOSTLEN];
   if (!(chan->stat&CHAN_ENFORCEBANS)) return;
@@ -449,7 +451,8 @@ void kick_match_ban(struct chanset_t *chan, char *ban)
 
 /* kick everyone on the channel with matching 
    hostmask that joined since the time stamp */
-void kick_match_since(struct chanset_t *chan, char *mask, time_t timestamp)
+void kick_match_since PROTO3(struct chanset_t *,chan, char *,mask, 
+			     time_t,timestamp)
 {
   char s[UHOSTLEN]; memberlist *m=chan->channel.member; 
   while (m->nick[0]) {
@@ -461,7 +464,7 @@ void kick_match_since(struct chanset_t *chan, char *mask, time_t timestamp)
 }
 
 /* resets the bans on the channel */
-void resetbans(struct chanset_t *chan)
+void resetbans PROTO1(struct chanset_t *,chan)
 {
   banlist *b=chan->channel.ban;
   if (!me_op(chan)) return;   /* can't do it */
@@ -476,7 +479,7 @@ void resetbans(struct chanset_t *chan)
 }
 
 /* remove any bogus bans */
-void kill_bogus_bans(struct chanset_t *chan)
+void kill_bogus_bans PROTO1(struct chanset_t *,chan)
 {
   banlist *b=chan->channel.ban; int bogus,i;
   if (!me_op(chan)) return;
@@ -490,20 +493,21 @@ void kill_bogus_bans(struct chanset_t *chan)
 }
 
 /* check that this person has ops on all AUTOOP channels */
-void recheck_ops(char *nick,char *hand)
+void recheck_ops PROTO2(char *,nick,char *,hand)
 {
   struct chanset_t *chan=chanset; int chatr,atr=get_attr_handle(hand);
   while (chan!=NULL) {
     chatr=get_chanattr_handle(hand,chan->name);
     if ((chan->stat & CHAN_OPONJOIN) &&
-	((chatr & CHANUSER_OP) || (atr & USER_GLOBAL)))
+	((chatr & CHANUSER_OP) || 
+	 ((atr & USER_GLOBAL) && !(chatr&CHANUSER_DEOP))))
       add_mode(chan,'+','o',nick);
     chan=chan->next;
   }
 }
 
 /* things to do when i just became a chanop: */
-void recheck_channel(struct chanset_t *chan)
+void recheck_channel PROTO1(struct chanset_t *,chan)
 {
   memberlist *m; char s[UHOSTLEN],hand[10]; int chatr,atr;
   /* okay, sort through who needs to be deopped. */
@@ -519,18 +523,21 @@ void recheck_channel(struct chanset_t *chan)
     }
     else {
       if ((m->flags&CHANOP) && ((chatr & CHANUSER_DEOP) ||
+	  ((atr & USER_DEOP) && !(chatr & CHANUSER_OP))) &&
 	  ((chan->stat&CHAN_BITCH) &&
-	  (!(chatr & CHANUSER_OP) && !(atr & USER_GLOBAL)))))
+	  (!(chatr & CHANUSER_OP) && 
+	   !((atr & USER_GLOBAL) && !(chatr & CHANUSER_DEOP)))))
 	add_mode(chan,'-','o',m->nick);
       if ((!(m->flags&CHANOP)) &&
-	  ((chatr & CHANUSER_OP) || (atr & USER_GLOBAL)) &&
+	  ((chatr & CHANUSER_OP) || 
+	   ((atr & USER_GLOBAL) && !(chatr & CHANUSER_DEOP))) &&
 	  (chan->stat&CHAN_OPONJOIN))
 	add_mode(chan,'+','o',m->nick);
       if ((chan->stat&CHAN_ENFORCEBANS) &&
 	  ((match_ban(s)) || (u_match_ban(chan->bans,s))))
 	refresh_ban_kick(chan,s,m->nick);
       /* ^ will use the ban comment */
-      else if (chatr & CHANUSER_KICK) {
+      else if ((chatr & CHANUSER_KICK) || (atr & USER_KICK)) {
 	quickban(chan,m->userhost);
 	get_handle_comment(hand,s);
 	if (!s[0])
@@ -554,13 +561,13 @@ void recheck_channels()
   }
 }
 
-void newly_chanop(struct chanset_t *chan)
+void newly_chanop PROTO1(struct chanset_t *,chan)
 {
   recheck_channel(chan);
 }
 
 /* is user x a chanop? */
-int member_op(char *chname,char *x)
+int member_op PROTO2(char *,chname,char *,x)
 {
   memberlist *mx; struct chanset_t *chan;
   chan=findchan(chname); if (chan==NULL) return 0;
@@ -569,7 +576,7 @@ int member_op(char *chname,char *x)
 }
 
 /* is user x a voice? (+v) */
-int member_voice(char *chname,char *x)
+int member_voice PROTO2(char *,chname,char *,x)
 {
   memberlist *mx; struct chanset_t *chan;
   chan=findchan(chname); if (chan==NULL) return 0;
@@ -578,7 +585,7 @@ int member_voice(char *chname,char *x)
 }
 
 /* reset the channel information */
-void reset_chan_info(struct chanset_t *chan)
+void reset_chan_info PROTO1(struct chanset_t *,chan)
 {
   clear_channel(chan,1);
   chan->stat|=CHANPEND;
@@ -591,7 +598,7 @@ void reset_chan_info(struct chanset_t *chan)
 /*  if i'm the only person on the channel, and i'm not op'd,   *
  *  might as well leave and rejoin. If i'm NOT the only person *
  *  on the channel, but i'm still not op'd, demand ops         */
-void check_lonely_channel(struct chanset_t *chan)
+void check_lonely_channel PROTO1(struct chanset_t *,chan)
 {
   memberlist *m; char s[UHOSTLEN]; int i=0; static int whined=0;
   context;
@@ -663,7 +670,7 @@ void check_expired_splits()
       if (m->split) {
 	n=m->next;
 	if (!(chan->stat&CHANACTIVE)) killmember(chan,m->nick);
-	else if (now-(m->split) > WAIT_SPLIT) {
+	else if (now-(m->split) > wait_split) {
 	  sprintf(s,"%s!%s",m->nick,m->userhost);
 	  get_handle_by_host(hand,s);
 	  check_tcl_sign(m->nick,m->userhost,hand,chan->name,
@@ -696,7 +703,7 @@ void check_idle_kick()
 	  sprintf(s,"%s!%s",m->nick,m->userhost);
 	  atr=get_attr_host(s);
 	  chatr=get_chanattr_host(s,chan->name);
-	  if (!(atr & (USER_MASTER|USER_BOT|USER_GLOBAL)) &&
+	  if (!(atr & (USER_MASTER|USER_FRIEND|USER_BOT|USER_GLOBAL)) &&
 	      !(chatr & (CHANUSER_MASTER|CHANUSER_FRIEND|CHANUSER_OP)))
 	    mprintf(serv,"KICK %s %s :idle %d min\n",chan->name,m->nick,
 		    chan->idle_kick);
@@ -718,7 +725,7 @@ void update_idle(char *chname,char *nick)
 }
 
 /* write channel's local banlist to a file */
-int write_chanbans(FILE *f)
+int write_chanbans PROTO1(FILE *,f)
 {
   struct chanset_t *chan; struct eggqueue *q;
   chan=chanset; while (chan!=NULL) {
@@ -734,7 +741,7 @@ int write_chanbans(FILE *f)
 }
 
 /* channel ban loaded from user file */
-void restore_chanban(char *chname,char *host)
+void restore_chanban PROTO2(char *,chname,char *,host)
 {
   struct chanset_t *chan;
   chan=findchan(chname); if (chan==NULL) {

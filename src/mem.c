@@ -41,7 +41,37 @@ struct {
 } memtbl[MEMTBLSIZE];
 #endif
 
-/* Prototypes */
+#ifdef STDC_HEADERS
+#define PROTO(x) x
+#define PROTO1(a,b) (a b)
+#define PROTO2(a1,b1,a2,b2) (a1 b1, a2 b2) 
+#define PROTO3(a1,b1,a2,b2,a3,b3) (a1 b1, a2 b2, a3 b3)
+#define PROTO4(a1,b1,a2,b2,a3,b3,a4,b4) \
+              (a1 b1, a2 b2, a3 b3, a4 b4)
+#define PROTO5(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5) \
+              (a1 b1, a2 b2, a3 b3, a4 b4, a5 b5)
+#define PROTO6(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5,a6,b6) \
+              (a1 b1, a2 b2, a3 b3, a4 b4, a5 b5, a6 b6)
+#else
+#define PROTO(x) ()
+#define PROTO1(a,b) (b) a b;
+#define PROTO2(a1,b1,a2,b2) (b1, b2) a1 b1; a2 b2; 
+#define PROTO3(a1,b1,a2,b2,a3,b3) (b1, b2, b3) a1 b1; a2 b2; a3 b3;
+#define PROTO4(a1,b1,a2,b2,a3,b3,a4,b4) (b1, b2, b3, b4) \
+              a1 b1; a2 b2; a3 b3; a4 b4;
+#define PROTO5(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5) \
+              (b1, b2, b3, b4, b5) \
+              a1 b1; a2 b2; a3 b3; a4 b4; a5 b5;
+#define PROTO6(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5,a6,b6) \
+              (b1, b2, b3, b4, b5, b6) \
+              a1 b1; a2 b2; a3 b3; a4 b4; a5 b5; a6 b6;
+#endif
+
+#ifdef HAVE_DPRINTF 
+#define dprintf dprintf_eggdrop
+#endif
+
+/* prototypes */
 void mprintf();
 void tprintf();
 void dprintf();
@@ -71,7 +101,7 @@ void init_mem()
 }
 
 /* tell someone the gory memory details */
-void tell_mem_status(char *nick)
+void tell_mem_status PROTO1(char *,nick)
 {
 #ifdef DEBUG
   float per;
@@ -83,7 +113,7 @@ void tell_mem_status(char *nick)
 	  (int)(expected_memory()/1024));
 }
 
-void tell_mem_status_dcc(int idx)
+void tell_mem_status_dcc PROTO1(int,idx)
 {
 #ifdef DEBUG
   int exp; float per;
@@ -99,7 +129,7 @@ void tell_mem_status_dcc(int idx)
 #endif
 }
 
-void debug_mem_to_dcc(int idx)
+void debug_mem_to_dcc PROTO1(int,idx)
 {
 #ifdef DEBUG
   unsigned long exp[11],use[11],l; int i,j; char fn[20],sofar[81];
@@ -191,7 +221,7 @@ void debug_mem_to_dcc(int idx)
   debug_blowfish(idx);
 }
 
-void *n_malloc(int size,char *file,int line)
+void *n_malloc PROTO3(int,size,char *,file,int,line)
 {
   void *x; int i=0;
   x=(void *)malloc(size);
@@ -213,7 +243,7 @@ void *n_malloc(int size,char *file,int line)
   return x;
 }
 
-void *n_realloc(void *ptr,int size,char *file,int line)
+void *n_realloc PROTO4(void *,ptr,int,size,char *,file,int,line)
 {
   void *x; int i=0;
   x=(void *)realloc(ptr,size);
@@ -237,7 +267,7 @@ void *n_realloc(void *ptr,int size,char *file,int line)
   return x;
 }
 
-void n_free(void *ptr,char *file,int line)
+void n_free PROTO3(void *,ptr,char *,file,int,line)
 {
   int i=0;
   if (ptr==NULL) {

@@ -1,0 +1,5 @@
+%{+n}
+### set max-notes <#>
+     sets the maximum number of notes a user may have stored for them
+     on the bot. once this is full, no more notes will be accepted
+     for the user

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set default-flags <flags>
    specifies the flags to give to a user when they first
    introduce themselves to the bot with /MSG HELLO.  obviously

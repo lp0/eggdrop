@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set temp-path <path>
    specifies a temporary directory where eggdrop can store
    files for a short period of time.  right now this is used

@@ -1,5 +1,156 @@
+
+TO-DO:  LEAVE THIS HERE WHERE WE CAN SEE IT :)
+"""""
+- files '.mv' move directories  [andrej]
+- '.sort' to sort files
+
+BUG REPORTS:
+* DCC sends are causing memory leaks on some systems.  This affects shared
+  userfile transfers
+* Some tcl scripts handling idxes that worked before are spitting out invalid
+  idx errors
+* tcl8.0 doesnt like eggdrop in some situations
+
+SUGGESTIONS:
+
+* Make +u channel specific so it shares info from all but that channel.
+* Channel specific file ownerships (ie, only people on a certain channel
+  can get certain files)
+* Move more things into NO_IRC such as bans and hostmasks
+
 Changes in eggdrop:
 """"""""""""""""""
+
+v1.1.2
+
+* .assoc wasnt working right for local channels [found by David-] [beldin]
+* minor fix to getop-1.7.tcl [dtm]
+* change optimization back to -O2 saving executable size & sunos/bsd 
+  crashes [beldin]
+* version number is now in the form   abbccdd   a = major ver. (1 atm)
+  bb = minor ver (1 atm) cc = revision (2 atm) dd = patch count
+* tcl assoc "channel name" return channel number [suggested by Eraseme]
+  [beldin]
+* made .banner neater (1 line) [suggest by Eraseme] [beldin]
+* -chan was leaving dccchat users with that channel in a mess [beldin]
+* more help files [beldin]
+
+v1.1.1+pl2(wild/bel)
+
+* made ctcp_version default acutally SAY eggdrop, and sanity check on string
+  lengths [beldin]
+* tcl isdynamic & tcl notes commands added [beldin]
+* resolve_dir belongs in proto.h not files.h [wild]
+* many minor code neatenings [wild]
+* -chan would cause the bot to leave & rejoin & get confused [wild]
+* all the trace functions (got206/401/402) merge into trace_failed [wild]
+* +f/+d/+k are now global flags, also chan-specific +d/+o should override
+  global settings [by beldin]
+* eforced channel key was not beign set if no key at all was set [beldin]
+* put the socks in the parts you fix weenie! [wild]
+* channel creation wasnt clearing the mode stack properly [found by TheGhost]
+  [beldin]
+  
+v1.1.1+pl1
+
+* long topics mess up channel info [found by Randy Summerfiled] [beldin]
+* a binding causing a tcl error returning too long a string crashed
+  (now truncated) [by beldin]
+* tcl whom * returns all users on the botnet, with a extra element
+  per user indicating channel [suggested by eraseme/dtm] [beldin]
+* .status shows shared setting now [found by TheGhost] [beldin]
+* +shared shows up in .chaninfo, cant be set via .chanset, added
+  to eggdrop.conf [beldin]
+* +ban should work now for channel+o's [beldin]
+* chanadd/chandel now +chan/-chan (fits the pattern) [idea stolen
+  from CFusion <G>]
+* new tcl commands mv,cp,mkdir,rmdir,setflags,getflags [beldin]
+* new tcl command strftime [panasync] including using now [beldin]
+
+v1.1.1
+
+* Made channels require +share to share [by Raistlin]
+* Made sharing of only some channels possible [by Raistlin]
+* Made default version, clientinfo, userinfo "Eggdrop" and removed
+  lines in config changing it (Idiot proofing) [by Raistlin]
+* Moved default net to FDFNet (We encourage bots) [by Raistlin]
+* fixed a bug in /msg op & /msg notes where long args were causing 
+  SEGV's [found by guppy] [by beldin]
+* moved the following settings from eggdrop.h to eggdrop.conf
+  modes-per-line, max-queue-msg, wait-split, wait-info, xfer-timeout,
+  default-port & note-life [by beldin]
+* made it so it *should* compile under sun-os and still allow full
+  prototypes for real compilers :) [by beldin]
+* fixed the fixes in bottree/page code so it'll compile on some sunos
+  boxes (at the expense of speed :( [by beldin]
+* cleaned up help/dcc/set (since set is now a +n command) & added
+  info about recent new tcl variables [by beldin]
+* Includes Getops-1.7 [by dtM]
+ 
+v1.1.0+pl3
+
+* commented out the desynch "fixing" in getops-1.5.tcl,
+  it *doesnt* work on a lagged network [found by OldGhost] [by beldin]
+* fixed to places where IP #'s were backwards in .dccstat [by beldin]
+* fixed tell_bottree so it sends a line at a time, therefore not confusing
+  the paging code [by beldin]
+* fixed the paging code so flooders didnt crash it 
+  [found by ???] [by beldin]
+* was forgetting to free up store lines when a .page'n dcc chatter left 
+  early [by beldin]
+* a couple of part messages were missing the sock #'s [by beldin]
+* botnet version now put's <> around the network [suggestion by EraseMe?]
+  [by beldin]
+* fixed global laston time in .whois so it now displays accurately
+  [by beldin]
+* tcl page was crashing [found by somni] [by beldin]
+* tcl bind was crashing (with no args) [found by somni] [by beldin]
+* added another ifdef EBUG (for stridx) [by beldin]
+* fixed ^H bug in dcc chat [found by ???anybody???] [by beldin]
+* made putdcc use dumplots [found by Donovan Long] [by beldin]
+* .restart now totally restarts tcl by delaying restart of tcl till
+  it's outside of tcl [by beldin]
+* 16 context list when -DEBUG works now [by beldin]
+
+v1.1.0+pl2
+
+* made MAXNOTES a tcl variable (max-notes) added to config file also [wild]
+* Output debugging now checks for linefeeds and trims them, instead
+  of assuming the last char is a linefeed, marked the type also e.g.
+  tprintf is [!t] instead of [!] [wild]
+* Channel ops and such couldn't remove a channel ban if a global ban
+  that matched existed [wild]
+* -ban now also removes bans that are on a channel, but not in the 
+  banlist (the code was there but not being used) [wild]
+* When sharing, leaf-bots were getting dupes of channel bans, they are now
+  removed first if the hub is sharing bans for that channel [wild, beldin]
+* added some more ifdef EBUG 's [wild]
+* ifdef EBUG_OUTPUT in eggdrop.h was supposed to define EBUG, but it was
+  defining DEBUG instead (whoops :) [wild]
+* various functions in cmds.c concerning global/channel op commands were
+  improved. [wild]
+* Moved putlogs in bot_pls_banchan and bot_mns_banchan to not show if the 
+  bot isn't guarding that channel [wild]
+* debugs to hide password's in tclhash.c now work proper. [wild]
+
+v1.1.0+pl1
+
+* tcl adduser wasn't truncating nick to 9 characters [found by CFusion]
+  [patch by beldin]
+* fixed getops-1.2.tcl->getops-1.5.tcl [by dtM]
+* removed getops-1.1.tcl, gainops1.tcl (old scripts)
+* Fixed tcl chpass, so chpass <nick> "" will remove passwords 
+  [found by madhack] [patch by beldin]
+* Fixed .newpass <pass> error (needed 2 arguments to work)
+  [found by guppy] [patch by beldin]
+* Fixed chon bug with console.tcl [found by Jerry Sutton] [patch by dk]
+* Fixed small compiler bugs with DIE_SIGHUP and DIE_TERM.  fatal had
+  the wrong number of args.  [found by Alex] [patch by dk]
+* put <> around the network in botinfo [suggested by LuckyStar] [patch by dk]
+* Owners can't su to other owners without a pass (saw as a security
+  risk) [patch by Mastr]
+* Can't su to a Bots [patch by Mastr]
+* Added help file for .fixcodes [by beldin]
 
 v1.1.0
 
@@ -656,32 +807,3 @@ v1.1.0
 * local users going to the file system just look "away" to remote users
   [patch by poptix]
 
-TO-DO:
-"""""
-- Tcl commands for:
-    move/copy a file
-    make/remove a dir
-    get/set a dir's required flags
-    get # of downloads for a file
-- files '.mv' move directories  [andrej]
-- '.sort' to sort files
-- finish up botnet master implementation
-
-BUG REPORTS:
-* DCC sends are causing memory leaks on some systems.  This affects shared
-  userfile transfers
-* Some tcl scripts handling idxes that worked before are spitting out invalid
-  idx errors
-
-SUGGESTIONS:
-
-* Make MAXNOTES a tcl variable
-* Make +s channel specific so it only shares info from that channel.
-* Make +u channel specific so it shares info from all but that channel.
-* Make +f a global-able flag
-* Channel specific file ownerships (ie, only people on a certain channel
-  can get certain files)
-* Fix DEBUG_OUTPUT (in misc.c and net.c (mprintf,hprintf,tprintf) the \n needs
-  to be trimmed off _all_ the stuff thats sent to debug1() because it already
-  has a \n making it send an extra linefeed
-* Move more things into NO_IRC such as bans and hostmasks

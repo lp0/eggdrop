@@ -35,7 +35,7 @@ extern int hashtot;
 
 
 /* new hashing function */
-void gotcmd(char *nick,char *from,char *msg,int ignoring)
+void gotcmd PROTO4(char *,nick,char *,from,char *,msg,int,ignoring)
 {
   char code[512],hand[41],s[121],total[512];
   sprintf(s,"%s!%s",nick,from); strcpy(total,msg); rmspace(msg);
@@ -50,7 +50,7 @@ void gotcmd(char *nick,char *from,char *msg,int ignoring)
 }
 
 /* for dcc commands -- hash the function */
-int got_dcc_cmd(int idx,char *msg)
+int got_dcc_cmd PROTO2(int,idx,char *,msg)
 {
   char total[512],code[512];
   strcpy(total,msg); rmspace(msg); nsplit(code,msg); rmspace(msg);
@@ -59,7 +59,7 @@ int got_dcc_cmd(int idx,char *msg)
 
 #ifndef NO_FILE_SYSTEM
 /* hash function for file area commands */
-int got_files_cmd(int idx,char *msg)
+int got_files_cmd PROTO2(int,idx,char *,msg)
 {
   char total[512],code[512];
   strcpy(msg,check_tcl_filt(idx,msg));
@@ -71,7 +71,7 @@ int got_files_cmd(int idx,char *msg)
 #endif
 
 /* hash function for tandem bot commands */
-void dcc_bot(int idx,char *msg)
+void dcc_bot PROTO2(int,idx,char *,msg)
 {
   char total[512],code[512]; int i,f;
   strcpy(total,msg); nsplit(code,msg);

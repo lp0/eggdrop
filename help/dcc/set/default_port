@@ -1,0 +1,4 @@
+%{+n}
+### set default-port <#>
+     sets the default port the bot tries to connect to when there
+     is not port specified in the server list.

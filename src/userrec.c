@@ -75,7 +75,7 @@ char chanflag0='0';
 int cache_hit=0,cache_miss=0;
 
 
-struct eggqueue *add_q(char *ss,struct eggqueue *q)
+struct eggqueue *add_q PROTO2(char *,ss,struct eggqueue *,q)
 {
   char s[512]; struct eggqueue *x; char s1[121],*p;
   strcpy(s,ss); do {
@@ -90,13 +90,13 @@ struct eggqueue *add_q(char *ss,struct eggqueue *q)
   return x;
 }
 
-void chg_q(struct eggqueue *q,char *new)
+void chg_q PROTO2(struct eggqueue *,q,char *,new)
 {
   nfree(q->item); q->item=(char *)nmalloc(strlen(new)+1);
   strcpy(q->item,new);
 }
 
-struct eggqueue *del_q(char *s,struct eggqueue *q,int *ok)
+struct eggqueue *del_q PROTO3(char *,s,struct eggqueue *,q,int *,ok)
 {
   struct eggqueue *x,*ret,*old;
   x=q; ret=q; old=q; *ok=0; while (x!=NULL) {
@@ -163,7 +163,7 @@ int expmem_users()
   return tot;
 }
 
-unsigned int str2chflags(char *s)
+unsigned int str2chflags PROTO1(char *,s)
 {
   unsigned int i,f=0;
   for (i=0; i<strlen(s); i++) {
@@ -197,7 +197,7 @@ unsigned int str2chflags(char *s)
   return f;
 }
 
-unsigned int str2flags(char *s)
+unsigned int str2flags PROTO1(char *,s)
 {
   unsigned int i,f=0;
   for (i=0; i<strlen(s); i++) {
@@ -214,6 +214,9 @@ unsigned int str2flags(char *s)
     if (s[i]=='j') f|=USER_JANITOR;
     if (s[i]=='u') f|=USER_UNSHARED;
     if (s[i]=='B') f|=USER_BOTMAST;
+    if (s[i]=='k') f|=USER_KICK;
+    if (s[i]=='d') f|=USER_DEOP;
+    if (s[i]=='f') f|=USER_FRIEND;
     if (s[i]=='s') f|=BOT_SHARE;
     if (s[i]=='a') f|=BOT_ALT;
     if (s[i]=='l') f|=BOT_LEAF;
@@ -243,7 +246,7 @@ unsigned int str2flags(char *s)
   return f;
 }
 
-void chflags2str(int f,char *s)
+void chflags2str PROTO2(int,f,char *,s)
 {
   s[0]=0;
   if (f&CHANUSER_OP) strcat(s,"o");
@@ -265,7 +268,7 @@ void chflags2str(int f,char *s)
   if (s[0]==0) strcpy(s,"-");
 }
 
-void flags2str(int f,char *s)
+void flags2str PROTO2(int,f,char *,s)
 {
   s[0]=0;
   if (f&USER_GLOBAL) strcat(s,"o");
@@ -277,6 +280,9 @@ void flags2str(int f,char *s)
   if (f&USER_JANITOR) strcat(s,"j");
   if (f&USER_UNSHARED) strcat(s,"u");
   if (f&USER_BOTMAST) strcat(s,"B");
+  if (f&USER_KICK) strcat(s,"k");
+  if (f&USER_DEOP) strcat(s,"d");
+  if (f&USER_FRIEND) strcat(s,"f");
 #ifdef OWNER
   if (f&USER_OWNER) strcat(s,"n");
   if (f&USER_PSUOWN) strcat(s,"N");
@@ -305,7 +311,7 @@ void flags2str(int f,char *s)
   if (s[0]==0) strcat(s,"-");
 }
 
-int count_users(struct userrec *bu)
+int count_users PROTO1(struct userrec *,bu)
 { 
   int tot=0; struct userrec *u=bu;
   while (u!=NULL) {
@@ -316,15 +322,14 @@ int count_users(struct userrec *bu)
 }
 
 /* forgive me :) */
-struct userrec *check_dcclist_hand(char *handle)
+struct userrec *check_dcclist_hand PROTO1(char *,handle)
 {
   /* in the future, this will scan the dcclist for cached entries */
   /* for now, pretend it always failed to find it */
   return NULL;
 }
 
-struct userrec *get_user_by_handle(bu,handle)
-struct userrec *bu; char *handle;
+struct userrec *get_user_by_handle PROTO2(struct userrec *,bu,char *,handle)
 {
   struct userrec *u=bu,*ret;
   if (handle==NULL) return NULL;
@@ -358,7 +363,7 @@ struct userrec *bu; char *handle;
   return NULL;
 }
 
-void clear_chanrec(struct userrec *u)
+void clear_chanrec PROTO1(struct userrec *,u)
 {
   struct chanuserrec *ch,*z;
   ch=u->chanrec; while (ch!=NULL) {
@@ -369,7 +374,7 @@ void clear_chanrec(struct userrec *u)
   u->chanrec=NULL;
 }
 
-struct chanuserrec *get_chanrec(struct userrec *u,char *chname)
+struct chanuserrec *get_chanrec PROTO2(struct userrec *,u,char *,chname)
 {
   struct chanuserrec *ch=u->chanrec;
   while (ch!=NULL) {
@@ -379,7 +384,8 @@ struct chanuserrec *get_chanrec(struct userrec *u,char *chname)
   return NULL;
 }
 
-void add_chanrec(struct userrec *u,char *chname,unsigned int flags,time_t laston)
+void add_chanrec PROTO4(struct userrec *,u,char *,chname,
+			unsigned int,flags,time_t,laston)
 {
   struct chanuserrec *ch;
   ch=(struct chanuserrec *)nmalloc(sizeof(struct chanuserrec));
@@ -389,8 +395,8 @@ void add_chanrec(struct userrec *u,char *chname,unsigned int flags,time_t laston
   strncpy(ch->channel,chname,40); ch->channel[40]=0;
 }
 
-void add_chanrec_by_handle(struct userrec *bu,char *hand,char *chname,
-                           unsigned int flags,time_t laston)
+void add_chanrec_by_handle PROTO5(struct userrec *,bu,char *,hand,char *,chname,
+				  unsigned int,flags,time_t,laston)
 {
   struct userrec *u;
   u=get_user_by_handle(bu,hand);
@@ -398,7 +404,7 @@ void add_chanrec_by_handle(struct userrec *bu,char *hand,char *chname,
   add_chanrec(u,chname,flags,laston);
 }
 
-int is_user2(struct userrec *bu,char *handle)
+int is_user2 PROTO2(struct userrec *,bu,char *,handle)
 {
   struct userrec *u;
   u=get_user_by_handle(bu,handle);
@@ -406,13 +412,13 @@ int is_user2(struct userrec *bu,char *handle)
   else return 1;
 }
 
-int is_user(char *handle)
+int is_user PROTO1(char *,handle)
 {
   return is_user2(userlist,handle);
 }
 
 /* fix capitalization, etc */
-void correct_handle(char *handle)
+void correct_handle PROTO1(char *,handle)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -420,7 +426,7 @@ void correct_handle(char *handle)
   strcpy(handle,u->handle);
 }
 
-void clear_userlist(struct userrec *bu)
+void clear_userlist PROTO1(struct userrec *,bu)
 {
   struct userrec *u=bu,*v;
   while (u!=NULL) {
@@ -443,7 +449,7 @@ void clear_userlist(struct userrec *bu)
 /* find CLOSEST host match */
 /* (if "*!*@*" and "*!*@*clemson.edu" both match, use the latter!) */
 /* 26feb: CHECK THE CHANLIST FIRST to possibly avoid needless search */
-struct userrec *get_user_by_host(char *host)
+struct userrec *get_user_by_host PROTO1(char *,host)
 {
   struct userrec *u=userlist,*ret; struct eggqueue *q; int cnt,i;
   if (host==NULL) return NULL;
@@ -464,7 +470,7 @@ struct userrec *get_user_by_host(char *host)
   return ret;
 }
 
-void get_handle_by_host(char *nick,char *host)
+void get_handle_by_host PROTO2(char *,nick,char *,host)
 {
   struct userrec *u;
   u=get_user_by_host(host);
@@ -472,8 +478,7 @@ void get_handle_by_host(char *nick,char *host)
   strcpy(nick,u->handle);
 }
 
-struct userrec *get_user_by_equal_host(host)
-char *host;
+struct userrec *get_user_by_equal_host PROTO1(char *,host)
 {
   struct userrec *u=userlist; struct eggqueue *q;
   while (u!=NULL) {
@@ -489,7 +494,7 @@ char *host;
 
 /* try: pass_match_by_host("-",host)
    will return 1 if no password is set for that host   */
-int pass_match_by_host(char *pass,char *host)
+int pass_match_by_host PROTO2(char *,pass,char *,host)
 {
   struct userrec *u; char new[20];
   u=get_user_by_host(host);
@@ -507,7 +512,7 @@ int pass_match_by_host(char *pass,char *host)
   return 0;
 }
 
-int pass_match_by_handle(char *pass,char *handle)
+int pass_match_by_handle PROTO2(char *,pass,char *,handle)
 {
   struct userrec *u; char new[20];
   u=get_user_by_handle(userlist,handle);
@@ -525,7 +530,7 @@ int pass_match_by_handle(char *pass,char *handle)
   return 0;
 }
 
-void get_pass_by_handle(char *handle,char *pass)
+void get_pass_by_handle PROTO2(char *,handle,char *,pass)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -534,9 +539,10 @@ void get_pass_by_handle(char *handle,char *pass)
   return;
 }
 
-int write_user(struct userrec *u,FILE *f)
+int write_user PROTO3(struct userrec *,u,FILE *,f,int,shr)
 {
   char s[181]; struct eggqueue *q; struct chanuserrec *ch;
+  struct chanset_t *cst;
   flags2str((u->flags & USER_MASK),s);
   /* for user-created flags that could have any name, depending: */
   if (u->flags & USER_FLAG1) strcat(s,"1");
@@ -566,22 +572,26 @@ int write_user(struct userrec *u,FILE *f)
     q=q->next;
   }
   if (s[0]) { if (fprintf(f,"%s\n",s)==EOF) return 0; }
-  ch=u->chanrec; while (ch!=NULL) {
-    chflags2str((ch->flags & CHANUSER_MASK),s);
-    /* now fill in user-defined flags */
-    if (ch->flags & CHANUSER_1) strcat(s,"1");
-    if (ch->flags & CHANUSER_2) strcat(s,"2");
-    if (ch->flags & CHANUSER_3) strcat(s,"3");
-    if (ch->flags & CHANUSER_4) strcat(s,"4");
-    if (ch->flags & CHANUSER_5) strcat(s,"5");
-    if (ch->flags & CHANUSER_6) strcat(s,"6");
-    if (ch->flags & CHANUSER_7) strcat(s,"7");
-    if (ch->flags & CHANUSER_8) strcat(s,"8");
-    if (ch->flags & CHANUSER_9) strcat(s,"9");
-    if (ch->flags & CHANUSER_0) strcat(s,"0");
-    if (fprintf(f,"! %-20s %lu %-10s %s\n",ch->channel,ch->laston,
-		s,(ch->info==NULL)?"":ch->info)==EOF)
-      return 0;
+  ch=u->chanrec;
+  while (ch!=NULL) {
+    cst=findchan(ch->channel);
+    if ((shr!=1) || ((cst->stat&CHAN_SHARED))) {
+      chflags2str((ch->flags & CHANUSER_MASK),s);
+      /* now fill in user-defined flags */
+      if (ch->flags & CHANUSER_1) strcat(s,"1");
+      if (ch->flags & CHANUSER_2) strcat(s,"2");
+      if (ch->flags & CHANUSER_3) strcat(s,"3");
+      if (ch->flags & CHANUSER_4) strcat(s,"4");
+      if (ch->flags & CHANUSER_5) strcat(s,"5");
+      if (ch->flags & CHANUSER_6) strcat(s,"6");
+      if (ch->flags & CHANUSER_7) strcat(s,"7");
+      if (ch->flags & CHANUSER_8) strcat(s,"8");
+      if (ch->flags & CHANUSER_9) strcat(s,"9");
+      if (ch->flags & CHANUSER_0) strcat(s,"0");
+      if (fprintf(f,"! %-20s %lu %-10s %s\n",ch->channel,ch->laston,
+  	  	s,(ch->info==NULL)?"":ch->info)==EOF)
+        return 0;
+    }
     ch=ch->next;
   }
   if (u->email!=NULL) {
@@ -637,7 +647,7 @@ void write_userfile()
   context;
   ok=1;
   u=userlist; while ((u!=NULL) && (ok)) {
-    ok=write_user(u,f);
+    ok=write_user(u,f,0);
     u=u->next;
   }
   context;
@@ -658,7 +668,7 @@ void write_userfile()
   context;
 }
 
-int write_tmp_userfile(char *fn,struct userrec *bu)
+int write_tmp_userfile PROTO2(char *,fn,struct userrec *,bu)
 {
   FILE *f; struct userrec *u; int ok;
   f=fopen(fn,"w");
@@ -670,7 +680,7 @@ int write_tmp_userfile(char *fn,struct userrec *bu)
   fprintf(f,"#3v: %s -- %s -- transmit\n",ver,origbotname);
   ok=1; u=bu;
   while ((u!=NULL) && (ok)) {
-    ok=write_user(u,f);
+    ok=write_user(u,f,1);
     u=u->next;
   }
   ok=write_chanbans(f);
@@ -682,7 +692,7 @@ int write_tmp_userfile(char *fn,struct userrec *bu)
   return ok;
 }
 
-void change_pass_by_handle(char *handle,char *pass)
+void change_pass_by_handle PROTO2(char *,handle,char *,pass)
 {
   struct userrec *u; char new[20]; unsigned char *p;
   u=get_user_by_handle(userlist,handle);
@@ -702,7 +712,7 @@ void change_pass_by_handle(char *handle,char *pass)
     shareout("chpass %s %s\n",handle,pass);
 }
 
-void change_pass_by_host(char *host,char *pass)
+void change_pass_by_host PROTO2(char *,host,char *,pass)
 {
   struct userrec *u; char new[20]; unsigned char *p;
   u=get_user_by_host(host);
@@ -721,7 +731,7 @@ void change_pass_by_host(char *host,char *pass)
     shareout("chpass %s %s\n",u->handle,pass);
 }
 
-int change_handle(char *oldh,char *newh)
+int change_handle PROTO2(char *,oldh,char *,newh)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,oldh);
@@ -737,8 +747,8 @@ int change_handle(char *oldh,char *newh)
   return 1;
 }
 
-struct userrec *adduser(struct userrec *bu,char *handle,char *host,char *pass,
-                        int flags)
+struct userrec *adduser PROTO5(struct userrec *,bu,char *,handle,char *,host,
+			       char *,pass,int,flags)
 {
   struct userrec *u,*x; char s[81];
   u=(struct userrec *)nmalloc(sizeof(struct userrec));
@@ -779,8 +789,7 @@ struct userrec *adduser(struct userrec *bu,char *handle,char *host,char *pass,
    clone bots) -- userlist is reversed in the process, which is OK
    because the receiving bot reverses the list AGAIN when saving */
 /* t=1: copy only tandem-bots  --  t=0: copy everything BUT tandem-bots */
-struct userrec *dup_userlist(t)
-int t;
+struct userrec *dup_userlist PROTO1(int,t)
 {
   struct userrec *u,*u1,*retu,*nu; struct eggqueue *q; struct chanuserrec *ch;
   nu=retu=NULL; u=userlist;
@@ -850,7 +859,7 @@ int t;
   return retu;
 }
 
-void freeuser(struct userrec *u)
+void freeuser PROTO1(struct userrec *,u)
 {
   if (u==NULL) return;
   clearq(u->host);
@@ -863,7 +872,7 @@ void freeuser(struct userrec *u)
   nfree(u);
 }
 
-int deluser(char *handle)
+int deluser PROTO1(char *,handle)
 {
   struct userrec *u=userlist,*prev=NULL; int fnd=0;
   while ((u!=NULL) && (!fnd)) {
@@ -882,7 +891,7 @@ int deluser(char *handle)
   return 1;
 }
 
-int delhost_by_handle(char *handle,char *host)
+int delhost_by_handle PROTO2(char *,handle,char *,host)
 {
   struct userrec *u; int i;
   u=get_user_by_handle(userlist,handle);
@@ -895,7 +904,7 @@ int delhost_by_handle(char *handle,char *host)
   return i;
 }
 
-int ishost_for_handle(char *handle,char *host)
+int ishost_for_handle PROTO2(char *,handle,char *,host)
 {
   struct userrec *u; struct eggqueue *q;
   u=get_user_by_handle(userlist,handle);
@@ -908,7 +917,7 @@ int ishost_for_handle(char *handle,char *host)
   return 0;
 }
 
-void addhost_by_handle2(struct userrec *bu,char *handle,char *hst)
+void addhost_by_handle2 PROTO3(struct userrec *,bu,char *,handle,char *,hst)
 {
   struct userrec *u; int i; char *p; struct eggqueue *q; char host[161];
   u=get_user_by_handle(bu,handle); strcpy(host,hst);
@@ -929,7 +938,7 @@ void addhost_by_handle2(struct userrec *bu,char *handle,char *hst)
   u->host=add_q(host,u->host);
 }
 
-void addhost_by_handle(char *handle,char *host)
+void addhost_by_handle PROTO2(char *,handle,char *,host)
 {
   struct userrec *u;
   addhost_by_handle2(userlist,handle,host);
@@ -942,7 +951,7 @@ void addhost_by_handle(char *handle,char *host)
   clear_chanlist();
 }
 
-void get_handle_email(char *handle,char *s)
+void get_handle_email PROTO2(char *,handle,char *,s)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -951,7 +960,7 @@ void get_handle_email(char *handle,char *s)
   strcpy(s,u->email); return;
 }
 
-void get_handle_dccdir(char *handle,char *s)
+void get_handle_dccdir PROTO2(char *,handle,char *,s)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -960,7 +969,7 @@ void get_handle_dccdir(char *handle,char *s)
   strcpy(s,u->dccdir); return;
 }
 
-void get_handle_comment(char *handle,char *s)
+void get_handle_comment PROTO2(char *,handle,char *,s)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -969,7 +978,7 @@ void get_handle_comment(char *handle,char *s)
   strcpy(s,u->comment); return;
 }
 
-void get_handle_info(char *handle,char *s)
+void get_handle_info PROTO2(char *,handle,char *,s)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -978,7 +987,7 @@ void get_handle_info(char *handle,char *s)
   strcpy(s,u->info); return;
 }
 
-void get_handle_chaninfo(char *handle,char *chname,char *s)
+void get_handle_chaninfo PROTO3(char *,handle,char *,chname,char *,s)
 {
   struct userrec *u; struct chanuserrec *ch;
   u=get_user_by_handle(userlist,handle);
@@ -990,7 +999,7 @@ void get_handle_chaninfo(char *handle,char *chname,char *s)
 }
 
 /* returns possibly infinite-length string, please do not modify it */
-char *get_handle_xtra(char *handle)
+char *get_handle_xtra PROTO1(char *,handle)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -1001,7 +1010,7 @@ char *get_handle_xtra(char *handle)
 
 /* max length for these things is now 160 */
 
-void set_handle_email(struct userrec *bu,char *handle,char *email)
+void set_handle_email PROTO3(struct userrec *,bu,char *,handle,char *,email)
 {
   struct userrec *u;
   if (strlen(email)>160) email[160]=0;
@@ -1017,7 +1026,7 @@ void set_handle_email(struct userrec *bu,char *handle,char *email)
     shareout("chemail %s %s\n",handle,email);
 }
 
-void set_handle_dccdir(struct userrec *bu,char *handle,char *dir)
+void set_handle_dccdir PROTO3(struct userrec *,bu,char *,handle,char *,dir)
 {
   struct userrec *u;
   if (strlen(dir)>160) dir[160]=0;
@@ -1033,7 +1042,7 @@ void set_handle_dccdir(struct userrec *bu,char *handle,char *dir)
     shareout("chdccdir %s %s\n",handle,dir);
 }
 
-void set_handle_comment(struct userrec *bu,char *handle,char *comment)
+void set_handle_comment PROTO3(struct userrec *,bu,char *,handle,char *,comment)
 {
   struct userrec *u;
   if (strlen(comment)>160) comment[160]=0;
@@ -1049,7 +1058,7 @@ void set_handle_comment(struct userrec *bu,char *handle,char *comment)
     shareout("chcomment %s %s\n",handle,comment);
 }
 
-void set_handle_info(struct userrec *bu,char *handle,char *info)
+void set_handle_info PROTO3(struct userrec *,bu,char *,handle,char *,info)
 {
   /* Modified by crisk to allow 8-bit channels to be joined */
   /* Namely, the Hebrew channel on the Undernet. */
@@ -1073,9 +1082,10 @@ void set_handle_info(struct userrec *bu,char *handle,char *info)
   }
 }
 
-void set_handle_chaninfo(struct userrec *bu,char *handle,char *chname,char *info)
+void set_handle_chaninfo PROTO4(struct userrec *,bu,char *,handle,
+				char *,chname,char *,info)
 {
-  struct userrec *u; struct chanuserrec *ch; char *p;
+  struct userrec *u; struct chanuserrec *ch; char *p;struct chanset_t *cst;
   if (strlen(info)>80) info[80]=0;
   for (p=info; *p; ) {
     if ((*p < 32) || (*p==127)) strcpy(p,p+1);
@@ -1091,12 +1101,14 @@ void set_handle_chaninfo(struct userrec *bu,char *handle,char *chname,char *info
     strcpy(ch->info,info);
   }
   else ch->info=NULL;
-  if ((!noshare) && (bu==userlist) && !(u->flags&(USER_UNSHARED|USER_BOT))) {
+  cst=findchan(chname);
+  if ((!noshare) && (bu==userlist) && !(u->flags&(USER_UNSHARED|USER_BOT)) && 
+      (cst->stat&CHAN_SHARED)) {
     shareout("chchinfo %s %s %s\n",handle,chname,info);
   }
 }
 
-void set_handle_xtra(struct userrec *bu,char *handle,char *xtra)
+void set_handle_xtra PROTO3(struct userrec *,bu,char *,handle,char *,xtra)
 {
   struct userrec *u; char *p,*q;
   u=get_user_by_handle(bu,handle);
@@ -1123,7 +1135,7 @@ void set_handle_xtra(struct userrec *bu,char *handle,char *xtra)
   }
 }
 
-void add_handle_xtra(struct userrec *bu,char *handle,char *xtra)
+void add_handle_xtra PROTO3(struct userrec *,bu,char *,handle,char *,xtra)
 {
   struct userrec *u; char *p;
   u=get_user_by_handle(bu,handle);
@@ -1142,7 +1154,7 @@ void add_handle_xtra(struct userrec *bu,char *handle,char *xtra)
   }
 }
 
-int get_attr_handle(char *handle)
+int get_attr_handle PROTO1(char *,handle)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -1150,7 +1162,7 @@ int get_attr_handle(char *handle)
   return u->flags;
 }
 
-int get_chanattr_handle(char *handle,char *chname)
+int get_chanattr_handle PROTO2(char *,handle,char *,chname)
 {
   struct userrec *u; struct chanuserrec *ch;
   u=get_user_by_handle(userlist,handle);
@@ -1160,7 +1172,7 @@ int get_chanattr_handle(char *handle,char *chname)
   return ch->flags;
 }
 
-void set_attr_handle(char *handle,unsigned int flags)
+void set_attr_handle PROTO2(char *,handle,unsigned int,flags)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,handle);
@@ -1170,9 +1182,9 @@ void set_attr_handle(char *handle,unsigned int flags)
     shareout("chattr %s %d\n",u->handle,(flags&BOT_MASK));
 }
 
-void set_chanattr_handle(char *handle,char *chname,unsigned int flags)
+void set_chanattr_handle PROTO3(char *,handle,char *,chname,unsigned int,flags)
 {
-  struct userrec *u; struct chanuserrec *ch;
+  struct userrec *u; struct chanuserrec *ch; struct chanset_t *cst;
   u=get_user_by_handle(userlist,handle);
   if (u==NULL) return;
   ch=get_chanrec(u,chname);
@@ -1181,12 +1193,13 @@ void set_chanattr_handle(char *handle,char *chname,unsigned int flags)
     return;
   }
   ch->flags=flags;
-  if ((!noshare) && !(u->flags&USER_UNSHARED))
+  cst=findchan(chname);
+  if ((!noshare) && !(u->flags&USER_UNSHARED) && (cst->stat&CHAN_SHARED))
     shareout("chattr %s %d %s\n",u->handle,flags,chname);
 }
 
-void change_chanflags(struct userrec *bu,char *handle,char *chname,
-                      unsigned int add,unsigned int remove)
+void change_chanflags PROTO5(struct userrec *,bu,char *,handle,char *,chname,
+			     unsigned int,add,unsigned int,remove)
 {
   struct userrec *u; struct chanuserrec *ch; struct chanset_t *chan;
   u=get_user_by_handle(bu,handle);
@@ -1211,7 +1224,7 @@ void change_chanflags(struct userrec *bu,char *handle,char *chname,
   ch->flags=((ch->flags|add)&(~remove));
 }
   
-int get_attr_host(char *host)
+int get_attr_host PROTO1(char *,host)
 {
   struct userrec *u;
   u=get_user_by_host(host);
@@ -1219,18 +1232,20 @@ int get_attr_host(char *host)
   return u->flags;
 }
 
-int get_chanattr_host(char *host,char *chname)
+int get_chanattr_host PROTO2(char *,host,char *,chname)
 {
   struct userrec *u; struct chanuserrec *ch;
   u=get_user_by_host(host);
   if (u==NULL) return 0;
   ch=get_chanrec(u,chname);
   if (ch==NULL) return 0;
-  return (u->flags & USER_GLOBAL) ? (ch->flags|CHANUSER_OP) : ch->flags;
+  /********* DO WE REALLY NEED THIS ANYMORE *******????******/
+  /* return (u->flags & USER_GLOBAL) ? (ch->flags|CHANUSER_OP) : ch->flags; */
+  return ch->flags;
 }
 
 /* don't use this with channel flags */
-int flags_ok(int req,int have)
+int flags_ok PROTO2(int,req,int,have)
 {
   if ((have&USER_OWNER) && !(req&USER_BOT)) return 1;
   if ((have&USER_MASTER) && !(req&(USER_OWNER|USER_BOT))) return 1;
@@ -1242,7 +1257,7 @@ int flags_ok(int req,int have)
 }
 
 /* do they have +o anywhere? */
-int op_anywhere(char *handle)
+int op_anywhere PROTO1(char *,handle)
 {
   struct userrec *u; struct chanuserrec *ch; struct chanset_t *chan;
   u=get_user_by_handle(userlist,handle);
@@ -1257,7 +1272,7 @@ int op_anywhere(char *handle)
 }
 
 /* do they have +m anywhere? */
-int master_anywhere(char *handle)
+int master_anywhere PROTO1(char *,handle)
 { 
   struct userrec *u; struct chanuserrec *ch; struct chanset_t *chan;
   u=get_user_by_handle(userlist,handle);
@@ -1272,7 +1287,7 @@ int master_anywhere(char *handle)
 }
 
 /* do they have +n anywhere? */
-int owner_anywhere(char *handle)
+int owner_anywhere PROTO1(char *,handle)
 { 
   struct userrec *u; struct chanuserrec *ch; struct chanset_t *chan;
   u=get_user_by_handle(userlist,handle);
@@ -1289,7 +1304,7 @@ int owner_anywhere(char *handle)
 /* get icon symbol for a user (depending on access level) */
 /* (*)owner on any channel  (+)master on any channel (%) botnet master */
 /* (@)op on any channel  (-)other  */
-char geticon(int idx)
+char geticon PROTO1(int,idx)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,dcc[idx].nick);
@@ -1302,8 +1317,8 @@ char geticon(int idx)
 }
 
 /* set upload/dnload stats for a user */
-void set_handle_uploads(struct userrec *bu,char *hand,unsigned int ups,
-                        unsigned long upk)
+void set_handle_uploads PROTO4(struct userrec *,bu,char *,hand,
+			       unsigned int,ups, unsigned long,upk)
 {
   struct userrec *u=get_user_by_handle(bu,hand);
   if (u==NULL) return;
@@ -1311,8 +1326,8 @@ void set_handle_uploads(struct userrec *bu,char *hand,unsigned int ups,
   u->upload_k=upk;
 }
 
-void set_handle_dnloads(struct userrec *bu,char *hand,unsigned int dns,
-                        unsigned long dnk)
+void set_handle_dnloads PROTO4(struct userrec *,bu,char *,hand,
+			       unsigned int,dns,unsigned long,dnk)
 {
   struct userrec *u=get_user_by_handle(bu,hand);
   if (u==NULL) return;
@@ -1320,7 +1335,7 @@ void set_handle_dnloads(struct userrec *bu,char *hand,unsigned int dns,
   u->dnload_k=dnk;
 }
 
-void stats_add_upload(char *hand,unsigned long bytes)
+void stats_add_upload PROTO2(char *,hand,unsigned long,bytes)
 {
   struct userrec *u=get_user_by_handle(userlist,hand);
   if (u==NULL) return;
@@ -1330,7 +1345,7 @@ void stats_add_upload(char *hand,unsigned long bytes)
     shareout("+upload %s %lu\n",hand,bytes);
 }
 
-void stats_add_dnload(char *hand,unsigned long bytes)
+void stats_add_dnload PROTO2(char *,hand,unsigned long,bytes)
 {
   struct userrec *u=get_user_by_handle(userlist,hand);
   if (u==NULL) return;
@@ -1340,7 +1355,7 @@ void stats_add_dnload(char *hand,unsigned long bytes)
     shareout("+dnload %s %lu\n",hand,bytes);
 }
 
-void del_chanrec(struct userrec *u,char *chname)
+void del_chanrec PROTO2(struct userrec *,u,char *,chname)
 {
   struct chanuserrec *ch, * lst;
   lst=NULL;
@@ -1358,7 +1373,7 @@ void del_chanrec(struct userrec *u,char *chname)
   }
 }
        
-void del_chanrec_by_handle(struct userrec *bu,char *hand,char *chname)
+void del_chanrec_by_handle PROTO3(struct userrec *,bu,char *,hand,char *,chname)
 {
   struct userrec *u;
   u=get_user_by_handle(bu,hand);
@@ -1366,7 +1381,7 @@ void del_chanrec_by_handle(struct userrec *bu,char *hand,char *chname)
   del_chanrec(u,chname);
 }
 
-void touch_laston(struct userrec *u,char *chan,time_t time)
+void touch_laston PROTO3(struct userrec *,u,char *,chan,time_t,time)
 {
   if (time>1) {
     u->laston=time;
@@ -1379,7 +1394,8 @@ void touch_laston(struct userrec *u,char *chan,time_t time)
   }
 }
 
-void touch_laston_handle(struct userrec *bu,char *hand,char *chan,time_t time)
+void touch_laston_handle PROTO4(struct userrec *,bu,char *,hand,char *,chan,
+				time_t,time)
 {
    struct userrec *u;
    u=get_user_by_handle(bu,hand);

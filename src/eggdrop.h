@@ -119,48 +119,8 @@
    /* maximum number of dcc connections you will allow */
 #define MAXDCC 50
 
-   /* some networks allow you to stack lots of channel modes into one */
-   /* line.  as of november 1996, the major networks allowed: */
-   /*   EFnet      4     */
-   /*   Euronet    3     */
-   /*   Undernet   6     */
-   /*   Dalnet     6     */
-   /* they're all guaranteed to support at least 3, so that's the default, */
-   /* but if you know your network supports more, you may want to adjust */
-   /* this value. */
-#define MODES_PER_LINE     3
-
-   /* maximum number of lines to queue to the server */
-   /* if you're going to dump large chunks of text to people over irc,  you */
-   /* will probably want to raise this -- most people are fine at 300 though */
-#define MAXQMSG 300
-
-   /* maximum number of notes a user may have stored (to prevent flooding) */
-#define MAXNOTES 50
-
    /* maximum number of logfiles to allow */
 #define MAXLOGS 10
-
-   /* time (in seconds) to wait for someone to return from a netsplit */
-#define WAIT_SPLIT 300
-
-   /* time (in seconds) that someone must have been off-channel before */
-   /* re-displaying their info */
-#define WAIT_INFO 180
-
-   /* time (in seconds) that a dcc file transfer can remain inactive */
-   /* before being timed out */
-#define WAIT_DCC_XFER 300
-
-   /* time (in seconds) to attempt to connect a dcc chat or bot link */
-   /* before giving up */
-#define WAIT_CONNECT 120
-
-   /* time (in days) to let stored notes live before expiring them */
-#define NOTE_LIFE 60
-
-  /* if no port is specified on a .jump or whatver, which port should I use? */
-#define DEFAULT_PORT 6667
 
   /* define this if you want to bounce all server bans */
 #define BOUNCE_SERVER_BANS
@@ -211,6 +171,12 @@
 # endif
 #endif
 
+#ifdef EBUG_OUTPUT
+# ifndef EBUG
+#  define EBUG
+# endif 
+#endif
+
 #if !HAVE_RENAME
 #define rename movefile
 #endif
@@ -242,6 +208,7 @@
 #define nmalloc(x) n_malloc((x),__FILE__,__LINE__)
 #define nrealloc(x,y) n_realloc((x),(y),__FILE__,__LINE__)
 #define nfree(x) n_free((x),__FILE__,__LINE__)
+
 #ifdef EBUG
 #define context { cx_ptr=((cx_ptr + 1) & 15); \
                   strcpy(cx_file[cx_ptr],__FILE__); \
@@ -280,12 +247,6 @@ typedef unsigned long IP;
   egg_numver++; \
   sprintf(&egg_xtra[strlen(egg_xtra)]," %s",str); \
 }
-
-#ifdef EBUG_OUTPUT
-# ifndef EBUG
-# define DEBUG
-# endif 
-#endif
 
 #ifdef EBUG
 #define debug0(x) putlog(LOG_DEBUG,"*",x)
@@ -487,28 +448,31 @@ struct script_info {
 
 /* bug: changing the order of these will mess up filedb */
 #define USER_GLOBAL   0x00000001  /* o   user is +o on all channels */
-#define USER_PSUEDOOP 0x00000002  /* O   pseudo-op for command binds only */
-#define USER_OWNER    0x00000004  /* n   user is the bot owner */
-#define USER_PSUOWN   0x00000008  /* N   psuedo-owner for command binds only */
+#define USER_DEOP     0x00800002  /* d   user is global de-op */
+#define USER_KICK     0x00000004  /* k   user is global auto-kick */
+#define USER_FRIEND   0x00000008  /* f   user is global friend*/
 #define USER_MASTER   0x00000010  /* m   user has full bot access */
-#define USER_PSUMST   0x00000020  /* M   psuedo-master for command binds only */
-#define USER_XFER     0x00000040  /* x   user has file area access */
-#define USER_PARTY    0x00000080  /* p   user has party line access */
-#define USER_COMMON   0x00000100  /* c   user is actually a public irc site */
-#define USER_FLAG1    0x00000200  /* 1   user-defined flag #1 */
-#define USER_FLAG2    0x00000400  /* 2   user-defined flag #2 */
-#define USER_FLAG3    0x00000800  /* 3   user-defined flag #3 */
-#define USER_FLAG4    0x00001000  /* 4   user-defined flag #4 */
-#define USER_FLAG5    0x00002000  /* 5   user-defined flag #5 */
-#define USER_FLAG6    0x00004000  /* 6   user-defined flag #6 */
-#define USER_FLAG7    0x00008000  /* 7   user-defined flag #7 */
-#define USER_FLAG8    0x01000000  /* 8   user-defined flag #8 */
-#define USER_FLAG9    0x02000000  /* 9   user-defined flag #9 */
-#define USER_FLAG0    0x04000000  /* 0   user-defined flag #10 */
-#define USER_JANITOR  0x08000000  /* j   user has file area master */
-#define USER_UNSHARED 0x10000000  /* u   not shared with sharebots */
-#define USER_BOTMAST  0x20000000  /* B   user is botnet master */
-#define USER_MASK (0x38ff01ff)    /* all non-userdef flags */
+#define USER_OWNER    0x00000020  /* n   user is the bot owner */
+#define USER_FLAG1    0x00000040  /* 1   user-defined flag #1 */
+#define USER_FLAG2    0x00000080  /* 2   user-defined flag #2 */
+#define USER_FLAG3    0x00000100  /* 3   user-defined flag #3 */
+#define USER_FLAG4    0x00000200  /* 4   user-defined flag #4 */
+#define USER_FLAG5    0x00000400  /* 5   user-defined flag #5 */
+#define USER_FLAG6    0x00000800  /* 6   user-defined flag #6 */
+#define USER_FLAG7    0x00001000  /* 7   user-defined flag #7 */
+#define USER_FLAG8    0x00002000  /* 8   user-defined flag #8 */
+#define USER_FLAG9    0x00004000  /* 9   user-defined flag #9 */
+#define USER_FLAG0    0x00008000  /* 0   user-defined flag #10 */
+#define USER_JANITOR  0x00400000  /* j   user has file area master */
+#define USER_UNSHARED 0x00800000  /* u   not shared with sharebots */
+#define USER_XFER     0x01000000  /* x   user has file area access */
+#define USER_PARTY    0x02000000  /* p   user has party line access */
+#define USER_COMMON   0x04000000  /* c   user is actually a public irc site */
+#define USER_BOTMAST  0x08000000  /* B   user is botnet master */
+#define USER_PSUOWN   0x10000000  /* N   psuedo-owner for command binds only */
+#define USER_PSUMST   0x20000000  /* M   psuedo-master for command binds only */
+#define USER_PSUEDOOP 0x40000000  /* O   pseudo-op for command binds only */
+#define USER_MASK    (0xffff003f) /* all non-userdef flags */
 
 #ifndef OWNER
 #undef USER_OWNER
@@ -517,11 +481,11 @@ struct script_info {
 #define USER_PSUOWN   USER_PSUMST
 #endif
 
-/*   ???uj098 b??arlhs 7654321c px?m?n?g   */
-/*   (users)  (bots)   (users)  (users)    */
-/*   unused letters: defikoqtvwyz          */
+/*   ?NMOBcpx ujbarlhs 09876543 21nmfkdo   */
+/*   (users)    (bots) (users)  (users)    */
+/*   unused letters: egiqtvwyz          */
 
-#define BOT_MASK (0xff00ffff)     /* all non-bot flags */
+#define BOT_MASK     (0xffC0ffff)     /* all non-bot flags */
 
 /* flags specifically for bots */
 #define BOT_SHARE     0x00010000  /* s   bot shares user files */
@@ -529,11 +493,9 @@ struct script_info {
 #define BOT_LEAF      0x00040000  /* l   may not link other bots */
 #define BOT_REJECT    0x00080000  /* r   automatically reject anywhere */
 #define BOT_ALT       0x00100000  /* a   auto-link here if all +h's fail */
-#define BOT_UNDEF_1   0x00200000
-#define BOT_UNDEF_2   0x00400000
-#define USER_BOT      0x00800000  /* b   user is a bot (previously 't') */
+#define USER_BOT      0x00200000  /* b   user is a bot (previously 't') */
 
-/*   ???????? ???????? ???54321 ???mfkdo   */
+/*   ???????? ???????? 09876543 21nmfkdo   */
 
 /* channel-specific flags */
 #define CHANUSER_OP       0x00000001  /* o   bot will op the user */
@@ -552,7 +514,7 @@ struct script_info {
 #define CHANUSER_8        0x00002000  /* 8   user defined */
 #define CHANUSER_9        0x00004000  /* 9   user defined */
 #define CHANUSER_0        0x00008000  /* 0   user defined */
-#define CHANUSER_MASK (0xffff003f)    /* all non-use-defined */
+#define CHANUSER_MASK    (0xffff003f) /* all non-use-defined */
 
 #ifndef OWNER
 #undef CHANUSER_OWNER

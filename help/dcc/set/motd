@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set motd <filename>
    specifies the "Message Of The Day" file.  this should be a
    text file.  it will be displayed to users as they enter a
@@ -19,6 +19,7 @@
       %%{+1}Only people with user flag #1 see this.%%{-}
       %%{+b}This is only displayed to users doing a remote '.motd'
       from another bot.%%{-}
+      %%{+M}Only channel masters would see this.%%{-}
    Other extended %% commands are:
       %%{cols=N}     start splitting output into N columns
       %%{cols=N/W}   same, but use a screen width of W

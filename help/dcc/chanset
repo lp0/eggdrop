@@ -4,4 +4,4 @@
      (see '.help chaninfo' for the settings)
      these are used until the next rehash/chanload/restart,
      and are save whenever the channel settings are saved
-see also: %{+n}chanadd, chandel%{+N} chanload, chanset, chaninfo
+see also: %{+n}+chan, -chan%{+N} chanload, chanset, chaninfo

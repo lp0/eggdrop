@@ -92,7 +92,7 @@ X5(tcl_hand2nick, tcl_nick2hand, tcl_channel_info, tcl_channel_modify,
 X5(tcl_getchanidle, tcl_chanbans, tcl_resetbans, tcl_getchanjoin, tcl_resetchan);
 X5(tcl_channel, tcl_banlist, tcl_channels, tcl_getchanmode, tcl_flushmode);
 X5(tcl_pushmode, tcl_newchanban, tcl_newban, tcl_killchanban, tcl_killban);
-X(tcl_topic); X(tcl_savechannels); X(tcl_loadchannels); X(tcl_validchan);
+X5(tcl_topic, tcl_savechannels, tcl_loadchannels, tcl_validchan, tcl_isdynamic);
 
 /* tcluser.c */
 X5(tcl_countusers, tcl_validuser, tcl_finduser, tcl_passwdOk, tcl_chattr);
@@ -106,6 +106,7 @@ X5(tcl_getdnloads, tcl_setdnloads, tcl_getuploads, tcl_setuploads,
    tcl_matchchanattr);
 X5(tcl_getchaninfo, tcl_setchaninfo, tcl_addchanrec, tcl_delchanrec, 
    tcl_getchanlaston);
+X(tcl_notes);
 
 /* tcldcc.c */
 X5(tcl_putdcc, tcl_strip, tcl_dccsend, tcl_dccbroadcast, tcl_hand2idx);
@@ -115,7 +116,6 @@ X5(tcl_bots, tcl_dcclist, tcl_dccused, tcl_link, tcl_unlink);
 X5(tcl_filesend, tcl_assoc, tcl_killassoc, tcl_getdccidle, tcl_getdccaway);
 X5(tcl_setdccaway, tcl_connect, tcl_whom, tcl_valididx, tcl_listen);
 X5(tcl_putidx, tcl_page, tcl_boot, tcl_rehash, tcl_restart);
-X(tcl_validchan);
 #ifdef ENABLE_TCL_DCCSIMUL
 X(tcl_dccsimul);
 #endif
@@ -129,7 +129,8 @@ X5(tcl_getfileq, tcl_getdesc, tcl_setdesc, tcl_getowner, tcl_setowner);
 X5(tcl_getgots, tcl_setlink, tcl_getlink, tcl_setpwd, tcl_getpwd);
 X5(tcl_getfiles, tcl_getdirs, tcl_hide, tcl_unhide, tcl_share);
 X5(tcl_unshare, tcl_encrypt, tcl_decrypt, tcl_dumpfile, tcl_dccdumpfile);
-X(tcl_backup); X(tcl_die);
+X5(tcl_backup, tcl_die, tcl_strftime, tcl_mkdir, tcl_rmdir);
+X(tcl_getflags); X(tcl_setflags); X(tcl_mv); X(tcl_cp);
 
 #endif
 

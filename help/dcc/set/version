@@ -1,0 +1,4 @@
+%{+n}
+### set version
+     this read-only variable returns the current version of the bot 
+     in the form v1.1.0+lastpatch <versionnumber> <patch list>

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set keep-nick <0/1>
    specifies whether the bot will keep trying to regain its nickname if
    it is forced to change nicks.  if this is on, and you change the bot's

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set realname <text>
    specifies the real name field to use on IRC.  this usually
    shows up in a /WHOIS as the thing in parenthesis after some-

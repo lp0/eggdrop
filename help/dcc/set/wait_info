@@ -1,0 +1,5 @@
+%{+n}
+### set wait-info <#>
+     allows you to set the number of seconds to wait before 
+     redisplaying a users info line when they join the channel
+     (only relevant if use-info is 1)

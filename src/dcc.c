@@ -65,8 +65,7 @@ int dcc_block=1024;
 char network[41]="unknown-net";
 
 
-void stop_auto(nick)
-char *nick;
+void stop_auto PROTO1(char *,nick)
 {
   int i;
   for (i=0; i<dcc_total; i++)
@@ -76,8 +75,7 @@ char *nick;
     }
 }
 
-void greet_new_bot(idx)
-int idx;
+void greet_new_bot PROTO1(int,idx)
 {
   int atr=get_attr_handle(dcc[idx].nick);
   stop_auto(dcc[idx].nick);
@@ -92,7 +90,7 @@ int idx;
     return;
   }
   if (atr & BOT_LEAF) dcc[idx].u.bot->status|=STAT_LEAF;
-  tprintf(dcc[idx].sock,"version %s %s\n",ver,network);
+  tprintf(dcc[idx].sock,"version %s <%s>\n",ver,network);
   tprintf(dcc[idx].sock,"thisbot %s\n",botnetnick);
   putlog(LOG_BOTS,"*","Linked to %s",dcc[idx].nick);
   chatout("*** Linked to %s\n",dcc[idx].nick);
@@ -102,8 +100,7 @@ int idx;
   check_tcl_link(dcc[idx].nick,botnetnick);
 }
 
-void dcc_chat_pass(idx,buf)
-int idx; char *buf;
+void dcc_chat_pass PROTO2(int,idx,char *,buf)
 {
   int atr=get_attr_handle(dcc[idx].nick);
   if (pass_match_by_handle(buf,dcc[idx].nick)) {
@@ -134,8 +131,7 @@ int idx; char *buf;
   }
 }
 
-void dcc_bot_new(idx,buf)
-int idx; char *buf;
+void dcc_bot_new PROTO2(int,idx,char *,buf)
 {
   if (strcasecmp(buf,"*hello!")==0) {
     dcc[idx].type=DCC_BOT;
@@ -161,8 +157,7 @@ int idx; char *buf;
 }
 
 #ifndef NO_FILE_SYSTEM
-void dcc_files_pass(idx,buf)
-int idx; char *buf;
+void dcc_files_pass PROTO2(int,idx,char *,buf)
 {
   if (pass_match_by_handle(buf,dcc[idx].nick)) {
     if (too_many_filers()) {
@@ -191,8 +186,7 @@ int idx; char *buf;
 }
 #endif
 
-void dcc_fork(idx,buf)
-int idx; char *buf;
+void dcc_fork PROTO2(int,idx,char *,buf)
 {
   switch(dcc[idx].u.fork->type) {
 #ifndef NO_IRC
@@ -213,8 +207,7 @@ int idx; char *buf;
 }
 
 /* ie, connect failed. :) */
-void eof_dcc_fork(idx)
-int idx;
+void eof_dcc_fork PROTO1(int,idx)
 {
   switch(dcc[idx].u.fork->type) {
 #ifndef NO_IRC
@@ -233,8 +226,7 @@ int idx;
 }
 
 #ifndef NO_FILE_SYSTEM
-void eof_dcc_send(idx)
-int idx;
+void eof_dcc_send PROTO1(int,idx)
 {
   int ok,j; char ofn[121],nfn[121],hand[41],s[161];
   context;
@@ -306,8 +298,7 @@ int idx;
 #endif
 
 /* make sure ansi code is just for color-changing */
-int check_ansi(v)
-char *v;
+int check_ansi PROTO1(char *,v)
 {
   int count=2;
   if (*v++!='\033') return 1;
@@ -320,8 +311,7 @@ char *v;
   return count;
 }
 
-void dcc_chat(idx,buf)
-int idx; char *buf;
+void dcc_chat PROTO2(int,idx,char *,buf)
 {
   int i,nathan=0,doron=0,fixed=0; char *v=buf;
   context;
@@ -341,7 +331,7 @@ int idx; char *buf;
       if (v > buf) {
 	 v--;
 	 strcpy(v,v+2);
-      }
+      } else strcpy(v,v+1);
       break;
     case 27:  /* ESC - ansi code? */
       doron=check_ansi(v);
@@ -415,8 +405,7 @@ int idx; char *buf;
 }
 
 #ifndef NO_FILE_SYSTEM
-void dcc_files(idx,buf)
-int idx; char *buf;
+void dcc_files PROTO2(int,idx,char *,buf)
 {
   int i;
   if (detect_dcc_flood(dcc[idx].u.file->chat,idx)) return;
@@ -464,8 +453,7 @@ int idx; char *buf;
 }
 #endif
 
-void dcc_telnet(idx,buf)
-int idx; char *buf;
+void dcc_telnet PROTO2(int,idx,char *,buf)
 {
   unsigned long ip; unsigned short port; int i,j; char s[121],s1[81];
   i=dcc_total;
@@ -545,8 +533,7 @@ int idx; char *buf;
 }
 
 #ifndef NO_FILE_SYSTEM
-void dcc_get(idx,buf,len)
-int idx; char *buf; int len;
+void dcc_get PROTO3(int,idx,char *,buf,int,len)
 {
   unsigned char bbuf[121],xnick[NICKLEN],*bf; unsigned long cmp,l;
   context;
@@ -632,8 +619,7 @@ int idx; char *buf; int len;
   dcc[idx].u.xfer->pending=time(NULL);
 }
 
-void eof_dcc_get(idx)
-int idx;
+void eof_dcc_get PROTO1(int,idx)
 {
   char xnick[NICKLEN];
   context;
@@ -668,8 +654,7 @@ int idx;
   if (!at_limit(xnick)) send_next_file(xnick);
 }
 
-void dcc_get_pending(idx,buf)
-int idx; char *buf;
+void dcc_get_pending PROTO2(int,idx,char *,buf)
 {
   unsigned long ip; unsigned short port; int i; char *bf,s[UHOSTLEN];
   context;
@@ -694,8 +679,7 @@ int idx; char *buf;
   /* leave f open until file transfer is complete */
 }
 
-void dcc_send(idx,buf,len)
-int idx; char *buf; int len;
+void dcc_send PROTO3(int,idx,char *,buf,int,len)
 {
   char s[512]; unsigned long sent;
   context;
@@ -720,8 +704,7 @@ int idx; char *buf; int len;
 }
 #endif   /* !NO_FILE_SYSTEM */
 
-void dcc_telnet_id(idx,buf)
-int idx; char *buf;
+void dcc_telnet_id PROTO2(int,idx,char *,buf)
 {
   int ok=0,atr;
   buf[10]=0;
@@ -824,8 +807,7 @@ int idx; char *buf;
   }
 }
 
-void dcc_relay(idx,buf)
-int idx; char *buf;
+void dcc_relay PROTO2(int,idx,char *,buf)
 {
   int j;
   for (j=0; (dcc[j].sock!=dcc[idx].u.relay->sock) ||
@@ -842,8 +824,7 @@ int idx; char *buf;
   else tprintf(dcc[idx].u.relay->sock,"%s\r\n",buf);
 }
 
-void dcc_relaying(idx,buf)
-int idx; char *buf;
+void dcc_relaying PROTO2(int,idx,char *,buf)
 {
   int j; struct chat_info *ci;
   if (strcasecmp(buf,"*BYE*")!=0) {
@@ -877,8 +858,7 @@ int idx; char *buf;
   killsock(dcc[j].sock); lostdcc(j);
 }
 
-void dcc_telnet_new(idx,buf)
-int idx; char *buf;
+void dcc_telnet_new PROTO2(int,idx,char *,buf)
 {
   int x,ok=1;
   buf[9]=0;
@@ -930,8 +910,7 @@ int idx; char *buf;
   dprintf(idx,"(Only the first 9 letters are significant.)\n");
 }
 
-void dcc_telnet_pw(idx,buf)
-int idx; char *buf;
+void dcc_telnet_pw PROTO2(int,idx,char *,buf)
 {
   char newpass[10]; int x,ok;
   buf[10]=0; ok=1;
@@ -966,8 +945,7 @@ int idx; char *buf;
   dcc_chatter(idx);
 }
 
-void dcc_script(idx,buf)
-int idx; char *buf;
+void dcc_script PROTO2(int,idx,char *,buf)
 {
   void *old;
   if (!buf[0]) return;
@@ -1004,7 +982,7 @@ int idx; char *buf;
 /**********************************************************************/
 
 /* main loop calls here when activity is found on a dcc socket */
-void dcc_activity(int z,char *buf,int len)
+void dcc_activity PROTO3(int,z,char *,buf,int,len)
 {
   int idx;
   context;
@@ -1057,7 +1035,7 @@ void dcc_activity(int z,char *buf,int len)
 }
 
 /* eof from dcc goes here from I/O... */
-void eof_dcc(int z)
+void eof_dcc PROTO1(int,z)
 {
   int idx;
   context;

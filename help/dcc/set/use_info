@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set use-info <0/1>
    specifies whether to activate the info system.  if this is off,
    the bot will not accept changes to any user's "info line" (the

@@ -70,8 +70,7 @@ int expmem_blowfish()
   return tot;
 }
 
-void blowfish_encipher(xl,xr)
-UWORD_32bits *xl; UWORD_32bits *xr;
+void blowfish_encipher PROTO2(UWORD_32bits *,xl,UWORD_32bits *,xr)
 {
   union aword  Xl;
   union aword  Xr;
@@ -94,8 +93,7 @@ UWORD_32bits *xl; UWORD_32bits *xr;
   *xl = Xr.word;
 }
 
-void blowfish_decipher(xl,xr)
-UWORD_32bits *xl; UWORD_32bits *xr;
+void blowfish_decipher PROTO2(UWORD_32bits *,xl,UWORD_32bits *,xr)
 {
    union aword  Xl;
    union aword  Xr;
@@ -118,7 +116,7 @@ UWORD_32bits *xl; UWORD_32bits *xr;
    *xr = Xl.word;
 }
 
-void debug_blowfish(int idx) 
+void debug_blowfish PROTO1(int,idx) 
 {
   int i,tot=0;
   for (i=0; i<BOXES; i++) if (box[i].P!=NULL) tot++;
@@ -131,8 +129,7 @@ void debug_blowfish(int idx)
   if (idx<0) tprintf(-idx,"\n"); else dprintf(idx,"\n");
 }
 
-void blowfish_init(key,keybytes)
-UBYTE_08bits *key; short keybytes;
+void blowfish_init PROTO2(UBYTE_08bits *,key,short,keybytes)
 {
   int i,j,bx; time_t lowest;
   UWORD_32bits  data;
@@ -230,15 +227,14 @@ UBYTE_08bits *key; short keybytes;
 /* convert 64-bit encrypted password to text for userfile */
 char *base64="./0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-int base64dec(c)
-char c;
+int base64dec PROTO1(char,c)
 {
   int i;
   for (i=0; i<64; i++) if (base64[i]==c) return i;
   return 0;
 }
 
-void encrypt_pass(char *text, char *new)
+void encrypt_pass PROTO2(char *,text,char *,new)
 {
   UWORD_32bits left,right; int n; char *p;
   blowfish_init(text,strlen(text));
@@ -257,7 +253,7 @@ void encrypt_pass(char *text, char *new)
 }
 
 /* returned string must be freed when done with it! */
-char *encrypt_string(char *key, char *str)
+char *encrypt_string PROTO2(char *,key, char *,str)
 {
   UWORD_32bits left,right; char *p,*s,*dest,*d; int i;
   dest=(char *)nmalloc((strlen(str)+9)*2);
@@ -287,7 +283,7 @@ char *encrypt_string(char *key, char *str)
 }
 
 /* returned string must be freed when done with it! */
-char *decrypt_string(char *key,char *str)
+char *decrypt_string PROTO2(char *,key,char *,str)
 {
   UWORD_32bits left,right; char *p,*s,*dest,*d; int i;
   dest=(char *)nmalloc(strlen(str)+12);

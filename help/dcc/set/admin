@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set admin <admin-info>
    specifies the admin info for your bot.  it's just human-
    readable text that is displayed every once in a while.  it

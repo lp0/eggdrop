@@ -54,6 +54,8 @@ char motdfile[121]="motd";
 int server_timeout=15;
 /* how long to wait before a telnet connection times out */
 int connect_timeout=15;
+/* timeout time on DCC xfers */
+int wait_dcc_xfer = 300;
 
 
 int expmem_dccutil()
@@ -122,7 +124,7 @@ int expmem_dccutil()
  * guy, but when you added this feature you forced people to either  *
  * use your *SHAREWARE* client or face screenfulls of crap!)	     */
 
-void strip_mirc_codes (int flags, char *text)
+void strip_mirc_codes PROTO2(int,flags, char *,text)
 {
   char *vv;
   while (*text) {
@@ -381,8 +383,7 @@ va_dcl
   va_end(va);
 }
     
-void remote_tell_info(z,nick)
-int z; char *nick;
+void remote_tell_info PROTO2(int,z,char *,nick)
 {
   char s[256],*p,*q; struct chanset_t *chan;
   p=(char *)nmalloc(11); strcpy(p,"Channels: ");
@@ -404,7 +405,7 @@ int z; char *nick;
     tprintf(z,"priv %s %s Admin: %s\n",botnetnick,nick,admin);
 }
 
-void remote_tell_who(int z,char *nick,int chan)
+void remote_tell_who PROTO3(int,z,char *,nick,int,chan)
 {
   int i,k,ok=0; char s[121]; time_t tt;
   tt=time(NULL);
@@ -470,7 +471,7 @@ void remote_tell_who(int z,char *nick,int chan)
     }
 }
 
-void tell_who(int idx,int chan)
+void tell_who PROTO2(int,idx,int,chan)
 {
   int i,k,ok=0,atr; char s[121]; time_t tt;
   atr=get_attr_handle(dcc[idx].nick);
@@ -556,7 +557,7 @@ void tell_who(int idx,int chan)
   }
 }
 
-void dcc_chatter(int idx)
+void dcc_chatter PROTO1(int,idx)
 {
   int i,j;
 #ifndef NO_IRC
@@ -570,6 +571,19 @@ void dcc_chatter(int idx)
   dprintf(idx,"Everything else goes out to the party line.\n\n");
   i=dcc[idx].u.chat->channel; dcc[idx].u.chat->channel=234567;
   j=dcc[idx].sock;
+#ifndef NO_IRC
+  if (atr & (USER_GLOBAL|USER_MASTER|USER_OWNER)) found=1;
+  if (owner_anywhere(dcc[idx].nick)) find=CHANUSER_OWNER;
+  else if (master_anywhere(dcc[idx].nick)) find=CHANUSER_MASTER;
+  else find=CHANUSER_OP;
+  while (chan!=NULL && found==0) {
+    chatr=get_chanattr_handle(dcc[idx].nick,chan->name);
+    if (chatr & find) found=1;
+    else chan=chan->next;
+  }
+  if (chan==NULL) chan=chanset;
+  strcpy(dcc[idx].u.chat->con_chan,chan->name);
+#endif
   check_tcl_chon(dcc[idx].nick,dcc[idx].sock);
   /* still there? */
   if ((idx>=dcc_total) || (dcc[idx].sock!=j)) return;  /* nope */
@@ -593,34 +607,28 @@ void dcc_chatter(int idx)
 	        dcc[idx].host);
       }
     }
-    context;
     check_tcl_chjn(botnetnick,dcc[idx].nick,dcc[idx].u.chat->channel,
 		    geticon(idx),dcc[idx].sock,dcc[idx].host);
     context;
-#ifndef NO_IRC
-    if (atr & (USER_GLOBAL|USER_MASTER|USER_OWNER)) found=1;
-    if (owner_anywhere(dcc[idx].nick)) find=CHANUSER_OWNER;
-    else if (master_anywhere(dcc[idx].nick)) find=CHANUSER_MASTER;
-    else find=CHANUSER_OP;
-    while (chan!=NULL && found==0) {
-      chatr=get_chanattr_handle(dcc[idx].nick,chan->name);
-      if (chatr & find) found=1;
-      else chan=chan->next;
-    }
-    if (chan==NULL) chan=chanset;
-    strcpy(dcc[idx].u.chat->con_chan,chan->name);
-#endif
     notes_read(dcc[idx].nick,"",-1,idx);
-    context;
   }
 }
 
 /* remove entry from dcc list */
-void lostdcc(int n)
+void lostdcc PROTO1(int,n)
 {
   int i;
   switch(dcc[n].type) {
   case DCC_CHAT:
+    if (dcc[n].u.chat->buffer) {
+      struct eggqueue * p = dcc[n].u.chat->buffer,*q;
+      while (p) {
+	q = p->next;
+	nfree(p->item);
+	nfree(p);
+        p = q;
+      }
+    }
   case DCC_TELNET_ID:
   case DCC_CHAT_PASS:
   case DCC_TELNET_NEW:
@@ -681,8 +689,7 @@ void lostdcc(int n)
   }
 }
 
-char *stat_str(st)
-int st;
+char *stat_str PROTO1(int,st)
 {
   static char s[10];
   s[0]=st&STAT_CHAT?'C':'c';
@@ -693,8 +700,7 @@ int st;
   s[5]=0; return s;
 }
 
-char *stat_str2(st)
-int st;
+char *stat_str2 PROTO1(int,st)
 {
   static char s[10];
   s[0]=st&STAT_PINGED?'P':'p';
@@ -710,7 +716,7 @@ int st;
 
 /* show list of current dcc's to a dcc-chatter */
 /* positive value: idx given -- negative value: sock given */
-void tell_dcc(int zidx)
+void tell_dcc PROTO1(int,zidx)
 {
   int i; char s[20],x[20],other[40]; time_t now=time(NULL);
   if (zidx<0) {
@@ -846,7 +852,7 @@ void tell_dcc(int zidx)
 }
 
 /* mark someone on dcc chat as no longer away */
-void not_away(int idx)
+void not_away PROTO1(int,idx)
 {
   if (dcc[idx].u.chat->away==NULL) {
     dprintf(idx,"You weren't away!\n");
@@ -864,7 +870,7 @@ void not_away(int idx)
   notes_read(dcc[idx].nick,"",-1,idx);
 }
 
-void set_away(int idx,char *s)
+void set_away PROTO2(int,idx,char *,s)
 {
   if (s==NULL) { not_away(idx); return; }
   if (!s[0]) { not_away(idx); return; }
@@ -882,7 +888,7 @@ void set_away(int idx,char *s)
 }
 
 /* assumes it was chat type before! */
-void set_files(int idx)
+void set_files PROTO1(int,idx)
 {
   struct chat_info *ci;
   ci=dcc[idx].u.chat;
@@ -890,37 +896,37 @@ void set_files(int idx)
   dcc[idx].u.file->chat=ci;
 }
 
-void set_tand(int idx)
+void set_tand PROTO1(int,idx)
 {
   dcc[idx].u.bot=(struct bot_info *)nmalloc(sizeof(struct bot_info));
 }
 
-void set_chat(int idx)
+void set_chat PROTO1(int,idx)
 {
   dcc[idx].u.chat=(struct chat_info *)nmalloc(sizeof(struct chat_info));
 }
 
-void set_xfer(int idx)
+void set_xfer PROTO1(int,idx)
 {
   dcc[idx].u.xfer=(struct xfer_info *)nmalloc(sizeof(struct xfer_info));
 }
 
-void get_file_ptr(struct file_info **p)
+void get_file_ptr PROTO1(struct file_info **,p)
 {
   (*p)=(struct file_info *)nmalloc(sizeof(struct file_info));
 }
 
-void get_chat_ptr(struct chat_info **p)
+void get_chat_ptr PROTO1(struct chat_info **,p)
 {
   (*p)=(struct chat_info *)nmalloc(sizeof(struct chat_info));
 }
 
-void get_xfer_ptr(struct xfer_info **p)
+void get_xfer_ptr PROTO1(struct xfer_info **,p)
 {
   (*p)=(struct xfer_info *)nmalloc(sizeof(struct xfer_info));
 }
 
-void set_fork(int idx)
+void set_fork PROTO1(int,idx)
 {
   void *hold;
   hold=dcc[idx].u.other;
@@ -930,7 +936,7 @@ void set_fork(int idx)
   dcc[idx].type=DCC_FORK;
 }
 
-void set_script(int idx)
+void set_script PROTO1(int,idx)
 {
   void *hold;
   hold=dcc[idx].u.other;
@@ -940,19 +946,19 @@ void set_script(int idx)
   dcc[idx].type=DCC_SCRIPT;
 }
 
-void set_relay(int idx)
+void set_relay PROTO1(int,idx)
 {
   dcc[idx].u.relay=(struct relay_info *)nmalloc(sizeof(struct relay_info));
 }
 
-void set_new_relay(int idx)
+void set_new_relay PROTO1(int,idx)
 {
   set_relay(idx);
   dcc[idx].u.relay->chat=(struct chat_info *)nmalloc(sizeof(struct chat_info));
 }
 
 /* make a password, 6-9 random letters and digits */
-void makepass(char *s)
+void makepass PROTO1(char *,s)
 {
   int i,j;
   i=6+(random()%4);
@@ -998,7 +1004,7 @@ void check_expired_dcc()
     }
 #ifndef NO_FILE_SYSTEM
     if (dcc[i].type==DCC_GET_PENDING) {
-      if (now-dcc[i].u.xfer->pending > WAIT_DCC_XFER) {
+      if (now-dcc[i].u.xfer->pending > wait_dcc_xfer) {
 	if (strcmp(dcc[i].nick,"*users")==0) {
 	  int x,y=0;
 	  for (x=0; x<dcc_total; x++)
@@ -1027,7 +1033,7 @@ void check_expired_dcc()
       }
     }
     else if (dcc[i].type==DCC_SEND) {
-      if (now-dcc[i].u.xfer->pending > WAIT_DCC_XFER) {
+      if (now-dcc[i].u.xfer->pending > wait_dcc_xfer) {
 	if (strcmp(dcc[i].nick,"*users")==0) {
 	  int x,y=0;
 	  for (x=0; x<dcc_total; x++)
@@ -1103,43 +1109,34 @@ void check_expired_dcc()
   }
 }
 
-void append_line(int idx, char *line) {
-  char *x; int l=strlen(line);
+void append_line PROTO2(int,idx, char *,line)
+{
+  int l=strlen(line);
   struct eggqueue *p,*q; struct chat_info *c=dcc[idx].u.chat;
-  x=strchr(line,'\n'); /* if there's more than one line, split them up */
-  if (x!=NULL) {
-    if (x[1]!=0) {
-      char c=x[1];
-      x[1]=0;
-      append_line(idx,line);
-      x[1]=c;
-      line=x+1;
-    }
-  }  
-  c->current_lines++;
-  if (c->current_lines > 1000)
+  if (c->current_lines > 1000) {
+    p = c->buffer;
     /* they're probably trying to fill up the bot nuke the sods :) */
+    while (p) { /* flush their queue */
+      q = p->next;
+      nfree(p->item);
+      nfree(p);
+      p = q;
+    }
+    c->buffer = 0;
+    c->status &= ~STAT_PAGE; 
     do_boot(idx,botname,"too many pages - senq full");
+    return;
+  }
   if ((c->line_count < c->max_line) && (c->buffer==NULL)) {
     c->line_count++;
     tputs(dcc[idx].sock,line,l);
   } 
   else {
+    c->current_lines++;
     if (c->buffer==NULL) q=NULL;
     else {
-      int l2;
       q=c->buffer;
       while (q->next!=NULL) q=q->next;
-	x=q->item;
-	l2=strlen(x);
-	if (x[l2-1]!='\n') {
-          /* if previous entry did not end in a line, append it */
-	  x=nmalloc(l2+l+1);
-	  strcpy(x,q->item);
-	  strcpy(x+l2,line);
-	  nfree(q->item);
-	  return;
-	}
     }
     p=(struct eggqueue *)nmalloc(sizeof(struct eggqueue));
     p->stamp=l;
@@ -1151,10 +1148,12 @@ void append_line(int idx, char *line) {
   }
 }
 
-void flush_lines(int idx) {
+void flush_lines PROTO1(int,idx)
+{
   int c=dcc[idx].u.chat->line_count;
   struct eggqueue *p=dcc[idx].u.chat->buffer,*o;
   while (p && c < (dcc[idx].u.chat->max_line)) {
+    dcc[idx].u.chat->current_lines--;
     tputs(dcc[idx].sock,p->item,p->stamp);
     nfree(p->item);
     o=p->next;

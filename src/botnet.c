@@ -80,7 +80,7 @@ void init_bots()
 }
 
 /* add a tandem bot to our chain list */
-void addbot(char *who,char *from,char *next)
+void addbot PROTO3(char *,who,char *,from,char *,next)
 {
   if (tands==maxtands) {
     /* expand tandem bot space */
@@ -95,7 +95,7 @@ void addbot(char *who,char *from,char *next)
 
 /* for backward 1.0 compatibility: */
 /* grab the (first) sock# for a user on another bot */
-int partysock(char *bot,char *nick)
+int partysock PROTO2(char *,bot,char *,nick)
 {
   int i;
   for (i=0; i<parties; i++) {
@@ -107,7 +107,8 @@ int partysock(char *bot,char *nick)
 }
 
 /* new botnet member */
-void addparty(char *bot,char *nick,int chan,char flag,int sock,char *from)
+void addparty PROTO6(char *,bot,char *,nick,int,chan,char,flag,int,sock,
+		     char *,from)
 {
   int i;
   context;
@@ -150,7 +151,7 @@ void addparty(char *bot,char *nick,int chan,char flag,int sock,char *from)
 }
 
 /* alter status flags for remote party-line user */
-void partystat(char *bot,int sock,int add,int rem)
+void partystat PROTO4(char *,bot,int,sock,int,add,int,rem)
 {
   int i;
   for (i=0; i<parties; i++) {
@@ -163,7 +164,7 @@ void partystat(char *bot,int sock,int add,int rem)
 }
 
 /* other bot is sharing idle info */
-void partysetidle(char *bot, int sock,int secs)
+void partysetidle PROTO3(char *,bot,int,sock,int,secs)
 {
   int i;
   for (i=0; i<parties; i++) {
@@ -175,7 +176,7 @@ void partysetidle(char *bot, int sock,int secs)
 }
 
 /* un-idle someone */
-void partyidle(char *bot,char *nick)
+void partyidle PROTO2(char *,bot,char *,nick)
 {
   int i;
   for (i=0; i<parties; i++) {
@@ -187,7 +188,7 @@ void partyidle(char *bot,char *nick)
 }
 
 /* set away message */
-void partyaway(char *bot,int sock,char *msg)
+void partyaway PROTO3(char *,bot,int,sock,char *,msg)
 {
   int i;
   for (i=0; i<parties; i++) {
@@ -201,7 +202,7 @@ void partyaway(char *bot,int sock,char *msg)
 }
 
 /* remove a tandem bot from the chain list */
-void rembot(char *who,char *from)
+void rembot PROTO2(char *,who,char *,from)
 {
   int i,j;
   context;
@@ -218,7 +219,7 @@ void rembot(char *who,char *from)
     }
 }
 
-void remparty(char *bot, int sock)
+void remparty PROTO2(char *,bot, int,sock)
 {
   int i,j;
   context;
@@ -241,8 +242,7 @@ void remparty(char *bot, int sock)
 }
 
 /* cancel every user that was on a certain bot */
-void rempartybot(bot)
-char *bot;
+void rempartybot PROTO1(char *,bot)
 {
   int i;
   for (i=0; i<parties; i++) if (strcasecmp(party[i].bot,bot)==0) {
@@ -251,12 +251,12 @@ char *bot;
 }
 
 /* modern version of 'whom' (use local data) */
-void answer_local_whom(int idx,int chan)
+void answer_local_whom PROTO2(int,idx,int,chan)
 {
   char *s,c,idle[20]; int i; time_t now=time(NULL);
   context;
   if (chan==(-1))
-    dprintf(idx,"Users across the botnet (+: partly line, *: local channel)\n");
+    dprintf(idx,"Users across the botnet (+: party line, *: local channel)\n");
   else if (chan>0) {
     s=get_assoc_name(chan);
     if (s==NULL) dprintf(idx,"Users on channel %s%d:\n",
@@ -311,7 +311,7 @@ void answer_local_whom(int idx,int chan)
 }
 
 /* remove every bot linked 'via' bot <x> */
-void unvia(int idx, char *who)
+void unvia PROTO2(int,idx,char *,who)
 {
   int i;
   rempartybot(who);
@@ -323,7 +323,7 @@ void unvia(int idx, char *who)
 }
 
 /* return index into dcc list of the bot that connects us to bot <x> */
-int nextbot(char *who)
+int nextbot PROTO1(char *,who)
 {
   int i,j;
   for (i=0; i<tands; i++) if (strcasecmp(who,tandbot[i].bot)==0) {
@@ -336,7 +336,7 @@ int nextbot(char *who)
 }
 
 /* return name of the bot that is directly connected to bot X */
-char *lastbot(char *who)
+char *lastbot PROTO1(char *,who)
 {
   int i;
   for (i=0; i<tands; i++) if (strcasecmp(who,tandbot[i].bot)==0)
@@ -345,7 +345,7 @@ char *lastbot(char *who)
 }
 
 /* show z a list of all bots connected */
-void tell_bots(int idx)
+void tell_bots PROTO1(int,idx)
 {
   char s[512]; int i;
   if (!tands) { dprintf(idx,"No bots linked.\n"); return; }
@@ -359,12 +359,13 @@ void tell_bots(int idx)
 }
 
 int get_tands() { return tands; }
-char *get_tandbot(int i) { return tandbot[i].bot; }
+char *get_tandbot PROTO1(int,i) { return tandbot[i].bot; }
 
 /* show a simpleton bot tree */
-void tell_bottree(int idx)
+void tell_bottree PROTO1(int,idx)
 {
   int i; char s[161],last[20][10],this[10]; int lev=0,more,mark[20],ok,cnt;
+  char work[1024];
   int tothops=0;
   strcpy(this,botnetnick); more=1;
   if (tands==0) {
@@ -376,21 +377,24 @@ void tell_bottree(int idx)
     s[strlen(s)-2]=0; dprintf(idx,"(No trace info for: %s)\n",s);
   }
   dprintf(idx,"%s\n",this);
+  work[0] = 0;
   while (more) {
     if (lev==20) { dprintf(idx,"\nTree too complex!\n"); return; }
     cnt=0; tothops+=lev;
     for (i=0; i<tands; i++) if (strcasecmp(tandbot[i].next,this)==0) cnt++;
     if (cnt) {
       for (i=0; i<lev; i++) {
-	if (mark[i]) dprintf(idx,"  |  ");
-	else dprintf(idx,"     ");
+	if (mark[i]) strcat(work,"  |  ");
+	else strcat(work,"     ");
       }
-      if (cnt>1) dprintf(idx,"  |--"); else dprintf(idx,"  `--");
+      if (cnt>1) strcat(work,"  |--"); 
+      else strcat(work,"  `--");
       s[0]=0; i=0; while (!s[0]) {
 	if (strcasecmp(tandbot[i].next,this)==0) strcpy(s,tandbot[i].bot);
 	else i++;
       }
-      dprintf(idx,"%s\n",s); if (cnt>1) mark[lev]=1; else mark[lev]=0;
+      dprintf(idx,"%s%s\n",work,s); if (cnt>1) mark[lev]=1; else mark[lev]=0;
+      work[0] = 0;
       strcpy(last[lev],this); strcpy(this,s); lev++; more=1;
     }
     else {
@@ -407,12 +411,13 @@ void tell_bottree(int idx)
 	}
 	if (cnt) {
 	  for (i=1; i<lev; i++) {
-	    if (mark[i-1]) dprintf(idx,"  |  ");
-	    else dprintf(idx,"     ");
+	    if (mark[i-1])strcat(work,"  |  ");
+	    else strcat(work,"     ");
 	  }
 	  strcpy(this,s); more=1;
-	  if (cnt>1) dprintf(idx,"  |--%s\n",this);
-	  else dprintf(idx,"  `--%s\n",this);
+	  if (cnt>1) dprintf(idx,"%s  |--%s\n",work,this);
+	  else dprintf(idx,"%s  `--%s\n",work,this);
+	  work[0] = 0;
 	  if (cnt>1) mark[lev-1]=1; else mark[lev-1]=0;
 	}
 	else {
@@ -428,7 +433,7 @@ void tell_bottree(int idx)
 	  ((float)tothops)/((float)tands),tands+1);
 }
 
-void kill_assoc(int chan)
+void kill_assoc PROTO1(int,chan)
 {
   assoc_t *a=assoc,*last=NULL;
   while (a!=NULL) {
@@ -452,7 +457,7 @@ void kill_all_assoc()
 }
 
 /* add a channel association */
-void add_assoc(char *name, int chan)
+void add_assoc PROTO2(char *,name,int,chan)
 {
   assoc_t *a=assoc,*b,*old=NULL;
   while (a!=NULL) {
@@ -480,7 +485,7 @@ void add_assoc(char *name, int chan)
   if (old==NULL) assoc=b; else old->next=b;
 }
 
-int get_assoc(char *name)
+int get_assoc PROTO1(char *,name)
 {
   assoc_t *a=assoc;
   while (a!=NULL) {
@@ -490,7 +495,7 @@ int get_assoc(char *name)
   return -1;
 }
 
-char *get_assoc_name(int chan)
+char *get_assoc_name PROTO1(int,chan)
 {
   assoc_t *a=assoc;
   while (a!=NULL) {
@@ -501,7 +506,7 @@ char *get_assoc_name(int chan)
 }
 
 /* no.  don't do this any more. */
-void dump_assoc(int idx)
+void dump_assoc PROTO1(int,idx)
 {
   assoc_t *a=assoc;
   if (a==NULL) {
@@ -519,7 +524,7 @@ void dump_assoc(int idx)
 }
 
 /* dump list of links to a new bot */
-void dump_links(int z)
+void dump_links PROTO1(int,z)
 {
   int i;
   assoc_t *a=assoc;
@@ -556,7 +561,7 @@ void dump_links(int z)
   }
 }
 
-int in_chain(char *who)
+int in_chain PROTO1(char *,who)
 {
   int i;
   for (i=0; i<tands; i++) if (strcasecmp(tandbot[i].bot,who)==0) return 1;
@@ -564,7 +569,7 @@ int in_chain(char *who)
   return 0;
 }
 
-void cancel_user_xfer(int idx)
+void cancel_user_xfer PROTO1(int,idx)
 {
   int i,j;
   context;
@@ -606,7 +611,7 @@ void cancel_user_xfer(int idx)
   context;
 }
 
-void reject_bot(char *who)
+void reject_bot PROTO1(char *,who)
 {
   int i;
   i=nextbot(who); if (i<0) return;
@@ -648,7 +653,7 @@ void drop_alt_bots()
 }
 
 /* break link with a tandembot */
-int botunlink(int idx,char *nick,char *reason)
+int botunlink PROTO3(int,idx,char *,nick,char *,reason)
 {
   int i;
   context;
@@ -705,7 +710,7 @@ int botunlink(int idx,char *nick,char *reason)
 }
 
 /* link to another bot */
-int botlink(char *linker,int idx,char *nick)
+int botlink PROTO3(char *,linker,int,idx,char *,nick)
 {
   char s[121],*p; int port,i;
   context;
@@ -762,7 +767,7 @@ int botlink(char *linker,int idx,char *nick)
   return 1;
 }
 
-void failed_link(int idx)
+void failed_link PROTO1(int,idx)
 {
   char s[81];
   if (dcc[idx].port>=dcc[idx].u.fork->port+3) {
@@ -787,7 +792,7 @@ void failed_link(int idx)
   }
 }
 
-void cont_link(int idx)
+void cont_link PROTO1(int,idx)
 {
   int i; char s[81]; struct bot_info *ti;
   context;
@@ -833,7 +838,7 @@ void cont_link(int idx)
 }
 
 /* relay to another tandembot */
-void tandem_relay(int idx, char *nick)
+void tandem_relay PROTO2(int,idx, char *,nick)
 {
   char s[121],*p,*p1; int port,i; struct chat_info *ci;
   context;
@@ -895,7 +900,7 @@ void tandem_relay(int idx, char *nick)
 }
 
 /* input from user before connect is ready */
-void pre_relay(int idx, char *buf)
+void pre_relay PROTO2(int,idx, char *,buf)
 {
   int tidx=(-1),i;
   context;
@@ -934,7 +939,7 @@ void pre_relay(int idx, char *buf)
 }
 
 /* user disconnected before her relay had finished connecting */
-void failed_pre_relay(int idx)
+void failed_pre_relay PROTO1(int,idx)
 {
   int tidx=(-1),i;
   context;
@@ -956,7 +961,7 @@ void failed_pre_relay(int idx)
   dcc[tidx].sock=dcc[tidx].type; dcc[tidx].type=DCC_LOST;
 }
 
-void failed_tandem_relay(int idx)
+void failed_tandem_relay PROTO1(int,idx)
 {
   int uidx=(-1),i;
   context;
@@ -984,7 +989,7 @@ void failed_tandem_relay(int idx)
     failed_tandem_relay(idx);
 }
 
-void cont_tandem_relay(int idx)
+void cont_tandem_relay PROTO1(int,idx)
 {
   int uidx=(-1),i; struct relay_info *ri;
   context;
@@ -1073,7 +1078,7 @@ void check_botnet_pings()
     }
 }
 
-void zapfbot(int idx)
+void zapfbot PROTO1(int,idx)
 {
   chatout("*** Dropped bot: %s\n",dcc[idx].nick);
   tandout_but(idx,"unlinked %s\n",dcc[idx].nick);

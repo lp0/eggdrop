@@ -76,7 +76,8 @@ extern char botname[], origbotname[], botuser[], botrealname[], botserver[],
 extern char flag1, flag2, flag3, flag4, flag5, flag6, flag7, flag8, flag9,
   flag0, chanflag1, chanflag2, chanflag3, chanflag4, chanflag5, chanflag6,
   chanflag7, chanflag8, chanflag9, chanflag0;
-extern int online;
+extern int online, maxnotes,modesperline,maxqmsg,wait_split,wait_info,
+  wait_dcc_xfer,note_life,default_port;
 extern struct eggqueue *serverlist;
 extern struct dcc_t dcc[];
 extern int dcc_total;
@@ -151,7 +152,7 @@ int tcl_logfile STDVAR
   return TCL_ERROR;
 }
 
-int findidx(int z)
+int findidx PROTO1(int,z)
 {
   int j;
   for (j=0; j<dcc_total; j++)
@@ -162,8 +163,7 @@ int findidx(int z)
   return -1;
 }
 
-void nick_change(new)
-char *new;
+void nick_change PROTO1(char *,new)
 {
 #ifndef NO_IRC
   if (strcasecmp(origbotname,new)!=0) {
@@ -172,13 +172,12 @@ char *new;
     strcpy(origbotname,new);
     /* start all over with nick chasing: */
     strcpy(botname,origbotname); newbotname[0]=0;
-    if (serv>=0) tprintf(serv,"TRACE %s\n",botname);
+    if (serv>=0) tprintf(serv,"NICK %s\n",botname);
   }
 #endif
 }
 
-void botnet_change(new)
-char *new;
+void botnet_change PROTO1(char *,new)
 {
   if (strcasecmp(botnetnick,new)!=0) {
     /* trying to change bot's nickname */
@@ -199,8 +198,8 @@ char *new;
 
 /* called when some script tries to change flag1..flag0 */
 /* (possible that the new value will be invalid, so we ignore the change) */
-char *tcl_eggflag(cdata,irp,name1,name2,flags)
-ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
+char *tcl_eggflag PROTO5(ClientData,cdata,Tcl_Interp *,irp,char *,name1,
+			 char *,name2,int,flags)
 {
   char s1[2],*s; flaginfo *fi=(flaginfo *)cdata;
   if (flags&(TCL_TRACE_READS|TCL_TRACE_UNSETS)) {
@@ -225,8 +224,8 @@ ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
 }
 
 /* read/write normal integer */
-char *tcl_eggint(cdata,irp,name1,name2,flags)
-ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
+char *tcl_eggint PROTO5(ClientData,cdata,Tcl_Interp *,irp,char *,name1,
+			char *,name2,int,flags)
 {
   char *s,s1[40]; long l;
   if (flags&(TCL_TRACE_READS|TCL_TRACE_UNSETS)) {
@@ -252,6 +251,12 @@ ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
 	return "read-only variable";
       else {
 	if (Tcl_ExprLong(interp,s,&l)==TCL_ERROR) return interp->result;
+	if ((int *)cdata == &modesperline) {
+	   if (l < 3) 
+	     l = 3;
+	   if (l > 6)
+	     l = 6;
+	}
 	*(int *)cdata=(int)l;
       }
     }
@@ -260,8 +265,8 @@ ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
 }
 
 /* read/write normal string variable */
-char *tcl_eggstr(cdata,irp,name1,name2,flags)
-ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
+char *tcl_eggstr PROTO5(ClientData,cdata,Tcl_Interp *,irp,char *,name1,
+			char *,name2,int,flags)
 {
   char *s; strinfo *st=(strinfo *)cdata;
   if (flags&(TCL_TRACE_READS|TCL_TRACE_UNSETS)) {
@@ -311,8 +316,7 @@ ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
 }
 
 /* trace a flag */
-void tcl_traceflag(name,ptr,def)
-char *name,*ptr; char def;
+void tcl_traceflag PROTO3(char *,name,char *,ptr,char,def)
 {
   flaginfo *fi;
   fi=(flaginfo *)nmalloc(sizeof(flaginfo));
@@ -329,8 +333,7 @@ char *name,*ptr; char def;
 
 /* set up a string variable to be traced (takes a little more effort than */
 /* the others, cos the max length has to be stored too) */
-void tcl_tracestr2(name,ptr,len,dir)
-char *name,*ptr; int len,dir;
+void tcl_tracestr2 PROTO4(char *,name,char *,ptr,int,len,int,dir)
 {
   strinfo *st;
   st=(strinfo *)nmalloc(sizeof(strinfo));
@@ -347,8 +350,8 @@ char *name,*ptr; int len,dir;
 /* oddballs */
 
 /* read/write the server list */
-char *tcl_eggserver(cdata,irp,name1,name2,flags)
-ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
+char *tcl_eggserver PROTO5(ClientData,cdata,Tcl_Interp *,irp,char *,name1,
+			   char *,name2,int,flags)
 {
   Tcl_DString ds; char *slist,**list; struct eggqueue *q; int lc,code,i;
   if (flags&(TCL_TRACE_READS|TCL_TRACE_UNSETS)) {
@@ -380,8 +383,8 @@ ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
 }
 
 /* read/write integer couplets (int1:int2) */
-char *tcl_eggcouplet(cdata,irp,name1,name2,flags)
-ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
+char *tcl_eggcouplet PROTO5(ClientData,cdata,Tcl_Interp *,irp,char *,name1,
+			    char *,name2,int,flags)
 {
   char *s,s1[41]; coupletinfo *cp=(coupletinfo *)cdata;
   if (flags&(TCL_TRACE_READS|TCL_TRACE_UNSETS)) {
@@ -407,8 +410,7 @@ ClientData cdata; Tcl_Interp *irp; char *name1,*name2; int flags;
 	       tcl_eggserver,(ClientData)ptr)
 
 /* allocate couplet space for tracing couplets */
-void tcl_tracecouplet(name,lptr,rptr)
-char *name; int *lptr,*rptr;
+void tcl_tracecouplet PROTO3(char *,name,int *,lptr,int *,rptr)
 {
   coupletinfo *cp;
   cp=(coupletinfo *)nmalloc(sizeof(coupletinfo));
@@ -420,24 +422,19 @@ char *name; int *lptr,*rptr;
 
 /**********************************************************************/
 
-int check_cmd(idx,msg)
-int idx; char *msg;
+#ifdef EBUG
+int check_cmd PROTO2(int,idx,char *,msg)
 {
   char s[512];
   context;
   stridx(s,msg,1);
   if (strcasecmp(s,"chpass")==0) {
-    stridx(s,msg,2);
-    if (s[0]) {
-      if (s[0]=='"' && s[1]=='"' && (!s[2] || s[2]==' ')) { 
-        dprintf(idx,"TCL error: empty quotes\n");
-        return 0;
-      }
-    }
-    return 2;
+    stridx(s,msg,3);
+    if (s[0]) return 1;
   }
-  return 1;
+  return 0;
 }
+#endif
 
 void protect_tcl()
 {
@@ -547,6 +544,15 @@ void init_traces()
   tcl_tracecouplet("flood-chan",&flood_pub_thr,&flood_pub_time);
   tcl_tracecouplet("flood-join",&flood_join_thr,&flood_join_time);
   tcl_tracecouplet("flood-ctcp",&flood_ctcp_thr,&flood_ctcp_time);
+  /* moved from eggdrop.h */
+  tcl_traceint("modes-per-line",&modesperline);
+  tcl_traceint("max-queue-msg",&maxqmsg);
+  tcl_traceint("wait-split",&wait_split);
+  tcl_traceint("wait-info",&wait_info);
+  tcl_traceint("xfer-timeout",&wait_dcc_xfer);
+  tcl_traceint("default-port",&default_port);
+  tcl_traceint("note-life",&note_life);
+  tcl_traceint("max-notes",&maxnotes);
 }
 
 /* not going through Tcl's crazy main() system (what on earth was he
@@ -612,7 +618,7 @@ void init_tcl()
   Q("resetchan",tcl_resetchan); Q("validchan",tcl_validchan);
   Q("getting-users",tcl_getting_users); Q("strip",tcl_strip);
   Q("page",tcl_page); Q("savechannels",tcl_savechannels);
-  Q("loadchannels",tcl_loadchannels);
+  Q("loadchannels",tcl_loadchannels); Q("isdynamic",tcl_isdynamic);
 #ifndef NO_FILE_SYSTEM
   Q("dccsend",tcl_dccsend); Q("getfileq",tcl_getfileq);
   Q("getdesc",tcl_getdesc); Q("getowner",tcl_getowner);
@@ -624,6 +630,8 @@ void init_tcl()
   Q("unshare",tcl_unshare); Q("filesend",tcl_filesend);
   Q("getuploads",tcl_getuploads); Q("setuploads",tcl_setuploads);
   Q("getdnloads",tcl_getdnloads); Q("setdnloads",tcl_setdnloads);
+  Q("mkdir",tcl_mkdir); Q("rmdir",tcl_rmdir); Q("cp",tcl_cp); Q("mv",tcl_mv);
+  Q("getflags",tcl_getflags); Q("setflags",tcl_setflags);
 #endif
   Q("assoc",tcl_assoc); Q("killassoc",tcl_killassoc);
   Q("getchanmode",tcl_getchanmode); Q("pushmode",tcl_pushmode);
@@ -641,6 +649,7 @@ void init_tcl()
   Q("getchaninfo",tcl_getchaninfo); Q("setchaninfo",tcl_setchaninfo);
   Q("addchanrec",tcl_addchanrec); Q("delchanrec",tcl_delchanrec);
   Q("getchanlaston",tcl_getchanlaston);
+  Q("strftime",tcl_strftime); Q("notes",tcl_notes);
 }
 
 /* set Tcl variables to match eggdrop internal variables */
@@ -659,7 +668,7 @@ void set_tcl_vars()
 /**********************************************************************/
 
 /* show user-defined whois fields */
-void tcl_tell_whois(int idx,char *xtra)
+void tcl_tell_whois PROTO2(int,idx,char *,xtra)
 {
   int code,lc,xc,qc,i,j; char **list,**xlist,**qlist;
   context;
@@ -687,30 +696,33 @@ void tcl_tell_whois(int idx,char *xtra)
 }
 
 /* evaluate a Tcl command, send output to a dcc user */
-void cmd_tcl(idx,msg)
-int idx; char *msg;
+void cmd_tcl PROTO2(int,idx,char *,msg)
 {
-  int code,i=0; char s[512];
+  int code;
+#ifdef EBUG
+  int i=0; char s[512];
   context;
-  if (msg[0]) {
-    i=check_cmd(idx,msg);
-    if (!i) return;
-  }
-  set_tcl_vars();
-  if (i>1) {
+  if (msg[0]) i=check_cmd(idx,msg);
+  if (i) {
     stridx(s,msg,2);
-    debug1("tcl: evaluate (.tcl): chpass %s [something]",s);
+    if (s[0]) debug1("tcl: evaluate (.tcl): chpass %s [something]",s);
+    else debug1("tcl: evaluate (.tcl): %s",msg);
   }
   else debug1("tcl: evaluate (.tcl): %s",msg);
+#endif
+  context;
+  set_tcl_vars();
+  context;
   code=Tcl_GlobalEval(interp,msg);
+  context;
   if (code==TCL_OK) dumplots(idx,"Tcl: ",interp->result);
-  else dprintf(idx,"TCL error: %s\n",interp->result);
+  else dumplots(idx,"TCL error: ",interp->result);
+  context;
   /* refresh internal vars */
 }
 
 /* perform a 'set' command */
-void cmd_set(idx,msg)
-int idx; char *msg;
+void cmd_set PROTO2(int,idx,char *,msg)
 {
   int code; char s[512];
   putlog(LOG_CMDS,"*","#%s# set %s",dcc[idx].nick,msg);
@@ -730,7 +742,7 @@ int idx; char *msg;
   else dprintf(idx,"Error: %s\n",interp->result);
 }
 
-void do_tcl(char *whatzit,char *script)
+void do_tcl PROTO2(char *,whatzit,char *,script)
 {
   int code;
 #ifdef EBUG_TCL
@@ -754,7 +766,7 @@ void do_tcl(char *whatzit,char *script)
 
 /* read and interpret the configfile given */
 /* return 1 if everything was okay */
-int readtclprog(char *fname)
+int readtclprog PROTO1(char *,fname)
 {
   int code; FILE *f;
   set_tcl_vars();

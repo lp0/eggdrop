@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set whois-fields <field-list>
    tells the bot what "xtra" fields to display in a '.whois' or
    '.match' command.  the "xtra" fields are normally set by

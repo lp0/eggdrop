@@ -50,7 +50,7 @@ int tcl_putdcc STDVAR
     Tcl_AppendResult(irp,"illegal idx",NULL);
     return TCL_ERROR;
   }
-  dprintf(j,"%s\n",argv[2]);
+  dumplots(j,"",argv[2]);
   return TCL_OK;
 }
 
@@ -344,7 +344,7 @@ int tcl_page STDVAR
     return TCL_ERROR;
   }
   if (argc==3) {
-    int l=atoi(argv[3]);
+    int l=atoi(argv[2]);
     if (l==0) dcc[i].u.chat->status&=~STAT_PAGE;
     else {
       dcc[i].u.chat->status|=STAT_PAGE;
@@ -497,35 +497,43 @@ int tcl_dcclist STDVAR
 /* list of { nick bot host flag idletime awaymsg } */
 int tcl_whom STDVAR
 {
-  char c[2],idle[10],away[121]; int chan; time_t now=time(NULL);
-  char *list[6],*p; int i;
+  char c[2],idle[10],away[121],work[20],*list[6],*p;
+  int chan,i; time_t now=time(NULL);
   BADARGS(2,2," chan");
-  if ((argv[1][0]<'0') || (argv[1][0]>'9')) {
-    chan=get_assoc(argv[1]);
-    if (chan==(-1)) {
-      Tcl_AppendResult(irp,"channel name is invalid",NULL);
+  if (argv[1][0] == '*')
+     chan = -1;
+  else {
+    if ((argv[1][0]<'0') || (argv[1][0]>'9')) {
+      chan=get_assoc(argv[1]);
+      if (chan==(-1)) {
+        Tcl_AppendResult(irp,"channel name is invalid",NULL);
+        return TCL_ERROR;
+      }
+    }
+    else chan=atoi(argv[1]);
+    if ((chan<0) || (chan>199999)) {
+      Tcl_AppendResult(irp,"channel out of range; must be 0 thru 199999",NULL);
       return TCL_ERROR;
     }
   }
-  else chan=atoi(argv[1]);
-  if ((chan<0) || (chan>199999)) {
-    Tcl_AppendResult(irp,"channel out of range; must be 0 thru 199999",NULL);
-    return TCL_ERROR;
-  }
   for (i=0; i<dcc_total; i++) if (dcc[i].type==DCC_CHAT) {
-    if (dcc[i].u.chat->channel==chan) {
+    if ((dcc[i].u.chat->channel==chan) || (chan == -1)) {
       c[0]=geticon(i); c[1]=0;
       sprintf(idle,"%lu",(now-dcc[i].u.chat->timer)/60);
       if (dcc[i].u.chat->away!=NULL) strcpy(away,dcc[i].u.chat->away);
       else away[0]=0;
       list[0]=dcc[i].nick; list[1]=botnetnick; list[2]=dcc[i].host;
       list[3]=c; list[4]=idle; list[5]=away;
-      p=Tcl_Merge(6,list);
+      if (chan == -1) {
+	sprintf(work,"%d",dcc[i].u.chat->channel);
+	list[6] = work;
+      }
+      p=Tcl_Merge((chan == -1)?7:6,list);
       Tcl_AppendElement(irp,p); n_free(p,"",0);
     }
   }
   for (i=0; i<parties; i++) {
-    if (party[i].chan==chan) {
+    if ((party[i].chan==chan) || (chan == -1)) {
       c[0]=party[i].flag; c[1]=0;
       if (party[i].timer==0L) strcpy(idle,"0");
       else sprintf(idle,"%lu",(now-party[i].timer)/60);
@@ -533,7 +541,11 @@ int tcl_whom STDVAR
       else away[0]=0;
       list[0]=party[i].nick; list[1]=party[i].bot; list[2]=party[i].from;
       list[3]=c; list[4]=idle; list[5]=away;
-      p=Tcl_Merge(6,list);
+      if (chan == -1) {
+	sprintf(work,"%d",party[i].chan);
+	list[6] = work;
+      }
+      p=Tcl_Merge((chan == -1)?7:6,list);
       Tcl_AppendElement(irp,p); n_free(p,"",0);
     }
   }
@@ -679,6 +691,16 @@ int tcl_assoc STDVAR
 {
   int chan; char name[21],*p;
   BADARGS(2,3," chan ?name?");
+  if ((argc == 2) && ((argv[1][0] < '0') || (argv[1][0] > '9'))) {
+     chan = get_assoc(argv[1]);
+     if (chan==-1)
+       Tcl_AppendResult(irp,"",NULL);
+     else { 
+       sprintf(name,"%d",chan);
+       Tcl_AppendResult(irp,name,NULL);
+     }
+     return TCL_OK;
+  }
   chan=atoi(argv[1]);
   if ((chan<1) || (chan>199999)) {
     Tcl_AppendResult(irp,"invalid channel #",NULL);

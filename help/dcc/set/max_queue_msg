@@ -1,0 +1,5 @@
+%{+n}
+### set max-queue-msg <#>
+     sets the maximum number of messages the bot will queue in it's
+     queue to send to the server, before it starts ignoring any
+     futher messages

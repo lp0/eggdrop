@@ -23,8 +23,8 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "eggdrop.h"
-#include "files.h"
 #include "proto.h"
+#include "files.h"
 
 /* 'configure' is supposed to make things easier for me now */
 /* PLEASE don't fail me, 'configure'! :)  */
@@ -70,7 +70,7 @@ int dcc_limit=3;
 #endif
 
 /* low-level stuff for other modules */
-int is_file(char *s)
+int is_file PROTO1(char *,s)
 {
   struct stat ss;
   int i=stat(s,&ss);
@@ -82,7 +82,7 @@ int is_file(char *s)
 #ifndef NO_FILE_SYSTEM
 
 /* return true if this user has >= the maximum number of file xfers going */
-int at_limit(char *nick)
+int at_limit PROTO1(char *,nick)
 {
   int i,x=0;
   for (i=0; i<dcc_total; i++)
@@ -101,7 +101,7 @@ int too_many_filers()
 }
 
 /* someone uploaded a file -- add it */
-void add_file(char *dir,char *file,char *nick)
+void add_file PROTO3(char *,dir,char *,file,char *,nick)
 {
   FILE *f;
   /* gave me a full pathname */
@@ -113,7 +113,7 @@ void add_file(char *dir,char *file,char *nick)
   filedb_close(f);
 }
 
-int welcome_to_files(int idx)
+int welcome_to_files PROTO1(int,idx)
 {
   int atr=get_attr_handle(dcc[idx].nick); FILE *f;
   dprintf(idx,"\n");
@@ -147,8 +147,7 @@ int welcome_to_files(int idx)
 /* given current directory, and the desired changes, fill 'real' with */
 /* the new current directory.  check directory parmissions along the */
 /* way.  return 1 if the change can happen, 0 if not. */
-int resolve_dir(current,change,real,atr)
-char *current,*change,*real; int atr;
+int resolve_dir PROTO4(char *,current,char *,change,char *,real,int,atr)
 {
   char elem[512],s[1024],new[1024],*p; FILE *f; filedb *fdb;
   strcpy(real,current); strcpy(new,change);
@@ -214,7 +213,7 @@ char *current,*change,*real; int atr;
   return 1;
 }
 
-void incr_file_gots(char *ppath)
+void incr_file_gots PROTO1(char *,ppath)
 {
   char *p,path[256],destdir[121],fn[81]; filedb *fdb; FILE *f; long where;
   /* absolute dir?  probably a tcl script sending it, and it might not */
@@ -246,22 +245,19 @@ void incr_file_gots(char *ppath)
 
 /*** COMMANDS ***/
 
-void cmd_pwd(idx,par)
-int idx; char *par;
+void cmd_pwd PROTO2(int,idx,char *,par)
 {
   putlog(LOG_FILES,"*","files: #%s# pwd",dcc[idx].nick);
   dprintf(idx,"%s: /%s\n",FILES_CURDIR,dcc[idx].u.file->dir);
 }
 
-void cmd_pending(idx,par)
-int idx; char *par;
+void cmd_pending PROTO2(int,idx,char *,par)
 {
   show_queued_files(idx);
   putlog(LOG_FILES,"*","files: #%s# pending",dcc[idx].nick);
 }
 
-void cmd_cancel(idx,par)
-int idx; char *par;
+void cmd_cancel PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"%s: cancel <file-mask>\n",USAGE);
@@ -271,8 +267,7 @@ int idx; char *par;
   putlog(LOG_FILES,"*","files: #%s# cancel %s",dcc[idx].nick,par);
 }
 
-void cmd_chdir(idx,msg)
-int idx; char *msg;
+void cmd_chdir PROTO2(int,idx,char *,msg)
 {
   char s[121]; int atr;
   if (!msg[0]) {
@@ -291,8 +286,7 @@ int idx; char *msg;
   dprintf(idx,"%s: /%s\n",FILES_NEWCURDIR,dcc[idx].u.file->dir);
 }
 
-void files_ls(idx,par,showall)
-int idx; char *par; int showall;
+void files_ls PROTO3(int,idx,char *,par,int,showall)
 {
   char *p,s[DIRLEN],destdir[DIRLEN],mask[81]; int atr; FILE *f;
   atr=get_attr_handle(dcc[idx].nick);
@@ -327,19 +321,17 @@ int idx; char *par; int showall;
   }
 }
 
-void cmd_ls(idx,par)
-int idx; char *par;
+void cmd_ls PROTO2(int,idx,char *,par)
 {
   files_ls(idx,par,0);
 }
-void cmd_lsa(idx,par)
-int idx; char *par;
+
+void cmd_lsa PROTO2(int,idx,char *,par)
 {
   files_ls(idx,par,1);
 }
   
-void cmd_get(idx,par)
-int idx; char *par;
+void cmd_get PROTO2(int,idx,char *,par)
 {
   int atr,ok=0,i; char *p,what[512],destdir[121],s[256];
   filedb *fdb; FILE *f; long where;
@@ -408,8 +400,7 @@ int idx; char *par;
   else putlog(LOG_FILES,"*","files: #%s# get %s %s",dcc[idx].nick,what,par);
 }
 
-void cmd_file_help(idx,par)
-int idx; char *par;
+void cmd_file_help PROTO2(int,idx,char *,par)
 {
   char s[1024]; int atr;
   atr=get_attr_handle(dcc[idx].nick);
@@ -425,8 +416,7 @@ int idx; char *par;
   }
 }
 
-void cmd_hide(idx,par)
-int idx; char *par;
+void cmd_hide PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
@@ -459,8 +449,7 @@ int idx; char *par;
   }
 }
 
-void cmd_unhide(idx,par)
-int idx; char *par;
+void cmd_unhide PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
@@ -493,8 +482,7 @@ int idx; char *par;
   }
 }
 
-void cmd_share(idx,par)
-int idx; char *par;
+void cmd_share PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
@@ -527,8 +515,7 @@ int idx; char *par;
   }
 }
 
-void cmd_unshare(idx,par)
-int idx; char *par;
+void cmd_unshare PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0;
   if (!par[0]) {
@@ -562,8 +549,7 @@ int idx; char *par;
 }
 
 /* link a file from another bot */
-void cmd_ln(idx,par)
-int idx; char *par;
+void cmd_ln PROTO2(int,idx,char *,par)
 {
   char share[512],newpath[121],newfn[81],*p; FILE *f; filedb fdb,*x;
   long where; int atr;
@@ -614,8 +600,7 @@ int idx; char *par;
 	 newpath[0]?"/":"",newfn,share);
 }
 
-void cmd_desc(idx,par)
-int idx; char *par;
+void cmd_desc PROTO2(int,idx,char *,par)
 {
   char fn[512],desc[301],*p,*q; int atr,ok=0,lin; FILE *f; filedb *fdb;
   long where;
@@ -676,8 +661,7 @@ int idx; char *par;
   else putlog(LOG_FILES,"*","files: #%s# desc %s",dcc[idx].nick,fn);
 }
 
-void cmd_rm(idx,par)
-int idx; char *par;
+void cmd_rm PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; int ok=0; char s[256];
   if (!par[0]) {  
@@ -713,8 +697,7 @@ int idx; char *par;
   }
 }
 
-void cmd_mkdir(idx,par)
-int idx; char *par;
+void cmd_mkdir PROTO2(int,idx,char *,par)
 {
   char name[512],s[512]; FILE *f; filedb *fdb; long where;
   if (!par[0]) {
@@ -767,8 +750,7 @@ int idx; char *par;
   filedb_close(f);
 }
 
-void cmd_rmdir(idx,par)
-int idx; char *par;
+void cmd_rmdir PROTO2(int,idx,char *,par)
 {
   FILE *f; filedb *fdb; long where; char s[256],name[80];
   strncpy(name,par,80); name[80]=0;
@@ -801,8 +783,7 @@ int idx; char *par;
   filedb_close(f);
 }
 
-void cmd_mv_cp(idx,par,copy)
-int idx; char *par; int copy;
+void cmd_mv_cp PROTO3(int,idx,char *,par,int,copy)
 {
   char *p,fn[512],oldpath[161],s[161],s1[161],newfn[161],newpath[161];
   int atr,ok,only_first,skip_this; FILE *f,*g; filedb *fdb,x,*z;
@@ -940,20 +921,17 @@ int idx; char *par; int copy;
   if (g!=NULL) filedb_close(g);
 }
 
-void cmd_mv(idx,par)
-int idx; char *par;
+void cmd_mv PROTO2(int,idx,char *,par)
 {
   cmd_mv_cp(idx,par,0);
 }
 
-void cmd_cp(idx,par)
-int idx; char *par;
+void cmd_cp PROTO2(int,idx,char *,par)
 {
   cmd_mv_cp(idx,par,1);
 }
 
-void cmd_stats(idx,par)
-int idx; char *par;
+void cmd_stats PROTO2(int,idx,char *,par)
 {
   tell_file_stats(idx,dcc[idx].nick);
   putlog(LOG_FILES,"*","files: #%s# stats",dcc[idx].nick);
@@ -961,7 +939,7 @@ int idx; char *par;
 
 /***** Tcl stub functions *****/
 
-int files_get(int idx,char *fn,char *nick)
+int files_get PROTO3(int,idx,char *,fn,char *,nick)
 {
   int atr,i; char *p,what[512],destdir[121],s[256];
   filedb *fdb; FILE *f; long where;
@@ -1008,7 +986,7 @@ int files_get(int idx,char *fn,char *nick)
   return 1;
 }
 
-void files_setpwd(int idx,char *where)
+void files_setpwd PROTO2(int,idx,char *,where)
 {
   int atr; char s[121];
   atr=get_attr_handle(dcc[idx].nick);

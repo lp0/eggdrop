@@ -59,8 +59,7 @@ extern int copy_to_tmp;
 char filedb_path[121]="";
 
 /* lock the file, using fcntl */
-void lockfile(f)
-FILE *f;
+void lockfile PROTO1(FILE *,f)
 {
   struct flock fl;
   fl.l_type=F_WRLCK;
@@ -72,8 +71,7 @@ FILE *f;
 }
 
 /* unlock the file */
-void unlockfile(f)
-FILE *f;
+void unlockfile PROTO1(FILE *,f)
 {
   struct flock fl;
   fl.l_type=F_UNLCK;
@@ -84,8 +82,7 @@ FILE *f;
 }
 
 /* use a where of 0 to start out, then increment 1 space for each next */
-filedb *findmatch(f,lookfor,where)
-FILE *f; char *lookfor; long *where;
+filedb *findmatch PROTO3(FILE *,f,char *,lookfor,long *,where)
 {
   static filedb fdb; char match[256];
   strncpy(match,lookfor,255); match[255]=0;
@@ -104,8 +101,7 @@ FILE *f; char *lookfor; long *where;
   return NULL;
 }
 
-filedb *findfile(f,name,where)
-FILE *f; char *name; long *where;
+filedb *findfile PROTO3(FILE *,f,char *,name,long *,where)
 {
   filedb *fdb;
   long w=0L;   /* force a rewind */
@@ -115,8 +111,7 @@ FILE *f; char *name; long *where;
 }
 
 /* alternate version so the buffers don't get overwritten */
-filedb *findmatch2(f,lookfor,where)
-FILE *f; char *lookfor; long *where;
+filedb *findmatch2 PROTO3(FILE *,f,char *,lookfor,long *,where)
 {
   static filedb fdb; char match[256];
   strcpy(match,lookfor);
@@ -135,8 +130,7 @@ FILE *f; char *lookfor; long *where;
   return NULL;
 }
 
-filedb *findfile2(f,name,where)
-FILE *f; char *name; long *where;
+filedb *findfile2 PROTO3(FILE *,f,char *,name,long *,where)
 {
   filedb *fdb;
   long w=0L;   /* force a rewind */
@@ -145,7 +139,7 @@ FILE *f; char *name; long *where;
   return fdb;
 }
 
-long findempty(FILE *f)
+long findempty PROTO1(FILE *,f)
 {
   long where=0L; filedb fdb;
   rewind(f); while (!feof(f)) {
@@ -160,8 +154,7 @@ long findempty(FILE *f)
   return where;
 }
 
-void filedb_timestamp(f)
-FILE *f;
+void filedb_timestamp PROTO1(FILE *,f)
 {
   filedb fdb; int x;
   /* read 1st filedb entry if it's there */
@@ -177,8 +170,7 @@ FILE *f;
 }
 
 /* return 1 if i find a '.files' and convert it */
-int convert_old_db(path,newfiledb)
-char *path,*newfiledb;
+int convert_old_db PROTO2(char *,path,char *,newfiledb)
 {
   FILE *f,*g; char s[256],fn[61],nick[20],tm[20]; filedb fdb; 
   int in_file=0; long where; struct stat st;
@@ -236,8 +228,7 @@ char *path,*newfiledb;
   fclose(f); return 1;
 }
 
-void filedb_update(path,f)
-char *path; FILE *f;
+void filedb_update PROTO2(char *,path,FILE *,f)
 {
   struct dirent *dd; DIR *dir; filedb *fdb,fdb1; char name[61]; long where;
   struct stat st; char s[512];
@@ -309,7 +300,7 @@ char *path; FILE *f;
 
 int count=0;
 
-FILE *filedb_open(char *path)
+FILE *filedb_open PROTO1(char *,path)
 {
   char s[DIRLEN],npath[DIRLEN]; FILE *f; filedb fdb; struct stat st;
   if (count>=2) {
@@ -365,7 +356,7 @@ FILE *filedb_open(char *path)
   return f;
 }
 
-void filedb_close(FILE *f)
+void filedb_close PROTO1(FILE *,f)
 {
   filedb_timestamp(f);
   fseek(f,0L,SEEK_END);
@@ -374,7 +365,7 @@ void filedb_close(FILE *f)
   fclose(f);
 }
 
-void filedb_add(FILE *f,char *filename,char *nick)
+void filedb_add PROTO3(FILE *,f,char *,filename,char *,nick)
 {
   unsigned long where; filedb *fdb;
   /* when the filedb was opened, a record was already created */
@@ -387,8 +378,7 @@ void filedb_add(FILE *f,char *filename,char *nick)
 }
   
 /* fills fdb if can find a match and returns 1, else returns 0 */
-int filedb_match(f,match,fdb,first)
-FILE *f; char *match; filedb *fdb; int first;
+int filedb_match PROTO4(FILE *,f,char *,match,filedb *,fdb,int,first)
 {
   if (first) rewind(f);
   while (!feof(f)) {
@@ -400,7 +390,7 @@ FILE *f; char *match; filedb *fdb; int first;
   return 0;
 }
 
-void filedb_ls(FILE *f,int idx,int atr,char *mask,int showall)
+void filedb_ls PROTO5(FILE *,f,int,idx,int,atr,char *,mask,int,showall)
 {
   filedb fdb; int ok=0,cnt=0,is=0; char s[81],s1[81],*p;
   rewind(f); while (!feof(f)) {
@@ -478,7 +468,7 @@ void filedb_ls(FILE *f,int idx,int atr,char *mask,int showall)
   else dprintf(idx,"--- %d file%s.\n",cnt,cnt>1?"s":"");
 }
 
-void remote_filereq(int idx,char *from,char *file)
+void remote_filereq PROTO3(int,idx,char *,from,char *,file)
 {
   char *p,what[256],dir[256],s[256],s1[256]; FILE *f; filedb *fdb; int i;
   strcpy(what,file);
@@ -529,7 +519,7 @@ void remote_filereq(int idx,char *from,char *file)
 
 /*** for tcl: ***/
 
-void filedb_getdesc(char *dir,char *fn,char *desc)
+void filedb_getdesc PROTO3(char *,dir,char *,fn,char *,desc)
 {
   FILE *f; filedb *fdb;
   f=filedb_open(dir);
@@ -540,7 +530,7 @@ void filedb_getdesc(char *dir,char *fn,char *desc)
   strcpy(desc,fdb->desc); return;
 }
 
-void filedb_getowner(char *dir,char *fn,char *owner)
+void filedb_getowner PROTO3(char *,dir,char *,fn,char *,owner)
 {
   FILE *f; filedb *fdb;
   f=filedb_open(dir);
@@ -551,7 +541,7 @@ void filedb_getowner(char *dir,char *fn,char *owner)
   strcpy(owner,fdb->uploader); return;
 }
 
-int filedb_getgots(char *dir,char *fn)
+int filedb_getgots PROTO2(char *,dir,char *,fn)
 {
   FILE *f; filedb *fdb;
   f=filedb_open(dir);
@@ -562,7 +552,7 @@ int filedb_getgots(char *dir,char *fn)
   return fdb->gots;
 }
 
-void filedb_setdesc(char *dir,char *fn,char *desc)
+void filedb_setdesc PROTO3(char *,dir,char *,fn,char *,desc)
 {
   FILE *f; filedb *fdb; long where;
   f=filedb_open(dir);
@@ -576,7 +566,7 @@ void filedb_setdesc(char *dir,char *fn,char *desc)
   return;
 }
 
-void filedb_setowner(char *dir,char *fn,char *owner)
+void filedb_setowner PROTO3(char *,dir,char *,fn,char *,owner)
 {
   FILE *f; filedb *fdb; long where;
   f=filedb_open(dir);
@@ -590,7 +580,7 @@ void filedb_setowner(char *dir,char *fn,char *owner)
   return;
 }
 
-void filedb_setlink(char *dir,char *fn,char *link)
+void filedb_setlink PROTO3(char *,dir,char *,fn,char *,link)
 {
   FILE *f; filedb fdb,*x; long where;
   f=filedb_open(dir);
@@ -620,7 +610,7 @@ void filedb_setlink(char *dir,char *fn,char *link)
   fwrite(&fdb,sizeof(filedb),1,f); filedb_close(f);
 }
 
-void filedb_getlink(char *dir,char *fn,char *link)
+void filedb_getlink PROTO3(char *,dir,char *,fn,char *,link)
 {
   FILE *f; filedb *fdb;
   f=filedb_open(dir); link[0]=0;
@@ -633,7 +623,7 @@ void filedb_getlink(char *dir,char *fn,char *link)
   return;
 }
 
-void filedb_getfiles(Tcl_Interp *irp,char *dir)
+void filedb_getfiles PROTO2(Tcl_Interp *,irp,char *,dir)
 {
   FILE *f; filedb fdb;
   f=filedb_open(dir); if (f==NULL) return;
@@ -648,7 +638,7 @@ void filedb_getfiles(Tcl_Interp *irp,char *dir)
   filedb_close(f);
 }
 
-void filedb_getdirs(Tcl_Interp *irp,char *dir)
+void filedb_getdirs PROTO2(Tcl_Interp *,irp,char *,dir)
 {
   FILE *f; filedb fdb;
   f=filedb_open(dir); if (f==NULL) return;
@@ -663,7 +653,7 @@ void filedb_getdirs(Tcl_Interp *irp,char *dir)
   filedb_close(f);
 }
 
-void filedb_change(char *dir,char *fn,int what)
+void filedb_change PROTO3(char *,dir,char *,fn,int,what)
 {
   FILE *f; filedb *fdb; long where;
   f=filedb_open(dir);

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set servlimit <#>
    specifies the minimum number of servers the bot should accept.
    if the bot's home channel ever empties out, and the number of

@@ -260,6 +260,14 @@ just new commands) are marked with vertical bars on the left.
       a sharebot (and hence, user records are about to drastically
       change), "0" if not
 
+| notes <user> [number]
+|   gets info on notes stored for a user
+|   returns: (if no numbers specified) number of notes for user,
+|            -1 if no such user, -2 if notefile failure
+|            (if a note number specified) the number'th note for the
+|            user, -1 if no such user, -2 if notefile failure, 0 if
+|            no such note. the note is a list, first element from,
+|            2nd element timestamp, 3rd element the note itself
 
 *** CHANNEL COMMANDS ***
 
@@ -384,7 +392,10 @@ just new commands) are marked with vertical bars on the left.
 | validchan <channel>
 |   checks if the bot is monitoring that channel
 |   returns: 1 if the channel exists, 0 if not
- 
+|
+| isdynamic <channel>
+|   returns: 1 if the channel is an existing dynamic channel, 0 if not
+
 *** DCC COMMANDS ***
 
   putdcc <idx> <text>
@@ -393,7 +404,7 @@ just new commands) are marked with vertical bars on the left.
 
 | putidx <idx> <text>
 |   useful to  use in script connections, same as putdcc, but a little faster
-|   sends test to the idx indicated
+|   sends text to the idx indicated
 |   returns: nothing
 
   dccbroadcast <message>
@@ -636,6 +647,37 @@ just new commands) are marked with vertical bars on the left.
     returns: list containing download statistics, in the same format
       as getuploads
 
+| mkdir <directory> [required-flags]
+|   creates a directory in the files system, only users with the
+|   required flags may access
+|   returns:
+|     0 on success
+|     1 on can't create directory
+|     2 on directory exists but is not a directory
+|
+| rmdir <directory>
+|   removes a directory from the file system.
+|   return: 0 on success, 1 on failure
+|
+| mv <file> <destination>
+|   moves the file from it's source to the given destination, file
+|   can also be a mask, eg /incoming/* provided the destination is
+|   a directory
+|   returns: number of files copied on success or negative numbers
+|     to indicat errors: -1 = invalid source file, -2 = invalid desto
+|     -3 = you're trying to copy onto itself (duh!) -4 = no matchs found
+|
+| cp <file> <destination>
+|   exactly the same as mv except it leaves the original file there
+|   aswell
+|   returns: same as mv
+|
+| getflags <dir>
+|   returns: the flags required to access this directory
+|
+| setflags <dir> [flags]
+|   sets the flags required to access the directory
+|   returns: 0 on success, -1 on failure
 
 *** MISCELLANEOUS COMMANDS ***
 
@@ -697,6 +739,10 @@ just new commands) are marked with vertical bars on the left.
 
   time
     returns: the current time in 24-hour format (ie "14:15")
+
+| strftime <formatstring> [time]
+|   returns: a formatted string of time using standard strftime
+|     fromat, uses the value of time, or now if no time specified
 
   date
     returns: the current date in standard format (ie "21 Dec 1994")
@@ -765,9 +811,9 @@ GLOBAL VARIABLES:
     current server the bot is using, ie 'irc.math.ufl.edu:6667'
 
   version
-    current bot version (ie: "1.0k 1200"); first item is the text version,
-      second item is a numerical version, and any following items are the
-      names of patches that have been added
+    current bot version (ie: "1.1.2+pl1 1010201 pl1");
+      first item is the text version, second item is a numerical version,
+      and any following items are the names of patches that have been added
 
   uptime
     unixtime value for when the bot was started

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set altnick <nickname>
    sets an alernate nickname to use if the preferred nickname
    (in 'nick') is in use.  if the alternate nickname is also in

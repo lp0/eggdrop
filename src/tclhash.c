@@ -92,7 +92,7 @@ void init_hash()
   Tcl_InitHashTable(&H_time,TCL_STRING_KEYS);
 }
 
-void *tclcmd_alloc(int size)
+void *tclcmd_alloc PROTO1(int,size)
 {
   tcl_cmd_t *x=(tcl_cmd_t *)nmalloc(sizeof(tcl_cmd_t));
   hashtot+=sizeof(tcl_cmd_t);
@@ -103,8 +103,7 @@ void *tclcmd_alloc(int size)
 
 /* returns hashtable for that type */
 /* also sets 'stk' if stackable, and sets 'name' the name, if non-NULL */
-Tcl_HashTable *gethashtable(typ,stk,name)
-int typ,*stk; char *name;
+Tcl_HashTable *gethashtable PROTO3(int,typ,int *,stk,char *,name)
 {
   char *nam=NULL; int st=0; Tcl_HashTable *ht=NULL;
   switch(typ) {
@@ -150,7 +149,7 @@ int typ,*stk; char *name;
   return ht;
 }
 
-int get_bind_type(char *name)
+int get_bind_type PROTO1(char *,name)
 {
   int tp=(-1);
   if (strcasecmp(name,"dcc")==0) tp=CMD_DCC;
@@ -193,7 +192,7 @@ int get_bind_type(char *name)
 }
 
 /* remove command */
-int cmd_unbind(int typ,int flags,char *cmd,char *proc)
+int cmd_unbind PROTO4(int,typ,int,flags,char *,cmd,char *,proc)
 {
   tcl_cmd_t *tt,*last; Tcl_HashEntry *he; Tcl_HashTable *ht;
   ht=gethashtable(typ,NULL,NULL);
@@ -219,7 +218,7 @@ int cmd_unbind(int typ,int flags,char *cmd,char *proc)
 }
 
 /* add command (remove old one if necessary) */
-int cmd_bind(int typ,int flags,char *cmd,char *proc)
+int cmd_bind PROTO4(int,typ,int,flags,char *,cmd,char *,proc)
 {
   tcl_cmd_t *tt; int new; Tcl_HashEntry *he; Tcl_HashTable *ht; int stk;
   if (proc[0]=='#') {
@@ -250,7 +249,7 @@ int tcl_builtin STDVAR
 {
   char typ[4]; Function F=(Function)cd;
 #ifdef EBUG
-  char s[512];
+  char s[512]; int i=0;
 #endif
   /* find out what kind of cmd this is */
   context;
@@ -274,29 +273,30 @@ int tcl_builtin STDVAR
 #ifdef EBUG
     /* check if it's a password change, if so, don't show the password */
     strcpy(s,&argv[0][5]);
-    if (strcasecmp(s,"newpass")==0) {
-      debug4("tcl: builtin dcc call: %s %s %s %s [something]",argv[0],argv[1],
-             argv[2],s);
+    if (strcmp(s,"newpass")==0) {
+      if (argv[3][0]) debug3("tcl: builtin dcc call: %s %s %s [something]",
+			     argv[0],argv[1],argv[2]);
+      else i=1;
     }
-    else if (strcasecmp(s,"chpass")==0) {
+    else if (strcmp(s,"chpass")==0) {
       stridx(s,argv[3],1);
-      debug4("tcl: builtin dcc call: %s %s %s chpass %s [something]",argv[0],argv[1],
-             argv[2],s);
+      if (s[0]) debug4("tcl: builtin dcc call: %s %s %s %s [something]",
+		       argv[0],argv[1],argv[2],s);
+      else i=1;
     }
-    else if (strcasecmp(s,"tcl")==0) {
+    else if (strcmp(s,"tcl")==0) {
       stridx(s,argv[3],1);
-      if (strcasecmp(s,"chpass")==0) {
+      if (strcmp(s,"chpass")==0) {
         stridx(s,argv[3],2);
-        debug4("tcl: builtin dcc call: %s %s %s chpass %s [something]",argv[0],argv[1],
-               argv[2],s);
+        if (s[0]) debug4("tcl: builtin dcc call: %s %s %s chpass %s [something]",
+			 argv[0],argv[1],argv[2],s);
+	else i=1;
       }
-      else {
-        debug4("tcl: builtin dcc call: %s %s %s %s",argv[0],argv[1],argv[2],
-                argv[3]);
-      }
+      else i=1;
     }
-    else debug4("tcl: builtin dcc call: %s %s %s %s",argv[0],argv[1],argv[2],
-                argv[3]);
+    else i=1;
+    if (i) debug4("tcl: builtin dcc call: %s %s %s %s",argv[0],argv[1],argv[2],
+		  argv[3]);
 #endif
     (F)(idx,argv[3]);
     Tcl_ResetResult(irp);
@@ -346,8 +346,7 @@ int tcl_builtin STDVAR
 #define BIND_EXEC_BRK   5    /* proc returned BREAK (quit) */
 
 /* trigger (execute) a proc */
-int trigger_bind(proc,param)
-char *proc,*param;
+int trigger_bind PROTO2(char *,proc,char *,param)
 {
   int x;
 #ifdef EBUG_TCL
@@ -361,6 +360,8 @@ char *proc,*param;
 #ifdef EBUG_TCL
     if (f!=NULL) { fprintf(f,"done eval. error.\n"); fclose(f); }
 #endif
+    if (strlen(interp->result)>400)
+      interp->result[400]=0;
     putlog(LOG_MISC,"*","Tcl error [%s]: %s",proc,interp->result);
     return BIND_EXECUTED;
   }
@@ -374,8 +375,8 @@ char *proc,*param;
 }
 
 /* check a tcl binding and execute the procs necessary */
-int check_tcl_bind(hash,match,atr,param,match_type)
-Tcl_HashTable *hash; char *match,*param; int atr,match_type;
+int check_tcl_bind PROTO5(Tcl_HashTable *,hash,char *,match,int,atr,
+			  char *,param,int,match_type)
 {
   Tcl_HashSearch srch; Tcl_HashEntry *he; int cnt=0; char *proc=NULL;
   tcl_cmd_t *tt; int f=0,atrok,x;
@@ -439,7 +440,8 @@ Tcl_HashTable *hash; char *match,*param; int atr,match_type;
 
 /* check for tcl-bound msg command, return 1 if found */
 /* msg: proc-name <nick> <user@host> <handle> <args...> */
-int check_tcl_msg(char *cmd,char *nick,char *uhost,char *hand,char *args)
+int check_tcl_msg PROTO5(char *,cmd,char *,nick,char *,uhost,char *,hand,
+			 char *,args)
 {
 #ifndef NO_IRC
   int x,atr;
@@ -466,7 +468,7 @@ int check_tcl_msg(char *cmd,char *nick,char *uhost,char *hand,char *args)
 
 /* check for tcl-bound dcc command, return 1 if found */
 /* dcc: proc-name <handle> <sock> <args...> */
-int check_tcl_dcc(char *cmd,int idx,char *args)
+int check_tcl_dcc PROTO3(char *,cmd,int,idx,char *,args)
 {
   int x,atr,chatr; char s[5];
   context;
@@ -500,7 +502,7 @@ int check_tcl_dcc(char *cmd,int idx,char *args)
 #ifndef NO_FILE_SYSTEM
 /* check for tcl-bound file command, return 1 if found */
 /* fil: proc-name <handle> <dcc-handle> <args...> */
-int check_tcl_fil(char *cmd,int idx,char *args)
+int check_tcl_fil PROTO3(char *,cmd,int,idx,char *,args)
 {
   int atr,chatr,x; char s[5];
   context;
@@ -532,7 +534,7 @@ int check_tcl_fil(char *cmd,int idx,char *args)
 }
 #endif
 
-int check_tcl_pub(char *nick,char *from,char *chname,char *msg)
+int check_tcl_pub PROTO4(char *,nick,char *,from,char *,chname,char *,msg)
 {
   int x,atr,chatr; char args[512],cmd[512],host[161],handle[21];
   context;
@@ -558,7 +560,7 @@ int check_tcl_pub(char *nick,char *from,char *chname,char *msg)
   return 1;
 }
 
-void check_tcl_pubm(char *nick,char *from,char *chname,char *msg)
+void check_tcl_pubm PROTO4(char *,nick,char *,from,char *,chname,char *,msg)
 {
   char args[512],host[161],handle[21]; int atr,chatr;
   context;
@@ -580,7 +582,8 @@ void check_tcl_pubm(char *nick,char *from,char *chname,char *msg)
   context;
 }
 
-void check_tcl_msgm(char *cmd,char *nick,char *uhost,char *hand,char *arg)
+void check_tcl_msgm PROTO5(char *,cmd,char *,nick,char *,uhost,char *,hand,
+			   char *,arg)
 {
   int atr; char args[512];
   context;
@@ -600,7 +603,7 @@ void check_tcl_msgm(char *cmd,char *nick,char *uhost,char *hand,char *arg)
   context;
 }
 
-void check_tcl_notc(char *nick,char *uhost,char *hand,char *arg)
+void check_tcl_notc PROTO4(char *,nick,char *,uhost,char *,hand,char *,arg)
 {
   int atr;
   context;
@@ -618,7 +621,7 @@ void check_tcl_notc(char *nick,char *uhost,char *hand,char *arg)
   context;
 }
 
-void check_tcl_join(char *nick,char *uhost,char *hand,char *chname)
+void check_tcl_join PROTO4(char *,nick,char *,uhost,char *,hand,char *,chname)
 {
   int atr,chatr; char args[512];
   context;
@@ -638,7 +641,7 @@ void check_tcl_join(char *nick,char *uhost,char *hand,char *chname)
   context;
 }
 
-void check_tcl_part(char *nick,char *uhost,char *hand,char *chname)
+void check_tcl_part PROTO4(char *,nick,char *,uhost,char *,hand,char *,chname)
 {
   int atr,chatr; char args[512];
   context;
@@ -658,7 +661,8 @@ void check_tcl_part(char *nick,char *uhost,char *hand,char *chname)
   context;
 }
 
-void check_tcl_sign(char *nick,char *uhost,char *hand,char *chname,char *reason)
+void check_tcl_sign PROTO5(char *,nick,char *,uhost,char *,hand,
+			   char *,chname,char *,reason)
 {
   int atr,chatr; char args[512];
   context;
@@ -679,7 +683,8 @@ void check_tcl_sign(char *nick,char *uhost,char *hand,char *chname,char *reason)
   context;
 }
 
-void check_tcl_topc(char *nick,char *uhost,char *hand,char *chname,char *topic)
+void check_tcl_topc PROTO5(char *,nick,char *,uhost,char *,hand,
+			   char *,chname,char *,topic)
 {
   int atr,chatr; char args[512];
   context;
@@ -700,7 +705,8 @@ void check_tcl_topc(char *nick,char *uhost,char *hand,char *chname,char *topic)
   context;
 }
 
-void check_tcl_nick(char *nick,char *uhost,char *hand,char *chname,char *newnick)
+void check_tcl_nick PROTO5(char *,nick,char *,uhost,char *,hand,
+			   char *,chname,char *,newnick)
 {
   int atr=get_attr_handle(hand),chatr=get_chanattr_handle(hand,chname);
   char args[512];
@@ -720,8 +726,8 @@ void check_tcl_nick(char *nick,char *uhost,char *hand,char *chname,char *newnick
   context;
 }
 
-void check_tcl_kick(char *nick,char *uhost,char *hand,char *chname,char *dest,
-                    char *reason)
+void check_tcl_kick PROTO6(char *,nick,char *,uhost,char *,hand,
+			   char *,chname,char *,dest,char *,reason)
 {
   char args[512];
   context;
@@ -740,7 +746,7 @@ void check_tcl_kick(char *nick,char *uhost,char *hand,char *chname,char *dest,
 
 /* return 1 if processed */
 #ifdef RAW_BINDS
-int check_tcl_raw(char *from,char *code,char *msg)
+int check_tcl_raw PROTO3(char *,from,char *,code,char *,msg)
 {
   int x;
   context;
@@ -755,7 +761,7 @@ int check_tcl_raw(char *from,char *code,char *msg)
 }
 #endif
 
-void check_tcl_bot(char *nick,char *code,char *param)
+void check_tcl_bot PROTO3(char *,nick,char *,code,char *,param)
 {
   context;
   Tcl_SetVar(interp,"_n",nick,0);
@@ -766,7 +772,8 @@ void check_tcl_bot(char *nick,char *code,char *param)
   context;
 }
 
-void check_tcl_mode(char *nick,char *uhost,char *hand,char *chname,char *mode)
+void check_tcl_mode PROTO5(char *,nick,char *,uhost,char *,hand,
+			   char *,chname,char *,mode)
 {
   char args[512];
   context;
@@ -782,8 +789,8 @@ void check_tcl_mode(char *nick,char *uhost,char *hand,char *chname,char *mode)
   context;
 }
 
-int check_tcl_ctcp(char *nick,char *uhost,char *hand,char *dest,char *keyword,
-                   char *args)
+int check_tcl_ctcp PROTO6(char *,nick,char *,uhost,char *,hand,char *,dest,
+			  char *,keyword,char *,args)
 {
   int atr,x;
   context;
@@ -805,8 +812,8 @@ int check_tcl_ctcp(char *nick,char *uhost,char *hand,char *dest,char *keyword,
 /*  return ((x==BIND_MATCHED)||(x==BIND_EXECUTED)||(x==BIND_EXEC_LOG)); */
 }
 
-int check_tcl_ctcr(char *nick,char *uhost,char *hand,char *dest,char *keyword,
-                   char *args)
+int check_tcl_ctcr PROTO6(char *,nick,char *,uhost,char *,hand,
+			  char *,dest,char *,keyword,char *,args)
 {
   int atr;
   context;
@@ -827,7 +834,7 @@ int check_tcl_ctcr(char *nick,char *uhost,char *hand,char *dest,char *keyword,
   return 1;
 }
 
-void check_tcl_chon(char *hand,int idx)
+void check_tcl_chon PROTO2(char *,hand,int,idx)
 {
   int atr; char s[20];
   context;
@@ -844,7 +851,7 @@ void check_tcl_chon(char *hand,int idx)
   context;
 }
 
-void check_tcl_chof(char *hand,int idx)
+void check_tcl_chof PROTO2(char *,hand,int,idx)
 {
   int atr; char s[20];
   context;
@@ -861,7 +868,7 @@ void check_tcl_chof(char *hand,int idx)
   context;
 }
 
-void check_tcl_sent(char *hand,char *nick,char *path)
+void check_tcl_sent PROTO3(char *,hand,char *,nick,char *,path)
 {
   int atr;
   context;
@@ -878,7 +885,7 @@ void check_tcl_sent(char *hand,char *nick,char *path)
   context;
 }
 
-void check_tcl_rcvd(char *hand,char *nick,char *path)
+void check_tcl_rcvd PROTO3(char *,hand,char *,nick,char *,path)
 {
   int atr;
   context;
@@ -895,7 +902,7 @@ void check_tcl_rcvd(char *hand,char *nick,char *path)
   context;
 }
 
-void check_tcl_chat(char *from,int chan,char *text)
+void check_tcl_chat PROTO3(char *,from,int,chan,char *,text)
 {
   char s[10];
   context;
@@ -908,7 +915,7 @@ void check_tcl_chat(char *from,int chan,char *text)
   context;
 }
 
-void check_tcl_link(char *bot,char *via)
+void check_tcl_link PROTO2(char *,bot,char *,via)
 {
   context;
   Tcl_SetVar(interp,"_n",bot,0);
@@ -918,7 +925,7 @@ void check_tcl_link(char *bot,char *via)
   context;
 }
 
-void check_tcl_disc(char *bot)
+void check_tcl_disc PROTO1(char *,bot)
 {
   context;
   Tcl_SetVar(interp,"_n",bot,0);
@@ -927,7 +934,7 @@ void check_tcl_disc(char *bot)
   context;
 }
 
-void check_tcl_splt(char *nick,char *uhost,char *hand,char *chname)
+void check_tcl_splt PROTO4(char *,nick,char *,uhost,char *,hand,char *,chname)
 {
   int atr,chatr; char args[512];
   context;
@@ -943,11 +950,11 @@ void check_tcl_splt(char *nick,char *uhost,char *hand,char *chname)
   Tcl_SetVar(interp,"_a",chname,0);
   context;
   check_tcl_bind(&H_splt,args,atr," $_n $_uh $_h $_a",
-		   MATCH_MASK|BIND_USE_ATTR|BIND_STACKABLE);
+		 MATCH_MASK|BIND_USE_ATTR|BIND_STACKABLE);
   context;
 }
 
-void check_tcl_rejn(char *nick,char *uhost,char *hand,char *chname)
+void check_tcl_rejn PROTO4(char *,nick,char *,uhost,char *,hand,char *,chname)
 {
   int atr,chatr; char args[512];
   context;
@@ -967,7 +974,7 @@ void check_tcl_rejn(char *nick,char *uhost,char *hand,char *chname)
   context;
 }
 
-char *check_tcl_filt(int idx,char *text)
+char *check_tcl_filt PROTO2(int,idx,char *,text)
 {
   char s[10]; int x,atr,chatr;
   context;
@@ -990,7 +997,8 @@ char *check_tcl_filt(int idx,char *text)
   else return text;
 }
 
-int check_tcl_flud(char *nick,char *uhost,char *hand,char *ftype,char *chname)
+int check_tcl_flud PROTO5(char *,nick,char *,uhost,char *,hand,
+			  char *,ftype,char *,chname)
 {
   int x;
   context;
@@ -1006,7 +1014,7 @@ int check_tcl_flud(char *nick,char *uhost,char *hand,char *ftype,char *chname)
   return (x==BIND_EXEC_LOG);
 }
 
-int check_tcl_note(char *from,char *to,char *text)
+int check_tcl_note PROTO3(char *,from,char *,to,char *,text)
 {
   int x;
   context;
@@ -1019,7 +1027,7 @@ int check_tcl_note(char *from,char *to,char *text)
   return ((x==BIND_MATCHED)||(x==BIND_EXECUTED)||(x==BIND_EXEC_LOG));
 }
 
-void check_tcl_act(char *from,int chan,char *text)
+void check_tcl_act PROTO3(char *,from,int,chan,char *,text)
 {
   char s[10];
   context;
@@ -1032,7 +1040,7 @@ void check_tcl_act(char *from,int chan,char *text)
   context;
 }
 
-void check_tcl_listen(char *cmd,int idx)
+void check_tcl_listen PROTO2(char *,cmd,int,idx)
 {
   char s[10]; int x;
   context;
@@ -1046,7 +1054,7 @@ void check_tcl_listen(char *cmd,int idx)
     putlog(LOG_MISC,"*","error on listen: %s",interp->result);
 }
   
-int check_tcl_wall(char *from,char *msg)
+int check_tcl_wall PROTO2(char *,from,char *,msg)
 {
   int x;
   context;
@@ -1061,7 +1069,7 @@ int check_tcl_wall(char *from,char *msg)
   } else return 0;
 }
 
-void tell_binds(int idx,char *name)
+void tell_binds PROTO2(int,idx,char *,name)
 {
   Tcl_HashEntry *he; Tcl_HashSearch srch; Tcl_HashTable *ht; int i,fnd=0;
   tcl_cmd_t *tt; char typ[5],*s,*proc,flg[20]; int kind,showall=0;
@@ -1092,7 +1100,7 @@ void tell_binds(int idx,char *name)
   }
 }
 
-int tcl_getbinds(int kind,char *name)
+int tcl_getbinds PROTO2(int,kind,char *,name)
 {
   Tcl_HashEntry *he; Tcl_HashSearch srch; Tcl_HashTable *ht; char *s;
   tcl_cmd_t *tt;
@@ -1112,7 +1120,7 @@ int tcl_getbinds(int kind,char *name)
   return TCL_OK;
 }
 
-int call_tcl_func(char *name,int idx,char *args)
+int call_tcl_func PROTO3(char *,name,int,idx,char *,args)
 {
   char s[11];
   set_tcl_vars(); sprintf(s,"%d",idx);
@@ -1125,8 +1133,8 @@ int call_tcl_func(char *name,int idx,char *args)
   return (atoi(interp->result));
 }
 
-void check_tcl_chjn(char *bot,char *nick,int chan,char type,int sock,
-                    char *host)
+void check_tcl_chjn PROTO6(char *,bot,char *,nick,int,chan,char,type,
+			   int,sock,char *,host)
 {
   int atr; char s[20],t[2],u[20];
   context;
@@ -1159,7 +1167,7 @@ void check_tcl_chjn(char *bot,char *nick,int chan,char type,int sock,
   context;
 }
 
-void check_tcl_chpt(char *bot,char *hand,int sock)
+void check_tcl_chpt PROTO3(char *,bot,char *,hand,int,sock)
 {
   char u[20];
   context;
@@ -1173,7 +1181,7 @@ void check_tcl_chpt(char *bot,char *hand,int sock)
   context;
 }
 
-void check_tcl_bcst(char *from,int chan,char *text)
+void check_tcl_bcst PROTO3(char *,from,int,chan,char *,text)
 {
   char s[10];
   context;
@@ -1183,11 +1191,11 @@ void check_tcl_bcst(char *from,int chan,char *text)
   Tcl_SetVar(interp,"_aa",text,0);
   context;
   check_tcl_bind(&H_bcst,s,get_attr_handle(from),
-  		 " $_n $_a $_aa",MATCH_MASK|BIND_STACKABLE);     
+  		 " $_n $_a $_aa",MATCH_MASK|BIND_STACKABLE);
   context;
 }
 
-void check_tcl_time(struct tm *tm)
+void check_tcl_time PROTO1(struct tm *,tm)
 {
   char y[100];
   context;

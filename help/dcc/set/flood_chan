@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set flood-chan <#msgs>[:<#seconds>]
    specifies the flood threshold for channel msgs.  if the
    same host sends this many consecutive msgs to the channel

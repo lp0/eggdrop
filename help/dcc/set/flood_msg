@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set flood-msg <#msgs>[:<#seconds>]
    specifies the flood threshold for /MSG or party line chatter.
    if the same host dumps more than this many /MSG's to the bot

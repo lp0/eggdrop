@@ -52,15 +52,14 @@ char TBUF[1024];
 /* i'll just grab the next "fakesock" # (incrementing to assure uniqueness) */
 int fakesock=2300;
 
-void fake_alert(int idx)
+void fake_alert PROTO1(int,idx)
 {
   tprintf(dcc[idx].sock,"chat %s NOTICE: Fake message rejected.\n",
 	  botnetnick);
 }
 
 /* chan <from> <chan> <text> */
-void bot_chan(idx,par)
-int idx; char *par;
+void bot_chan PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*s=TBUF+512,*p; int i,chan;
   nsplit(from,par); chan=atoi(par); nsplit(NULL,par);
@@ -87,8 +86,7 @@ int idx; char *par;
 }
 
 /* chat <from> <notice>  -- only from bots */
-void bot_chat(idx,par)
-int idx; char *par;
+void bot_chat PROTO2(int,idx,char *,par)
 {
   char *from=TBUF; int i;
   nsplit(from,par);
@@ -106,8 +104,7 @@ int idx; char *par;
 }
 
 /* actchan <from> <chan> <text> */
-void bot_actchan(idx,par)
-int idx; char *par;
+void bot_actchan PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*p; int i,chan;
   nsplit(from,par); p=strchr(from,'@');
@@ -126,8 +123,7 @@ int idx; char *par;
 }
 
 /* priv <from> <to> <message> */
-void bot_priv(idx,par)
-int idx; char *par;
+void bot_priv PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*p,*to=TBUF+600,*tobot=TBUF+512; int i;
   nsplit(from,par); nsplit(tobot,par); tobot[40]=0; splitc(to,tobot,'@');
@@ -171,8 +167,7 @@ int idx; char *par;
   }
 }
 
-void bot_bye(idx,par)
-int idx; char *par;
+void bot_bye PROTO2(int,idx,char *,par)
 {
   putlog(LOG_BOTS,"*","Disconnected from: %s",dcc[idx].nick);
   chatout("*** Disconnected from: %s\n",dcc[idx].nick);
@@ -184,8 +179,7 @@ int idx; char *par;
 }
 
 /* who <from@bot> <tobot> <chan#> */
-void bot_who(idx,par)
-int idx; char *par;
+void bot_who PROTO2(int,idx,char *,par)
 {
   char *p; char *from=TBUF,*to=TBUF+512; int i;
   nsplit(from,par); p=strchr(from,'@'); if (p==NULL) {
@@ -202,8 +196,7 @@ int idx; char *par;
   }
 }
 
-void bot_version(idx,par)
-int idx; char *par;
+void bot_version PROTO2(int,idx,char *,par)
 {
   strcpy(dcc[idx].u.bot->version,par);
   if ((share_users) && (get_attr_handle(dcc[idx].nick)&BOT_SHARE)) {
@@ -223,8 +216,7 @@ int idx; char *par;
 }
 
 /* who? <from@bot> <chan>  ->  whom <to@bot> <attr><nick> <bot> <host> */
-void bot_whoq(idx,par)
-int idx; char *par;
+void bot_whoq PROTO2(int,idx,char *,par)
 {
   /* ignore old-style 'whom' request */
   putlog(LOG_BOTS,"*","Outdated 'whom' request from %s (ignoring)",
@@ -232,8 +224,7 @@ int idx; char *par;
 }
 
 /* info? <from@bot>   -> send priv */
-void bot_infoq(idx,par)
-int idx; char *par;
+void bot_infoq PROTO2(int,idx,char *,par)
 {
 #ifndef NO_IRC
   char s[161]; struct chanset_t *chan;
@@ -246,11 +237,11 @@ int idx; char *par;
   }
   if (s[0]) {
     s[strlen(s)-2]=0;
-    tprintf(dcc[idx].sock,"priv %s %s %s %s (%s)\n",botnetnick,par,ver,
+    tprintf(dcc[idx].sock,"priv %s %s %s <%s> (%s)\n",botnetnick,par,ver,
 	    network,s);
   }
   else
-    tprintf(dcc[idx].sock,"priv %s %s %s %s (no channels)\n",botnetnick,par,
+    tprintf(dcc[idx].sock,"priv %s %s %s <%s> (no channels)\n",botnetnick,par,
 	    ver,network);
 #else
   tprintf(dcc[idx].sock,"priv %s %s %s\n",botnetnick,par,ver);
@@ -259,29 +250,25 @@ int idx; char *par;
 }
 
 /* whom <to@bot> <attr><nick> <bot> <etc> */
-void bot_whom(idx,par)
-int idx; char *par;
+void bot_whom PROTO2(int,idx,char *,par)
 {
   /* scrap it */
   putlog(LOG_BOTS,"*","Outdated 'whom' request from %s (ignoring)",
 	 dcc[idx].nick);
 }
 
-void bot_ping(idx,par)
-int idx; char *par;
+void bot_ping PROTO2(int,idx,char *,par)
 {
   tprintf(dcc[idx].sock,"pong\n");
 }
 
-void bot_pong(idx,par)
-int idx; char *par;
+void bot_pong PROTO2(int,idx,char *,par)
 {
   dcc[idx].u.bot->status&=~STAT_PINGED;
 }
 
 /* link <from@bot> <who> <to-whom> */
-void bot_link(idx,par)
-int idx; char *par;
+void bot_link PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*bot=TBUF+512,*rfrom=TBUF+41; int i;
   nsplit(from,par); nsplit(bot,par); from[40]=0;
@@ -301,8 +288,7 @@ int idx; char *par;
 }
 
 /* unlink <from@bot> <linking-bot> <undesired-bot> <reason> */
-void bot_unlink(idx,par)
-int idx; char *par;
+void bot_unlink PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*bot=TBUF+512,*rfrom=TBUF+41;int i; char *p;
   char *undes=TBUF+550;
@@ -337,8 +323,7 @@ int idx; char *par;
   }
 }
 
-void bot_ufno(idx,par)
-int idx; char *par;
+void bot_ufno PROTO2(int,idx,char *,par)
 {
   putlog(LOG_BOTS,"*","User file rejected by %s: %s",dcc[idx].nick,par);
   dcc[idx].u.bot->status&=~STAT_OFFERED;
@@ -346,8 +331,7 @@ int idx; char *par;
     dcc[idx].u.bot->status&=~STAT_SHARE;
 }
 
-void bot_ufobsolete(idx,par)
-int idx; char *par;
+void bot_ufobsolete PROTO2(int,idx,char *,par)
 {
   putlog(LOG_BOTS,"*","Can't send userfile to %s -- doesn't recognize new format",
 	 dcc[idx].nick);
@@ -366,8 +350,7 @@ int idx; char *par;
   killsock(dcc[idx].sock); lostdcc(idx);
 }
 
-void bot_ufyes3(idx,par)
-int idx; char *par;
+void bot_ufyes3 PROTO2(int,idx,char *,par)
 {
   if (dcc[idx].u.bot->status&STAT_OFFERED) {
     dcc[idx].u.bot->status&=~STAT_OFFERED;
@@ -378,8 +361,7 @@ int idx; char *par;
   }
 }
 
-void bot_userfileq(idx,par)
-int idx; char *par;
+void bot_userfileq PROTO2(int,idx,char *,par)
 {
   int ok=1,i;
   flush_tbuf(dcc[idx].nick);
@@ -402,8 +384,7 @@ int idx; char *par;
 }
 
 /* ufsend <ip> <port> <length> */
-void bot_ufsend(idx,par)
-int idx; char *par;
+void bot_ufsend PROTO2(int,idx,char *,par)
 {
   char *ip=TBUF,*port=TBUF+512; int i;
   if (!(dcc[idx].u.bot->status & STAT_SHARE)) {
@@ -420,7 +401,7 @@ int idx; char *par;
   }
   nsplit(ip,par); nsplit(port,par);
   i=dcc_total;
-  dcc[i].addr=iptolong(my_atoul(ip));
+  dcc[i].addr=my_atoul(ip);
   dcc[i].port=atoi(port);
   dcc[i].sock=(-1);
   dcc[i].type=DCC_FORK;
@@ -454,8 +435,7 @@ int idx; char *par;
   }
 }
 
-void bot_resyncq(idx,par)
-int idx; char *par;
+void bot_resyncq PROTO2(int,idx,char *,par)
 {
 #ifndef ALLOW_RESYNC
   tprintf(dcc[idx].sock,"resync-no Not permitting resync.\n");
@@ -481,8 +461,7 @@ int idx; char *par;
 #endif
 }
 
-void bot_resync(idx,par)
-int idx; char *par;
+void bot_resync PROTO2(int,idx,char *,par)
 {
   if (dcc[idx].u.bot->status&STAT_OFFERED) {
     if (can_resync(dcc[idx].nick)) {
@@ -494,8 +473,7 @@ int idx; char *par;
   }
 }
 
-void bot_resync_no(idx,par)
-int idx; char *par;
+void bot_resync_no PROTO2(int,idx,char *,par)
 {
   putlog(LOG_BOTS,"*","Resync refused by %s: %s",dcc[idx].nick,par);
   flush_tbuf(dcc[idx].nick);
@@ -506,8 +484,7 @@ int idx; char *par;
 #define CHKGET if (!(dcc[idx].u.bot->status&STAT_GETTING)) return
 #define CHKSHARE if (!(dcc[idx].u.bot->status&STAT_SHARE)) return
 
-void bot_chpass(idx,par)
-int idx; char *par;
+void bot_chpass PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -516,8 +493,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: newpass %s",dcc[idx].nick,hand);
 }
 
-void bot_chhand(idx,par)
-int idx; char *par;
+void bot_chhand PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF; int i;
   CHKSHARE;
@@ -541,10 +517,9 @@ int idx; char *par;
   }
 }
 
-void bot_chattr(idx,par)
-int idx; char *par;
+void bot_chattr PROTO2(int,idx,char *,par)
 {
-  char *hand=TBUF,*atr=TBUF+50,*s=TBUF+512; int oatr,natr;
+  char *hand=TBUF,*atr=TBUF+50,*s=TBUF+512; int oatr,natr;struct chanset_t *cst;
   CHKSHARE;
   shareout_but(idx,"chattr %s\n",par);
   noshare=1; nsplit(hand,par);
@@ -556,10 +531,15 @@ int idx; char *par;
   nsplit(atr,par);
   if (par[0]) {
     if (defined_channel(par)) {
+      cst=findchan(par);
       natr=atoi(atr);
-      set_chanattr_handle(hand,par,natr);
-      noshare=0; chflags2str(get_chanattr_handle(hand,par),s);
-      putlog(LOG_CMDS,"*","%s: chattr %s %s %s",dcc[idx].nick,hand,s,par);
+      if (cst->stat&CHAN_SHARED) {
+        set_chanattr_handle(hand,par,natr);
+        noshare=0; chflags2str(get_chanattr_handle(hand,par),s);
+        putlog(LOG_CMDS,"*","%s: chattr %s %s %s",dcc[idx].nick,hand,s,par);
+      }
+      else putlog(LOG_CMDS,"*","Rejected info for unshared channel %s from %s",
+		  par,dcc[idx].nick);
     }
     return;
   }
@@ -575,8 +555,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: chattr %s %s",dcc[idx].nick,hand,s);
 }
 
-void bot_newuser(idx,par)
-int idx; char *par;
+void bot_newuser PROTO2(int,idx,char *,par)
 {
   char *etc=TBUF,*etc2=TBUF+41,*etc3=TBUF+121;
   CHKSHARE;
@@ -592,8 +571,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: newuser %s",dcc[idx].nick,etc);
 }
 
-void bot_killuser(idx,par)
-int idx; char *par;
+void bot_killuser PROTO2(int,idx,char *,par)
 {
   CHKSHARE;
   noshare=1;
@@ -610,8 +588,7 @@ int idx; char *par;
   else noshare=0;
 }
 
-void bot_pls_upload(idx,par)
-int idx; char *par;
+void bot_pls_upload PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -620,8 +597,7 @@ int idx; char *par;
   /* no point logging this */
 }
 
-void bot_pls_dnload(idx,par)
-int idx; char *par;
+void bot_pls_dnload PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -630,8 +606,7 @@ int idx; char *par;
   /* no point logging this either */
 }
 
-void bot_pls_host(idx,par)
-int idx; char *par;
+void bot_pls_host PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -640,8 +615,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: +host %s %s",dcc[idx].nick,hand,par);
 }
 
-void bot_pls_bothost(idx,par)
-int idx; char *par;
+void bot_pls_bothost PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF, *p=TBUF+512;
   CHKSHARE;
@@ -662,8 +636,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: +host %s %s",dcc[idx].nick,hand,par);
 }
 
-void bot_mns_host(idx,par)
-int idx; char *par;
+void bot_mns_host PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -678,8 +651,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: -host %s %s",dcc[idx].nick,hand,par);
 }
 
-void bot_chemail(idx,par)
-int idx; char *par;
+void bot_chemail PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -688,8 +660,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: change email %s",dcc[idx].nick,hand);
 }
 
-void bot_chdccdir(idx,par)
-int idx; char *par;
+void bot_chdccdir PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -697,8 +668,7 @@ int idx; char *par;
   noshare=1; nsplit(hand,par); set_handle_dccdir(userlist,hand,par); noshare=0;
 }
 
-void bot_chcomment(idx,par)
-int idx; char *par;
+void bot_chcomment PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -708,8 +678,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: change comment %s",dcc[idx].nick,hand);
 }
 
-void bot_chinfo(idx,par)
-int idx; char *par;
+void bot_chinfo PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -718,20 +687,23 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: change info %s",dcc[idx].nick,hand);
 }
 
-void bot_chchinfo(idx,par)
-int idx; char *par;
+void bot_chchinfo PROTO2(int,idx,char *,par)
 {
-  char *hand=TBUF; char *chan=TBUF+512;
+  char *hand=TBUF; char *chan=TBUF+512;struct chanset_t *cst;
   CHKSHARE;
   shareout_but(idx,"chchinfo %s\n",par);
   noshare=1; nsplit(hand,par); nsplit(chan,par);
-  set_handle_chaninfo(userlist,hand,chan,par);
-  noshare=0;
-  putlog(LOG_CMDS,"*","%s: change info %s %s",dcc[idx].nick,chan,hand);
+  cst=findchan(chan);
+  if (cst->stat&CHAN_SHARED) {
+    set_handle_chaninfo(userlist,hand,chan,par);
+    noshare=0;
+    putlog(LOG_CMDS,"*","%s: change info %s %s",dcc[idx].nick,chan,hand);
+  } 
+  else putlog(LOG_CMDS,"*","Info line change from %s denied.  Channel %s not shared.",
+	      dcc[idx].nick,chan);
 }
 
-void bot_chaddr(idx,par)
-int idx; char *par;
+void bot_chaddr PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -746,16 +718,14 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","%s: change address %s",dcc[idx].nick,hand);
 }
 
-void bot_clrxtra(idx,par)
-int idx; char *par;
+void bot_clrxtra PROTO2(int,idx,char *,par)
 {
   CHKSHARE;
   shareout_but(idx,"clrxtra %s\n",par);
   noshare=1; set_handle_xtra(userlist,par,""); noshare=0;
 }
 
-void bot_addxtra(idx,par)
-int idx; char *par;
+void bot_addxtra PROTO2(int,idx,char *,par)
 {
   char *hand=TBUF;
   CHKSHARE;
@@ -763,8 +733,7 @@ int idx; char *par;
   noshare=1; nsplit(hand,par); add_handle_xtra(userlist,hand,par); noshare=0;
 }
 
-void bot_mns_ban(idx,par)
-int idx; char *par;
+void bot_mns_ban PROTO2(int,idx,char *,par)
 {
   CHKSHARE;
   shareout_but(idx,"-ban %s\n",par);
@@ -772,20 +741,18 @@ int idx; char *par;
   noshare=1; delban(par); noshare=0;
 }
 
-void bot_mns_banchan(idx,par)
-int idx; char *par;
+void bot_mns_banchan PROTO2(int,idx,char *,par)
 {
   char *chname=TBUF; struct chanset_t *chan;
   CHKSHARE;
   shareout_but(idx,"-banchan %s\n",par);
   nsplit(chname,par);
-  putlog(LOG_CMDS,"*","%s: cancel ban %s on %s",dcc[idx].nick,par,chname);
   chan=findchan(chname); if (chan==NULL) return;
+  putlog(LOG_CMDS,"*","%s: cancel ban %s on %s",dcc[idx].nick,par,chname);
   noshare=1; u_delban(chan->bans,par); noshare=0;
 }
 
-void bot_mns_ignore(idx,par)
-int idx; char *par;
+void bot_mns_ignore PROTO2(int,idx,char *,par)
 {
   CHKSHARE;
   shareout_but(idx,"-ignore %s\n",par);
@@ -793,8 +760,7 @@ int idx; char *par;
   noshare=1; delignore(par); noshare=0;
 }
 
-void bot_pls_ban(idx,par)
-int idx; char *par;
+void bot_pls_ban PROTO2(int,idx,char *,par)
 {
   time_t now=time(NULL),expire_time;
   char *ban=TBUF,*tm=TBUF+512,*from=TBUF+532;
@@ -818,8 +784,7 @@ int idx; char *par;
   noshare=0;
 }
 
-void bot_pls_banchan(idx,par)
-int idx; char *par;
+void bot_pls_banchan PROTO2(int,idx,char *,par)
 {
   time_t now=time(NULL),expire_time; struct chanset_t *chan;
   char *ban=TBUF,*tm=TBUF+512,*chname=TBUF+600,*from=TBUF+700;
@@ -827,9 +792,9 @@ int idx; char *par;
   shareout_but(idx,"+banchan %s\n",par);
   nsplit(ban,par); nsplit(tm,par); nsplit(chname,par); nsplit(from,par);
   if (from[strlen(from)-1]==':') from[strlen(from)-1]=0;
+  chan=findchan(chname); if (chan==NULL) return;
   putlog(LOG_CMDS,"*","%s: ban %s on %s (%s:%s)",dcc[idx].nick,ban,chname,
 	 from,par);
-  chan=findchan(chname); if (chan==NULL) return;
   noshare=1;
   /* new format? */
   if (tm[0]=='+') {
@@ -847,8 +812,7 @@ int idx; char *par;
 }
 
 /* +ignore <host> +<seconds-left> <from> <note> */
-void bot_pls_ignore(idx,par)
-int idx; char *par;
+void bot_pls_ignore PROTO2(int,idx,char *,par)
 {
   time_t now=time(NULL),expire_time;
   char *ign=TBUF,*from=TBUF+256,*ts=TBUF+512;
@@ -872,8 +836,7 @@ int idx; char *par;
   noshare=0;
 }
 
-void bot_nlinked(idx,par)
-int idx; char *par;
+void bot_nlinked PROTO2(int,idx,char *,par)
 {
   char *newbot=TBUF,*next=TBUF+512,*p; int reject=0,bogus=0,atr,i;
   nsplit(newbot,par); nsplit(next,par);
@@ -938,8 +901,7 @@ int idx; char *par;
   }
 }
 
-void bot_linked(idx,par)
-int idx; char *par;
+void bot_linked PROTO2(int,idx,char *,par)
 {
   putlog(LOG_BOTS,"*","Older bot detected (unsupported)");
   chatout("*** Disconnected %s (outdated)\n",dcc[idx].nick);
@@ -951,8 +913,7 @@ int idx; char *par;
   killsock(dcc[idx].sock); lostdcc(idx);
 }
 
-void bot_unlinked(idx,par)
-int idx; char *par;
+void bot_unlinked PROTO2(int,idx,char *,par)
 {
   int i;
   char bot[512];
@@ -967,8 +928,7 @@ int idx; char *par;
   } /* otherwise it's not even a valid bot, so just ignore! */
 }
 
-void bot_trace(idx,par)
-int idx; char *par;
+void bot_trace PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*dest=TBUF+512; int i;
   /* trace <from@bot> <dest> <chain:chain..> */
@@ -982,8 +942,7 @@ int idx; char *par;
   }
 }
 
-void bot_traced(idx,par)
-int idx; char *par;
+void bot_traced PROTO2(int,idx,char *,par)
 {
   char *to=TBUF,*ss=TBUF+512,*p; int i,sock;
   /* traced <to@bot> <chain:chain..> */
@@ -1004,8 +963,7 @@ int idx; char *par;
 }
 
 /* reject <from> <bot> */
-void bot_reject(idx,par)
-int idx; char *par;
+void bot_reject PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*who=TBUF+81,*destbot=TBUF+41,*p; int i;
   nsplit(from,par); from[40]=0;
@@ -1077,8 +1035,7 @@ int idx; char *par;
   }
 }
 
-void bot_thisbot(idx,par)
-int idx; char *par;
+void bot_thisbot PROTO2(int,idx,char *,par)
 {
   if (strcasecmp(par,dcc[idx].nick)!=0) {
     putlog(LOG_BOTS,"*","Wrong bot: wanted %s, got %s",dcc[idx].nick,par);
@@ -1097,8 +1054,7 @@ int idx; char *par;
   strcpy(dcc[idx].nick,par);
 }
 
-void bot_handshake(idx,par)
-int idx; char *par;
+void bot_handshake PROTO2(int,idx,char *,par)
 {
   change_pass_by_handle(dcc[idx].nick,par);
   if ((dcc[idx].u.bot->status&STAT_SHARE) &&
@@ -1109,15 +1065,13 @@ int idx; char *par;
   }
 }
 
-void bot_trying(idx,par)
-int idx; char *par;
+void bot_trying PROTO2(int,idx,char *,par)
 {
   tandout_but(idx,"trying %s\n",par);
   /* currently ignore */
 }
 
-void bot_end_trying(idx,par)
-int idx; char *par;
+void bot_end_trying PROTO2(int,idx,char *,par)
 {
   tandout_but(idx,"*trying %s\n",par);
   /* currently ignore */
@@ -1125,8 +1079,7 @@ int idx; char *par;
 
 /* used to send a direct msg from Tcl on one bot to Tcl on another */
 /* zapf <frombot> <tobot> <code [param]> */
-void bot_zapf(idx,par)
-int idx; char *par;
+void bot_zapf PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*to=TBUF+512; int i;
   nsplit(from,par); nsplit(to,par);
@@ -1147,8 +1100,7 @@ int idx; char *par;
 
 /* used to send a global msg from Tcl on one bot to every other bot */
 /* zapf-broad <frombot> <code [param]> */
-void bot_zapfbroad(idx,par)
-int idx; char *par;
+void bot_zapfbroad PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*opcode=TBUF+512; int i;
   nsplit(from,par);
@@ -1161,8 +1113,7 @@ int idx; char *par;
 }
 
 /* show motd to someone */
-void bot_motd(idx,par)
-int idx; char *par;
+void bot_motd PROTO2(int,idx,char *,par)
 {
   FILE *vv; char *s=TBUF,*who=TBUF+512,*p; int i;
   nsplit(who,par);
@@ -1194,8 +1145,7 @@ int idx; char *par;
 
 /* assoc [link-flag] <chan#> <name> */
 /* link-flag is Y if botlinking */
-void bot_assoc(idx,par)
-int idx; char *par;
+void bot_assoc PROTO2(int,idx,char *,par)
 {
   char *s=TBUF,*s1;
   int linking=0;
@@ -1234,8 +1184,7 @@ int idx; char *par;
 }
 
 /* filereject <bot:filepath> <sock:nick@bot> <reason...> */
-void bot_filereject(idx,par)
-int idx; char *par;
+void bot_filereject PROTO2(int,idx,char *,par)
 {
   char *path=TBUF,*tobot=TBUF+512,*to=TBUF+542,*p; int i;
   nsplit(path,par); nsplit(tobot,par); splitc(to,tobot,'@');
@@ -1258,8 +1207,7 @@ int idx; char *par;
 }
 
 /* filreq <sock:nick@bot> <bot:file> */
-void bot_filereq(idx,par)
-int idx; char *par;
+void bot_filereq PROTO2(int,idx,char *,par)
 {
   char *from=TBUF,*tobot=TBUF+41; int i;
   nsplit(from,par); splitc(tobot,par,':');
@@ -1279,8 +1227,7 @@ int idx; char *par;
 }
 
 /* filesend <bot:path> <sock:nick@bot> <IP#> <port> <size> */
-void bot_filesend(idx,par)
-int idx; char *par;
+void bot_filesend PROTO2(int,idx,char *,par)
 {
   char *botpath=TBUF,*nick=TBUF+512,*tobot=TBUF+552,*sock=TBUF+692; int i;
   char *nfn;
@@ -1304,15 +1251,13 @@ int idx; char *par;
   }
 }
 
-void bot_error(idx,par)
-int idx; char *par;
+void bot_error PROTO2(int,idx,char *,par)
 {
   putlog(LOG_MISC|LOG_BOTS,"*","%s: %s",dcc[idx].nick,par);
 }
 
 /* join <bot> <nick> <chan> <flag><sock> <from> */
-void bot_join(idx,par)
-int idx; char *par;
+void bot_join PROTO2(int,idx,char *,par)
 {
   char *bot=TBUF,*nick=TBUF+20,*x=TBUF+40,*y=TBUF+60,*from=TBUF+70;
   int i,sock;
@@ -1335,8 +1280,7 @@ int idx; char *par;
 }
 
 /* part <bot> <nick> <sock> [etc..] */
-void bot_part(idx,par)
-int idx; char *par;
+void bot_part PROTO2(int,idx,char *,par)
 {
   char *bot=TBUF,*nick=TBUF+20,*etc=TBUF+40; int sock;
   nsplit(bot,par); bot[9]=0;
@@ -1349,8 +1293,7 @@ int idx; char *par;
 }
 
 /* away <bot> <sock> <message> */
-void bot_away(idx,par)
-int idx; char *par;
+void bot_away PROTO2(int,idx,char *,par)
 {
   char *bot=TBUF,*etc=TBUF+20; int sock;
   nsplit(bot,par); bot[9]=0;
@@ -1362,8 +1305,7 @@ int idx; char *par;
 }
 
 /* unaway <bot> <sock> */
-void bot_unaway(idx,par)
-int idx; char *par;
+void bot_unaway PROTO2(int,idx,char *,par)
 {
   char *bot=TBUF,*etc=TBUF+20; int sock;
   nsplit(bot,par); bot[9]=0;
@@ -1375,8 +1317,7 @@ int idx; char *par;
 
 /* (a courtesy info to help during connect bursts) */
 /* idle <bot> <sock> <#secs> */
-void bot_idle(idx,par)
-int idx; char *par;
+void bot_idle PROTO2(int,idx,char *,par)
 {
   char *bot=TBUF,*etc=TBUF+20; int sock;
   nsplit(bot,par); bot[9]=0;

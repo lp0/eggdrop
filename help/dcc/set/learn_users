@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set learn-users <0/1>
    specifies whether the bot will add users on the fly when they
    send the "hello" msg.  if turned off, the only way to add users

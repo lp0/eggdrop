@@ -54,7 +54,7 @@ int reserved_port=0;
 
 #ifndef NO_IRC
 /* received a ctcp-dcc */
-void gotdcc(char *nick,char *from,char *msg)
+void gotdcc PROTO3(char *,nick,char *,from,char *,msg)
 {
   char code[512],param[512],ip[512],s1[512],prt[81],nk[10];
   int z=0,i,atr;
@@ -127,7 +127,7 @@ void gotdcc(char *nick,char *from,char *msg)
   }
 #endif
   i=dcc_total;
-  dcc[i].addr=iptolong(my_atoul(ip));
+  dcc[i].addr=my_atoul(ip);
   dcc[i].port=atoi(prt);
   dcc[i].sock=(-1);
   dcc[i].type=DCC_FORK;
@@ -301,7 +301,7 @@ void gotdcc(char *nick,char *from,char *msg)
   if ((z==DCC_CHAT) || (z==DCC_FILES)) cont_got_dcc(i);
 }
 
-void failed_got_dcc(int idx)
+void failed_got_dcc PROTO1(int,idx)
 {
   char s1[121];
   if (strcmp(dcc[idx].nick,"*users")==0) {
@@ -337,7 +337,7 @@ void failed_got_dcc(int idx)
 }
 #endif  /* !NO_IRC */
 
-void cont_got_dcc(int idx)
+void cont_got_dcc PROTO1(int,idx)
 {
   char s1[121];
   sprintf(s1,"%s!%s",dcc[idx].nick,dcc[idx].host);
@@ -385,7 +385,7 @@ void cont_got_dcc(int idx)
 }
 
 #ifndef NO_FILE_SYSTEM
-void wipe_tmp_filename(char *fn,int idx)
+void wipe_tmp_filename PROTO2(char *,fn,int,idx)
 {
   int i,ok=1;
   if (!copy_to_tmp) return;
@@ -398,7 +398,7 @@ void wipe_tmp_filename(char *fn,int idx)
 /* given idx of a completed file operation, check to make sure no other
    file transfers are happening currently on that file -- if there aren't
    any, erase the file (it's just a copy anyway) */
-void wipe_tmp_file(int idx)
+void wipe_tmp_file PROTO1(int,idx)
 {
   wipe_tmp_filename(dcc[idx].u.xfer->filename,idx);
 }
@@ -409,7 +409,7 @@ void wipe_tmp_file(int idx)
 #define DCCSEND_NOSOCK 2     /* can't open a listening socket */
 #define DCCSEND_BADFN  3     /* no such file */
 
-int raw_dcc_send(char *filename,char *nick,char *from,char *dir)
+int raw_dcc_send PROTO4(char *,filename,char *,nick,char *,from,char *,dir)
 {
   int zz,port,i; char *nfn; IP host; struct stat ss;
   context;
@@ -454,8 +454,7 @@ int raw_dcc_send(char *filename,char *nick,char *from,char *dir)
 }
 
 #ifndef NO_FILE_SYSTEM
-int _dcc_send(idx,filename,nick,dir)
-int idx; char *filename,*nick,*dir;
+int _dcc_send PROTO4(int,idx,char *,filename,char *,nick,char *,dir)
 {
   int x; char *nfn;
   context;
@@ -494,7 +493,7 @@ int idx; char *filename,*nick,*dir;
   return 1;
 }
 
-int do_dcc_send(int idx,char *dir,char *filename)
+int do_dcc_send PROTO3(int,idx,char *,dir,char *,filename)
 {
   char s[161],s1[161],fn[512],nick[512]; FILE *f; int x;
   context;
@@ -546,7 +545,7 @@ int do_dcc_send(int idx,char *dir,char *filename)
 
 #endif  /* !NO_FILE_SYSTEM */
 
-int detect_dcc_flood(struct chat_info *chat,int idx)
+int detect_dcc_flood PROTO2(struct chat_info *,chat,int,idx)
 {
   time_t t;
   if (flood_thr==0) return 0;
@@ -579,7 +578,7 @@ int detect_dcc_flood(struct chat_info *chat,int idx)
 }
 
 /* handle someone being booted from dcc chat */
-void do_boot(int idx,char *by,char *reason)
+void do_boot PROTO3(int,idx,char *,by,char *,reason)
 {
   int files=(dcc[idx].type==DCC_FILES);
   dprintf(idx,"-=- poof -=-\n");

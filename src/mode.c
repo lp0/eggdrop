@@ -38,7 +38,8 @@ extern struct chanset_t *chanset;
 
 /* reversing this mode? */
 int reversing=0;
-
+/* number of modes per line to send */
+int modesperline = 3;
 
 #define PLUS    1
 #define MINUS   2
@@ -47,7 +48,7 @@ int reversing=0;
 #define VOICE   16
 
 
-void flush_mode(struct chanset_t *chan,int pri)
+void flush_mode PROTO2(struct chanset_t *,chan,int,pri)
 {
 #ifndef NO_IRC
   char *p,out[512],post[512]; int i,ok=0;
@@ -67,7 +68,7 @@ void flush_mode(struct chanset_t *chan,int pri)
     *p++='l'; sprintf(&post[strlen(post)],"%d ",chan->limit);
   }
   chan->limit=(-1); chan->key[0]=0;
-  for (i=0; i<MODES_PER_LINE; i++) if (chan->cmode[i].type&PLUS) {
+  for (i=0; i<modesperline; i++) if (chan->cmode[i].type&PLUS) {
     if (!ok) { *p++='+'; ok=1; }
     *p++=(chan->cmode[i].type&BAN?'b':(chan->cmode[i].type&CHOP?'o':'v'));
     strcat(post,chan->cmode[i].op); strcat(post," ");
@@ -80,14 +81,14 @@ void flush_mode(struct chanset_t *chan,int pri)
     *p++='k'; strcat(post,chan->rmkey); strcat(post," ");
   }
   chan->rmkey[0]=0;
-  for (i=0; i<MODES_PER_LINE; i++) if (chan->cmode[i].type&MINUS) {
+  for (i=0; i<modesperline; i++) if (chan->cmode[i].type&MINUS) {
     if (!ok) { *p++='-'; ok=1; }
     *p++=(chan->cmode[i].type&BAN?'b':(chan->cmode[i].type&CHOP?'o':'v'));
     strcat(post,chan->cmode[i].op); strcat(post," ");
     nfree(chan->cmode[i].op); chan->cmode[i].op=NULL;
   }
   *p=0;
-  for (i=0; i<MODES_PER_LINE; i++) chan->cmode[i].type=0;
+  for (i=0; i<modesperline; i++) chan->cmode[i].type=0;
   if (post[strlen(post)-1]==' ') post[strlen(post)-1]=0;
   if (post[0]) { strcat(out," "); strcat(out,post); }
   if (out[0]) {
@@ -110,25 +111,25 @@ void flush_modes()
 }
 
 /* queue a channel mode change */
-void add_mode(struct chanset_t *chan,char plus,char mode,char *op)
+void add_mode PROTO4(struct chanset_t *,chan,char,plus,char,mode,char *,op)
 {
 #ifndef NO_IRC
   int i,type,ok; char s[21];
   if ((mode=='o') || (mode=='b') || (mode=='v')) {
     type=(plus=='+'?PLUS:MINUS)|(mode=='o'?CHOP:(mode=='b'?BAN:VOICE));
     /* op-type mode change */
-    for (i=0; i<MODES_PER_LINE; i++) 
+    for (i=0; i<modesperline; i++)
       if ((chan->cmode[i].type==type) && (chan->cmode[i].op!=NULL) &&
 	  (strcasecmp(chan->cmode[i].op,op)==0))
 	return;   /* already in there :- duplicate */
     ok=0;  /* add mode to buffer */
-    for (i=0; i<MODES_PER_LINE; i++) if ((chan->cmode[i].type==0) && (!ok)) {
+    for (i=0; i<modesperline; i++) if ((chan->cmode[i].type==0) && (!ok)) {
       chan->cmode[i].type=type;
       chan->cmode[i].op=(char *)nmalloc(strlen(op)+1);
       strcpy(chan->cmode[i].op,op); ok=1;
     }
     ok=0;  /* check for full buffer */
-    for (i=0; i<MODES_PER_LINE; i++) if (chan->cmode[i].type==0) ok=1;
+    for (i=0; i<modesperline; i++) if (chan->cmode[i].type==0) ok=1;
     if (!ok) flush_mode(chan,NORMAL);      /* full buffer!  flush modes */
     return;
   }
@@ -156,7 +157,8 @@ void add_mode(struct chanset_t *chan,char plus,char mode,char *op)
 /* horrible code to parse mode changes */
 /* no, it's not horrible, it just looks that way */
 
-void got_key(struct chanset_t *chan,char *nick,char *from,char *key,int atr)
+void got_key PROTO5(struct chanset_t *,chan,char *,nick,char *,from,
+		    char *,key,int,atr)
 {
   int bogus=0,i;
   set_key(chan,key);
@@ -173,8 +175,8 @@ void got_key(struct chanset_t *chan,char *nick,char *from,char *key,int atr)
     add_mode(chan,'-','k',key);
 }
 
-void got_op(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
-            int chatr1)
+void got_op PROTO6(struct chanset_t *,chan,char *,nick,char *,from,
+		   char *,who,int,atr1,int,chatr1)
 {
   memberlist *m; char s[UHOSTLEN]; int atr,chatr;
   m=ismember(chan,who); if (m==NULL) {
@@ -195,7 +197,8 @@ void got_op(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
 	(CHANUSER_OP|CHANUSER_MASTER)))) {
       add_mode(chan,'-','o',who); m->flags|=SENTDEOP;
     }
-    else if ((chatr&CHANUSER_DEOP) && (!(chatr&CHANUSER_OP)) && 
+    else if (((chatr&CHANUSER_DEOP) || (atr & USER_DEOP)) 
+	     && (!(chatr&CHANUSER_OP)) && 
 	     (!(atr1 & (USER_MASTER|USER_BOT))) && (!(chatr1 &
 	     CHANUSER_MASTER))) {
       add_mode(chan,'-','o',who); m->flags|=SENTDEOP;
@@ -209,10 +212,18 @@ void got_op(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
     add_mode(chan,'-','o',who); m->flags|=SENTDEOP;
   }
   if (nick[0]==0) {   /* server op! */
-    if ((!(chatr&(CHANUSER_OP|CHANUSER_FRIEND|CHANUSER_MASTER)))
-	&& (!(atr & (USER_MASTER|USER_GLOBAL))) &&
-	(!(m->flags&CHANOP)) && (!(m->flags&SENTDEOP)) && (me_op(chan)) &&
-	(chan->stat&CHAN_STOPNETHACK)) {
+    int ok = 0;
+    if ((atr & (USER_MASTER)) || (chatr & (CHANUSER_MASTER)))
+       ok = 1;
+    else if (!(chatr & CHANUSER_DEOP)) {
+       if (!(atr & USER_DEOP) && ((atr & (USER_FRIEND|USER_GLOBAL))
+	    || (chatr & (CHANUSER_FRIEND|CHANUSER_OP))))
+	 ok = 1;
+       if (chatr & CHANUSER_OP)
+	 ok = 1;
+    } 
+    if (!ok && (!(m->flags&CHANOP)) && (!(m->flags&SENTDEOP)) &&
+	(me_op(chan)) && (chan->stat&CHAN_STOPNETHACK)) {
       add_mode(chan,'-','o',who); m->flags|=(FAKEOP|SENTDEOP);
     }
   }
@@ -221,8 +232,8 @@ void got_op(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
   m->flags&=~SENTOP;
 }
 
-void got_deop(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
-              int chatr1)
+void got_deop PROTO6(struct chanset_t *,chan,char *,nick,char *,from,
+		     char *,who,int,atr1,int,chatr1)
 {
   memberlist *m; char s[UHOSTLEN],s1[UHOSTLEN],s2[UHOSTLEN]; int atr,chatr;
   m=ismember(chan,who); if (m==NULL) {
@@ -236,27 +247,35 @@ void got_deop(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
   atr=get_attr_host(s);
   chatr=get_chanattr_host(s,chan->name);
   /* deop'd someone on my oplist? */
-  if ((me_op(chan)) && (chatr & (CHANUSER_MASTER|CHANUSER_OP|CHANUSER_FRIEND)) &&
-      !(chatr & CHANUSER_DEOP) && (strcasecmp(nick,botname)!=0) &&
+  if (me_op(chan)) {
+    int ok = 1;
+    if ((atr&USER_MASTER) || (chatr&CHANUSER_MASTER))
+       ok = 0;
+    else if ((atr & (USER_GLOBAL|USER_FRIEND)) && !(chatr &CHANUSER_DEOP))
+       ok = 0;
+    else if (chatr & (CHANUSER_OP|CHANUSER_FRIEND))
+       ok = 0;
+    if (!ok && (strcasecmp(nick,botname)!=0) &&
       (strcasecmp(who,nick)!=0) && (m->flags & CHANOP) &&
       (strcasecmp(who,botname)!=0)) {        /* added 25mar96, robey */
     /* reop? */
-    if (!(atr1 & (USER_MASTER|USER_BOT)) && (chan->stat&CHAN_PROTECTOPS) &&
-	(!(chan->stat&CHAN_BITCH) || (atr&(USER_MASTER|USER_GLOBAL)) 
-	|| (chatr&(CHANUSER_OP|CHANUSER_MASTER))) &&
-	/* ^ must be +o or +m to get re-op'd when +bitch is on */
-	!(m->flags & SENTOP)) {
-      add_mode(chan,'+','o',who); m->flags|=SENTOP;
-    }
-    else if (reversing) {
-      add_mode(chan,'+','o',who); m->flags|=SENTOP;
-    }
-    if (!(atr1 & (USER_MASTER|USER_BOT)) 
-	&& !(chatr1 & (CHANUSER_FRIEND|CHANUSER_MASTER)) &&
-	(chan->stat & CHAN_REVENGE)) {
-      if (nick[0]) {
-	sprintf(s2,"deopped %s",s);
-	take_revenge(chan,s1,s2);    /* punish bad guy */
+      if (!(atr1 & (USER_MASTER|USER_BOT)) && (chan->stat&CHAN_PROTECTOPS) &&
+  	  (!(chan->stat&CHAN_BITCH) || (atr&(USER_MASTER|USER_GLOBAL)) 
+	  || (chatr&(CHANUSER_OP|CHANUSER_MASTER))) && !(chatr&CHANUSER_DEOP) &&
+	  /* ^ must be +o or +m to get re-op'd when +bitch is on */
+	  !(m->flags & SENTOP)) {
+        add_mode(chan,'+','o',who); m->flags|=SENTOP;
+      }
+      else if (reversing) {
+        add_mode(chan,'+','o',who); m->flags|=SENTOP;
+      }
+      if (!(atr1 & (USER_MASTER|USER_BOT|USER_FRIEND))
+ 	  && !(chatr1 & (CHANUSER_FRIEND|CHANUSER_MASTER)) &&
+ 	  (chan->stat & CHAN_REVENGE)) {
+        if (nick[0]) {
+ 	  sprintf(s2,"deopped %s",s);
+	  take_revenge(chan,s1,s2);    /* punish bad guy */
+	}
       }
     }
   }
@@ -293,7 +312,7 @@ void got_deop(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
   if (!(m->flags&CHANVOICE)) mprintf(serv,"WHO %s\n",m->nick);
   if ((strcasecmp(who,botname)==0) && (chan->stat & CHAN_REVENGE)) {
     /* deopped ME!  take revenge */
-    if (!(atr1 & USER_MASTER) 
+    if (!(atr1 & (USER_MASTER|USER_FRIEND)) 
 	&& !(chatr1 & (CHANUSER_MASTER|CHANUSER_FRIEND)) && (nick[0]) &&
 	(strcasecmp(nick,botname)!=0))
       take_revenge(chan,s1,"deopped me");
@@ -304,8 +323,8 @@ void got_deop(struct chanset_t *chan,char *nick,char *from,char *who,int atr1,
   m->flags&=~(FAKEOP|CHANOP|SENTDEOP);
 }
 
-void got_ban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
-             int chatr)
+void got_ban PROTO6(struct chanset_t *,chan,char *,nick,char *,from,
+		    char *,who,int,atr,int,chatr)
 {
   char me[UHOSTLEN],s[UHOSTLEN],s1[UHOSTLEN]; int check,i,bogus;
   memberlist *m;
@@ -323,7 +342,7 @@ void got_ban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
 	  (who[i]!=2) && (who[i]!=22) && (who[i]!=31))
 	bogus=1;
     if (bogus) {
-      if ((atr & (USER_MASTER|USER_BOT)) 
+      if ((atr & (USER_MASTER|USER_BOT|USER_FRIEND))
 	  || (chatr & (CHANUSER_MASTER|CHANUSER_FRIEND))) {
 	/* fix their bogus ban */
 	int ok=0;
@@ -349,7 +368,7 @@ void got_ban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
     if (!nick[0]) check=0;
     /* does this remotely match against any of our hostmasks? */
     /* just an off-chance... */
-    if ((get_attr_host(who) & USER_MASTER) ||
+    if ((get_attr_host(who) & (USER_MASTER|USER_FRIEND|USER_GLOBAL)) ||
 	(get_chanattr_host(who,chan->name) & 
 	(CHANUSER_MASTER|CHANUSER_FRIEND|CHANUSER_OP))) {
       if (!(atr & (USER_MASTER|USER_BOT))) { 
@@ -367,7 +386,7 @@ void got_ban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
 	sprintf(s1,"%s!%s",m->nick,m->userhost);
 	if (wild_match(who,s1)) {
 	  int tatr=get_attr_host(s1),tchatr=get_chanattr_host(s1,chan->name);
-	  if ((tatr & USER_MASTER) ||
+	  if ((tatr & (USER_MASTER|USER_GLOBAL|USER_FRIEND)) ||
 	      (tchatr & (CHANUSER_MASTER|CHANUSER_FRIEND|CHANUSER_OP))) {
 	    /* remove ban on +o/f/m user, unless placed by another +m/b */
 	    if (!(atr & (USER_MASTER|USER_BOT))
@@ -391,8 +410,8 @@ void got_ban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
   if (reversing) add_mode(chan,'-','b',who);
 }
 
-void got_unban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
-               int chatr)
+void got_unban PROTO6(struct chanset_t *,chan,char *,nick,char *,from,
+		      char *,who,int,atr,int,chatr)
 {
   int i,bogus;
   killban(chan,who); bogus=0;
@@ -401,7 +420,7 @@ void got_unban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
 	(who[i]!=2) && (who[i]!=22) && (who[i]!=31))
       bogus=1;
   if ((bogus) && (strcasecmp(nick,botname)!=0) && (!isbanned(chan,who)) &&
-      !(atr & (USER_MASTER|USER_BOT)) &&
+      !(atr & (USER_MASTER|USER_BOT|USER_FRIEND|USER_GLOBAL)) &&
       !(chatr & (CHANUSER_MASTER|CHANUSER_OP|CHANUSER_FRIEND))) {
     tprintf(serv,"KICK %s %s :bogus ban\n",chan->name,nick);
     return;
@@ -417,7 +436,8 @@ void got_unban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
     if ((atr & (USER_BOT|BOT_SHARE))==(USER_BOT|BOT_SHARE)) {
       /* sharebot -- do nothing */
     }
-    else if ((atr & USER_MASTER) || (chatr & (CHANUSER_MASTER|CHANUSER_OP))) {
+    else if ((atr & (USER_MASTER|USER_GLOBAL)) 
+	     || (chatr & (CHANUSER_MASTER|CHANUSER_OP))) {
       hprintf(serv,"NOTICE %s :%s is in my permban list.  You need to %s\n",
 	      nick,who,"use '-ban' in dcc chat if you want it gone for good.");
     }
@@ -447,7 +467,7 @@ void got_unban(struct chanset_t *chan,char *nick,char *from,char *who,int atr,
 }
 
 /* a pain in the ass: mode changes */
-void gotmode(char *from,char *msg)
+void gotmode PROTO2(char *,from,char *,msg)
 {
   char nick[NICKLEN],hand[10],ch[UHOSTLEN],op[UHOSTLEN],chg[81];
   char s[UHOSTLEN],ms[UHOSTLEN]; int pos=0,i,atr,chatr; memberlist *m;
@@ -585,7 +605,7 @@ void gotmode(char *from,char *msg)
 
 #endif  /* !NO_IRC */
 
-void recheck_chanmode(struct chanset_t *chan)
+void recheck_chanmode PROTO1(struct chanset_t *,chan)
 {
 #ifndef NO_IRC
   int cur,pls,mns; char s[121];
@@ -610,14 +630,12 @@ void recheck_chanmode(struct chanset_t *chan)
       sprintf(s,"%d",chan->limit_prot); add_mode(chan,'+','l',s);
   }
   else if (mns&CHANLIMIT && cur&CHANLIMIT) add_mode(chan,'-','l',"");
-  if (pls&CHANKEY) {
-    if (chan->key_prot[0]) {
+  if (chan->key_prot[0]) {
+    if (strcasecmp(chan->channel.key,chan->key_prot)!=0) {
       if (chan->channel.key[0]) {
-        if (strcasecmp(chan->channel.key,chan->key_prot)!=0) {
-          add_mode(chan,'-','k',chan->channel.key);
-          add_mode(chan,'+','k',chan->key_prot);
-        }
+	add_mode(chan,'-','k',chan->channel.key);
       }
+      add_mode(chan,'+','k',chan->key_prot);
     }
   }
   else if(mns&CHANKEY && cur&CHANKEY) add_mode(chan,'-','k',chan->channel.key);
@@ -630,7 +648,7 @@ void recheck_chanmode(struct chanset_t *chan)
   if (pos==1) chan->mode_pls_prot|=(x); else chan->mode_mns_prot|=(x); \
 }
 
-void set_mode_protect(struct chanset_t *chan,char *set)
+void set_mode_protect PROTO2(struct chanset_t *,chan,char *,set)
 {
 #ifndef NO_IRC
   int i,pos=1; char s[121],s1[121];
@@ -668,7 +686,7 @@ void set_mode_protect(struct chanset_t *chan,char *set)
 #endif
 }
 
-void get_mode_protect(struct chanset_t *chan,char *s)
+void get_mode_protect PROTO2(struct chanset_t *,chan,char *,s)
 {
 #ifndef NO_IRC
   char *p=s,s1[121]; int ok=0,i,tst;

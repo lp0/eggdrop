@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set firewall <host:port>
    specifies your telnet proxy server if you're behind a firewall.
    leave this blank if you have a normal (direct) net connection.

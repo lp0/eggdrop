@@ -12,6 +12,8 @@
 #                      logs EVERY command sent to Tcl
 #   -DEBUG           logs random debugging comments to +d level (annoying
 #                      and useless to most people)
+#   -DREDHATSUX      if you get dprintf already defined errors in redhat
+#
 CFLGS = -g
 
 

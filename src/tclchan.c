@@ -36,6 +36,8 @@ extern struct userrec *userlist;
 extern int ban_time;
 extern char chanfile[];
 extern int setstatic;
+extern int default_port;
+extern int modesperline;
 
 /***********************************************************************/
 
@@ -377,7 +379,7 @@ int tcl_jump STDVAR
   if (argc>=2) {
     strcpy(newserver,argv[1]);
     if (argc>=3) newserverport=atoi(argv[2]);
-    else newserverport=DEFAULT_PORT;
+    else newserverport=default_port;
     if (argc==4) strcpy(newserverpass,argv[3]);
   }
   tprintf(serv,"QUIT :changing servers\n");
@@ -460,8 +462,7 @@ int tcl_nick2hand STDVAR
   return TCL_OK;
 }
 
-int tcl_channel_info(irp,chan)
-Tcl_Interp *irp; struct chanset_t *chan;
+int tcl_channel_info PROTO2(Tcl_Interp *,irp,struct chanset_t *,chan)
 {
   char s[121];
   get_mode_protect(chan,s); Tcl_AppendElement(irp,s);
@@ -495,12 +496,14 @@ Tcl_Interp *irp; struct chanset_t *chan;
   else Tcl_AppendElement(irp,"-revenge");
   if (chan->stat&CHAN_SECRET) Tcl_AppendElement(irp,"+secret");
   else Tcl_AppendElement(irp,"-secret");
+  if (chan->stat&CHAN_SHARED) Tcl_AppendElement(irp,"+shared");
+  else Tcl_AppendElement(irp,"-shared");
   return TCL_OK;
 }
 
 /* parse options for a channel */
-int tcl_channel_modify(irp,chan,items,item)
-Tcl_Interp *irp; struct chanset_t *chan; int items; char **item;
+int tcl_channel_modify PROTO4(Tcl_Interp *,irp,struct chanset_t *,chan,
+			      int,items,char **,item)
 {
   int i;
   for (i=0; i<items; i++) {
@@ -611,6 +614,10 @@ Tcl_Interp *irp; struct chanset_t *chan; int items; char **item;
       chan->stat|=CHAN_SECRET;
     else if (strcmp(item[i],"-secret")==0)
       chan->stat&=~CHAN_SECRET;
+    else if (strcmp(item[i],"+shared")==0)
+      chan->stat|=CHAN_SHARED;
+    else if (strcmp(item[i],"-shared")==0)
+      chan->stat&=~CHAN_SHARED;
     else {
       if (irp)
 	Tcl_AppendResult(irp,"illegal channel option: ",item[i],NULL);
@@ -621,8 +628,7 @@ Tcl_Interp *irp; struct chanset_t *chan; int items; char **item;
 }
 
 /* create new channel and parse commands */
-int tcl_channel_add(irp,newname,options)
-Tcl_Interp *irp; char *newname,*options;
+int tcl_channel_add PROTO3(Tcl_Interp *,irp,char *,newname,char *,options)
 {
   int i; struct chanset_t *chan; int items; char **item;
   if (irp) 
@@ -637,7 +643,7 @@ Tcl_Interp *irp; char *newname,*options;
     CHAN_STOPNETHACK;
   chan->pls[0]=0; chan->mns[0]=0; chan->key[0]=0; chan->rmkey[0]=0;
   chan->limit=(-1); chan->idle_kick=0;
-  for (i=0; i<MODES_PER_LINE; i++) { 
+  for (i=0; i<6; i++) { 
     chan->cmode[i].op=NULL; chan->cmode[i].type=0;
   }
   chan->deopnick[0]=0; chan->deoptime=0L; chan->deops=0;
@@ -913,5 +919,19 @@ int tcl_validchan STDVAR
   chan=findchan(argv[1]); 
   if (chan==NULL) Tcl_AppendResult(irp,"0",NULL);
   else Tcl_AppendResult(irp,"1",NULL);
+  return TCL_OK;
+}
+
+int tcl_isdynamic STDVAR
+{
+  struct chanset_t *chan;
+  BADARGS(2,2," channel");
+  chan=findchan(argv[1]); 
+  if (chan!=NULL)
+    if (!(chan->stat&CHANSTATIC)) {
+      Tcl_AppendResult(irp,"1",NULL);
+      return TCL_OK;
+    }
+  Tcl_AppendResult(irp,"0",NULL);
   return TCL_OK;
 }

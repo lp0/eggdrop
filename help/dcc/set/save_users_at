@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set save-users-at <minute>
    tells eggdrop when to save its userfile, which it does once an
    hour.  this number will set the number of minutes after the top

@@ -48,5 +48,4 @@ filedb *findmatch();
 filedb *findfile();
 filedb *findmatch2();
 filedb *findfile2();
-
 #endif

@@ -61,6 +61,8 @@ int conmask=LOG_MODES|LOG_CMDS|LOG_MISC;
 int mtot=0;
 /* total messages queued on help queue */
 int htot=0;
+/* maximum messages to store in each queue */
+int maxqmsg=300;
 
 struct msgq {
   int sock;
@@ -114,7 +116,7 @@ void init_misc()
 /* determine if littles is contained in bigs (ignoring case) */
 /* if so: return pointer to the littles in bigs */
 /* if not: return NULL */
-char *stristr(char *bigs,char *littles)
+char *stristr PROTO2(char *,bigs,char *,littles)
 {
   char *st=bigs,*p,*q;
   while (1) {
@@ -129,7 +131,7 @@ char *stristr(char *bigs,char *littles)
 
 #if !HAVE_STRCASECMP
 /* unixware has no strcasecmp() without linking in a hefty library */
-int strcasecmp(char *s1,char *s2)
+int strcasecmp PROTO2(char *,s1,char *,s2)
 {
   while ((*s1) && (*s2) && (upcase(*s1)==upcase(*s2))) { s1++; s2++; }
   return upcase(*s1)-upcase(*s2);
@@ -137,7 +139,7 @@ int strcasecmp(char *s1,char *s2)
 #endif
 
 /* split first word off of rest and put it in first */
-void splitc(char *first,char *rest,char divider)
+void splitc PROTO3(char *,first,char *,rest,char,divider)
 {
   char *p;
   p=strchr(rest,divider);
@@ -146,11 +148,12 @@ void splitc(char *first,char *rest,char divider)
   if (first!=rest) strcpy(rest,p+1);
 }
 
-void split(char *first,char *rest) { splitc(first,rest,' '); }
-void splitnick(char *first,char *rest) { splitc(first,rest,'!'); }
+void split PROTO2(char *,first,char *,rest) { splitc(first,rest,' '); }
+void splitnick PROTO2(char *,first,char *,rest) { splitc(first,rest,'!'); }
 
+#ifdef EBUG
 /* return the index'd word without changing 'rest' */
-void stridx(char *first,char *rest,int index)
+void stridx PROTO3(char *,first,char *,rest,int,index)
 {
   char s[510]; int i;
   context;
@@ -161,8 +164,9 @@ void stridx(char *first,char *rest,int index)
   }
   strcpy(rest,s);
 }
+#endif
 
-void nsplit(char *first,char *rest) 
+void nsplit PROTO2(char *,first,char *,rest) 
 {
   split(first,rest);
   if (first!=NULL) if (!first[0]) { strcpy(first,rest); rest[0]=0; }
@@ -170,7 +174,7 @@ void nsplit(char *first,char *rest)
 
 /* convert "abc!user@a.b.host" into "*!user@*.b.host"
    or "abc!user@1.2.3.4" into "*!user@1.2.3.*"  */
-void maskhost(char *s,char *nw)
+void maskhost PROTO2(char *,s,char *,nw)
 {
   char *p,*q,xx[150];
   strcpy(xx,s);
@@ -219,7 +223,7 @@ void maskhost(char *s,char *nw)
 /* copy a file from one place to another (possibly erasing old copy) */
 /* returns 0 if OK, 1 if can't open original file, 2 if can't open new */
 /* file, 3 if original file isn't normal, 4 if ran out of disk space */
-int copyfile(char *oldpath,char *newpath)
+int copyfile PROTO2(char *,oldpath,char *,newpath)
 {
   int fi,fo,x; char buf[512]; struct stat st;
   fi=open(oldpath,O_RDONLY,0);
@@ -239,7 +243,7 @@ int copyfile(char *oldpath,char *newpath)
   close(fo); close(fi); return 0;
 }
 
-int movefile(char *oldpath,char *newpath)
+int movefile PROTO2(char *,oldpath,char *,newpath)
 {
   int x=copyfile(oldpath,newpath);
   if (x==0) unlink(oldpath);
@@ -248,7 +252,7 @@ int movefile(char *oldpath,char *newpath)
 
 /* make nick!~user@host into nick!user@host if necessary */
 /* also the new form: nick!+user@host or nick!-user@host */
-void fixfrom(char *s)
+void fixfrom PROTO1(char *,s)
 {
   char nick[NICKLEN],from[UHOSTLEN];
   if (strict_host) return;
@@ -262,7 +266,7 @@ void fixfrom(char *s)
 
 /* dump a potentially super-long string of text */
 /* assume prefix 20 chars or less */
-void dumplots(int idx,char *prefix,char *data)
+void dumplots PROTO3(int,idx,char *,prefix,char *,data)
 {
   char *p=data,*q,*n,c;
   if (!(*data)) {
@@ -295,7 +299,7 @@ void dumplots(int idx,char *prefix,char *data)
 
 /* convert an interval (in seconds) to one of: */
 /* "19 days ago", "1 day ago", "18:12" */
-void daysago(time_t now,time_t then,char *out)
+void daysago PROTO3(time_t,now,time_t,then,char *,out)
 {
   char s[81];
   if (now-then > 86400) {
@@ -309,7 +313,7 @@ void daysago(time_t now,time_t then,char *out)
 
 /* convert an interval (in seconds) to one of: */
 /* "in 19 days", "in 1 day", "at 18:12" */
-void days(time_t now,time_t then,char *out)
+void days PROTO3(time_t,now,time_t,then,char *,out)
 {
   char s[81];
   if (now-then > 86400) {
@@ -324,7 +328,7 @@ void days(time_t now,time_t then,char *out)
 
 /* convert an interval (in seconds) to one of: */
 /* "for 19 days", "for 1 day", "for 09:10" */
-void daysdur(time_t now,time_t then,char *out)
+void daysdur PROTO3(time_t,now,time_t,then,char *,out)
 {
   char s[81]; int hrs,mins;
   if (now-then > 86400) {
@@ -404,7 +408,7 @@ void flushlogs()
 /***** BOT AND HELPBOT SERVER QUEUES *****/
 
 /* queue a msg on one of the msg queues */
-struct msgq *q_msg(struct msgq *qq,int sock,char *s)
+struct msgq *q_msg PROTO3(struct msgq *,qq,int,sock,char *,s)
 {
   struct msgq *q; int cnt;
   if (qq==NULL) {
@@ -414,7 +418,7 @@ struct msgq *q_msg(struct msgq *qq,int sock,char *s)
     strcpy(q->msg,s); return q;
   }
   cnt=0; q=qq; while (q->next!=NULL) { q=q->next; cnt++; }
-  if (cnt>MAXQMSG) return NULL;   /* return null: did not alter queue */
+  if (cnt>maxqmsg) return NULL;   /* return null: did not alter queue */
   q->next=(struct msgq *)nmalloc(sizeof(struct msgq));
   q=q->next; q->sock=sock; q->next=NULL;
   q->msg=(char *)nmalloc(strlen(s)+1);
@@ -431,7 +435,9 @@ va_dcl
   vsprintf(s,format,va); va_end(va);
   q=q_msg(mq,sock,s);
 #ifdef EBUG_OUTPUT
-  s[strlen(s)-1]=0; debug1("[!] %s",s);
+  if (s[strlen(s)-1]=='\n')
+    s[strlen(s)-1]=0;
+  debug1("[!m] %s",s);
 #endif
   if (q!=NULL) { mq=q; mtot++; warned=0; }
   else {
@@ -450,7 +456,9 @@ va_dcl
   vsprintf(s,format,va); va_end(va);
   q=q_msg(hq,sock,s);
 #ifdef EBUG_OUTPUT
-  s[strlen(s)-1]=0; debug1("[!] %s",s);
+  if (s[strlen(s)-1]=='\n')
+    s[strlen(s)-1]=0;
+  debug1("[!h] %s",s);
 #endif
   if (q!=NULL) { hq=q; htot++; warned=0; }
   else {
@@ -494,7 +502,7 @@ void empty_msgq()
 /***** RESYNC BUFFERS *****/
 
 /* create a tandem buffer for 'bot' */
-void new_tbuf(char *bot)
+void new_tbuf PROTO1(char *,bot)
 {
   int i;
   for (i=0; i<5; i++) if (tbuf[i].bot[0]==0) {
@@ -507,7 +515,7 @@ void new_tbuf(char *bot)
 }
 
 /* flush a certain bot's tbuf */
-int flush_tbuf(char *bot)
+int flush_tbuf PROTO1(char *,bot)
 {
   int i; struct msgq *q;
   for (i=0; i<5; i++) if (strcasecmp(tbuf[i].bot,bot)==0) {
@@ -539,7 +547,7 @@ void check_expired_tbufs()
 }
 
 /* add stuff to a specific bot's tbuf */
-void q_tbuf(char *bot,char *s)
+void q_tbuf PROTO2(char *,bot,char *,s)
 {
   int i; struct msgq *q;
   for (i=0; i<5; i++) if (strcasecmp(tbuf[i].bot,bot)==0) {
@@ -548,7 +556,7 @@ void q_tbuf(char *bot,char *s)
 }
 
 /* add stuff to the resync buffers */
-void q_resync(char *s)
+void q_resync PROTO1(char *,s)
 {
   int i; struct msgq *q;
   for (i=0; i<5; i++) if (tbuf[i].bot[0]) {
@@ -557,7 +565,7 @@ void q_resync(char *s)
 }
 
 /* is bot in resync list? */
-int can_resync(char *bot)
+int can_resync PROTO1(char *,bot)
 {
   int i;
   for (i=0; i<5; i++) if (strcasecmp(bot,tbuf[i].bot)==0) return 1;
@@ -565,7 +573,7 @@ int can_resync(char *bot)
 }
 
 /* dump the resync buffer for a bot */
-void dump_resync(int z,char *bot)
+void dump_resync PROTO2(int,z,char *,bot)
 {
   int i; struct msgq *q;
   for (i=0; i<5; i++) if (strcasecmp(bot,tbuf[i].bot)==0) {
@@ -579,7 +587,7 @@ void dump_resync(int z,char *bot)
 }
 
 /* give status report on tbufs */
-void status_tbufs(int idx)
+void status_tbufs PROTO1(int,idx)
 {
   int i,count; struct msgq *q; char s[121];
   s[0]=0;
@@ -603,7 +611,7 @@ static int subwidth=70;
 static char *colstr=NULL;
 
 /* add string to colstr */
-void subst_addcol(char *s,char *newcol)
+void subst_addcol PROTO2(char *,s,char *,newcol)
 {
   char *p,*q; int i,colwidth;
   if ((newcol[0]) && (newcol[0]!='\377')) colsofar++;
@@ -637,7 +645,7 @@ void subst_addcol(char *s,char *newcol)
 /* %{center}  center this line */
 /* %{cols=N}  start of columnated section (indented) */
 /* %{end}     end of section */
-void help_subst(char *s,char *nick,int flags,int isdcc)
+void help_subst PROTO4(char *,s,char *,nick,int,flags,int,isdcc)
 {
   char xx[512],sub[161],*p,*q,c; int i,j,center=0; time_t tt;
   if (s==NULL) {
@@ -710,7 +718,7 @@ void help_subst(char *s,char *nick,int flags,int isdcc)
   }
 }
 
-void showhelp(char *who,char *file,int flags)
+void showhelp PROTO3(char *,who,char *,file,int,flags)
 {
   FILE *f; char s[1024],*p; int lines=0;
   for (p=file; *p!=0; p++) {
@@ -745,7 +753,7 @@ void showhelp(char *who,char *file,int flags)
   if (!lines) hprintf(serv,"NOTICE %s :No help available on that.\n",who);
 }
 
-void showtext(char *who,char *file,int flags)
+void showtext PROTO3(char *,who,char *,file,int,flags)
 {
   FILE *f; char s[1024],*p;
   for (p=file; *p!=0; p++) if ((*p==' ') || (*p=='.')) *p='/';
@@ -770,7 +778,7 @@ void showtext(char *who,char *file,int flags)
   fclose(f);
 }
 
-void tellhelp(int idx,char *file,int flags)
+void tellhelp PROTO3(int,idx,char *,file,int,flags)
 {
   FILE *f; char s[1024],*p; int lines=0;
   for (p=file; *p!=0; p++) {
@@ -805,7 +813,7 @@ void tellhelp(int idx,char *file,int flags)
   fclose(f);
 }
 
-void telltext(int idx,char *file,int flags)
+void telltext PROTO3(int,idx,char *,file,int,flags)
 {
   FILE *f; char s[1024],*p;
   for (p=file; *p!=0; p++) if ((*p==' ') || (*p=='.')) *p='/';
@@ -831,7 +839,7 @@ void telltext(int idx,char *file,int flags)
 }
 
 /* show motd to dcc chatter */
-void show_motd(int idx)
+void show_motd PROTO1(int,idx)
 {
   FILE *vv; char s[1024]; int atr;
   atr=get_attr_handle(dcc[idx].nick);

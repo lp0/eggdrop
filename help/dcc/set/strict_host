@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set strict-host <0/1>
    specifies whether the bot should leave leading ~ in users' host-
    names.  if this is on, leading ~ will be left in (the bot will

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set keep-all-logs <0/1>
    specifies whether to keep logs older than 48 hours or not.  if
    this is set off, at midnight, the current logfile will be re-

@@ -35,6 +35,7 @@ extern int dcc_total;
 extern char origbotname[];
 extern char botnetnick[];
 extern int ignore_time;
+extern char notefile[];
 
 /***********************************************************************/
 
@@ -150,6 +151,8 @@ int tcl_matchchanattr STDVAR
 int tcl_adduser STDVAR
 {
   BADARGS(3,3," handle hostmask");
+  if (strlen(argv[1]) > 9)
+    argv[1][9] = 0;
   if (is_user(argv[1])) {
     Tcl_AppendResult(irp,"0",NULL);
     return TCL_OK;
@@ -406,7 +409,7 @@ int tcl_chpass STDVAR
 {
   char par[10],pass[10];
   BADARGS(2,3," handle ?password?");
-  if (argc==3) {
+  if (argc==3 && argv[2][0]) {
     strncpy(par,argv[2],9); par[9]=0;
     nsplit(pass,par);
     change_pass_by_handle(argv[1],pass);
@@ -623,3 +626,53 @@ int tcl_delchanrec STDVAR
   Tcl_AppendResult(irp,"1",NULL);
   return TCL_OK;
 }
+
+int tcl_notes STDVAR
+{
+  FILE * f; char s[601],to[34],from[34],dt[34];
+  int count; char * list[3], *p;
+  context;
+  BADARGS(2,3," handle ?note#?");
+  if(!is_user(argv[1])) {
+    Tcl_AppendResult(irp,"-1",NULL);
+    return TCL_OK;
+  }
+  if (argc == 2) {
+    sprintf(s,"%d",num_notes(argv[1]));
+    Tcl_AppendResult(irp,s,NULL);
+    return TCL_OK;
+  }
+  count = atoi(argv[2]);
+  if (!notefile[0]) {
+    Tcl_AppendResult(irp,"-2",NULL);
+    return TCL_OK;
+  }
+  f=fopen(notefile,"r"); if (f==NULL) {
+    Tcl_AppendResult(irp,"-2",NULL);
+    return TCL_OK;
+  }
+  while (!feof(f)) {
+    fgets(s,600,f);
+    if (s[strlen(s)-1]=='\n') s[strlen(s)-1]=0;
+    if (!feof(f)) {
+      rmspace(s);
+      if ((s[0]) && (s[0]!='#') & (s[0]!=';')) {   /* not comment */
+	split(to,s);
+	if (strcasecmp(to,argv[1])==0) {
+	  split(from,s); split(dt,s); 
+	  count--;
+	  list[0]=from; list[1]=dt; list[2]=s;
+	  p=Tcl_Merge(3,list);
+	  Tcl_AppendElement(irp,p); 
+	  n_free(p,"",0);
+	  fclose(f);
+	  return TCL_OK;
+	}
+      }
+    }
+  } 
+  Tcl_AppendResult(irp,"0",NULL);
+  fclose(f);
+  return TCL_OK;
+}
+

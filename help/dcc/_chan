@@ -1,5 +1,5 @@
 %{+n}
-### chandel
+### -chan
      this removes ALL information about a channel from the bot, it's not
      made permanent unless a channel-file has been defined in the user
      file, then it's saved each time the usefile is, or by using .chansave
@@ -25,4 +25,4 @@
      heck! don't use this unless you NEVER want the bot on the channel
      again
      
-see also: chanadd, chansave, chanload, chanset, chaninfo
+see also: +chan, chansave, chanload, chanset, chaninfo

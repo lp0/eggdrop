@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set my-hostname <hostname>
    overrides the network DNS name used by the bot to identify
    itself on servers, etc.  this is only useful if your machine

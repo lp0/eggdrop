@@ -1,0 +1,6 @@
+%{+j}
+### filestats <user>
+     reports on the users upload & download statistics
+%{+m}
+### filestats <user> clear
+     clears a users upload & download statistics

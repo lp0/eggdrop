@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set never-give-up <0/1>
    specifies whether the bot should loop forever.  If never-give-up
    is set false, then the bot will shut down if it goes through the

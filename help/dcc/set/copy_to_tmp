@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set copy-to-tmp <0/1>
    sets whether files will be copied into your /tmp directory
    before they are sent to users who download them from the file

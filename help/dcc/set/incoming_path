@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set incoming-path <path>
    specifies the directory where files dcc'd to the bot will go.
    if you have turned off the file section by setting 'files-path'

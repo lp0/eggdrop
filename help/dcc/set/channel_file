@@ -1,0 +1,4 @@
+%{+n}
+### set channel-file
+     this set the file used to store dynamic channel information 
+     for the bot, it can only be set in the config file.

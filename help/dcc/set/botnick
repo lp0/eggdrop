@@ -1,0 +1,4 @@
+%{+n}
+### set botnick
+     this read-only variable returns the bots current nickname on 
+     irc

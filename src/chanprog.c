@@ -117,6 +117,9 @@ tcl_timer_t *timer=NULL,*utimer=NULL;
 unsigned long timer_id=1;
 /* for setting static flag of channels read from config */
 int setstatic=0;
+/* default server connection port */
+int default_port=6667;
+
 
 /* remove space characters from beginning and end of string */
 /* (more efficent by Fred1) */
@@ -153,7 +156,7 @@ int expmem_chanprog()
 }
 
 /* add someone to a queue */
-struct eggqueue *addq(char *ss, struct eggqueue *q)
+struct eggqueue *addq PROTO2(char *,ss, struct eggqueue *,q)
 {
   char s[512]; struct eggqueue *x,*z; char s1[121],*p;
   strcpy(s,ss);
@@ -175,7 +178,7 @@ struct eggqueue *addq(char *ss, struct eggqueue *q)
 }
 
 /* remove someone from a queue */
-struct eggqueue *delq(char *s, struct eggqueue *q, int *ok)
+struct eggqueue *delq PROTO3(char *,s, struct eggqueue *,q, int *,ok)
 {
   struct eggqueue *x,*ret,*old;
   x=q; ret=q; old=q; *ok=0;
@@ -198,7 +201,7 @@ struct eggqueue *delq(char *s, struct eggqueue *q, int *ok)
 }
 
 /* clear out a list */
-void clearq(struct eggqueue *xx)
+void clearq PROTO1(struct eggqueue *,xx)
 {
   struct eggqueue *x,*x1;
   x=xx; while (x!=NULL) {
@@ -208,11 +211,11 @@ void clearq(struct eggqueue *xx)
 }
 
 /* new server to the list */
-void add_server(char *s) { serverlist=addq(s,serverlist); }
+void add_server PROTO1(char *,s) { serverlist=addq(s,serverlist); }
 
 /* set botserver to the next available server */
 /* -> if (*ptr == -1) then jump to that particular server */
-void next_server(int *ptr,char *serv,int *port,char *pass)
+void next_server PROTO4(int *,ptr,char *,serv,int *,port,char *,pass)
 {
   struct eggqueue *x=serverlist; int ok=1,i; char s[121];
   if (x==NULL) return;
@@ -222,7 +225,7 @@ void next_server(int *ptr,char *serv,int *port,char *pass)
     ok=0; i=0;
     while ((x!=NULL) && (!ok)) {
       strcpy(s,x->item); splitc(sv,s,':');
-      if (!sv[0]) { strcpy(sv,s); p=DEFAULT_PORT; }
+      if (!sv[0]) { strcpy(sv,s); p=default_port; }
       else { p=atoi(s); }
       if ((strcasecmp(sv,serv)==0) && (p==*port)) ok=1;
       else { x=x->next; i++; }
@@ -240,7 +243,7 @@ void next_server(int *ptr,char *serv,int *port,char *pass)
   if (x!=NULL) { x=x->next; (*ptr)++; }     /* go to next server */
   if (x==NULL) { x=serverlist; *ptr=0; }    /* start over at the beginning */
   pass[0]=0; strcpy(s,x->item); splitc(serv,s,':');
-  if (!serv[0]) { strcpy(serv,s); *port=DEFAULT_PORT; }
+  if (!serv[0]) { strcpy(serv,s); *port=default_port; }
   else {
     char xs[121];
     *port=atoi(s); splitc(xs,s,':');
@@ -251,7 +254,7 @@ void next_server(int *ptr,char *serv,int *port,char *pass)
 
 #ifndef NO_IRC
 /* 001: welcome to IRC (use it to fix the server name) */
-void got001(char *from,char *msg)
+void got001 PROTO2(char *,from,char *,msg)
 {
   struct eggqueue *x; int i; char s[121],s1[121],srv[121];
   struct chanset_t *chan;
@@ -270,7 +273,6 @@ void got001(char *from,char *msg)
   }
   chan=chanset; while (chan!=NULL) {
     mprintf(serv," %s",chan->key_prot);
-    chan->stat&=~(CHANACTIVE|CHANPEND);
     chan=chan->next;
   }
   mprintf(serv,"\n");
@@ -283,7 +285,7 @@ void got001(char *from,char *msg)
       return;
     }
     strcpy(s,x->item); splitc(srv,s,':');
-    if (!srv[0]) { strcpy(srv,s); sprintf(s,"%d",DEFAULT_PORT); }
+    if (!srv[0]) { strcpy(srv,s); sprintf(s,"%d",default_port); }
     sprintf(s1,"%s:%s",from,s);
     nfree(x->item); x->item=(char *)nmalloc(strlen(s1)+1);
     strcpy(x->item,s1);
@@ -293,7 +295,7 @@ void got001(char *from,char *msg)
 #endif
 
 /* show server list, and point out which one the bot is on */
-void tell_servers(int idx)
+void tell_servers PROTO1(int,idx)
 {
   struct eggqueue *x=serverlist; int i,sp; char s[141],sv[121];
   if (x==NULL) {
@@ -302,7 +304,7 @@ void tell_servers(int idx)
   dprintf(idx,"My server list:\n"); i=0;
   while (x!=NULL) {
     strcpy(s,x->item); splitc(sv,s,':'); 
-    if (!sv[0]) { strcpy(sv,s); sp=DEFAULT_PORT; }
+    if (!sv[0]) { strcpy(sv,s); sp=default_port; }
     else sp=atoi(s);
     sprintf(s,"  %s:%d",sv,sp);
     if (i==curserv) strcat(s,"   <- I am here.");
@@ -318,13 +320,14 @@ void wipe_serverlist()
 
 /* revenge tactic: person did something bad, if they are oplisted,
    remove them from the op list otherwise, deop them */
-void take_revenge(struct chanset_t *chan, char *who, char *reason)
+void take_revenge PROTO3(struct chanset_t *,chan, char *,who, char *,reason)
 {
-  char nick[NICKLEN],s[UHOSTLEN],s1[UHOSTLEN],ct[81],hand[10]; int i,chatr;
+  char nick[NICKLEN],s[UHOSTLEN],s1[UHOSTLEN],ct[81],hand[10]; int i,chatr,atr;
   time_t tm;
   get_handle_by_host(hand,who);
+  atr=get_attr_handle(hand);
   chatr=get_chanattr_handle(hand,chan->name);
-  if (chatr & CHANUSER_FRIEND) {
+  if ((chatr & CHANUSER_FRIEND) || (atr & USER_FRIEND)) {
     putlog(LOG_MISC,"*","%s is a friend (%s)",who,reason);
     return;  /* argh! */
   }
@@ -342,7 +345,7 @@ void take_revenge(struct chanset_t *chan, char *who, char *reason)
   tm=time(NULL); strcpy(ct,ctime(&tm));
   ct[10]=0; ct[16]=0; strcpy(ct,&ct[8]);
   strcpy(&ct[2],&ct[3]); strcpy(&ct[7],&ct[10]);
-  if (chatr & CHANUSER_DEOP) {
+  if ((chatr & CHANUSER_DEOP) || (atr & USER_DEOP)) {
     /* this is out of control: BAN THEM */
     putlog(LOG_MISC,"*","Now banning %s (%s)",who,reason);
     strcpy(s1,who); splitnick(nick,s1); maskhost(s1,s);
@@ -385,7 +388,7 @@ void clearprog()
   strcpy(oldnick,botname);
 }
 
-int logmodes(char *s)
+int logmodes PROTO1(char *,s)
 {
   int i; int res=0;
   for (i=0; i<strlen(s); i++) switch(s[i]) {
@@ -416,7 +419,7 @@ int logmodes(char *s)
   return res;
 }
 
-char *masktype(int x)
+char *masktype PROTO1(int,x)
 {
   static char s[20]; char *p=s;
   if (x&LOG_MSGS) *p++='m';
@@ -445,7 +448,7 @@ char *masktype(int x)
   return s;
 }
 
-char *maskname(int x)
+char *maskname PROTO1(int,x)
 {
   static char s[161];
   s[0]=0;
@@ -477,7 +480,7 @@ char *maskname(int x)
 }
 
 /* show all internal state variables */
-void tell_settings(int idx)
+void tell_settings PROTO1(int,idx)
 {
   char s[256]; int i;
 #ifndef NO_IRC
@@ -507,6 +510,7 @@ void tell_settings(int idx)
     if (chan->stat&CHAN_REVENGE) strcat(s,"revenge ");
     if (chan->stat&CHAN_STOPNETHACK) strcat(s,"stopnethack ");
     if (chan->stat&CHAN_SECRET) strcat(s,"secret ");
+    if (chan->stat&CHAN_SHARED) strcat(s,"shared ");
     dprintf(idx,"\n   Options: %s\n",s); s[0]=0;
     if (chan->need_op[0])
       dprintf(idx,"   To get ops I do: %s\n",chan->need_op);
@@ -752,8 +756,8 @@ void get_first_server()
 /* brief venture into timers */
 
 /* add a timer */
-unsigned long add_timer(tcl_timer_t ** stack,int elapse, char *cmd,
-			unsigned long prev_id)
+unsigned long add_timer PROTO4(tcl_timer_t **,stack,int,elapse, char *,cmd,
+			       unsigned long,prev_id)
 {
   tcl_timer_t *old=(*stack);
   *stack=(tcl_timer_t *)nmalloc(sizeof(tcl_timer_t));
@@ -768,7 +772,7 @@ unsigned long add_timer(tcl_timer_t ** stack,int elapse, char *cmd,
 }
 
 /* remove a timer, by id */
-int remove_timer(tcl_timer_t **stack, unsigned long id)
+int remove_timer PROTO2(tcl_timer_t **,stack, unsigned long,id)
 {
   tcl_timer_t *mark=*stack,*old; int ok=0;
   *stack=NULL; while (mark!=NULL) {
@@ -781,7 +785,7 @@ int remove_timer(tcl_timer_t **stack, unsigned long id)
 }
 
 /* check timers, execute the ones that have expired */
-void do_check_timers(tcl_timer_t **stack)
+void do_check_timers PROTO1(tcl_timer_t **,stack)
 {
   tcl_timer_t *mark=*stack,*old; Tcl_DString ds; int argc,i; char **argv;
   /* new timers could be added by a Tcl script inside a current timer */
@@ -828,7 +832,7 @@ void check_utimers()
 }
 
 /* wipe all timers */
-void wipe_timers(Tcl_Interp *irp, tcl_timer_t **stack)
+void wipe_timers PROTO2(Tcl_Interp *,irp, tcl_timer_t **,stack)
 {
   tcl_timer_t *mark=*stack,*old;
   while (mark!=NULL) {
@@ -839,7 +843,7 @@ void wipe_timers(Tcl_Interp *irp, tcl_timer_t **stack)
 }
 
 /* return list of timers */
-void list_timers(Tcl_Interp *irp, tcl_timer_t *stack)
+void list_timers PROTO2(Tcl_Interp *,irp, tcl_timer_t *,stack)
 {
   tcl_timer_t *mark=stack; char mins[10],id[20],*argv[3],*x;
   while (mark!=NULL) {

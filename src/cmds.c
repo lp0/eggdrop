@@ -52,27 +52,34 @@ extern char chanfile[];
 extern int dcc_users;
 #endif
 extern int gban_total;
-
-/* Tcl Prototypes */
-/* void Tcl_DeleteInterp(Tcl_Interp *); */
-
+extern int do_restart;
+extern int default_port;
 
 /* Do we have any flags that will allow us ops on a channel? */
-int has_op(idx,par)
-int idx; char *par;
+int has_op PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan; int atr,chatr;
   context;
-  if (par[0]=='#') chan=findchan(par);
-  else chan=findchan(dcc[idx].u.chat->con_chan);
-  if (chan==NULL) {
-    dprintf(idx,"Invalid console channel.\n");
-    return 0;
+  if (par[0]) {
+    chan=findchan(par);
+    if (chan==NULL) {
+      dprintf(idx,"No such channel.\n");
+      return 0;
+    }
+  }
+  else {
+    chan=findchan(dcc[idx].u.chat->con_chan);
+    if (chan==NULL) {
+      dprintf(idx,"Invalid console channel.\n");
+      return 0;
+    }
   }
   atr=get_attr_handle(dcc[idx].nick);
   chatr=get_chanattr_handle(dcc[idx].nick,chan->name);
-  if ((atr & (USER_MASTER|USER_OWNER|USER_GLOBAL)) ||
+  if ((atr & (USER_MASTER|USER_OWNER)) ||
       (chatr & (CHANUSER_MASTER|CHANUSER_OWNER|CHANUSER_OP))) return 1;
+  else if ((atr & USER_GLOBAL) && !(chatr & CHANUSER_DEOP))
+     return 1;
   else {
     dprintf(idx,"You are not a channel op on %s.\n",chan->name);
     return 0;
@@ -80,8 +87,7 @@ int idx; char *par;
   return 1;
 }
 
-void cmd_who(idx,par)
-int idx; char *par;
+void cmd_who PROTO2(int,idx,char *,par)
 {
   int i;
   if (par[0]) {
@@ -110,15 +116,13 @@ int idx; char *par;
   }
 }
 
-void cmd_botinfo(idx,par)
-int idx; char *par;
+void cmd_botinfo PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# botinfo",dcc[idx].nick);
   tandout("info? %d:%s@%s\n",dcc[idx].sock,dcc[idx].nick,botnetnick);
 }
 
-void cmd_whom(idx,par)
-int idx; char *par;
+void cmd_whom PROTO2(int,idx,char *,par)
 {
   if (dcc[idx].u.chat->channel<0) {
     dprintf(idx,"You have chat turned off.\n");
@@ -160,8 +164,7 @@ int idx; char *par;
   }
 }
 
-void cmd_me(idx,par)
-int idx; char *par;
+void cmd_me PROTO2(int,idx,char *,par)
 {
   int i;
   if (dcc[idx].u.chat->channel<0) {
@@ -186,8 +189,7 @@ int idx; char *par;
   check_tcl_act(dcc[idx].nick,dcc[idx].u.chat->channel,par);
 }
 
-void cmd_motd(idx,par)
-int idx; char *par;
+void cmd_motd PROTO2(int,idx,char *,par)
 {
   int i;
   if (par[0]) {
@@ -207,8 +209,7 @@ int idx; char *par;
 }
 
 #ifndef NO_FILE_SYSTEM
-void cmd_files(idx,par)
-int idx; char *par;
+void cmd_files PROTO2(int,idx,char *,par)
 {
   int atr=get_attr_handle(dcc[idx].nick);
   if (dccdir[0]==0) dprintf(idx,"There is no file transfer area.\n");
@@ -250,8 +251,7 @@ int idx; char *par;
 }
 #endif
 
-void cmd_note(idx,par)
-int idx; char *par;
+void cmd_note PROTO2(int,idx,char *,par)
 {
   char handle[512],*p; int echo;
   split(handle,par); if (!handle[0]) {
@@ -269,19 +269,17 @@ int idx; char *par;
   add_note(handle,dcc[idx].nick,par,idx,echo);
 }
 
-void cmd_away(idx,par)
-int idx; char *par;
+void cmd_away PROTO2(int,idx,char *,par)
 {
   if (strlen(par)>60) par[60]=0;
-  set_away(idx,par);
+  set_away (idx,par);
 }
 
-void cmd_newpass(idx,par)
-int idx; char *par;
+void cmd_newpass PROTO2(int,idx,char *,par)
 {
   char new[512];
   nsplit(new,par);
-  if (!par[0]) {
+  if (!new[0]) {
     dprintf(idx,"Usage: newpass <newpassword>\n");
     return;
   }
@@ -295,22 +293,19 @@ int idx; char *par;
   dprintf(idx,"Changed password to '%s'\n",new);
 }
 
-void cmd_bots(idx,par)
-int idx; char *par;
+void cmd_bots PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# bots",dcc[idx].nick);
   tell_bots(idx);
 }
 
-void cmd_bottree(idx,par)
-int idx; char *par;
+void cmd_bottree PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# bottree",dcc[idx].nick);
   tell_bottree(idx);
 }
 
-void cmd_help(idx,par)
-int idx; char *par;
+void cmd_help PROTO2(int,idx,char *,par)
 {
   int atr,chatr;
   atr=get_attr_handle(dcc[idx].nick);
@@ -331,15 +326,14 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_act(idx,par)
-int idx; char *par;
+void cmd_act PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: act <action>\n");
     return;
   }
-  if (!has_op(idx," ")) return;
-  putlog(LOG_CMDS,"*","#%s# (%s) .act %s",dcc[idx].nick,
+  if (!has_op(idx,"")) return;
+  putlog(LOG_CMDS,"*","#%s# (%s) act %s",dcc[idx].nick,
          dcc[idx].u.chat->con_chan,par);
   mprintf(serv,"PRIVMSG %s :\001ACTION %s\001\n",dcc[idx].u.chat->con_chan,
 	  par);
@@ -347,8 +341,7 @@ int idx; char *par;
 #endif
 
 #ifndef NO_IRC
-void cmd_msg(idx,par)
-int idx; char *par;
+void cmd_msg PROTO2(int,idx,char *,par)
 {
   char nick[512];
   split(nick,par); if (!nick[0]) {
@@ -362,44 +355,42 @@ int idx; char *par;
 #endif
 
 #ifndef NO_IRC
-void cmd_say(idx,par)
-int idx; char *par;
+void cmd_say PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: say <message>\n");
     return;
   }
-  if (!has_op(idx," ")) return;
-  putlog(LOG_CMDS,"*","#%s# (%s) .say %s",dcc[idx].nick,
+  if (!has_op(idx,"")) return;
+  putlog(LOG_CMDS,"*","#%s# (%s) say %s",dcc[idx].nick,
          dcc[idx].u.chat->con_chan,par);
   mprintf(serv,"PRIVMSG %s :%s\n",dcc[idx].u.chat->con_chan,par);
 }
 #endif
 
 #ifndef NO_IRC
-void cmd_kickban(idx,par)
-int idx; char *par;
+void cmd_kickban PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan;
   if (!par[0]) {
     dprintf(idx,"Usage: kickban <nick> [reason]\n");
     return;
   }
-  if (!has_op(idx," ")) return;
+  if (!has_op(idx,"")) return;
   chan=findchan(dcc[idx].u.chat->con_chan);
   if (!me_op(chan)) {
     dprintf(idx,"I can't help you now because I'm not a channel op on %s.\n",
             chan->name);
     return;
   }
-  putlog(LOG_CMDS,"*","#%s# (%s) .kickban %s",dcc[idx].nick,chan->name,par);
-  user_kickban(idx,par);
+  putlog(LOG_CMDS,"*","#%s# (%s) kickban %s",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,par);
+  user_kickban (idx,par);
 }
 #endif
 
 #ifndef NO_IRC
-void cmd_op(idx,par)
-int idx; char *par;
+void cmd_op PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan; char nick[512];
   nsplit(nick,par);
@@ -408,15 +399,11 @@ int idx; char *par;
     return;
   }
   if (par[0]) {
+    if (!has_op(idx,par)) return;
     chan=findchan(par);
-    if (chan==NULL) {
-      dprintf(idx,"I'm not on channel %s.\n",par);
-      return;
-    }
-    if (!has_op(idx,chan->name)) return;
   }
   else {
-    if (!has_op(idx," ")) return;
+    if (!has_op(idx,"")) return;
     chan=findchan(dcc[idx].u.chat->con_chan);
   }
   if (!me_op(chan)) {
@@ -424,14 +411,14 @@ int idx; char *par;
             chan->name);
     return;
   }
-  putlog(LOG_CMDS,"*","#%s# (%s) .op %s %s",dcc[idx].nick,chan->name,nick,par);
+  putlog(LOG_CMDS,"*","#%s# (%s) op %s %s",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,nick,par);
   give_op(nick,chan,idx);
 }
 #endif
 
 #ifndef NO_IRC
-void cmd_deop(idx,par)
-int idx; char *par;
+void cmd_deop PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan; char nick[512];
   nsplit(nick,par);
@@ -440,15 +427,11 @@ int idx; char *par;
     return;
   }
   if (par[0]) {
+    if (!has_op(idx,par)) return;
     chan=findchan(par);
-    if (chan==NULL) {
-      dprintf(idx,"I'm not on channel %s.\n",par);
-      return;
-    }
-    if (!has_op(idx,chan->name)) return;
   }
   else {
-    if (!has_op(idx," ")) return;
+    if (!has_op(idx,"")) return;
     chan=findchan(dcc[idx].u.chat->con_chan);
   }
   if (!me_op(chan)) {
@@ -456,40 +439,41 @@ int idx; char *par;
             chan->name);
     return;
   }
-  putlog(LOG_CMDS,"*","#%s# (%s) .deop %s %s",dcc[idx].nick,chan->name,nick,par);
+  putlog(LOG_CMDS,"*","#%s# (%s) deop %s %s",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,nick,par);
   give_deop(nick,chan,idx);
 }
 #endif
 
 #ifndef NO_IRC
-void cmd_kick(idx,par)
-int idx; char *par;
+void cmd_kick PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan;
   if (!par[0]) {
     dprintf(idx,"Usage: kick <nick> [reason]\n");
     return;
   }
-  if (!has_op(idx," ")) return;
+  if (!has_op(idx,"")) return;
   chan=findchan(dcc[idx].u.chat->con_chan);
   if (!me_op(chan)) {
     dprintf(idx,"I can't help you now because I'm not a channel op on %s.\n",
             chan->name);
     return;
   }
-  putlog(LOG_CMDS,"*","#%s# (%s) .kick %s",dcc[idx].nick,chan->name,par);
+  putlog(LOG_CMDS,"*","#%s# (%s) kick %s",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,par);
   user_kick(idx,par);
 }
 #endif
 
 #ifndef NO_IRC
-void cmd_invite(idx,par)
-int idx; char *par;
+void cmd_invite PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan;
-  if (!has_op(idx," ")) return;
+  if (!has_op(idx,"")) return;
   chan=findchan(dcc[idx].u.chat->con_chan);
-  putlog(LOG_CMDS,"*","#%s# (%s) .invite %s",dcc[idx].nick,chan->name,par);
+  putlog(LOG_CMDS,"*","#%s# (%s) invite %s",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,par);
   if (!me_op(chan) && (chan->channel.mode&CHANINV)) {
     dprintf(idx,"I'm not chop on %s, so I can't invite anyone.\n",chan->name);
     return;
@@ -503,18 +487,17 @@ int idx; char *par;
 }
 #endif
 
-void cmd_resetbans(idx,par)
-int idx; char *par;
+void cmd_resetbans PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan;
-  if (!has_op(idx," ")) return;
+  if (!has_op(idx,"")) return;
   chan=findchan(dcc[idx].u.chat->con_chan);
-  putlog(LOG_CMDS,"*","#%s# (%s) .resetbans",dcc[idx].nick,chan->name);
+  putlog(LOG_CMDS,"*","#%s# (%s) resetbans",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan);
   dprintf(idx,"Resetting bans on %s...\n",chan->name); resetbans(chan);
 }
 
-void cmd_pls_ban(idx,par)
-int idx; char *par;
+void cmd_pls_ban PROTO2(int,idx,char *,par)
 {
   char who[512],note[512],s[UHOSTLEN]; struct chanset_t *chan;
   char chname[512];
@@ -525,14 +508,14 @@ int idx; char *par;
   }
   nsplit(who,par); rmspace(who);
   chan=findchan(dcc[idx].u.chat->con_chan);
-  if (!(get_attr_handle(dcc[idx].nick) & USER_MASTER)) {
-    if (!has_op(idx," ")) return;
-    strcpy(chname,dcc[idx].u.chat->con_chan);
-  }
-  else if (par[0]=='#') {
+  if ((par[0]=='#') || (par[0] == '&')) {
     nsplit(chname,par); rmspace(chname);
     if (!has_op(idx,chname)) return;
     chan=findchan(chname);
+  }
+  else if (!(get_attr_handle(dcc[idx].nick) & USER_MASTER)) {
+    if (!has_op(idx,"")) return;
+    strcpy(chname,dcc[idx].u.chat->con_chan);
   }
   rmspace(par); 
   if (!par[0]) strcpy(note,"request");
@@ -548,16 +531,18 @@ int idx; char *par;
   }
   if (strlen(who)>70) who[70]=0;
   /* irc can't understand bans longer than that */
-  if (chname[0]!=0) {    
+  if (chname[0]) {    
     u_addban(chan->bans,who,dcc[idx].nick,note,0L);
-    putlog(LOG_CMDS,"*","#%s# +b %s %s (%s)",dcc[idx].nick,who,chname,note);
+    putlog(LOG_CMDS,"*","#%s# (%s) +ban %s %s (%s)",dcc[idx].nick,
+	   dcc[idx].u.chat->con_chan,who,chname,note);
     dprintf(idx,"New %s ban: %s (%s)\n",chname,who,note);
     if (me_op(chan)) add_mode(chan,'+','b',who);
     recheck_channel(chan);
     return;
   }
   addban(who,dcc[idx].nick,note,0L);
-  putlog(LOG_CMDS,"*","#%s# +ban %s (%s)",dcc[idx].nick,who,note);
+  putlog(LOG_CMDS,"*","#%s# (%s) +ban %s (%s)",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,who,note);
   dprintf(idx,"New ban: %s (%s)\n",who,note);
   chan=chanset; while (chan!=NULL) {
     if (me_op(chan)) add_mode(chan,'+','b',who);
@@ -566,10 +551,9 @@ int idx; char *par;
   }
 }
 
-void cmd_mns_ban(idx,par)
-int idx; char *par;
+void cmd_mns_ban PROTO2(int,idx,char *,par)
 {
-  int i,j,k; struct chanset_t *chan; char s[UHOSTLEN],ban[512],chname[512];
+  int i=0,j,k; struct chanset_t *chan; char s[UHOSTLEN],ban[512],chname[512];
   chname[0]=0;
   if (!par[0]) {
     dprintf(idx,"Usage: -ban <hostmask|ban #> [channel]\n");
@@ -580,57 +564,60 @@ int idx; char *par;
     strcpy(chname,par);
     if (!has_op(idx,chname)) return;
   }
-  else if (!has_op(idx," ")) return;
-  if (is_global_ban(ban) && !(get_attr_handle(dcc[idx].nick) & USER_MASTER)) {
-    dprintf(idx,"You do no have Bot Master privileges to remove Global Bans.\n");
-    return;
-  }
-  i=delban(ban);
-  if (i>0) {
-    putlog(LOG_CMDS,"*","#%s# -ban %s",dcc[idx].nick,ban);
-    dprintf(idx,"Removed ban: %s\n",ban);
-    chan=chanset; while (chan!=NULL) {
-      if (me_op(chan)) add_mode(chan,'-','b',ban);
-      chan=chan->next;
+  else if (!has_op(idx,"")) return;
+  if (!chname[0] && (get_attr_handle(dcc[idx].nick) & USER_MASTER)) {
+    i=delban(ban);
+    if (i>0) {
+      putlog(LOG_CMDS,"*","#%s# (%s) -ban %s",dcc[idx].nick,
+	     dcc[idx].u.chat->con_chan,ban);
+      dprintf(idx,"Removed ban: %s\n",ban);
+      chan=chanset; while (chan!=NULL) {
+        if (me_op(chan)) add_mode(chan,'-','b',ban);
+        chan=chan->next;
+      }
+      return;
     }
-    return;
   }
   /* channel-specific ban? */
-  if (chname[0]!=0) {
-    if ((chan=findchan(chname))==NULL) {
-      dprintf (idx,"No such channel.\n");
-      return;
-   }
-  } 
-  else chan=findchan(dcc[idx].u.chat->con_chan);
+  if (!chname[0]) strcpy(chname,dcc[idx].u.chat->con_chan);
+  chan=findchan(chname);
   sprintf(s,"%d",i+atoi(ban));
   j=u_delban(chan->bans,s);
   if (j>0) {
-    putlog(LOG_CMDS,"*","#%s# -ban %s",dcc[idx].nick,s);
-    dprintf(idx,"Removed channel ban: %s\n",s);
+    putlog(LOG_CMDS,"*","#%s# (%s) -ban %s",dcc[idx].nick,
+	   dcc[idx].u.chat->con_chan,s);
+    dprintf(idx,"Removed %s channel ban: %s\n",chname,s);
     add_mode(chan,'-','b',s);
     return;
   } 
-  else {
-    k=u_delban(chan->bans,ban);
-    if (k>0) {
-      putlog(LOG_CMDS,"*","#%s# -ban %s",dcc[idx].nick,ban);
-      dprintf(idx,"Removed channel ban: %s\n",ban);
-      add_mode(chan,'-','b',ban);
-      return;
-    }
+  k=u_delban(chan->bans,ban);
+  if (k>0) {
+    putlog(LOG_CMDS,"*","#%s# (%s) -ban %s",dcc[idx].nick,
+	   dcc[idx].u.chat->con_chan,ban);
+    dprintf(idx,"Removed %s channel ban: %s\n",chname,ban);
+    add_mode(chan,'-','b',ban);
+    return;
   }
   /* okay, not in any ban list -- might be ban on channel */
   if (atoi(ban)>0) {
-    if (kill_chanban(dcc[idx].u.chat->con_chan,idx,1-i-j,atoi(ban)))
-      putlog(LOG_CMDS,"*","#%s# -ban %s",dcc[idx].nick,ban);
+    if (kill_chanban(chname,idx,1-i-j,atoi(ban))) {
+      putlog(LOG_CMDS,"*","#%s# (%s) -ban %s [on channel]",
+	     dcc[idx].nick,dcc[idx].u.chat->con_chan,ban);
+      dprintf(idx,"Not in banlist. Removing match on %s\n",chname);
+      return;
+    }
   }
-  else if (kill_chanban_name(dcc[idx].u.chat->con_chan,idx,ban))
-    putlog(LOG_CMDS,"*","#%s# -ban %s",dcc[idx].nick,ban);
+  else {
+    if (kill_chanban_name(chname,idx,ban)) {
+      putlog(LOG_CMDS,"*","#%s# (%s) -ban %s [on channel]",
+	     dcc[idx].nick,dcc[idx].u.chat->con_chan,ban);
+      dprintf(idx,"Not in banlist. Removing match on %s\n",chname);
+      return;
+    }
+  }
 }
 
-void cmd_bans(idx,par)
-int idx; char *par;
+void cmd_bans PROTO2(int,idx,char *,par)
 {
   if (strcasecmp(par,"all")==0) {
     putlog(LOG_CMDS,"*","#%s# bans all",dcc[idx].nick);
@@ -643,21 +630,19 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_channel(idx,par)
-int idx; char *par;
+void cmd_channel PROTO2(int,idx,char *,par)
 {
   if (par[0]) {
     if (!has_op(idx,par)) return;
   }
-  else if (!has_op(idx," ")) return;
-  putlog(LOG_CMDS,"*","#%s# (%s) .channel %s",dcc[idx].nick,
+  else if (!has_op(idx,"")) return;
+  putlog(LOG_CMDS,"*","#%s# (%s) channel %s",dcc[idx].nick,
          dcc[idx].u.chat->con_chan,par);
   tell_verbose_chan_info(idx,par);
 }
 #endif
 
-void cmd_addlog(idx,par)
-int idx; char *par;
+void cmd_addlog PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: addlog <message>\n");
@@ -668,16 +653,14 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_servers(idx,par)
-int idx; char *par;
+void cmd_servers PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# servers",dcc[idx].nick);
   tell_servers(idx);
 }
 #endif
 
-void cmd_whois(idx,par)
-int idx; char *par;
+void cmd_whois PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: whois <handle>\n");
@@ -687,8 +670,7 @@ int idx; char *par;
   tell_user_ident(idx,par,(get_attr_handle(dcc[idx].nick) & USER_MASTER));
 }
 
-void cmd_match(idx,par)
-int idx; char *par;
+void cmd_match PROTO2(int,idx,char *,par)
 {
   int start=1,limit=20; char s[512],s1[512],chname[512];
   putlog(LOG_CMDS,"*","#%s# match %s",dcc[idx].nick,par);
@@ -704,8 +686,7 @@ int idx; char *par;
 		   USER_MASTER),chname);
 }
 
-void cmd_status(idx,par)
-int idx; char *par;
+void cmd_status PROTO2(int,idx,char *,par)
 {
   int atr=0;
   if (strcasecmp(par,"all")==0) {
@@ -727,15 +708,13 @@ int idx; char *par;
   }
 }
 
-void cmd_dccstat(idx,par)
-int idx; char *par;
+void cmd_dccstat PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# dccstat",dcc[idx].nick);
   tell_dcc(idx);
 }
 
-void cmd_pls_ignore(idx,par)
-int idx; char *par;
+void cmd_pls_ignore PROTO2(int,idx,char *,par)
 {
   char who[512],note[66];
   if (!par[0]) {
@@ -753,8 +732,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","#%s# +ignore %s %s",dcc[idx].nick,who,note);
 }
 
-void cmd_mns_ignore(idx,par)
-int idx; char *par;
+void cmd_mns_ignore PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: -ignore <hostmask>\n");
@@ -767,15 +745,13 @@ int idx; char *par;
   else dprintf(idx,"Can't find that ignore.\n");
 }
 
-void cmd_ignores(idx,par)
-int idx; char *par;
+void cmd_ignores PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# ignores %s",dcc[idx].nick,par);
   tell_ignores(idx,par);
 }
 
-void cmd_boot(idx,par)
-int idx; char *par;
+void cmd_boot PROTO2(int,idx,char *,par)
 {
   int i,files=0,ok=0; char who[512];
   if (!par[0]) {
@@ -828,10 +804,9 @@ int idx; char *par;
   if (!ok) dprintf(idx,"Who?  No such person on the party line.\n");
 }
 
-void cmd_console(idx,par)
-int idx; char *par;
+void cmd_console PROTO2(int,idx,char *,par)
 {
-  char nick[512],s[2],s1[512]; int dest=0,i,ok=0,pls,md,atr;
+  char nick[512],s[2],s1[512]; int dest=0,i,ok=0,pls,md,atr,chatr;
   if (!par[0]) {
     dprintf(idx,"Your console is %s: %s (%s)\n",dcc[idx].u.chat->con_chan,
 	    masktype(dcc[idx].u.chat->con_flags),
@@ -861,9 +836,10 @@ int idx; char *par;
 	dprintf(idx,"Invalid console channel: %s\n",nick);
 	return;
       }
-      if ((!(get_chanattr_handle(dcc[idx].nick,nick) & 
-	  (CHANUSER_OP|CHANUSER_MASTER))) && (!(atr & 
-	  (USER_GLOBAL|USER_MASTER)))) {
+      chatr = get_chanattr_handle(dcc[idx].nick,nick);
+      if ((!(chatr & (CHANUSER_OP|CHANUSER_MASTER)))
+	  && (!(atr &USER_MASTER)) &&
+	  !((atr&USER_GLOBAL)&&!(chatr&CHANUSER_DEOP))) {
  	dprintf(idx,"You don't have op or master access to channel %s\n",nick);
 	return;
       }
@@ -917,8 +893,7 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_adduser(idx,par)
-int idx; char *par;
+void cmd_adduser PROTO2(int,idx,char *,par)
 {
   char nick[512];struct chanset_t *chan;
   if ((par==NULL) || (!par[0])) {
@@ -942,8 +917,7 @@ int idx; char *par;
 }
 #endif
 
-void cmd_pls_user(idx,par)
-int idx; char *par;
+void cmd_pls_user PROTO2(int,idx,char *,par)
 {
   char handle[512],host[512];
   nsplit(handle,par); nsplit(host,par);
@@ -961,8 +935,7 @@ int idx; char *par;
   dprintf(idx,"Added %s (%s) with no password or flags.\n",handle,host);
 }
 
-void cmd_pls_bot(idx,par)
-int idx; char *par;
+void cmd_pls_bot PROTO2(int,idx,char *,par)
 {
   char handle[512],addr[512];
   nsplit(handle,par); if (!par[0]) {
@@ -988,8 +961,7 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_deluser(idx,par)
-int idx; char *par;
+void cmd_deluser PROTO2(int,idx,char *,par)
 {
   char nick[512];struct chanset_t *chan;
   if ((par==NULL) || (!par[0])) {
@@ -1020,8 +992,7 @@ int idx; char *par;
 }
 #endif
 
-void cmd_mns_user(idx,par)
-int idx; char *par;
+void cmd_mns_user PROTO2(int,idx,char *,par)
 {
   int atr=get_attr_handle(dcc[idx].nick), atr1=get_attr_handle(par);
   if (!par[0]) {
@@ -1038,7 +1009,7 @@ int idx; char *par;
       (!(get_attr_handle(dcc[idx].nick) & USER_OWNER))) {
     dprintf(idx,"You can't remove shared bots.\n");
     return;                               
-  }                                               
+  }
 #endif
   if ((atr & USER_BOTMAST) && (!(atr & (USER_MASTER|USER_OWNER))) 
       && (!(atr1 & USER_BOT))) {
@@ -1052,8 +1023,7 @@ int idx; char *par;
   else dprintf(idx,"Failed.\n");
 }
 
-void cmd_chnick(idx,par)
-int idx; char *par;
+void cmd_chnick PROTO2(int,idx,char *,par)
 {
   char hand[512]; int i;
   split(hand,par); if ((!hand[0]) || (!par[0])) {
@@ -1116,8 +1086,7 @@ int idx; char *par;
   else dprintf(idx,"Failed.\n");
 }
 
-void cmd_nick(idx,par)
-int idx; char *par;
+void cmd_nick PROTO2(int,idx,char *,par)
 {
   int i; char icon;
   if (!par[0]) {
@@ -1162,8 +1131,7 @@ int idx; char *par;
   else dprintf(idx,"Failed.\n");
 }
 
-void cmd_pls_host(idx,par)
-int idx; char *par;
+void cmd_pls_host PROTO2(int,idx,char *,par)
 {
   char handle[512],host[512]; int chatr;
   nsplit(handle,par); nsplit(host,par);
@@ -1203,8 +1171,7 @@ int idx; char *par;
   dprintf(idx,"Added '%s' to %s\n",host,handle);
 }
 
-void cmd_mns_host(idx,par)
-int idx; char *par;
+void cmd_mns_host PROTO2(int,idx,char *,par)
 {
   char handle[512],host[512]; int chatr;
   nsplit(handle,par); nsplit(host,par);
@@ -1247,8 +1214,7 @@ int idx; char *par;
   else dprintf(idx,"Failed.\n");
 }
 
-void cmd_chpass(idx,par)
-int idx; char *par;
+void cmd_chpass PROTO2(int,idx,char *,par)
 {
   char handle[512],new[512];
   if (!par[0]) {
@@ -1317,8 +1283,7 @@ int idx; char *par;
   dprintf(idx,"Changed password.\n");
 }
 
-void cmd_chaddr(idx,par)
-int idx; char *par;
+void cmd_chaddr PROTO2(int,idx,char *,par)
 {
   char handle[512],addr[512];
   nsplit(handle,par); nsplit(addr,par);
@@ -1342,8 +1307,7 @@ int idx; char *par;
   set_handle_info(userlist,handle,addr);
 }
 
-void cmd_comment(idx,par)
-int idx; char *par;
+void cmd_comment PROTO2(int,idx,char *,par)
 {
   char handle[512];
   split(handle,par); if (!handle[0]) {
@@ -1371,8 +1335,7 @@ int idx; char *par;
   set_handle_comment(userlist,handle,par);
 }
 
-void cmd_email(idx,par)
-int idx; char *par;
+void cmd_email PROTO2(int,idx,char *,par)
 {
   char s[161];
   if (!par[0]) {
@@ -1395,8 +1358,7 @@ int idx; char *par;
   set_handle_email(userlist,dcc[idx].nick,par);
 }
 
-void cmd_chemail(idx,par)
-int idx; char *par;
+void cmd_chemail PROTO2(int,idx,char *,par)
 {
   char handle[512];
   nsplit(handle,par);
@@ -1427,8 +1389,7 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_dump(idx,par)
-int idx; char *par;
+void cmd_dump PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: dump <server stuff>\n");
@@ -1439,8 +1400,7 @@ int idx; char *par;
 }
 #endif
 
-void cmd_reset(idx,par)
-int idx; char *par;
+void cmd_reset PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan; int atr,chatr=0;
   atr=get_attr_handle(dcc[idx].nick);
@@ -1470,8 +1430,7 @@ int idx; char *par;
   }
 }
 
-void cmd_restart(idx,par)
-int idx; char *par;
+void cmd_restart PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# restart",dcc[idx].nick);
   dprintf(idx,"Restarting.\n");
@@ -1483,13 +1442,10 @@ int idx; char *par;
   putlog(LOG_MISC,"*","Restarting ...");
   wipe_timers(interp,&utimer);
   wipe_timers(interp,&timer);
-/*  Tcl_DeleteInterp(interp);
-  init_tcl(); */
-  rehash();
+  do_restart = 1;
 }
 
-void cmd_rehash(idx,par)
-int idx; char *par;
+void cmd_rehash PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# rehash",dcc[idx].nick);
   dprintf(idx,"Rehashing.\n");
@@ -1502,16 +1458,14 @@ int idx; char *par;
   rehash();
 }
 
-void cmd_reload(idx,par)
-int idx; char *par;
+void cmd_reload PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# reload",dcc[idx].nick);
   dprintf(idx,"Reloading user file...\n");
   reload();
 }
 
-void cmd_die(idx,par)
-int idx; char *par;
+void cmd_die PROTO2(int,idx,char *,par)
 {
   char s[512];
   putlog(LOG_CMDS,"*","#%s# die %s",dcc[idx].nick,par);
@@ -1535,13 +1489,12 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_jump(idx,par)
-int idx; char *par;
+void cmd_jump PROTO2(int,idx,char *,par)
 {
   char other[512],port[512];
   if (par[0]) {
     nsplit(other,par); nsplit(port,par);
-    if (!port[0]) sprintf(port,"%d",DEFAULT_PORT);
+    if (!port[0]) sprintf(port,"%d",default_port);
     putlog(LOG_CMDS,"*","#%s# jump %s %s %s",dcc[idx].nick,other,port,par);
     strcpy(newserver,other); newserverport=atoi(port);
     strcpy(newserverpass,par);
@@ -1553,15 +1506,13 @@ int idx; char *par;
 }
 #endif
 
-void cmd_debug(idx,par)
-int idx; char *par;
+void cmd_debug PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# debug",dcc[idx].nick);
   debug_mem_to_dcc(idx);
 }
 
-void cmd_info(idx,par)
-int idx; char *par;
+void cmd_info PROTO2(int,idx,char *,par)
 {
   char s[512],chname[512]; int locked=0;
   if (!use_info) {
@@ -1629,8 +1580,7 @@ int idx; char *par;
   }
 }
 
-void cmd_chinfo(idx,par)
-int idx; char *par;
+void cmd_chinfo PROTO2(int,idx,char *,par)
 {
   char handle[512],chname[512];
   if (!use_info) {
@@ -1682,8 +1632,7 @@ int idx; char *par;
 }
 
 #ifdef ENABLE_SIMUL
-void cmd_simul(idx,par)
-int idx; char *par;
+void cmd_simul PROTO2(int,idx,char *,par)
 {
   char nick[512]; int i,ok=0;
   nsplit(nick,par);
@@ -1697,8 +1646,7 @@ int idx; char *par;
 }
 #endif
 
-void cmd_link(idx,par)
-int idx; char *par;
+void cmd_link PROTO2(int,idx,char *,par)
 {
   char s[512]; int i;
   putlog(LOG_CMDS,"*","#%s# link %s",dcc[idx].nick,par);
@@ -1713,8 +1661,7 @@ int idx; char *par;
   }
 }
 
-void cmd_unlink(idx,par)
-int idx; char *par;
+void cmd_unlink PROTO2(int,idx,char *,par)
 {
   int i;
   char bot[200];
@@ -1736,8 +1683,7 @@ int idx; char *par;
   }
 }
 
-void cmd_relay(idx,par)
-int idx; char *par;
+void cmd_relay PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: relay <bot>\n");
@@ -1747,15 +1693,13 @@ int idx; char *par;
   tandem_relay(idx,par);
 }
 
-void cmd_save(idx,par)
-int idx; char *par;
+void cmd_save PROTO2(int,idx,char *,par)
 {
   putlog(LOG_CMDS,"*","#%s# save",dcc[idx].nick);
   write_userfile();
 }
 
-void cmd_trace(idx,par)
-int idx; char *par;
+void cmd_trace PROTO2(int,idx,char *,par)
 {
   int i;
   if (!par[0]) {
@@ -1776,11 +1720,10 @@ int idx; char *par;
 }
 
 #ifndef NO_IRC
-void cmd_topic(idx,par)
-int idx; char *par;
+void cmd_topic PROTO2(int,idx,char *,par)
 {
   struct chanset_t *chan;
-  if (!has_op(idx," ")) return;
+  if (!has_op(idx,"")) return;
   chan=findchan(dcc[idx].u.chat->con_chan);
   if (!par[0]) {
     if (chan->channel.topic[0]==0) {
@@ -1800,30 +1743,25 @@ int idx; char *par;
   mprintf(serv,"TOPIC %s :%s\n",chan->name,par);
   dprintf(idx,"Changing topic...\n");
   strcpy(chan->channel.topic,par);
-  putlog(LOG_CMDS,"*","#%s# (%s) .topic %s",dcc[idx].nick,chan->name,par);
+  putlog(LOG_CMDS,"*","#%s# (%s) topic %s",dcc[idx].nick,
+	 dcc[idx].u.chat->con_chan,par);
 }
 #endif
 
-void cmd_binds(idx,par)
-int idx; char *par;
+void cmd_binds PROTO2(int,idx,char *,par)
 {
   tell_binds(idx,par);
   putlog(LOG_CMDS,"*","#%s# binds %s",dcc[idx].nick,par);
 }
 
-void cmd_banner(idx,par)
-int idx; char *par;
+void cmd_banner PROTO2(int,idx,char *,par)
 {
   char s[540]; int i;
   if (!par[0]) {
     dprintf(idx,"Usage: banner <message>\n");
     return;
   }
-  sprintf(s,"### \007\007\007BOTWIDE MESSAGE FROM %s:\n",dcc[idx].nick);
-  for (i=0; i<dcc_total; i++)
-    if ((dcc[i].type==DCC_CHAT) || (dcc[i].type==DCC_FILES))
-      dprintf(i,s);
-  sprintf(s,"###   %s\n",par);
+  sprintf(s,"\007\007### Botwide:[%s] %s\n",dcc[idx].nick,par);
   for (i=0; i<dcc_total; i++)
     if ((dcc[i].type==DCC_CHAT) || (dcc[i].type==DCC_FILES))
       dprintf(i,s);
@@ -1855,9 +1793,9 @@ int check_dcc_attrs(char *hand,int flags,int oatr)
       if ((dcc[i].type==DCC_CHAT) && ((flags & 
           (USER_GLOBAL|USER_MASTER|USER_OWNER|USER_BOTMAST))!=(oatr & 
           (USER_GLOBAL|USER_MASTER|USER_OWNER|USER_BOTMAST)))) {
-        tandout("part %s %s\n",botnetnick,dcc[i].nick);
-        tandout("join %s %s %d %c %s\n",botnetnick,dcc[i].nick,
-		dcc[i].u.chat->channel,geticon(i),dcc[i].host);
+        tandout("part %s %s %d\n",botnetnick,dcc[i].nick,dcc[i].sock);
+        tandout("join %s %s %d %c%d %s\n",botnetnick,dcc[i].nick,
+		dcc[i].u.chat->channel,geticon(i),dcc[i].sock,dcc[i].host);
       }
       if ((oatr&USER_MASTER) && !(flags&USER_MASTER)) {
         dcc[i].u.chat->con_flags &= ~(LOG_MISC|LOG_CMDS|LOG_RAW|LOG_FILES|
@@ -1950,12 +1888,12 @@ int check_dcc_chanattrs(char *hand,char *chname,int chflags,int ochatr)
       if ((dcc[i].type==DCC_CHAT) && ((chflags &
           (CHANUSER_OP|CHANUSER_MASTER|CHANUSER_OWNER))!=(ochatr &
           (CHANUSER_OP|CHANUSER_MASTER|CHANUSER_OWNER)))) {
-        tandout("part %s %s\n",botnetnick,dcc[i].nick);
-        tandout("join %s %s %d %c %s\n",botnetnick,dcc[i].nick,
-		dcc[i].u.chat->channel,geticon(i),dcc[i].host);
+        tandout("part %s %s %d\n",botnetnick,dcc[i].nick,dcc[i].sock);
+        tandout("join %s %s %d %c%d %s\n",botnetnick,dcc[i].nick,
+		dcc[i].u.chat->channel,geticon(i),dcc[i].sock,dcc[i].host);
       }
       if ((ochatr&CHANUSER_MASTER) && !(chflags&CHANUSER_MASTER)) {
-        if (!(get_attr_handle(hand) & USER_MASTER)) 
+        if (!(get_attr_handle(hand) & USER_MASTER))
 	  dcc[i].u.chat->con_flags &= ~(LOG_MISC|LOG_CMDS);
         dprintf(i,"*** POOF! ***\n");
         dprintf(i,"You are no longer a master on %s.\n",chname);
@@ -2013,6 +1951,8 @@ int sanity_check(int atr)
     if (atr & (BOT_LEAF|BOT_REJECT|BOT_ALT|BOT_SHARE|BOT_HUB))
       atr &= ~(BOT_LEAF|BOT_REJECT|BOT_ALT|BOT_SHARE|BOT_HUB);
   }
+  if ((atr&USER_GLOBAL) && (atr&USER_DEOP))
+    atr&=~(USER_GLOBAL|USER_DEOP);
 #ifdef OWNER
   /* can't be owner without also being master */
   if (atr&USER_OWNER) atr|=USER_MASTER;
@@ -2035,8 +1975,7 @@ int chatr;
   return chatr;
 }
 
-void cmd_chattr(idx,par)
-int idx; char *par;
+void cmd_chattr PROTO2(int,idx,char *,par)
 {
   char hand[512],s[21],chg[512]; struct chanset_t *chan;
   int i,pos,f,atr,oatr,chatr=0,ochatr=0,recheck=0,own,chown=0;
@@ -2074,7 +2013,7 @@ int idx; char *par;
       if (par[0]=='*') {
 	chown=0;
 	ochatr=chatr=get_chanattr_handle(hand,chanset->name);
-      } 
+      }
       else {
 	chown=(get_chanattr_handle(dcc[idx].nick,par)&CHANUSER_OWNER);
 	ochatr=chatr=get_chanattr_handle(hand,par);
@@ -2153,8 +2092,7 @@ int idx; char *par;
   }
 }
 
-void cmd_notes(idx,par)
-int idx; char *par;
+void cmd_notes PROTO2(int,idx,char *,par)
 {
   char fcn[512];
   if (!par[0]) {
@@ -2177,8 +2115,7 @@ int idx; char *par;
   putlog(LOG_CMDS,"*","#%s# notes %s %s",dcc[idx].nick,fcn,par);
 }
 
-void cmd_chat(idx,par)
-int idx; char *par;
+void cmd_chat PROTO2(int,idx,char *,par)
 {
   int newchan,oldchan;
   if (strcasecmp(par,"off")==0) {
@@ -2270,8 +2207,7 @@ int idx; char *par;
   }
 }
 
-void cmd_echo(idx,par)
-int idx; char *par;
+void cmd_echo PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Echo is currently %s.\n",dcc[idx].u.chat->status&STAT_ECHO?
@@ -2291,8 +2227,7 @@ int idx; char *par;
   dprintf(idx,"Usage: echo <on/off>\n");
 }
 
-void cmd_assoc(idx,par)
-int idx; char *par;
+void cmd_assoc PROTO2(int,idx,char *,par)
 {
   char num[512]; int chan;
   if (!par[0]) {
@@ -2303,7 +2238,7 @@ int idx; char *par;
   nsplit(num,par);
   if (num[0]=='*') {
     chan=100000+atoi(num+1);
-    if (chan<100000 || chan>19999) {
+    if (chan<100000 || chan>199999) {
       dprintf(idx,"Channel # out of range: must be *0-*99999\n");
       return;
     }
@@ -2352,22 +2287,19 @@ int idx; char *par;
   if (chan<100000) tandout("assoc %d %s\n",chan,par);
 }
 
-void cmd_fries(idx,par)
-int idx; char *par;
+void cmd_fries PROTO2(int,idx,char *,par)
 {
   dprintf(idx,"* %s juliennes some fries for you.\n",botnetnick);
   dprintf(idx,"Enjoy!\n");
 }
 
-void cmd_beer(idx,par)
-int idx; char *par;
+void cmd_beer PROTO2(int,idx,char *,par)
 {
   dprintf(idx,"* %s throws you a cold brew.\n",botnetnick);
   dprintf(idx,"It's Miller time. :)\n");
 }
 
-void cmd_flush(idx,par)
-int idx; char *par;
+void cmd_flush PROTO2(int,idx,char *,par)
 {
   if (!par[0]) {
     dprintf(idx,"Usage: flush <botname>\n");
@@ -2416,8 +2348,7 @@ char *stripmaskname(int x)
   return s;
 }
 
-void cmd_strip(idx,par)
-int idx; char *par;
+void cmd_strip PROTO2(int,idx,char *,par)
 {
   char nick[512],s[2],s1[512]; int dest=0,i,pls,md,ok=0,atr;
   if (!par[0]) {
@@ -2506,20 +2437,17 @@ int idx; char *par; int yn;
   dprintf(idx,"No such ban.\n");
 }
 
-void cmd_stick(idx,par)
-int idx; char *par;
+void cmd_stick PROTO2(int,idx,char *,par)
 {
   cmd_stick_yn(idx,par,1);
 }
 
-void cmd_unstick(idx,par)
-int idx; char *par;
+void cmd_unstick PROTO2(int,idx,char *,par)
 {
   cmd_stick_yn(idx,par,0);
 }
 
-void cmd_filestats (idx,par)
-int idx; char *par;
+void cmd_filestats PROTO2(int,idx,char *,par)
 {
   char nick[512];
   context;
@@ -2534,8 +2462,7 @@ int idx; char *par;
   else tell_file_stats(idx,nick);
 }
    
-void cmd_pls_chrec (idx,par)
-int idx; char *par;
+void cmd_pls_chrec PROTO2(int,idx,char *,par)
 {
   char nick[512], chn[512]; struct chanset_t *chan; struct userrec *u;
   struct chanuserrec *chanrec;
@@ -2575,8 +2502,7 @@ int idx; char *par;
   dprintf(idx,"Added %s channel record for %s.\n",chan->name,nick);
 }
 
-void cmd_mns_chrec (idx,par)
-int idx; char *par;
+void cmd_mns_chrec PROTO2(int,idx,char *,par)
 {
   char nick[512],chn[512]; struct chanset_t *chan; struct userrec *u;
   struct chanuserrec *chanrec;
@@ -2616,8 +2542,7 @@ int idx; char *par;
   dprintf(idx,"Removed %s channel record for %s.\n",chan->name,nick);
 }
 
-void cmd_su(idx,par)
-int idx; char *par;
+void cmd_su PROTO2(int,idx,char *,par)
 {
   int atr=get_attr_handle(dcc[idx].nick);
   if (strlen(par)==0) {
@@ -2628,8 +2553,12 @@ int idx; char *par;
     dprintf(idx,"No such user.\n");
     return;
   }
+  if (get_attr_handle(par) & USER_BOT) {
+    dprintf(idx,"Can't su to a bot... then again, why would you wanna?\n");
+    return;
+  }
   putlog(LOG_CMDS,"*","#%s# su %s",dcc[idx].nick,par);
-  if (!(atr & USER_OWNER)) {
+  if (!(atr & USER_OWNER) || (get_attr_handle(par) & USER_OWNER)) {
     tandout("part %s %s %d\n",botnetnick,dcc[idx].nick,dcc[idx].sock);
     chanout2(dcc[idx].u.chat->channel,"%s left the party line.\n",
 	     dcc[idx].nick);
@@ -2652,17 +2581,17 @@ int idx; char *par;
     context;
     return;
   }
+
 }
 
 #ifndef NO_IRC
 
-void cmd_chanadd (idx,par)
-int idx; char *par;
+void cmd_pls_chan PROTO2(int,idx,char *,par)
 {
   char chname[512],null[]="";
   nsplit(chname,par);
   if (!chname[0]) {
-    dprintf(idx,"Usage: chanadd <#channel>\n");
+    dprintf(idx,"Usage: +chan <#channel>\n");
     return;
   }
   if (findchan(chname)!=NULL) {
@@ -2670,17 +2599,18 @@ int idx; char *par;
     return;
   }
   tcl_channel_add(0,chname,null);
-  putlog(LOG_CMDS,"*","#%s# chanadd %s",dcc[idx].nick,chname);
+  putlog(LOG_CMDS,"*","#%s# +chan %s",dcc[idx].nick,chname);
 }
 
-void cmd_chandel (idx,par)
-int idx; char *par;
+void cmd_mns_chan PROTO2(int,idx,char *,par)
 {
   char chname[512];
   struct chanset_t *chan;
+  int i;
+   
   nsplit(chname,par);
   if (!chname[0]) {
-    dprintf(idx,"Usage: chandel <#channel>\n");
+    dprintf(idx,"Usage: -chan <#channel>\n");
     return;
   }
   chan=findchan(chname);
@@ -2690,20 +2620,26 @@ int idx; char *par;
   }
   if (chan->stat & CHANSTATIC) {
     dprintf(idx,"Cannot remove %s, it is not a dynamic channel!.\n",
-	    chan->name);
+	    chname);
     return;
   }
-  if (serv>=0) mprintf(serv,"PART %s\n",chan->name);
   clear_channel(chan,0);
   freeuser(chan->bans);
   killchanset(chname);
-  dprintf(idx,"Channel %s removed from the bot.\n");
+  if (serv>=0) mprintf(serv,"PART %s\n",chname);
+  dprintf(idx,"Channel %s removed from the bot.\n",chname);
   dprintf(idx,"This includes any channel specific bans you set.\n");
-  putlog(LOG_CMDS,"*","#%s# chandel %s",dcc[idx].nick,chname);
+  putlog(LOG_CMDS,"*","#%s# -chan %s",dcc[idx].nick,chname);
+  for (i=0; i<dcc_total; i++)
+     if ((dcc[i].type==DCC_CHAT) 
+	 && (strcasecmp(dcc[i].u.chat->con_chan,chname)==0)) {
+	dprintf(i,"%s is no longer a valid channel, changing your console to '*'\n",
+		chname);
+	strcpy(dcc[i].u.chat->con_chan,"*");
+     }
 }
 
-void cmd_chaninfo (idx,par)
-int idx; char *par;
+void cmd_chaninfo PROTO2(int,idx,char *,par)
 {
   char chname[256],work[512];
   struct chanset_t *chan;
@@ -2754,11 +2690,11 @@ int idx; char *par;
 	  (chan->stat & CHAN_STOPNETHACK) ? '+' : '-',
 	  (chan->stat & CHAN_REVENGE) ? '+' : '-',
 	  (chan->stat & CHAN_SECRET) ? '+' : '-');
+  dprintf(idx,"     %cshared\n", (chan->stat & CHAN_SHARED) ? '+' : '-');
   putlog(LOG_CMDS,"*","#%s# chaninfo %s",dcc[idx].nick,chname);
 }
 
-void cmd_chanset (idx,par)
-int idx; char *par;
+void cmd_chanset PROTO2(int,idx,char *,par)
 {
   char chname[512],work[512],args[512],answer[512];
   char *list[2];
@@ -2780,7 +2716,10 @@ int idx; char *par;
   while (work[0]) { 
     if (work[0]=='+' || work[0]=='-' ||
 	(strcmp(work,"dont-idle-kick")==0)) {
-      if (tcl_channel_modify(0,chan,1,list)==TCL_OK) {
+      if (strcmp(&(work[1]),"shared")==0) {
+	dprintf(idx,"You can't change shared settings on the fly\n");
+      }
+      else if (tcl_channel_modify(0,chan,1,list)==TCL_OK) {
 	strcat(answer,work); strcat(answer," ");
       } 
       else dprintf(idx,"Error trying to set %s for %s, invalid mode\n",
@@ -2814,8 +2753,7 @@ int idx; char *par;
   }
 }
 
-void cmd_chansave (idx,par)
-int idx; char *par;
+void cmd_chansave PROTO2(int,idx,char *,par)
 {
   if (!chanfile[0])
     dprintf(idx,"No channel saving file defined.\n");
@@ -2824,8 +2762,7 @@ int idx; char *par;
   write_channels();
 }
 
-void cmd_chanload (idx,par)
-int idx; char *par;
+void cmd_chanload PROTO2(int,idx,char *,par)
 {
   if (!chanfile[0])
     dprintf(idx,"No channel saving file defined.\n");
@@ -2836,8 +2773,7 @@ int idx; char *par;
 
 #endif /* !NO_IRC */
 
-void cmd_fixcodes(idx,par)
-int idx; char *par;
+void cmd_fixcodes PROTO2(int,idx,char *,par)
 {
   if (dcc[idx].u.chat->status&STAT_ECHO) {
     dcc[idx].u.chat->status=STAT_TELNET;
@@ -2853,8 +2789,7 @@ int idx; char *par;
   }
 }
 
-void cmd_page(idx,par)
-int idx; char *par;
+void cmd_page PROTO2(int,idx,char *,par)
 {
   int a;
   if (!par[0]) {

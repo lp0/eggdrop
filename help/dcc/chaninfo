@@ -36,4 +36,4 @@
 	             bans the bot or any valid user
 	secret       dont provide info about the channel over the botnet
 %{+N}
-see also: %{+n}chanadd, chandel,%{+N} chansave, chanload, chanset
+see also: %{+n}+chan, -chan,%{+N} chansave, chanload, chanset

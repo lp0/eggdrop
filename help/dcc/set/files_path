@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set files-path <path>
    specifies where the bot's dcc file directory is.  if you don't
    want a file transfer section on your bot, define this as "".

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set userfile <filename>
    specifies the filename where eggdrop should store user
    records.  you normally don't want to change this once you

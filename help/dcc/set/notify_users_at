@@ -1,0 +1,4 @@
+%{+n}
+### set notify-users-at <#>
+     allows you to set the minutes past the hour that users will be
+     notified if they have any notes waiting.

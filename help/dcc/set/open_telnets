@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set open-telnets <0/1>
    specifies whether to accept new users via a telnet connection.
    if set to 0, the bot will only accept telnet connections from

@@ -36,7 +36,7 @@ dnl stop putting -g in there!  @#$!#$%!
 dnl also fix strength-reduce problem in gcc
 CFLAGS="-O"
 if test "x$CC" = "xgcc"; then
-  CFLAGS="-O3 -fno-strength-reduce"
+  CFLAGS="-O2 -fno-strength-reduce"
 fi
 if test x`${UNAME}` = "xLinux"; then
   CFLAGS="${CFLAGS} -Wall"
@@ -113,6 +113,7 @@ AC_HEADER_TIME
 dnl Checks for library functions.
 AC_CHECK_FUNCS(rename getrusage getdtablesize srandom random sigaction)
 AC_CHECK_FUNCS(sigemptyset vsprintf strcasecmp setpgid clock dlopen)
+AC_CHECK_FUNCS(dprintf)
 
 if test "${ac_cv_func_vsprintf}" = "no"; then
   echo ""

@@ -65,6 +65,7 @@ extern time_t trying_server;
 extern time_t server_online;
 extern int server_lag;
 extern struct chanset_t *chanset;
+extern int maxqmsg;
 
 /* bot's nickname */
 char botname[10];
@@ -77,10 +78,11 @@ int min_servs=0;
 char admin[121];
 /* strict hostname matching (don't strip ~) */
 int strict_host=0;
-
+/* time to wait before re-display users info line */
+int wait_info = 180;
 
 /* dump status info out to dcc */
-void tell_verbose_status(int idx,int showchan)
+void tell_verbose_status PROTO2(int,idx,int,showchan)
 {
   char s[256],s1[121],s2[81]; int i,j; time_t now,hr,min;
 #ifndef NO_IRC
@@ -177,9 +179,9 @@ void tell_verbose_status(int idx,int showchan)
   dprintf(idx,"Server %s:%d %s\n",botserver,botserverport,trying_server?
 	  "(trying)":s);
   if (mtot) dprintf(idx,"Server queue is %d%% full.\n",
-		    (int)((float)(mtot*100.0)/(float)MAXQMSG));
+		    (int)((float)(mtot*100.0)/(float)maxqmsg));
   if (htot) dprintf(idx,"Help queue is %d%% full.\n",
-		    (int)((float)(htot*100.0)/(float)MAXQMSG));
+		    (int)((float)(htot*100.0)/(float)maxqmsg));
 #endif
   now=time(NULL); now-=online_since; s[0]=0;
   if (now>86400) {
@@ -225,7 +227,7 @@ void tell_verbose_status(int idx,int showchan)
 }
 
 /* what the channel's mode CURRENTLY is */
-char *getchanmode(struct chanset_t *chan)
+char *getchanmode PROTO1(struct chanset_t *,chan)
 {
   static char s[121]; int atr,i;
   s[0]='+'; i=1; atr=chan->channel.mode;
@@ -246,7 +248,7 @@ char *getchanmode(struct chanset_t *chan)
 }
 
 /* dump channel info out to dcc */
-void tell_verbose_chan_info(int idx, char *chname)
+void tell_verbose_chan_info PROTO2(int,idx, char *,chname)
 {
 #ifndef NO_IRC
   char handle[20],s[121],s1[121],atrflag,chanflag;
@@ -290,10 +292,12 @@ void tell_verbose_chan_info(int idx, char *chname)
       chatr=get_chanattr_handle(handle,chan->name);
       /* determine status char to use */
       if (atr&USER_BOT) atrflag='b';
-      else if (atr&USER_OWNER) atrflag='n';
+      else if ((atr&USER_OWNER) || (chatr&CHANUSER_OWNER)) atrflag='n';
       else if ((atr&USER_MASTER) || (chatr&CHANUSER_MASTER)) atrflag='m';
-      else if ((atr&USER_GLOBAL) || (chatr&CHANUSER_OP)) atrflag='o';
-      else if (chatr&CHANUSER_DEOP) atrflag='d';
+      else if ((chatr&CHANUSER_OP) || 
+	       ((atr&USER_GLOBAL) && !(chatr&CHANUSER_DEOP))) atrflag='o';
+      else if ((chatr&CHANUSER_DEOP) ||
+	       ((atr&USER_DEOP) && !(chatr&CHANUSER_OP))) atrflag='d';
       else atrflag=' ';
       if (m->flags&CHANOP) chanflag='@';
       else if (m->flags&CHANVOICE) chanflag='+';
@@ -332,7 +336,7 @@ void tell_verbose_chan_info(int idx, char *chname)
 }
 
 /* given a [nick!]user@host, place a quick ban on them on a chan */
-char *quickban(struct chanset_t *chan, char *uhost)
+char *quickban PROTO2(struct chanset_t *,chan, char *,uhost)
 {
   char s1[512],*pp; int i;static char s[512];
   strcpy(s,uhost); maskhost(s,s1);
@@ -346,7 +350,7 @@ char *quickban(struct chanset_t *chan, char *uhost)
   return s;
 }
 
-void tell_chanbans(struct chanset_t *chan, int idx, int k, char *match)
+void tell_chanbans PROTO4(struct chanset_t *,chan, int,idx, int,k, char *,match)
 {
   banlist *b=chan->channel.ban; char s[UHOSTLEN],s1[UHOSTLEN],fill[256];
   time_t now; int min,sec;
@@ -373,7 +377,7 @@ void tell_chanbans(struct chanset_t *chan, int idx, int k, char *match)
   if (k==1) dprintf(idx,"(There are no bans, permanent or otherwise.)\n");
 }
 
-int kill_chanban(char *chname,int idx,int k,int which)
+int kill_chanban PROTO4(char *,chname,int,idx,int,k,int,which)
 {
   banlist *b; struct chanset_t *chan;
   if (k==0) k=1;
@@ -393,7 +397,7 @@ int kill_chanban(char *chname,int idx,int k,int which)
   else return 1;
 }
 
-int kill_chanban_name(char *chname,int idx,char *which)
+int kill_chanban_name PROTO3(char *,chname,int,idx,char *,which)
 {
   banlist *b; struct chanset_t *chan;
   chan=findchan(chname); if (chan==NULL) return 0;
@@ -433,7 +437,7 @@ void log_chans()
 }
 
 /* dump channel info out to nick */
-void tell_chan_info(char *nick)
+void tell_chan_info PROTO1(char *,nick)
 {
   char s[256],*p,*q; int i; struct chanset_t *chan;
   mprintf(serv,"NOTICE %s :I am %s, running %s.\n",nick,botname,version);
@@ -463,7 +467,7 @@ void tell_chan_info(char *nick)
 
 /* got 324: mode status */
 /* <server> 324 <to> <channel> <mode> */
-void got324(char *from,char *msg)
+void got324 PROTO2(char *,from,char *,msg)
 {
   int i=1; char *p,*q,chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -507,7 +511,7 @@ void got324(char *from,char *msg)
 }
 
 /* got a 352: who info! */
-void got352(char *from,char *msg)
+void got352 PROTO2(char *,from,char *,msg)
 {
   char userhost[UHOSTLEN],nick[NICKLEN],s[UHOSTLEN],hand[10]; memberlist *m;
   int waschanop,atr,chatr; struct chanset_t *chan;
@@ -540,14 +544,16 @@ void got352(char *from,char *msg)
   m->user=get_user_by_host(s);
   atr=get_attr_host(s);
   chatr=get_chanattr_host(s,chan->name);
-  if ((m->flags&CHANOP) && (chatr & CHANUSER_DEOP) && (me_op(chan)) &&
+  if ((m->flags&CHANOP) && ((chatr & CHANUSER_DEOP) ||
+       ((atr &USER_DEOP) && !(chatr & CHANUSER_OP))) && (me_op(chan)) &&
       (strcasecmp(nick,botname)!=0))
     add_mode(chan,'-','o',nick);
   if (((match_ban(s)) || (u_match_ban(chan->bans,s))) && 
       (strcasecmp(nick,botname)!=0) && (me_op(chan)) &&
       (chan->stat&CHAN_ENFORCEBANS))
     mprintf(serv,"KICK %s %s :banned\n",chan->name,nick);
-  else if ((chatr & CHANUSER_KICK) && (strcasecmp(nick,botname)!=0) &&
+  else if (((chatr & CHANUSER_KICK) || (atr & USER_KICK))
+	   && (strcasecmp(nick,botname)!=0) &&
 	   (me_op(chan))) {
     get_handle_by_host(hand,s);
     get_handle_comment(hand,userhost);
@@ -562,7 +568,7 @@ void got352(char *from,char *msg)
 
 /* got 315: end of who */
 /* <server> 315 <to> <chan> :End of /who */
-void got315(char *from,char *msg)
+void got315 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -585,7 +591,7 @@ void got315(char *from,char *msg)
 
 /* got 367: ban info */
 /* <server> 367 <to> <chan> <ban> [placed-by] [timestamp] */
-void got367(char *from,char *msg)
+void got367 PROTO2(char *,from,char *,msg)
 {
   char s[UHOSTLEN],ban[81],who[UHOSTLEN],chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -605,7 +611,7 @@ void got367(char *from,char *msg)
 
 /* got 368: end of ban list */
 /* <server> 368 <to> <chan> :etc */
-void got368(char *from,char *msg)
+void got368 PROTO2(char *,from,char *,msg)
 {
   struct chanset_t *chan; char chname[81];
   /* ok, now add bans that i want, which aren't set yet */
@@ -622,7 +628,7 @@ void got368(char *from,char *msg)
 
 /* got 251: lusers */
 /* <server> 251 <to> :there are 2258 users and 805 invisible on 127 servers */
-void got251(char *from,char *msg)
+void got251 PROTO2(char *,from,char *,msg)
 {
   int i; char servs[20];
   split(NULL,msg); fixcolon(msg); /* NOTE!!! If servlimit is not set or is 0 */
@@ -638,13 +644,13 @@ void got251(char *from,char *msg)
 }
 
 /* too many channels */
-void got405(char *from,char *msg)
+void got405 PROTO2(char *,from,char *,msg)
 {
   putlog(LOG_MISC,"*","I'm on too many channels.");
 }
 
 /* got 471: can't join channel, full */
-void got471(char *from,char *msg)
+void got471 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -654,7 +660,7 @@ void got471(char *from,char *msg)
 }
 
 /* got 473: can't join channel, invite only */
-void got473(char *from,char *msg)
+void got473 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -664,7 +670,7 @@ void got473(char *from,char *msg)
 }
 
 /* got 474: can't join channel, banned */
-void got474(char *from,char *msg)
+void got474 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -674,7 +680,7 @@ void got474(char *from,char *msg)
 }
 
 /* got 442: not on channel */
-void got442(char *from,char *msg)
+void got442 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -686,7 +692,7 @@ void got442(char *from,char *msg)
 }
 
 /* got 475: can't goin channel, bad key */
-void got475(char *from,char *msg)
+void got475 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -696,7 +702,7 @@ void got475(char *from,char *msg)
 }
 
 /* got invitation */
-void gotinvite(char *from,char *msg)
+void gotinvite PROTO2(char *,from,char *,msg)
 {
   char nick[NICKLEN]; struct chanset_t *chan;
   static char lastnick[NICKLEN]="*";
@@ -717,7 +723,7 @@ void gotinvite(char *from,char *msg)
 }
 
 /* topic change */
-void gottopic(char *from,char *msg)
+void gottopic PROTO2(char *,from,char *,msg)
 {
   char nick[NICKLEN],handle[10],s[UHOSTLEN],chname[81]; memberlist *m;
   struct chanset_t *chan;
@@ -728,13 +734,14 @@ void gottopic(char *from,char *msg)
   m=ismember(chan,nick); if (m!=NULL) m->last=time(NULL);
   sprintf(s,"%s!%s",nick,from);
   get_handle_by_host(handle,s);
-  strcpy(chan->channel.topic,msg);
+  strncpy(chan->channel.topic,msg,255);
+  chan->channel.topic[255]=0;
   check_tcl_topc(nick,from,handle,chname,msg);
 }
 
 /* 331: no current topic for this channel */
 /* <server> 331 <to> <chname> :etc */
-void got331(char *from,char *msg)
+void got331 PROTO2(char *,from,char *,msg)
 {
   char chname[81]; struct chanset_t *chan;
   split(NULL,msg); split(chname,msg);
@@ -745,7 +752,7 @@ void got331(char *from,char *msg)
 
 /* 332: topic on a channel i've just joined */
 /* <server> 332 <to> <chname> :topic goes here */
-void got332(char *from,char *msg)
+void got332 PROTO2(char *,from,char *,msg)
 {
   struct chanset_t *chan; char chname[81];
   split(NULL,msg); split(chname,msg);
@@ -755,8 +762,8 @@ void got332(char *from,char *msg)
   check_tcl_topc("*","*","*",chname,msg);
 }
 
-void do_embedded_mode(chan,nick,m,mode)
-struct chanset_t *chan; char *nick,*mode; memberlist *m;
+void do_embedded_mode PROTO4(struct chanset_t *,chan, char *,nick,
+			     memberlist *,m,char *,mode)
 {
 #ifndef NO_IRC
   char s[81];
@@ -779,7 +786,7 @@ struct chanset_t *chan; char *nick,*mode; memberlist *m;
 }
 
 /* join */
-void gotjoin(char *from,char *chname)
+void gotjoin PROTO2(char *,from,char *,chname)
 {
   char s[UHOSTLEN],s1[UHOSTLEN],handle[10],nick[NICKLEN],*p,*newmode;
   time_t tt; int i,j,atr,chatr; struct chanset_t *chan; memberlist *m;
@@ -863,13 +870,14 @@ void gotjoin(char *from,char *chname)
       return;
     }
     if (me_op(chan)) {
-      if (((atr & USER_GLOBAL) || (chatr & CHANUSER_OP))
+      if ((((atr & USER_GLOBAL) && !(chatr&CHANUSER_DEOP))
+	   || (chatr & CHANUSER_OP))
 	  && (chan->stat & CHAN_OPONJOIN))
 	add_mode(chan,'+','o',nick);
       if (strcasecmp(nick,botname)!=0) {
 	if ((match_ban(s)) || (u_match_ban(chan->bans,s)))
 	  refresh_ban_kick(chan,s,nick);
-	else if (chatr & CHANUSER_KICK) {
+	else if ((chatr & CHANUSER_KICK) || (atr & USER_KICK)) {
 	  quickban(chan,s);
 	  get_handle_comment(handle,s1);
 	  if (s1[0])
@@ -880,7 +888,7 @@ void gotjoin(char *from,char *chname)
       }
     }
     /* don't re-display greeting if they've been on the channel recently */
-    if ((chan->stat&CHAN_GREET) && (use_info) && (time(NULL)-tt > WAIT_INFO))
+    if ((chan->stat&CHAN_GREET) && (use_info) && (time(NULL)-tt > wait_info))
       showinfo(chan,handle,nick);
     i=num_notes(handle);
     for (j=0; j<dcc_total; j++)
@@ -896,7 +904,7 @@ void gotjoin(char *from,char *chname)
 }
 
 /* part */
-void gotpart(char *from,char *chname)
+void gotpart PROTO2(char *,from,char *,chname)
 {
   char nick[NICKLEN],hand[10],oldfrom[UHOSTLEN]; struct chanset_t *chan;
   fixcolon(chname);
@@ -926,7 +934,7 @@ void gotpart(char *from,char *chname)
 }
 
 /* kick */
-void gotkick(char *from,char *msg)
+void gotkick PROTO2(char *,from,char *,msg)
 {
   char nick[NICKLEN],whodid[NICKLEN],chname[81],s[UHOSTLEN],s1[UHOSTLEN];
   char hand[10]; memberlist *m; struct chanset_t *chan;
@@ -942,7 +950,8 @@ void gotkick(char *from,char *msg)
   atr=get_attr_host(s);
   chatr=get_chanattr_host(s,chname);
   /* check for masskick */
-  if (!(atr & USER_MASTER) && !(chatr & (CHANUSER_FRIEND|CHANUSER_MASTER)) &&
+  if (!(atr & (USER_FRIEND|USER_MASTER)) 
+     && !(chatr & (CHANUSER_FRIEND|CHANUSER_MASTER)) &&
       (strcasecmp(botname,whodid)!=0) &&
       (strcasecmp(chan->kicknick,whodid)==0)) {
     if (now - chan->kicktime<=10) {
@@ -980,7 +989,7 @@ void gotkick(char *from,char *msg)
     chan->stat&=~(CHANACTIVE|CHANPEND);
     mprintf(serv,"JOIN %s %s\n",chan->name,chan->key_prot);
     clear_channel(chan,1);
-    if ((chan->stat & CHAN_REVENGE) && !(atr & USER_MASTER) &&
+    if ((chan->stat & CHAN_REVENGE) && !(atr & (USER_FRIEND|USER_MASTER)) &&
 	!(chatr & (CHANUSER_FRIEND|CHANUSER_MASTER))) {
       take_revenge(chan,s,"kicked me off the channel");
       /* ^put the kicker on the deop list : revenge */
@@ -991,7 +1000,7 @@ void gotkick(char *from,char *msg)
 }
 
 /* nick change */
-void gotnick(char *ffrom,char *msg)
+void gotnick PROTO2(char *,ffrom,char *,msg)
 {
   char nick[NICKLEN],hand[10],from[UHOSTLEN],s[UHOSTLEN],s1[UHOSTLEN];
   memberlist *m,*mm; struct chanset_t *chan;
@@ -1035,7 +1044,7 @@ void gotnick(char *ffrom,char *msg)
 }
 
 /* WALLOPS: oper's nuisance */
-void gotwall(char *from,char *msg)
+void gotwall PROTO2(char *,from,char *,msg)
 {
   char nick[NICKLEN]; char *p; int r;
   context;
@@ -1054,7 +1063,7 @@ void gotwall(char *from,char *msg)
 }
 
 /* signoff, similar to part */
-void gotquit(char *from,char *msg)
+void gotquit PROTO2(char *,from,char *,msg)
 {
   char nick[NICKLEN],hand[10]; int split=0;
   memberlist *m; char *p; struct chanset_t *chan;
@@ -1094,7 +1103,7 @@ void gotquit(char *from,char *msg)
 }
 
 /* msg to xx everyone on the channel's info */
-void show_all_info(char *chname,char *who)
+void show_all_info PROTO2(char *,chname,char *,who)
 {
   memberlist *m; char s[UHOSTLEN],nick[NICKLEN],also[512],info[120];
   int atr; struct chanset_t *chan;
@@ -1137,7 +1146,7 @@ void show_all_info(char *chname,char *who)
 }
 
 /* request from a user to kickban (over dcc) */
-void user_kickban(int idx, char *nick)
+void user_kickban PROTO2(int,idx, char *,nick)
 {
   memberlist *m; char s[512],note[512], *s1; int atr,atr1,chatr;
   struct chanset_t *chan;
@@ -1170,7 +1179,8 @@ void user_kickban(int idx, char *nick)
 #ifdef OWNER
   if(!(atr1 & USER_OWNER)) {
 #endif
-  if (((chatr & CHANUSER_OP) || (atr & USER_GLOBAL)) && (!(atr1 & USER_MASTER))) {
+  if (((chatr & CHANUSER_OP) || ((atr & USER_GLOBAL) && !(chatr&CHANUSER_DEOP)))
+      && (!(atr1 & USER_MASTER))) {
     dprintf(idx,"%s is a legal op.\n",nick);
     return;
   }
@@ -1197,7 +1207,7 @@ void user_kickban(int idx, char *nick)
 }
 
 /* request from a user to kick (over dcc) */
-void user_kick(int idx, char *nick)
+void user_kick PROTO2(int,idx, char *,nick)
 {
   memberlist *m; char s[512],note[512]; int atr;
   struct chanset_t *chan;
@@ -1242,7 +1252,7 @@ void user_kick(int idx, char *nick)
 }
 
 /* add a user who's on the channel */
-int add_chan_user(char *nick,int idx,char *hand)
+int add_chan_user PROTO3(char *,nick,int,idx,char *,hand)
 {
   memberlist *m; char s[121],s1[121]; struct chanset_t *chan;
   chan=findchan(dcc[idx].u.chat->con_chan);
@@ -1296,7 +1306,7 @@ int add_chan_user(char *nick,int idx,char *hand)
 }
 
 /* Remove a user who's on the channel */
-int del_chan_user(char *nick, int idx)
+int del_chan_user PROTO2(char *,nick, int,idx)
 {
   memberlist *m; char s[121],s1[121]; struct chanset_t *chan;
   chan=findchan(dcc[idx].u.chat->con_chan);
@@ -1349,7 +1359,7 @@ int del_chan_user(char *nick, int idx)
 #endif /* !NO_IRC */
 
 /* add hostmask to a bot's record if possible */
-int add_bot_hostmask(int idx, char *nick)
+int add_bot_hostmask PROTO2(int,idx, char *,nick)
 {
   struct chanset_t *chan; memberlist *m; char s[UHOSTLEN],s1[UHOSTLEN];
   chan=chanset; while (chan!=NULL) {
@@ -1376,7 +1386,7 @@ int add_bot_hostmask(int idx, char *nick)
 #ifndef NO_IRC
 
 /* op/deop on the fly per master's request */
-void give_op(char *nick, struct chanset_t *chan, int idx)
+void give_op PROTO3(char *,nick, struct chanset_t *,chan, int,idx)
 {
   memberlist *m; char s[121]; int atr,chatr;
   if (!(chan->stat&CHANACTIVE)) {
@@ -1390,12 +1400,13 @@ void give_op(char *nick, struct chanset_t *chan, int idx)
   sprintf(s,"%s!%s",m->nick,m->userhost);
   atr=get_attr_host(s);
   chatr=get_chanattr_host(s,chan->name);
-  if (chatr & CHANUSER_DEOP) {
+  if ((chatr & CHANUSER_DEOP) || 
+      ((atr & USER_DEOP) && !(chatr &CHANUSER_OP))) {
     dprintf(idx,"%s is currently being auto-deopped.\n",m->nick);
     return;
   }
   if ((chan->stat&CHAN_BITCH) && (!(chatr & CHANUSER_OP))
-      && (!(atr & USER_GLOBAL))) {
+      && !((atr & USER_GLOBAL) && !(chatr & CHANUSER_DEOP))) {
     dprintf(idx,"%s is not a registered op.\n",m->nick);
     return;
   }
@@ -1403,7 +1414,7 @@ void give_op(char *nick, struct chanset_t *chan, int idx)
   dprintf(idx,"Gave op to %s on %s\n",nick,chan->name);
 }
 
-void give_deop(char *nick, struct chanset_t *chan, int idx)
+void give_deop PROTO3(char *,nick, struct chanset_t *,chan, int,idx)
 {
   memberlist *m; char s[121];
   int atr,chatr;
@@ -1426,7 +1437,8 @@ void give_deop(char *nick, struct chanset_t *chan, int idx)
     dprintf(idx,"%s is a master for %s\n",m->nick,chan->name);
     return;
   }
-  if (((atr & USER_GLOBAL) || (chatr & CHANUSER_OP)) && 
+  if ((((atr & USER_GLOBAL) && !(chatr & CHANUSER_DEOP)) 
+       || (chatr & CHANUSER_OP)) &&
       (!((get_attr_handle(dcc[idx].nick) & USER_MASTER) || 
       (get_chanattr_handle(dcc[idx].nick,chan->name) & CHANUSER_MASTER)))) {
     dprintf(idx,"%s has the op flag for %s\n",m->nick,chan->name);

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set filedb-path <path>
    specifies where database files for the file system should go.
    (this only matters if your bot has a file system.)  if this

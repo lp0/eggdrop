@@ -4,4 +4,4 @@
      setting, this file is reloaded during rehash and restarting the bot
      this allows you to change channel modes without having to edit the 
      config file every time.
-see also: %{+n}chanadd, chandel%{+N} chanload, chanset, chaninfo
+see also: %{+n}+chan, -chan%{+N} chanload, chanset, chaninfo

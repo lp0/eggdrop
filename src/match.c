@@ -21,6 +21,15 @@
  *
  * =================================================================== */
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+#ifdef STDC_HEADERS
+#define PROTO2(a1,b1,a2,b2) (a1 b1, a2 b2) 
+#else
+#define PROTO2(a1,b1,a2,b2) (b1, b2) a1 b1; a2 b2; 
+#endif
+
 /* Remove the next line to use this in IrcII */
 #define EGGDROP
 
@@ -117,7 +126,7 @@ static unsigned char tolowertab[] = {
  * Best use:  Generic string matching, such as in IrcII-esque bindings    *
  *========================================================================*/
 #ifdef EGGDROP
-int wild_match_per(register unsigned char *m,register unsigned char *n)
+int wild_match_per PROTO2(register unsigned char *,m,register unsigned char *,n)
 #else
 int wild_match(register unsigned char *m,register unsigned char *n)
 #endif
@@ -244,13 +253,13 @@ register unsigned char *ma,*na;
  * EGGDROP:   wild_match(char *ma, char *na)                             *
  * IrcII:     NOT USED                                                   *
  *                                                                       *
- * Features:  Backwards, case-insensitive, ?, *                          * 
+ * Features:  Backwards, case-insensitive, ?, *                          *
  * Best use:  Matching of hostmasks (since they are likely to begin with *
  *             a * rather than end with one).                            *
  *=======================================================================*/
 
 
-int wild_match(register unsigned char *m,register unsigned char *n)
+int wild_match PROTO2(register unsigned char *,m,register unsigned char *,n)
 {
   unsigned char *ma=m, *na=n, *lsm=0, *lsn=0;
   int match=1; register int sofar=0;
@@ -306,7 +315,7 @@ int wild_match(register unsigned char *m,register unsigned char *n)
  * Features:  Forward, case-sensitive, ?, *                               *
  * Best use:  File mask matching, as it is case-sensitive                 *
  *========================================================================*/
-int wild_match_file(register unsigned char *m,register unsigned char *n)
+int wild_match_file PROTO2(register unsigned char *,m,register unsigned char *,n)
 {
   unsigned char *ma=m, *lsm=0, *lsn=0;
   int match=1;  register unsigned int sofar=0;

@@ -7,24 +7,32 @@ DCC COMMANDS for %B, %V:
   bottree      deop         invite       console      chat
   notes        topic        nick         email        info
   echo         botinfo      stick        unstick      strip
-  trace
+  trace        fixcodes     filestats    page
 %{+M}
 For channel masters:
   adduser      +host        chattr       save         reload
-  deluser      -host        status       boot
+  deluser      -host        status       boot         chaninfo
+%{end}
+%{+N}
+For channel owners:
+  chanset      chansave     chanload
 %{end}
 %{+B}
 For botnet masters:
   +bot         chbotattr    chnick       chpass       +bothost
   -bot         link         chaddr       relay        -bothost
-   unlink       assoc       boot
+   unlink      assoc        boot
 %{end}
 %{+m}
 For masters:
-  chinfo       +user        set          jump         die
-  chemail      -user        flush        dccstat      dump
-  comment      binds        banner       +ignore      debug
-  rehash       restart      reset        -ignore
+  chinfo       +user        set          jump         dump
+  chemail      -user        flush        dccstat      debug
+  comment      binds        banner       +ignore      
+  rehash       restart      reset        -ignore      
+%{end}
+%{+n}
+For owners:
+  +chan        die          su           -chan
 %{end}
 All commands begin with '.' and all else goes to the party line.
 %{+m}Text starting with ',' is sent ONLY to bot-masters.%{end}

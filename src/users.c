@@ -70,7 +70,7 @@ int gban_total=0;
 
 
 /* is this nick!user@host being ignored? */
-int match_ignore(char *uhost)
+int match_ignore PROTO1(char *,uhost)
 {
   struct userrec *u; struct eggqueue *q; char host[UHOSTLEN],s[161];
   u=get_user_by_handle(userlist,IGNORE_NAME);
@@ -84,7 +84,7 @@ int match_ignore(char *uhost)
 }
 
 /* is this ban sticky? */
-int u_sticky_ban(struct userrec *u,char *uhost)
+int u_sticky_ban PROTO2(struct userrec *, u, char *, uhost)
 {
   struct eggqueue *q; char host[UHOSTLEN],s[256];
   q=u->host; while (q!=NULL) {
@@ -100,7 +100,7 @@ int u_sticky_ban(struct userrec *u,char *uhost)
 }
 
 /* set sticky attribute for a ban */
-int u_setsticky_ban(struct userrec *u,char *uhost,int sticky)
+int u_setsticky_ban PROTO3(struct userrec *, u, char *, uhost, int, sticky)
 {
   struct eggqueue *q; char host[UHOSTLEN],s[256],s1[256],*p; int j,k;
   j=k=atoi(uhost); if (!j) j=(-1);
@@ -124,7 +124,7 @@ int u_setsticky_ban(struct userrec *u,char *uhost,int sticky)
 }
 
 /* returns 1 if temporary ban, 2 if permban, 0 if not a ban at all */
-int u_equals_ban(struct userrec *u,char *uhost)
+int u_equals_ban PROTO2(struct userrec *,u,char *,uhost)
 {
   struct eggqueue *q; char host[UHOSTLEN],s[256],*p;
   q=u->host; while (q!=NULL) {
@@ -139,7 +139,7 @@ int u_equals_ban(struct userrec *u,char *uhost)
   return 0;   /* not equal */
 }
 
-int sticky_ban(char *uhost)
+int sticky_ban PROTO1(char *,uhost)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,BAN_NAME);
@@ -147,7 +147,7 @@ int sticky_ban(char *uhost)
   return u_sticky_ban(u,uhost);
 }
 
-int setsticky_ban(char *uhost,int par)
+int setsticky_ban PROTO2(char *,uhost,int,par)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,BAN_NAME);
@@ -155,7 +155,7 @@ int setsticky_ban(char *uhost,int par)
   return u_setsticky_ban(u,uhost,par);
 }
 
-int equals_ban(char *uhost)
+int equals_ban PROTO1(char *,uhost)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,BAN_NAME);
@@ -163,8 +163,7 @@ int equals_ban(char *uhost)
   return u_equals_ban(u,uhost);
 }
 
-int equals_ignore(uhost)
-char *uhost;
+int equals_ignore PROTO1(char *,uhost)
 {
   struct userrec *u; struct eggqueue *q; char host[UHOSTLEN],s[256];
   u=get_user_by_handle(userlist,IGNORE_NAME);
@@ -180,7 +179,7 @@ char *uhost;
   return 0;   /* not equal */
 }
 
-int u_match_ban(struct userrec *u,char *uhost)
+int u_match_ban PROTO2(struct userrec *,u,char *,uhost)
 {
   struct eggqueue *q; char host[UHOSTLEN],s[256];
   q=u->host; while (q!=NULL) {
@@ -191,7 +190,7 @@ int u_match_ban(struct userrec *u,char *uhost)
   return 0;
 }
 
-int match_ban(char *uhost)
+int match_ban PROTO1(char *,uhost)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,BAN_NAME);
@@ -200,7 +199,7 @@ int match_ban(char *uhost)
 }
 
 /* if any bans match this wildcard expression, refresh them on the channel */
-void refresh_ban_kick(struct chanset_t *chan,char *user,char *nick)
+void refresh_ban_kick PROTO3(struct chanset_t *,chan,char *,user,char *,nick)
 {
   struct userrec *u; struct eggqueue *q;
   char host[UHOSTLEN],s[256],ts[21],s1[161],*p,new_expire=0;
@@ -254,9 +253,9 @@ void refresh_ban_kick(struct chanset_t *chan,char *user,char *nick)
   }
 }
 
-int u_delban(struct userrec *u,char *who)
+int u_delban PROTO2(struct userrec *,u,char *,who)
 {
-  int i,j; struct eggqueue *q; char s[256],host[UHOSTLEN];
+  int i,j; struct eggqueue *q; char s[256],host[UHOSTLEN];struct chanset_t *cst;
   i=0;
   if (atoi(who)) {
     j=atoi(who); q=u->host;
@@ -285,14 +284,16 @@ int u_delban(struct userrec *u,char *who)
       /* distribute chan bans differently */
       if (strcasecmp(u->handle,BAN_NAME)==0)
 	shareout("-ban %s\n",who);
-      else
-	shareout("-banchan %s %s\n",u->info,who);
+      else {
+        cst=findchan(u->info);
+	if (cst->stat&CHAN_SHARED) shareout("-banchan %s %s\n",u->info,who);
+      }
     }
   }
   return i;
 }
 
-int delban(char *who)
+int delban PROTO1(char *,who)
 {
   struct userrec *u; int i;
   u=get_user_by_handle(userlist,BAN_NAME);
@@ -303,7 +304,7 @@ int delban(char *who)
   return i;
 }
 
-int delignore(char *ign)
+int delignore PROTO1(char *,ign)
 {
   struct userrec *u; int i,j; struct eggqueue *q;
   char s[161],host[UHOSTLEN];
@@ -338,11 +339,11 @@ int delignore(char *ign)
 
 /* new method of creating bans */
 /* if first char of note is '*' it's a sticky ban */
-void u_addban(struct userrec *u,char *ban,char *from,char *note,
-              time_t expire_time)
+void u_addban PROTO5(struct userrec *,u,char *,ban,char *,from,char *,note,
+              time_t,expire_time)
 {
   char s[UHOSTLEN],host[UHOSTLEN],*p,oldnote[256]; time_t t,now=time(NULL);
-  int sticky=0;
+  int sticky=0; struct chanset_t *cst;
   strcpy(host,ban);
   /* choke check: fix broken bans (must have '!' and '@') */
   if ((strchr(host,'!')==NULL) && (strchr(host,'@')==NULL))
@@ -380,13 +381,16 @@ void u_addban(struct userrec *u,char *ban,char *from,char *note,
     else strcpy(note,oldnote);
     if (strcasecmp(u->handle,BAN_NAME)==0)
       shareout("+ban %s +%lu %s %s\n",host,t,from,note);
-    else
-      shareout("+banchan %s +%lu %s %s %s\n",host,t,u->info,from,note);
+    else {
+      cst=findchan(u->info); 
+      if (cst->stat&CHAN_SHARED)
+	shareout("+banchan %s +%lu %s %s %s\n",host,t,u->info,from,note);
+    }
   }
   strcpy(note,oldnote);
 }
 
-void addban(char *ban,char *from,char *note,time_t expire_time)
+void addban PROTO4(char *,ban,char *,from,char *,note,time_t,expire_time)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,BAN_NAME);
@@ -398,7 +402,7 @@ void addban(char *ban,char *from,char *note,time_t expire_time)
   u_addban(u,ban,from,note,expire_time);
 }
 
-void addignore(char *ign,char *from,char *mnote,time_t expire_time)
+void addignore PROTO4(char *,ign,char *,from,char *,mnote,time_t,expire_time)
 {
   struct userrec *u; char s[UHOSTLEN],oldnote[256],*p,note[81];
   time_t t,now;
@@ -423,7 +427,7 @@ void addignore(char *ign,char *from,char *mnote,time_t expire_time)
 }
 
 /* grabs and translates the note from a ban (in host form) */
-void getbannote(char *host,char *from,char *note)
+void getbannote PROTO3(char *,host,char *,from,char *,note)
 {
   char *p;
   /* scratch off ban and timestamps */
@@ -442,8 +446,7 @@ void getbannote(char *host,char *from,char *note)
 }
 
 /* grabs and translates the note from an ignore (in host form) */
-void getignorenote(host,from,note)
-char *host,*from,*note;
+void getignorenote PROTO3(char *,host,char *,from,char *,note)
 {
   char *p;
   /* scratch off ignore and timestamp */
@@ -460,8 +463,8 @@ char *host,*from,*note;
 }
 
 /* take host entry from ban list and display it ban-style */
-void display_ban(idx,number,host,chan,show_inact)
-int idx,number,show_inact; char *host; struct chanset_t *chan;
+void display_ban PROTO5(int,idx,int,number,char *,host,struct chanset_t *,chan,
+			int,show_inact)
 {
   char ban[UHOSTLEN],ts[21],note[121],dates[81],from[81],s[41],*p;
   time_t expire_time,time_added,last_active,now; int sticky=0;
@@ -534,8 +537,7 @@ int idx,number,show_inact; char *host; struct chanset_t *chan;
 }
 
 /* take host entry from ignore list and display it ignore-style */
-void display_ignore(idx,number,host)
-int idx,number; char *host;
+void display_ignore PROTO3(int,idx,int,number,char *,host)
 {
   char ign[UHOSTLEN],ts[21],note[121],dates[81],from[81],s[41],*p;
   time_t expire_time,time_added,now;
@@ -586,7 +588,7 @@ int idx,number; char *host;
   }
 }
 
-void tell_bans(int idx,int show_inact,char *match)
+void tell_bans PROTO3(int,idx,int,show_inact,char *,match)
 {
   struct userrec *u; struct eggqueue *q; int k=1,cycle;
   char s[256],hst[UHOSTLEN],from[81],note[121],chname[512];
@@ -641,7 +643,7 @@ void tell_bans(int idx,int show_inact,char *match)
 }
 
 /* list the ignores and how long they've been active */
-void tell_ignores(int idx,char *match)
+void tell_ignores PROTO2(int,idx,char *,match)
 {
   struct userrec *u; struct eggqueue *q; int k=1;
   char s[256],hst[UHOSTLEN],from[81],note[121];
@@ -691,11 +693,13 @@ void check_expired_ignores()
       putlog(LOG_MISC,"*","No longer ignoring %s (expired)",host);
       delignore(host); u=get_user_by_handle(userlist,IGNORE_NAME);
 #ifdef SILENCE
-      char *p;
-      /* possibly an ircu silence was added for this user */
-      p=strchr(host,'!');
-      if (p==NULL) p=host; else p++;
-      mprintf(serv,"SILENCE -%s\n",p);
+      {
+        char *p;
+        /* possibly an ircu silence was added for this user */
+        p=strchr(host,'!');
+        if (p==NULL) p=host; else p++;
+        mprintf(serv,"SILENCE -%s\n",p);
+      }
 #endif
       if (u!=NULL) q=u->host;  /* start over, check for more */
     }
@@ -761,7 +765,7 @@ void check_expired_bans()
 }
 
 /* erase old user list, switch to new one */
-void finish_share(int idx)
+void finish_share PROTO1(int,idx)
 {
   struct userrec *u; int i,j=0;
   for (i=0; i<dcc_total; i++)
@@ -777,20 +781,79 @@ void finish_share(int idx)
     putlog(LOG_MISC,"*","CAN'T READ NEW USERFILE");
     return;
   }
-  unlink(dcc[idx].u.xfer->filename);   /* done with you! */
   putlog(LOG_MISC,"*","Userlist transfer complete; switched over.");
   clear_userlist(userlist);
   userlist=u;
+  restore_chandata();
+  unlink(dcc[idx].u.xfer->filename);   /* done with you! */
   reaffirm_owners();   /* make sure my owners are +n */
   clear_chanlist();
   lastuser=banu=ignu=NULL;
 }
 
+void restore_chandata()
+{ 
+  FILE *f; struct userrec *tbu=NULL; struct chanset_t *cst;
+  char s[181],hand[181],code[181];
+  context;
+  f=fopen(userfile,"r");
+  if (f==NULL) {
+    putlog(LOG_MISC,"*","* Cannot open userfile to reread channel data");
+    return;
+  }
+  context;
+  fgets(s,180,f);
+  /* Disregard opening statement.  We already know it should be good */
+  while (!feof(f)) {
+    fgets(s,180,f);
+    if (!feof(f)) {
+      rmspace(s);
+      if ((s[0]!='#') && (s[0]!=';') && (s[0])) {
+        nsplit(code,s); rmspace(code); rmspace(s);
+        if (strcasecmp(code,"!")==0) {
+          if ((hand[0]) && (tbu!=NULL)) {
+            char chname[181],st[181],fl[181]; int flags; time_t last;
+            struct chanuserrec *cr=NULL;
+            nsplit(chname,s); rmspace(chname); rmspace(s);
+            nsplit(st,s); rmspace(st); rmspace(s);
+            nsplit(fl,s); rmspace(fl); rmspace(s);
+            flags=str2chflags(fl); last=(time_t)atol(st);
+            if (defined_channel(chname)) {
+              cst=findchan(chname);
+              if (!(cst->stat&CHAN_SHARED)) {
+                cr=get_chanrec(tbu, chname);
+                if (cr==NULL) {
+                  add_chanrec_by_handle(tbu,hand,chname,flags,last);
+                  if (s[0]) set_handle_chaninfo(tbu,hand,chname,s);
+                } 
+		else {
+                  cr->flags=flags; cr->laston=last;
+                  if (s[0]) set_handle_chaninfo(tbu,hand,chname,s);
+                }
+              }            
+            }  
+          }
+        } 
+	else if ((strcasecmp(code,"-")==0) || (strcasecmp(code,"+")==0) ||
+		 (strcasecmp(code,"*")==0) || (strcasecmp(code,"=")==0) ||
+		 (strcasecmp(code,":")==0) || (strcasecmp(code,".")==0) ||
+		 (strcasecmp(code,"!!")==0) || (strcasecmp(code,"::")==0)) {
+	  /* do nothing */
+        } 
+	else {
+          strcpy(hand,code);
+          tbu=get_user_by_handle(userlist,hand);
+        }
+      }          
+    }
+  }
+}
+
 /* begin the user transfer process */
-void start_sending_users(int idx)
+void start_sending_users PROTO1(int,idx)
 {
   struct userrec *u; char s[161]; int i; struct eggqueue *q;
-  struct chanuserrec *ch;
+  struct chanuserrec *ch; struct chanset_t *cst;
   sprintf(s,".share.user%lu",time(NULL));
   debug0("ufsend: copying userlist");
   u=dup_userlist(0);  /* only non-bots */
@@ -833,8 +896,11 @@ void start_sending_users(int idx)
       q_tbuf(dcc[idx].nick,s);
       ch=u->chanrec; while (ch) {
 	if (ch->flags) {
-	  sprintf(s,"chattr %s %d %s\n",u->handle,ch->flags,ch->channel);
-	  q_tbuf(dcc[idx].nick,s);
+          cst=findchan(ch->channel);
+          if (cst->stat&CHAN_SHARED) {
+    	    sprintf(s,"chattr %s %d %s\n",u->handle,ch->flags,ch->channel);
+	    q_tbuf(dcc[idx].nick,s);
+          }
 	}
 	ch=ch->next;
       }
@@ -847,7 +913,7 @@ void start_sending_users(int idx)
 }
 
 /* update a user's last signon, by host */
-void update_laston(char *chan,char *host)
+void update_laston PROTO2(char *,chan,char *,host)
 {
   struct userrec *u; struct chanuserrec *ch;
   u=get_user_by_host(host);
@@ -859,14 +925,13 @@ void update_laston(char *chan,char *host)
 }
 
 /* return laston time */
-void get_handle_laston(char *chan,char *nick,time_t *n)
+void get_handle_laston PROTO3(char *,chan,char *,nick,time_t *,n)
 {
   struct userrec *u; struct chanuserrec *ch;
   u=get_user_by_handle(userlist,nick);
   if (u==NULL) *n=0L;
   else if (chan[0]=='*') {
-    if (u->laston > 0)
-      *n=u->laston;
+    if (u->laston > 0) *n=u->laston;
     else {
       *n=0L;
       ch=u->chanrec; while (ch!=NULL) {
@@ -882,7 +947,7 @@ void get_handle_laston(char *chan,char *nick,time_t *n)
   }
 }
 
-void get_handle_chanlaston(char *nick,char *chan)
+void get_handle_chanlaston PROTO2(char *,nick,char *,chan)
 {
   time_t n;
   struct userrec *u;struct chanuserrec *ch;
@@ -905,7 +970,7 @@ void get_handle_chanlaston(char *nick,char *chan)
   }
 }
 
-void set_handle_laston(char *chan,char *nick,time_t n)
+void set_handle_laston PROTO3(char *,chan,char *,nick,time_t,n)
 {
   struct userrec *u; struct chanuserrec *ch;
   u=get_user_by_handle(userlist,nick);
@@ -919,7 +984,7 @@ void set_handle_laston(char *chan,char *nick,time_t n)
 /* since i was getting a ban list, i assume i'm chop */
 /* recheck_bans makes sure that all who are 'banned' on the userlist are
    actually in fact banned on the channel */
-void recheck_bans(struct chanset_t *chan)
+void recheck_bans PROTO1(struct chanset_t *,chan)
 {
   struct userrec *u; struct eggqueue *q; char s[256],host[UHOSTLEN]; int i;
   if (chan->stat&CHAN_DYNAMICBANS) return;
@@ -938,7 +1003,7 @@ void recheck_bans(struct chanset_t *chan)
 }
 
 /* find info line for a user and display it if there is one */
-void showinfo(struct chanset_t *chan,char *who,char *nick)
+void showinfo PROTO3(struct chanset_t *,chan,char *,who,char *,nick)
 {
   char s[121],s1[121];
   if (get_attr_handle(who) & USER_BOT) return;
@@ -950,7 +1015,7 @@ void showinfo(struct chanset_t *chan,char *who,char *nick)
   if (s[0]) mprintf(serv,"PRIVMSG %s :[%s] %s\n",chan->name,nick,s);
 }
 
-void tell_file_stats(int idx,char *hand)
+void tell_file_stats PROTO2(int,idx,char *,hand)
 {
   struct userrec *u; float fr=(-1.0),kr=(-1.0);
   u=get_user_by_handle(userlist,hand);
@@ -965,8 +1030,7 @@ void tell_file_stats(int idx,char *hand)
   else dprintf(idx,"leech ratio (size) : %6.2f\n",kr);
 }
 
-void tell_user(idx,u,master)
-int idx; struct userrec *u; int master;
+void tell_user PROTO3(int,idx,struct userrec *,u,int,master)
 {
   char s[81],s1[81]; time_t now; int n;
   time_t t;
@@ -975,7 +1039,7 @@ int idx; struct userrec *u; int master;
   if (strcmp(u->handle,IGNORE_NAME)==0) return;
   flags2str(u->flags,s);
   n=num_notes(u->handle);
-  get_handle_laston(u->handle,"*",&t);
+  get_handle_laston("*",u->handle,&t);
   if (t==0L) strcpy(s1,"never");
   else {
     now=time(NULL)-t;strcpy(s1,ctime(&t));
@@ -1030,7 +1094,7 @@ int idx; struct userrec *u; int master;
 }
 
 /* show user by ident */
-void tell_user_ident(int idx,char *id,int master)
+void tell_user_ident PROTO3(int,idx,char *,id,int,master)
 {
   struct userrec *u;
   u=get_user_by_handle(userlist,id);
@@ -1045,8 +1109,8 @@ void tell_user_ident(int idx,char *id,int master)
 
 /* match string: wildcard to match nickname or hostmasks */
 /*               +attr to find all with attr */
-void tell_users_match(int idx,char *mtch,int start,int limit,int master,
-                      char *chname)
+void tell_users_match PROTO6(int,idx,char *,mtch,int,start,int,limit,
+			     int,master,char *,chname)
 {
   struct userrec *u=userlist; int fnd=0,cnt,not=0,fl; struct eggqueue *q;
   char s[UHOSTLEN],*t; struct chanuserrec *ch;
@@ -1127,10 +1191,11 @@ void tell_users_match(int idx,char *mtch,int start,int limit,int master,
    :  info line
    .  xtra (Tcl)
    !  channel-specific
-   |  global laston
+   !! global laston
+   :: channel-specific bans
 */
       
-int readuserfile(char *file,struct userrec **ret)
+int readuserfile PROTO2(char *,file,struct userrec **,ret)
 {
   char *p,s[181],lasthand[181],host[181],attr[181],pass[181],code[181];
   FILE *f; unsigned int flags; struct userrec *bu; int convpw=0,convch=0;
@@ -1219,6 +1284,16 @@ int readuserfile(char *file,struct userrec **ret)
 	    strcat(ignored,lasthand); strcat(ignored," ");
 	    lasthand[0]=0;
 	  }
+	  else {
+	    /* Remove all bans for this channel to avoid dupes */
+	    struct chanset_t *chan; 
+	    chan=findchan(lasthand);
+	    if (chan!=NULL) {
+	      struct userrec *b=chan->bans; int i;
+	      while (b->host!=NULL)
+		b->host=del_q(b->host->item,b->host,&i);
+	    }
+	  }
 	}
    	else if (strncmp(code,"!!",2)==0) {
 	  /* global laston time & channel */
@@ -1268,11 +1343,11 @@ int readuserfile(char *file,struct userrec **ret)
 	    if (convch) {
 	      /* for old user files: */
 	      if (strchr(attr,'f')!=NULL)
-		change_chanflags(bu,code,"*",CHANUSER_FRIEND,0);
+		flags |= USER_FRIEND;
 	      if (strchr(attr,'k')!=NULL)
-		change_chanflags(bu,code,"*",CHANUSER_KICK,0);
+		flags |= USER_KICK;
 	      if (strchr(attr,'d')!=NULL)
-		change_chanflags(bu,code,"*",CHANUSER_DEOP,0);
+		flags |= USER_DEOP;
 	    }
 	    /* if s starts with '/' it's got file info */
 	    if (s[0]=='/') {
@@ -1302,7 +1377,7 @@ int readuserfile(char *file,struct userrec **ret)
 /* 1st time scan for +sh bots and link if none connected */
 /* 2nd time scan for +h bots */
 /* 3rd time scan for +a/+h bots */
-void autolink_cycle(char *start)
+void autolink_cycle PROTO1(char *,start)
 {
   struct userrec *u=userlist,*autc=NULL; static int cycle=0;
   int got_hub=0,got_alt=0,got_shared=0,linked,ready=0,i;
@@ -1392,7 +1467,7 @@ void autolink_cycle(char *start)
 }
 
 /* returns 1 if Global Ban, 0 otherwise */
-int is_global_ban(char *ban)
+int is_global_ban PROTO1(char *,ban)
 {
   int i,j;struct userrec *u;struct eggqueue *q;
   char host[UHOSTLEN],s[256];

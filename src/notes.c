@@ -31,9 +31,13 @@ extern struct dcc_t dcc[];
 extern char botnetnick[];
 extern int serv;
 
+/* Maximum number of notes to allow stored for each user */
+int maxnotes=50;
+/* number of DAYS a note lives */
+int note_life=60;
 
 /* determine how many notes are waiting for a user */
-int num_notes(char *user)
+int num_notes PROTO1(char *,user)
 {
   int tot=0; FILE *f; char s[513],to[30];
   if (!notefile[0]) return 0;
@@ -54,7 +58,7 @@ int num_notes(char *user)
 }
 
 /* change someone's handle */
-void notes_change(int idx,char *oldnick,char *newnick)
+void notes_change PROTO3(int,idx,char *,oldnick,char *,newnick)
 {
   FILE *f,*g; char s[513],to[30]; int tot=0;
   if (!notefile[0]) return;
@@ -103,7 +107,7 @@ void expire_notes()
       if ((s[0]) && (s[0]!='#') && (s[0]!=';')) {   /* not comment */
 	nsplit(to,s); nsplit(from,s); nsplit(ts,s);
 	lapse=(now-(time_t)atol(ts))/86400;
-	if (lapse > NOTE_LIFE) tot++;
+	if (lapse > note_life) tot++;
 	else if (!is_user(to)) tot++;
 	else fprintf(g,"%s %s %s %s\n",to,from,ts,s);
       }
@@ -119,7 +123,7 @@ void expire_notes()
 }
 
 /* add note to notefile */
-int add_note(char *to,char *from,char *msg,int idx,int echo)
+int add_note PROTO5(char *,to,char *,from,char *,msg,int,idx,int,echo)
 {
   FILE *f; int status,i,iaway,sock; char *p,botf[81],ss[81],ssf[81];
   if (strlen(msg)>450) msg[450]=0;   /* notes have a limit */
@@ -200,7 +204,7 @@ int add_note(char *to,char *from,char *msg,int idx,int echo)
     return NOTE_ERROR;
   }
   if (idx==(-2)) return NOTE_OK;  /* error msg from a tandembot: don't store */
-  if (num_notes(to) > MAXNOTES) {
+  if (num_notes(to)>=maxnotes) {
     if (idx>=0) dprintf(idx,"Sorry, that user has too many notes already.\n");
     return NOTE_FULL;
   }
@@ -228,7 +232,7 @@ int add_note(char *to,char *from,char *msg,int idx,int echo)
 
    idx=-1 : /msg
 */
-void notes_read(char *hand,char *nick,int rd,int idx)
+void notes_read PROTO4(char *,hand,char *,nick,int,rd,int,idx)
 {
   FILE *f; char s[601],to[15],dt[81],from[81]; time_t tt; int ix=1;
   if (!notefile[0]) {
@@ -254,10 +258,10 @@ void notes_read(char *hand,char *nick,int rd,int idx)
 	  strcpy(dt,ctime(&tt));
 	  dt[16]=0; strcpy(dt,&dt[4]);
 	  lapse=(int)((time(NULL)-tt)/86400);
-	  if (lapse > NOTE_LIFE-7) {
-	    if (lapse>=NOTE_LIFE) strcat(dt," -- EXPIRES TODAY");
+	  if (lapse > note_life-7) {
+	    if (lapse>=note_life) strcat(dt," -- EXPIRES TODAY");
 	    else sprintf(&dt[strlen(dt)]," -- EXPIRES IN %d DAY%s",
-			 NOTE_LIFE-lapse,(NOTE_LIFE-lapse)==1?"":"S");
+			 note_life-lapse,(note_life-lapse)==1?"":"S");
 	  }
 	  if ((ix==rd) || (rd==0)) {
 	    if (idx>=0) dprintf(idx,"%2d. %s (%s): %s\n",ix,from,dt,s);
@@ -301,7 +305,7 @@ void notes_read(char *hand,char *nick,int rd,int idx)
   }
 }
 
-void notes_del(char *hand,char *nick,int dl,int idx)
+void notes_del PROTO4(char *,hand,char *,nick,int,dl,int,idx)
 {
   FILE *f,*g; char s[513],to[81]; int in=1;
   if (!notefile[0]) {

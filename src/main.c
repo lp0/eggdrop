@@ -83,6 +83,12 @@ extern int ban_time;
 extern int ignore_time;
 extern char botnetnick[];
 extern log_t logs[];
+extern char ctcp_finger[];
+extern char ctcp_userinfo[];
+extern char ctcp_version[];
+extern Tcl_Interp *interp;
+extern int default_port;
+
 
 /*
    Please use the PATCH macro instead of directly altering the version
@@ -93,8 +99,8 @@ extern log_t logs[];
    Note: Loading more than 10 patches could make your patch level "roll
    over" to the next release!  So try not to do that. :)
 */
-char egg_version[1024]="1.1.0";
-int egg_numver=2000;
+char egg_version[1024]="1.1.2";
+int egg_numver=1010200;
 
 /* socket that the server is on */
 int serv=(-1);
@@ -123,7 +129,7 @@ char bothost[121];
 /* our server */
 char botserver[121];
 /* port # to connect to */
-int botserverport=DEFAULT_PORT;
+int botserverport=6667;
 /* name of the config file */
 char configfile[121]="egg.config";
 /* possible alternate nickname to use */
@@ -191,9 +197,10 @@ char egg_xtra[1024];
 time_t server_online=0L;
 /* send stuff to stderr instead of logfiles? */
 int use_stderr=1;
+/* .restart has been called, restart a.s.a.p. */
+int do_restart = 0;
 
-
-void fatal(char *s,int recoverable)
+void fatal PROTO2(char *,s,int,recoverable)
 {
   int i;
   putlog(LOG_MISC,"*","* %s",s);
@@ -224,7 +231,7 @@ int expected_memory()
 
 /* fix the last parameter... if it starts with ':' then accept all of it,
    otherwise return only the first word */
-void fixcolon(char *s)
+void fixcolon PROTO1(char *,s)
 {
   if (s[0]==':') strcpy(s,&s[1]);
   else split(s,s);
@@ -233,7 +240,7 @@ void fixcolon(char *s)
 #ifndef NO_IRC
 
 /* given <in> (raw stuff from server), pull off who it's from & the code */
-void parsemsg(char *in,char *from,char *code,char *params)
+void parsemsg PROTO4(char *,in,char *,from,char *,code,char *,params)
 {
   char *p;
   from[0]=0;
@@ -252,8 +259,7 @@ void parsemsg(char *in,char *from,char *code,char *params)
 }
 
 /* ping from server */
-void gotpong(from,msg)
-char *from,*msg;
+void gotpong PROTO2(char *,from,char *,msg)
 {
   split(NULL,msg); fixcolon(msg);   /* scrap server name */
   waiting_for_awake=0;
@@ -264,21 +270,8 @@ char *from,*msg;
   }
 }
 
-/* 206 : This is the same as TRACE FAILED below except this is what 
-   Undernet spits out .. */
-void got206(from,msg)
-char *from,*msg;
-{
-  if (strcasecmp(botname,origbotname)==0) return;
-  putlog(LOG_MISC,"*","Switching back to nick %s",origbotname);
-  strcpy(newbotname,botname);  /* save, just in case */
-  strcpy(botname,origbotname);
-  tprintf(serv,"NICK %s\n",botname);
-}
-
 /* 302 : USERHOST to be used at a later date in a tcl command mebbe */
-void got302(from,msg)
-char *from,*msg;
+void got302 PROTO2(char *,from,char *,msg)
 {
 /*  char userhost[UHOSTLEN],nick[NICKLEN];
     int i,oper=0,away=0;
@@ -299,16 +292,12 @@ char *from,*msg;
 */
 }
 
-/* 401 : trace failed!  meaning my nick is not in use!  This is for Undernet
-         and other non-EFNet networks that have it as 401 and not 402.  poptix
-	 was right, 402 doesn't follow RFC specs as in rfc1459.  */
-
-/* sent 401 into 402, they do the same thing -Wild 18/05/97 */
-
-/* 402 : trace failed!  meaning my nick is not in use! (On Efnet) on
-         UnderNet this is the ERR_NOSUCHSERVER numeric :(((( */
-void got402(from,msg)
-char *from,*msg;
+/* trace failed! meaning my nick is not in use!
+   206 (undernet)
+   401 (other non-efnet)
+   402 (Efnet)
+*/
+void trace_fail PROTO2(char *,from,char *,msg)
 {
   debug1("%s\n",msg);
   if (strcasecmp(botname,origbotname)==0) return;
@@ -319,8 +308,7 @@ char *from,*msg;
 }
 
 /* 432 : bad nickname */
-void got432(from,msg)
-char *from,*msg;
+void got432 PROTO2(char *,from,char *,msg)
 {
   putlog(LOG_MISC,"*","Server says my nickname is invalid.");
   /* make random nick. */
@@ -330,8 +318,7 @@ char *from,*msg;
 
 /* 433 : nickname in use */
 /* change nicks till we're acceptable or we give up */
-void got433(from,msg)
-char *from,*msg;
+void got433 PROTO2(char *,from,char *,msg)
 {
   char c,*oknicks="^-_\\[]`",*p;
   /* could be futile attempt to regain nick: */
@@ -370,8 +357,7 @@ char *from,*msg;
 }
 
 /* 437 : nickname juped (Euronet) */
-void got437(from,msg)
-char *from,*msg;
+void got437 PROTO2(char *,from,char *,msg)
 {
   char s[512];
   struct chanset_t *chan;
@@ -392,8 +378,7 @@ char *from,*msg;
 }
 
 /* 451 : Not registered */
-void got451(from,msg)
-char *from,*msg;
+void got451 PROTO2(char *,from,char *,msg)
 {
 /* usually if we get this then we really fucked up somewhere
    or this is a non-standard server, so we log it and kill the socket
@@ -410,11 +395,12 @@ char lastmsghost[5][81]={ "","","","","" };
 time_t lastmsgtime[5]={ 0L,0L,0L,0L,0L };
 
 /* do on NICK, PRIVMSG, and NOTICE -- and JOIN */
-int detect_flood(char *from,struct chanset_t *chan,int which,int tochan)
+int detect_flood PROTO4(char *,from,struct chanset_t *,chan,int,which,
+			int,tochan)
 {
   char *p; time_t t; char h[UHOSTLEN],floodnick[NICKLEN],handle[10],ftype[10];
   int thr=0,lapse=0; memberlist *m;
-  if (get_attr_host(from) & (USER_BOT|USER_MASTER)) return 0;
+  if (get_attr_host(from) & (USER_BOT|USER_MASTER|USER_FRIEND)) return 0;
   if ((tochan) && (get_chanattr_host(from,chan->name) & 
 		   (CHANUSER_FRIEND|CHANUSER_MASTER)))
     return 0;
@@ -583,15 +569,24 @@ void write_debug()
   x=creat("DEBUG",0644); setsock(x,SOCK_NONSOCK);
   if (x<0) { putlog(LOG_MISC,"*","* Failed to write DEBUG"); }
   else {
+#ifdef EBUG
+    char work[1024], *p;
+#endif
     strcpy(s,ctime(&now));
     tprintf(x,"Debug (%s) written %s",ver,s);
     tprintf(x,"Full Patch List: %s\n",egg_xtra);
 #ifdef EBUG
-    tprintf(x,"Context: ");
-    for (y=((cx_ptr+1)&15); y!=cx_ptr; y=((y+1)&15)) {
-      tprintf(x,"%s/%d, ",cx_file[y],cx_line[y]);
+    y = cx_ptr +1;
+    if (y > 15)
+      y = 0;
+    p = work;
+    while (y != cx_ptr) {
+      p += sprintf(p,"%s/%d, ",cx_file[y],cx_line[y]);
+      y++;
+      if (y > 15)
+	y = 0;
     }
-    tprintf(x,"%s/%d\n\n",cx_file[y],cx_line[y]);
+    tprintf(x,"Context: %s%s/%d\n\n",work,cx_file[cx_ptr],cx_line[cx_ptr]);
 #else
     tprintf(x,"Context: %s/%d\n",cx_file,cx_line);
 #endif
@@ -602,34 +597,30 @@ void write_debug()
   }
 }
 
-void got_bus(z)
-int z;
+void got_bus PROTO1(int,z)
 {
   write_debug();
   fatal("BUS ERROR -- CRASHING!",1);
 }
 
-void got_segv(z)
-int z;
+void got_segv PROTO1(int,z)
 {
   write_debug();
   fatal("SEGMENT VIOLATION -- CRASHING!",1);
 }
 
-void got_fpe(z)
-int z;
+void got_fpe PROTO1(int,z)
 {
   write_debug();
   fatal("FLOATING POINT ERROR -- CRASHING!",1);
 }
 
-void got_term(z)
-int z;
+void got_term PROTO1(int,z)
 {
 #ifdef DIE_ON_SIGTERM
   write_userfile();
   tprintf(serv,"QUIT :terminate signal\n");
-  fatal("TERMINATE SIGNAL -- SIGNING OFF");
+  fatal("TERMINATE SIGNAL -- SIGNING OFF",0);
 #else
   putlog(LOG_MISC,"*","RECEIVED TERMINATE SIGNAL (IGNORING)");
   write_userfile();
@@ -637,20 +628,18 @@ int z;
 #endif
 }
 
-void got_quit(z)
-int z;
+void got_quit PROTO1(int,z)
 {
   putlog(LOG_MISC,"*","RECEIVED QUIT SIGNAL (IGNORING)");
   return;
 }
 
-void got_hup(z)
-int z;
+void got_hup PROTO1(int,z)
 {
 #ifdef DIE_ON_SIGHUP
   write_userfile();
   tprintf(serv,"QUIT :hangup signal\n");
-  fatal("HANGUP SIGNAL -- SIGNING OFF");
+  fatal("HANGUP SIGNAL -- SIGNING OFF",0);
 #else
   putlog(LOG_MISC,"*","Received HUP signal: rehashing...");
   rehash();
@@ -658,15 +647,13 @@ int z;
 #endif
 }
 
-void got_alarm(z)
-int z;
+void got_alarm PROTO1(int,z)
 {
   /* connection to a server was ended prematurely */
   return;
 }
 
-void got_usr1(z)
-int z;
+void got_usr1 PROTO1(int,z)
 {
   int i;
   putlog(LOG_MISC,"*","* USER1 SIGNAL: Debugging sockets");
@@ -688,8 +675,7 @@ int z;
 }
 
 /* got USR2 signal -- crash */
-void got_usr2(z)
-int z;
+void got_usr2 PROTO1(int,z)
 {
   putlog(LOG_MISC,"*","* Last context: %s/%d",cx_file,cx_line);
   write_debug();
@@ -697,14 +683,13 @@ int z;
 }
 
 /* got ILL signal -- log context and continue */
-void got_ill(z)
-int z;
+void got_ill PROTO1(int,z)
 {
   putlog(LOG_MISC,"*","* Context: %s/%d",cx_file,cx_line);
 }
 
 /* for relays: swallow all codes as if they don't exist */
-void swallow_telnet_codes(char *buf)
+void swallow_telnet_codes PROTO1(char *,buf)
 {
   unsigned char *p=(unsigned char *)buf; int mark;
   while (*p!=0) {
@@ -721,7 +706,7 @@ void swallow_telnet_codes(char *buf)
   }
 }
 
-void strip_telnet(int sock,char *buf,int *len)
+void strip_telnet PROTO3(int,sock,char *,buf,int *,len)
 {
   unsigned char *p=(unsigned char *)buf; int mark;
   while (*p!=0) {
@@ -759,8 +744,7 @@ void strip_telnet(int sock,char *buf,int *len)
   }
 }
 
-void do_arg(s)
-char *s;
+void do_arg PROTO1(char *,s)
 {
   int i;
   if (s[0]=='-') for (i=1; i < strlen(s); i++) {
@@ -797,7 +781,6 @@ char *s;
 void connect_server()
 {
   char s[121],pass[121]; static int oldserv=(-1);
-/*  struct chanset_t *chan; */
   waiting_for_awake=0; trying_server=time(NULL); empty_msgq();
   /* start up the counter (always reset it if "never-give-up" is on) */
   if ((oldserv<0) || (never_give_up)) oldserv=curserv;
@@ -823,21 +806,7 @@ void connect_server()
     tprintf(serv,"NICK %s\n",botname);
     if (pass[0]) tprintf(serv,"PASS %s\n",pass);
     tprintf(serv,"USER %s %s %s :%s\n",botuser,bothost,botserver,botrealname);
-/* Below is not needed, since we send joins when we get a 001 - Wild 13/05/97 */
-/*
-    mprintf(serv,"JOIN ");
-    chan=chanset; while (chan!=NULL) {
-      mprintf(serv,"%s,",chan->name);
-      chan->stat&=~(CHANACTIVE|CHANPEND);
-      chan=chan->next;
-    }
-    chan=chanset; while (chan!=NULL) {
-      mprintf(serv," %s",chan->key_prot);
-      chan->stat&=~(CHANACTIVE|CHANPEND);
-      chan=chan->next;
-    }
-    mprintf(serv,"\n");
-*/
+    /* We join channels AFTER getting the 001 -Wild */
     /* wait for async result now */
   }
 }
@@ -892,7 +861,8 @@ void periodic_timers()
       if (strcmp(botname,origbotname)!=0) {
 	/* see if my nickname is in use and if if my nick is right */
 	tprintf(serv,"TRACE %s\n",origbotname);
-	/* will return 402 (Efnet), 401 (other nets) numeric if not online */
+	/* will return 206(undernet), 401(other),
+	   or 402(efnet) numeric if not online */
       }
       else if (newbotname[0]) {
 	newbotname[0]=0; waiting_for_awake=0;
@@ -1036,8 +1006,7 @@ void periodic_timers()
 
 
 
-int main(argc,argv)
-int argc; char **argv;
+int main PROTO2(int,argc,char **,argv)
 {
   int xx,i; char buf[520],s[520]; FILE *f;
   struct sigaction sv; int modecnt=0;
@@ -1048,15 +1017,21 @@ int argc; char **argv;
   for (i=0;i<16;i++) { context; }
    
   /* --- PATCH INFO GOES HERE --- */
-
+   
   /* --- END OF PATCH INFO --- */
 
   /* version info! */
   sprintf(ver,"eggdrop v%s",egg_version);
   sprintf(version,"Eggdrop v%s  (c)1997 Robey Pointer",egg_version);
   /* now add on the patchlevel (for Tcl) */
-  sprintf(&egg_version[strlen(egg_version)]," %u",egg_numver);
+  sprintf(&egg_version[strlen(egg_version)]," %08u",egg_numver);
   strcat(egg_version,egg_xtra);
+  strncpy(ctcp_version,ver,160);
+  ctcp_version[160] = 0;
+  strncpy(ctcp_finger,ver,160);
+  ctcp_finger[160] = 0;
+  strncpy(ctcp_userinfo,ver,160);
+  ctcp_userinfo[160] = 0;
   context;
 #ifdef STOP_UAC
   {
@@ -1131,7 +1106,7 @@ int argc; char **argv;
   printf("\n%s: %d channel%s, %d users.\n",botname,j,j==1?"":"s",i);
 #endif
   /* move into background? */
-    if (backgrd) {
+  if (backgrd) {
     xx=fork();
     if (xx==-1) fatal("CANNOT FORK PROCESS.",0);
     if (xx!=0) {
@@ -1252,7 +1227,7 @@ int argc; char **argv;
 	else if (strcmp(code,"PONG")==0) gotpong(from,msg);
 	else if (strcmp(code,"WALLOPS")==0) gotwall(from,msg);
 	else if (strcmp(code,"001")==0) got001(from,msg);
-	else if (strcmp(code,"206")==0) got206(from,msg);
+	else if (strcmp(code,"206")==0) trace_fail(from,msg); /* undernet */
 	else if (strcmp(code,"251")==0) got251(from,msg);
 	else if (strcmp(code,"302")==0) got302(from,msg);
 	else if (strcmp(code,"315")==0) got315(from,msg);
@@ -1262,8 +1237,8 @@ int argc; char **argv;
 	else if (strcmp(code,"352")==0) got352(from,msg);
 	else if (strcmp(code,"367")==0) got367(from,msg);
 	else if (strcmp(code,"368")==0) got368(from,msg);
-	else if (strcmp(code,"401")==0) got402(from,msg);
-	else if (strcmp(code,"402")==0) got402(from,msg);
+	else if (strcmp(code,"401")==0) trace_fail(from,msg); /* other */
+	else if (strcmp(code,"402")==0) trace_fail(from,msg); /* efnet */
 	else if (strcmp(code,"405")==0) got405(from,msg);
 	else if (strcmp(code,"432")==0) got432(from,msg);
 	else if (strcmp(code,"433")==0) got433(from,msg);
@@ -1338,6 +1313,12 @@ int argc; char **argv;
       if (modecnt) {
 	flush_modes(); modecnt=0;
       }
+    }
+    if (do_restart) {
+       Tcl_DeleteInterp(interp);
+       init_tcl();
+       rehash();
+       do_restart = 0;
     }
   }
 }

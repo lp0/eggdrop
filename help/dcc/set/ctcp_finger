@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set ctcp-finger <text>
    specifies the response to send to a CTCP FINGER request.  you
    might want to set this to look like a response from a normal irc

@@ -66,10 +66,10 @@ int cmd_pls_ban(), cmd_pls_bot(), cmd_chat(), cmd_pls_host(), cmd_pls_ignore(),
   cmd_whois(), cmd_whom(), cmd_chemail(), cmd_echo(), cmd_bottree(),
   cmd_notes(), cmd_banner(), cmd_nick(), cmd_chattr(), cmd_stick(),
   cmd_assoc(), cmd_tcl(), cmd_binds(), cmd_flush(), cmd_unstick(),
-  cmd_strip(), cmd_pls_chrec(), cmd_mns_chrec(), cmd_fries(), cmd_beer(), 
+  cmd_strip(), cmd_pls_chrec(), cmd_mns_chrec(), cmd_fries(), cmd_beer(),
   cmd_restart(), cmd_fixcodes(), cmd_page(),
 #ifdef ENABLE_SIMUL
-  cmd_simul(), 
+  cmd_simul(),
 #endif
 #ifndef NO_FILE_SYSTEM
   cmd_files(), cmd_filestats(),
@@ -77,7 +77,7 @@ int cmd_pls_ban(), cmd_pls_bot(), cmd_chat(), cmd_pls_host(), cmd_pls_ignore(),
 #ifndef NO_IRC
   cmd_say(), cmd_act(), cmd_servers(), cmd_msg(), cmd_channel(), cmd_topic(),
   cmd_op(), cmd_deop(), cmd_dump(), cmd_kick(), cmd_kickban(), cmd_jump(),
-  cmd_invite(), cmd_adduser(), cmd_deluser(), cmd_chanadd(), cmd_chandel(),
+  cmd_invite(), cmd_adduser(), cmd_deluser(), cmd_pls_chan(), cmd_mns_chan(),
   cmd_chaninfo(), cmd_chanset(), cmd_chansave(), cmd_chanload(),
 #endif
   cmd_su();
@@ -91,6 +91,7 @@ cmd_t C_dcc[]={
   { "+ban", 'O', cmd_pls_ban },
   { "+bot", 'B', cmd_pls_bot },
   { "+bothost", 'B', cmd_pls_host },
+  { "+chan", 'n', cmd_pls_chan },
   { "+chrec", 'm', cmd_pls_chrec },
   { "+host", 'M', cmd_pls_host },
   { "+ignore", 'm', cmd_pls_ignore },
@@ -98,6 +99,7 @@ cmd_t C_dcc[]={
   { "-ban", 'O', cmd_mns_ban },
   { "-bot", 'B', cmd_mns_user },
   { "-bothost", 'B', cmd_mns_host },
+  { "-chan", 'n', cmd_mns_chan },
   { "-chrec", 'm', cmd_mns_chrec },
   { "-host", 'M', cmd_mns_host },
   { "-ignore", 'm', cmd_mns_ignore },
@@ -122,8 +124,6 @@ cmd_t C_dcc[]={
   { "bottree", '-', cmd_bottree },
   { "chaddr", 'B', cmd_chaddr },
 #ifndef NO_IRC
-  { "chanadd", 'n', cmd_chanadd },
-  { "chandel", 'n', cmd_chandel },
   { "chaninfo", 'M', cmd_chaninfo },
   { "chanload", 'N', cmd_chanload },
   { "channel", 'O', cmd_channel },

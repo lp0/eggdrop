@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set dcc-block <#>
    specifies the block size to use in DCC file transfers.  the ircII
    client defaults to 512, but admits that it may be too small.  most

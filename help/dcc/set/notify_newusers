@@ -1,0 +1,11 @@
+%{+n}
+###  set notify-newusers <nickname-list>
+   specifies who to inform when the bot gets introduced to
+   new users via the /MSG HELLO command.  obviously this has
+   no effect unless the /MSG HELLO command is activated.
+   the bot will send a note (see 'note') to each user listed
+   in notify-newusers.  this can be just one nick:
+      set notify-newusers "Robey"
+   or several, separated by commas:
+      set notify-newusers "Guy, Eden@Priscilla"
+   if you don't want anyone to be informed, just leave it blank.

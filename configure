@@ -860,7 +860,7 @@ if test x`${UNAME}` = "xCYGWIN32/NT"; then
   STRIP=
   EGGEXEC=eggdrop.exe
 else
-  echo "$ac_t""no" 1>&6
+  echo "$ac_t""Good" 1>&6
   NT=no
   EGGEXEC=eggdrop
 fi
@@ -1879,6 +1879,61 @@ else
 fi
 done
 
+for ac_func in dprintf
+do
+echo $ac_n "checking for $ac_func""... $ac_c" 1>&6
+echo "configure:1886: checking for $ac_func" >&5
+if eval "test \"`echo '$''{'ac_cv_func_$ac_func'+set}'`\" = set"; then
+  echo $ac_n "(cached) $ac_c" 1>&6
+else
+  cat > conftest.$ac_ext <<EOF
+#line 1891 "configure"
+#include "confdefs.h"
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $ac_func(); below.  */
+#include <assert.h>
+/* Override any gcc2 internal prototype to avoid an error.  */
+/* We use char because int might match the return type of a gcc2
+    builtin and then its argument prototype would still apply.  */
+char $ac_func();
+
+int main() {
+
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined (__stub_$ac_func) || defined (__stub___$ac_func)
+choke me
+#else
+$ac_func();
+#endif
+
+; return 0; }
+EOF
+if { (eval echo configure:1914: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
+  rm -rf conftest*
+  eval "ac_cv_func_$ac_func=yes"
+else
+  echo "configure: failed program was:" >&5
+  cat conftest.$ac_ext >&5
+  rm -rf conftest*
+  eval "ac_cv_func_$ac_func=no"
+fi
+rm -f conftest*
+fi
+
+if eval "test \"`echo '$ac_cv_func_'$ac_func`\" = yes"; then
+  echo "$ac_t""yes" 1>&6
+    ac_tr_func=HAVE_`echo $ac_func | tr 'abcdefghijklmnopqrstuvwxyz' 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'`
+  cat >> confdefs.h <<EOF
+#define $ac_tr_func 1
+EOF
+ 
+else
+  echo "$ac_t""no" 1>&6
+fi
+done
+
 
 if test "${ac_cv_func_vsprintf}" = "no"; then
   echo ""
@@ -1890,7 +1945,7 @@ fi
 
 
 echo $ac_n "checking space left in file database struct""... $ac_c" 1>&6
-echo "configure:1894: checking space left in file database struct" >&5
+echo "configure:1949: checking space left in file database struct" >&5
 cat >abacab.c <<'EOF'
 #include <stdio.h>
 #include <sys/time.h>
@@ -1934,7 +1989,7 @@ fi
 
 # check in common places now
 echo $ac_n "checking for libtcl""... $ac_c" 1>&6
-echo "configure:1938: checking for libtcl" >&5
+echo "configure:1993: checking for libtcl" >&5
 if test "$TCLLIB" = ""; then
   for checkfn in $libnames;
   do
@@ -1969,7 +2024,7 @@ else
 
   # check in common places now
   echo $ac_n "checking for tcl.h""... $ac_c" 1>&6
-echo "configure:1973: checking for tcl.h" >&5
+echo "configure:2028: checking for tcl.h" >&5
   if test "$TCLINC" = ""; then
     for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME $HOME/tcl $HOME/tcl/include;
     do
@@ -2012,7 +2067,7 @@ if test "$TCLLIB" = ""; then
   exit 1
 else
   echo $ac_n "checking for Tcl version""... $ac_c" 1>&6
-echo "configure:2016: checking for Tcl version" >&5
+echo "configure:2071: checking for Tcl version" >&5
   tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.4" | wc -l`
   if test $tclver = 0; then
     tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.5" | wc -l`
@@ -2046,7 +2101,7 @@ echo "configure:2016: checking for Tcl version" >&5
       CFLAGS="$CFLAGS -L/usr/bin"
     fi
     echo $ac_n "checking for dlopen in -ldl""... $ac_c" 1>&6
-echo "configure:2050: checking for dlopen in -ldl" >&5
+echo "configure:2105: checking for dlopen in -ldl" >&5
 ac_lib_var=`echo dl'_'dlopen | sed 'y%./+-%__p_%'`
 if eval "test \"`echo '$''{'ac_cv_lib_$ac_lib_var'+set}'`\" = set"; then
   echo $ac_n "(cached) $ac_c" 1>&6
@@ -2054,7 +2109,7 @@ else
   ac_save_LIBS="$LIBS"
 LIBS="-ldl  $LIBS"
 cat > conftest.$ac_ext <<EOF
-#line 2058 "configure"
+#line 2113 "configure"
 #include "confdefs.h"
 /* Override any gcc2 internal prototype to avoid an error.  */
 /* We use char because int might match the return type of a gcc2
@@ -2065,7 +2120,7 @@ int main() {
 dlopen()
 ; return 0; }
 EOF
-if { (eval echo configure:2069: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
+if { (eval echo configure:2124: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest; then
   rm -rf conftest*
   eval "ac_cv_lib_$ac_lib_var=yes"
 else
@@ -2085,9 +2140,14 @@ else
   echo "$ac_t""no" 1>&6
 fi
 
-    if test $got_dl != 0; then
-    LIBS="-ldl $LIBS"
+    if test $got_dl = 0; then
+      echo ""
+      echo "In order to use versions of Tcl from 7.5 on, you must have"
+      echo "the DL libraries somewhere on your system (-ldl)."
+      echo ""
+      exit 1
     fi
+    LIBS="-ldl $LIBS"
   fi
   TCLLIBFNS=`basename $TCLLIBFN .a`
   TCLLIBFNS=`basename $TCLLIBFNS .so.1.0`

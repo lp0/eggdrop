@@ -54,12 +54,9 @@ extern char origbotname[];
 extern int ignore_time;
 extern int flood_ctcp_thr;
 
-/* response to ctcp version requests */
-char ctcp_version[121]="you suck, v1.0";
-/* response to ctcp finger requests */
-char ctcp_finger[121]="yer gonna lose that finger if you don't stop.";
-/* response to ctcp userinfo requests */
-char ctcp_userinfo[121]="i'm cute, hung, and available";
+char ctcp_version[256];
+char ctcp_finger[256];
+char ctcp_userinfo[256];
 
 /* no point if there's no irc */
 #ifndef NO_IRC
@@ -73,8 +70,7 @@ char ctcp_userinfo[121]="i'm cute, hung, and available";
 static char ctcp_reply[512]="";
 
 /* ctcp embedded in a privmsg */
-void gotctcp(ffrom,to,msg,ignoring)
-char *ffrom,*to,*msg; int ignoring;
+void gotctcp PROTO4(char *,ffrom,char *,to,char *,msg,int,ignoring)
 {
   char from[UHOSTLEN],nick[NICKLEN],hand[10],code[512],*p;
   strcpy(from,ffrom);
@@ -178,14 +174,13 @@ char *ffrom,*to,*msg; int ignoring;
 }
 
 /* ctcp embedded in a notice */
-void gotctcpreply(ffrom,to,msg,ignoring)
-char *ffrom,*to,*msg; int ignoring;
+void gotctcpreply PROTO4(char *,ffrom,char *,to,char *,msg,int,ignoring)
 {
   char from[UHOSTLEN],nick[NICKLEN],hand[10],code[512];
   strcpy(from,ffrom);
   split(code,msg); splitnick(nick,from);
   if (code[0]==0) { strcpy(code,msg); msg[0]=0; }
-  if ((to[0]=='$') || ((strchr(to,'.')!=NULL) && 
+  if ((to[0]=='$') || ((strchr(to,'.')!=NULL) &&
       (strchr("&#+",to[0])==NULL))) {
     if (!ignoring)
       putlog(LOG_PUBLIC,"*","CTCP reply %s: %s from %s (%s) to %s",code,msg,
@@ -212,8 +207,7 @@ char *ffrom,*to,*msg; int ignoring;
 }  
 
 /* public msg on channel */
-void gotpublic(from,to,msg,ignoring)
-char *from,*to,*msg; int ignoring;
+void gotpublic PROTO4(char *,from,char *,to,char *,msg,int,ignoring)
 {
   char nick[NICKLEN]; struct chanset_t *chan;
   chan=findchan(to); if (chan==NULL) return;
@@ -232,8 +226,7 @@ char *from,*to,*msg; int ignoring;
 }
 
 /* public notice on channel */
-void gotpublicnotice(from,to,msg,ignoring)
-char *from,*to,*msg; int ignoring;
+void gotpublicnotice PROTO4(char *,from,char *,to,char *,msg,int,ignoring)
 {
   char nick[NICKLEN]; struct chanset_t *chan;
   chan=findchan(to); if (chan==NULL) return;
@@ -248,8 +241,7 @@ char *from,*to,*msg; int ignoring;
      beep flood
      CTCP avalanche
 */
-int detect_avalanche(msg)
-char *msg;
+int detect_avalanche PROTO1(char *,msg)
 {
   int count=0; unsigned char *p;
   for (p=(unsigned char *)msg; (*p)&&(count<8); p++) 
@@ -259,7 +251,7 @@ char *msg;
 }
 
 /* private message */
-void gotmsg(char *from,char *msg,int ignoring)
+void gotmsg PROTO3(char *,from,char *,msg,int,ignoring)
 {
   char to[UHOSTLEN],uhost[UHOSTLEN],nick[NICKLEN],ctcp[512]; char *p,*p1;
   int ctcp_count=0;
@@ -327,7 +319,7 @@ void gotmsg(char *from,char *msg,int ignoring)
 }
 
 /* private notice */
-void gotnotice(char *from,char *msg,int ignoring)
+void gotnotice PROTO3(char *,from,char *,msg,int,ignoring)
 {
   char to[UHOSTLEN],hand[10],nick[NICKLEN],ctcp[512]; char *p,*p1;
   split(to,msg); fixcolon(msg);  
@@ -382,7 +374,7 @@ void gotnotice(char *from,char *msg,int ignoring)
 }
 
 /* error notice */
-void goterror(char *from,char *msg)
+void goterror PROTO2(char *,from,char *,msg)
 {
   fixcolon(msg);
   putlog(LOG_SERV|LOG_MSGS,"*","-ERROR- %s",msg);

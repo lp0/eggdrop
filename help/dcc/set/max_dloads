@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set max-dloads <#>
    specifies the maximum number of downloads (dcc gets) a user can
    have going at once.  to effectively disable this, set it to 99.

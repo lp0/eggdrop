@@ -54,10 +54,10 @@ extern int dcc_total;
 extern struct dcc_t dcc[];
 extern struct userrec *userlist;
 extern struct chanset_t *chanset;
+extern int default_port;
 
 
-int msg_hello(n,nick,h,p)
-char *n,*nick,*h,*p;
+int msg_hello PROTO4(char *,n,char *,nick,char *,h,char *,p)
 {
   char host[161],s[161],s1[161]; char *p1; int common=0,atr;
   if ((!learn_users) && (!make_userfile)) return 0;
@@ -135,8 +135,7 @@ char *n,*nick,*h,*p;
   return 1;
 }
 
-int msg_pass(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_pass PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char old[512],new[512];
   if (strcasecmp(nick,botname)==0) return 1;
@@ -181,8 +180,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_ident(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_ident PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char s[121],s1[121],pass[512],who[NICKLEN];
   if (strcasecmp(nick,botname)==0) return 1;
@@ -228,8 +226,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_email(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_email PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char s[161];
   if (strcasecmp(nick,botname)==0) return 1;
@@ -259,8 +256,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_info(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_info PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char s[121],pass[512],chname[512]; int locked=0;
   if (strcasecmp(nick,botname)==0) return 1;
@@ -334,8 +330,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_who(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_who PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   struct chanset_t *chan;
   if (strcasecmp(nick,botname)==0) return 1;
@@ -362,8 +357,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_whois(hand,nick,host,opar)
-char *hand,*nick,*host,*opar;
+int msg_whois PROTO4(char *,hand,char *,nick,char *,host,char *,opar)
 {
   time_t tt; char s[161],s1[81],par[NICKLEN]; int atr,ok;
   struct chanset_t *chan;
@@ -418,8 +412,7 @@ char *hand,*nick,*host,*opar;
   return 1;
 }
 
-int msg_help(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_help PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   int atr; char s[121],*p;
   if (strcasecmp(nick,botname)==0) return 1;
@@ -445,13 +438,13 @@ char *hand,*nick,*host,*par;
 }
 
 /* i guess just op them on every channel they're on */
-int msg_op(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_op PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
-  struct chanset_t *chan; char pass[50], pass2[50];
+  struct chanset_t *chan; char pass[512], pass2[512];
   if (strcasecmp(nick,botname)==0) return 1;
   nsplit(pass,par);
   if (pass_match_by_handle(pass,hand)) {
+    int chatr;
     get_pass_by_handle(hand,pass2);
     if (strcmp(pass2,"-")==0) {
       putlog(LOG_CMDS,"*","(%s!%s) !%s! failed OP",nick,host,hand);
@@ -468,18 +461,20 @@ char *hand,*nick,*host,*par;
         putlog(LOG_CMDS,"*","(%s!%s) !%s! failed OP",nick,host,hand);
         return 1;
       }
+      chatr = get_chanattr_handle(hand,chan->name);
       if ((hand_on_chan(chan,hand)) && (!member_op(chan->name,nick)) &&
-	  ((get_chanattr_handle(hand,chan->name) & CHANUSER_OP) ||
-	   (get_attr_handle(hand) & USER_GLOBAL))) {
+	  ((chatr & CHANUSER_OP) ||
+	   ((get_attr_handle(hand) & USER_GLOBAL) && !(chatr&CHANUSER_DEOP)))) {
 	add_mode(chan,'+','o',nick);
 	putlog(LOG_CMDS,"*","(%s!%s) !%s! OP %s",nick,host,hand,par);
       }
       return 1;
     }
     chan=chanset; while (chan!=NULL) {
+      chatr = get_chanattr_handle(hand,chan->name);
       if ((hand_on_chan(chan,hand)) && (!member_op(chan->name,nick)) &&
-	  ((get_chanattr_handle(hand,chan->name) & CHANUSER_OP) ||
-	   (get_attr_handle(hand) & USER_GLOBAL)))
+	  ((chatr & CHANUSER_OP) ||
+	   ((get_attr_handle(hand) & USER_GLOBAL) && !(chatr & CHANUSER_DEOP))))
 	add_mode(chan,'+','o',nick);
       chan=chan->next;
     }
@@ -490,8 +485,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_invite(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_invite PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char pass[512];
   if (strcasecmp(nick,botname)==0) return 1;
@@ -515,8 +509,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_status(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_status PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   if (strcasecmp(nick,botname)==0) return 1;
   putlog(LOG_CMDS,"*","(%s!%s) !%s! STATUS",nick,host,hand);
@@ -524,8 +517,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_memory(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_memory PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   if (strcasecmp(nick,botname)==0) return 1;
   putlog(LOG_CMDS,"*","(%s!%s) !%s! MEMORY",nick,host,hand);
@@ -533,8 +525,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_die(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_die PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char s[121];
   if (strcasecmp(nick,botname)==0) return 1;
@@ -554,8 +545,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_rehash(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_rehash PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   if (strcasecmp(nick,botname)==0) return 1;
   if (pass_match_by_handle(par,hand)) {
@@ -567,8 +557,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_reset(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_reset PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   struct chanset_t *chan;
   if (strcasecmp(nick,botname)==0) return 1;
@@ -591,8 +580,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_go(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_go PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   struct chanset_t *chan; int ok=0;
   if (strcasecmp(nick,botname)==0) return 1;
@@ -632,8 +620,7 @@ char *hand,*nick,*host,*par;
   return 1;
 }
 
-int msg_jump(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_jump PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
   char s[512],port[512];
   if (strcasecmp(nick,botname)==0) return 1;
@@ -641,7 +628,7 @@ char *hand,*nick,*host,*par;
   if (pass_match_by_handle(s,hand)) {
     if (par[0]) {
       nsplit(s,par); nsplit(port,par);
-      if (!port[0]) sprintf(port,"%d",DEFAULT_PORT);
+      if (!port[0]) sprintf(port,"%d",default_port);
       putlog(LOG_CMDS,"*","(%s!%s) !%s! JUMP %s %s %s",nick,host,hand,s,port,
 	     par);
       strcpy(newserver,s); newserverport=atoi(port);
@@ -657,10 +644,9 @@ char *hand,*nick,*host,*par;
 }
 
 /* notes <pass> <func> */
-int msg_notes(hand,nick,host,par)
-char *hand,*nick,*host,*par;
+int msg_notes PROTO4(char *,hand,char *,nick,char *,host,char *,par)
 {
-  char pwd[121],fcn[121];
+  char pwd[512],fcn[512];
   if (strcasecmp(nick,botname)==0) return 1;
   if (hand[0]=='*') return 0;
   if (!par[0]) {

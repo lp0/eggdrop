@@ -57,7 +57,7 @@ int expmem_fileq()
   return tot;
 }
 
-void queue_file(char *dir,char *file,char *from,char *to)
+void queue_file PROTO4(char *,dir,char *,file,char *,from,char *,to)
 {
   fileq_t *q=fileq;
   fileq=(fileq_t *)nmalloc(sizeof(fileq_t));
@@ -68,8 +68,7 @@ void queue_file(char *dir,char *file,char *from,char *to)
   strcpy(fileq->nick,from); strcpy(fileq->to,to);
 }
 
-void deq_this(this)
-fileq_t *this;
+void deq_this PROTO1(fileq_t *,this)
 {
   fileq_t *q=fileq,*last=NULL;
   while ((q!=this) && (q!=NULL)) {
@@ -82,8 +81,7 @@ fileq_t *this;
 }
 
 /* remove all files queued to a certain user */
-void flush_fileq(to)
-char *to;
+void flush_fileq PROTO1(char *,to)
 {
   fileq_t *q=fileq; int fnd=1;
   while (fnd) {
@@ -95,7 +93,7 @@ char *to;
   }
 }
 
-void send_next_file(char *to)
+void send_next_file PROTO1(char *,to)
 {
   fileq_t *q=fileq,*this=NULL; char s[256],s1[256]; int x;
   while (q!=NULL) {
@@ -146,7 +144,7 @@ void send_next_file(char *to)
 }
 
 /* let tcl see the queued files for (x) */
-void tcl_get_queued(Tcl_Interp *irp,char *who)
+void tcl_get_queued PROTO2(Tcl_Interp *,irp,char *,who)
 {
   char s[512]; fileq_t *q=fileq;
   while (q!=NULL) {
@@ -161,7 +159,7 @@ void tcl_get_queued(Tcl_Interp *irp,char *who)
   }
 }
 
-void show_queued_files(int idx)
+void show_queued_files PROTO1(int,idx)
 {
   int i,cnt=0; fileq_t *q=fileq;
   while (q!=NULL) {
@@ -203,7 +201,7 @@ void show_queued_files(int idx)
   else dprintf(idx,"Total: %d\n",cnt);
 }
 
-void fileq_cancel(int idx,char *par)
+void fileq_cancel PROTO2(int,idx,char *,par)
 {
   int fnd=1,matches=0,atot=0,i; fileq_t *q; char s[256];
   while (fnd) {

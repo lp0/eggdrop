@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set notefile <filename>
    specifies the filename where bots should store notes that
    are sent to someone who isn't on the party line currently.

@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set botnet-nick <nickname>
    sets a name to use on the botnet that's different from the
    nickname used on IRC.  if not set, this will default to being

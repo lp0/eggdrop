@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set switch-logfiles-at <military-time>
    tells eggdrop when to switch logfiles, storing away the current
    logfile and starting fresh.  normally this happens at midnight,

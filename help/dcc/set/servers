@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set servers <server-list>
    gives the bot a list of servers to use for IRC.  you can change
    this at any time on the fly, but if the bot's current IRC server
@@ -8,4 +8,5 @@
         goblin.irc.com:6667
         dragon.irc.org
       }
-   note that if you omit the port, it will assume 6667.
+   note that if you omit the port, it will assume the value of the
+   default-port setting.

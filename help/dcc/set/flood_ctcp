@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set flood-ctcp <#ctcps>[:<#seconds>]
    specifies the flood threshold for CTCP queries (to the bot
    or channel).  if the same host dumps more than this many

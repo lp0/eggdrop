@@ -1,4 +1,4 @@
-%{+m}
+%{+n}
 ###  set init-server <raw-irc-text>
    specifies text to send to the server when first connecting
    there.  this is usually used to set the bot's mode to +i
