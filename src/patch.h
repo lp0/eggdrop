@@ -10,7 +10,7 @@
  * statement, leave the rest of the file alone, this allows better
  * overlapping patches.
  *
- * $Id: patch.h,v 1.723 2002/03/11 04:34:16 guppy Exp $
+ * $Id: patch.h,v 1.736 2002/03/29 05:53:55 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer

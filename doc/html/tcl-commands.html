@@ -1,5 +1,5 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
-<!-- $Id: tcl-commands.html,v 1.5 2002/03/09 21:14:16 wcc Exp $ -->
+<!-- $Id: tcl-commands.html,v 1.9 2002/03/23 17:27:52 wcc Exp $ -->
 
 <html>
   <head>
@@ -76,8 +76,13 @@
           &#39;.dump&#39; (intended for direct server commands); output is
           queued so that the bot won&#39;t flood itself off the server.</p>
 
-          <p><strong>Options:</strong> -next: push messages to the front
-          of the queue</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>-next</strong>: push messages to the front of the
+            queue<br>
+            <strong>-normal</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -91,8 +96,13 @@
           &#39;putserv&#39;, but it uses a different queue intended for
           sending messages to channels or people.</p>
 
-          <p><strong>Options:</strong> -next: push messages to the front
-          of the queue</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>-next</strong>: push messages to the front of the
+            queue<br>
+            <strong>-normal</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -105,8 +115,13 @@
           <p><strong>Description:</strong> sends text to the server, like
           &#39;putserv&#39;, but it uses a different (and faster) queue.</p>
 
-          <p><strong>Options:</strong> -next: push messages to the front
-          of the queue</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>-next</strong>: push messages to the front of the
+            queue<br>
+            <strong>-normal</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -147,7 +162,19 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>putloglev &lt;level(s)&gt; &lt;channel&gt; &lt;text&gt;</strong></dt>
+        <dt><strong>putxferlog &lt;text&gt;</strong></dt>
+
+        <dd>
+          <p><strong>Description:</strong> sends text to the bot&#39;s
+          logfile, marked as &#39;file-area&#39; (x)</p>
+
+          <p><strong>Returns:</strong> nothing</p>
+
+          <p><strong>Module:</strong> core</p>
+        </dd>
+
+        <dt><strong>putloglev &lt;level(s)&gt; &lt;channel&gt;
+        &lt;text&gt;</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> sends text to the bot&#39;s
@@ -256,7 +283,8 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>getuser &lt;handle&gt; &lt;entry-type&gt; [extra info]</strong></dt>
+        <dt><strong>getuser &lt;handle&gt; &lt;entry-type&gt;
+        [extra info]</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> an interface to the new generic
@@ -324,7 +352,7 @@
                 </td>
 
                 <td>
-                  <p>returns the user&#39;s xtra info</p>
+                  <p>returns the user&#39;s XTRA info</p>
                 </td>
               </tr>
 
@@ -386,7 +414,8 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>setuser &lt;handle&gt; &lt;entry-type&gt; [extra info]</strong></dt>
+        <dt><strong>setuser &lt;handle&gt; &lt;entry-type&gt;
+        [extra info]</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> this is the counterpart of
@@ -413,11 +442,11 @@
 
                 <td>
                   <p>This setting has 3 forms. &quot;setuser &lt;handle&gt;
-                  laston &lt;unixtime&gt; &lt;place&gt;&quot; sets global
-                  laston time, &quot;setuser &lt;handle&gt; laston
-                  &lt;unixtime&gt;&quot; sets global laston time (leaving the
-                  place field empty), and &quot;setuser &lt;handle&gt; laston
-                  &lt;unixtime&gt; &lt;channel&gt;&quot; sets a users laston
+                  LASTON &lt;unixtime&gt; &lt;place&gt;&quot; sets global
+                  LASTON time, &quot;setuser &lt;handle&gt; LASTON
+                  &lt;unixtime&gt;&quot; sets global LASTON time (leaving the
+                  place field empty), and &quot;setuser &lt;handle&gt; LASTON
+                  &lt;unixtime&gt; &lt;channel&gt;&quot; sets a users LASTON
                   time for a channel (if it is a  valid channel).</p>
                 </td>
               </tr>
@@ -439,7 +468,8 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>chhandle &lt;old-handle&gt; &lt;new-handle&gt;</strong></dt>
+        <dt><strong>chhandle &lt;old-handle&gt;
+        &lt;new-handle&gt;</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> changes a user&#39;s handle</p>
@@ -455,9 +485,10 @@
         <dd>
           <p><strong>Description:</strong> changes the attributes for a user
           record, if you include any. Changes are of the form &#39;+f&#39;,
-          &#39;-o&#39;, &#39;+dk&#39;, &#39;-o+d&#39;, etc. If a channel is
-          specified, the channel-specific flags for that channel are altered.
-          You can now use the +o|-o #channel format here too.</p>
+          &#39;-o&#39;, &#39;+dk&#39;, &#39;-o+d&#39;, etc. If changes are
+          specified in the format of |<changes> <channel>, the channel-specific
+          flags for that channel are altered. You can now use the +o|-o
+          #channel format here too.</p>
 
           <p><strong>Returns:</strong>  new flags for the user (if you made
           no changes, the current flags are returned). If a channel was
@@ -608,8 +639,13 @@
           ban-time (usually 60) is used. Setting the lifetime to 0 makes
           it a permanent ban.</p>
 
-          <p><strong>Options:</strong> sticky: forces the ban to be always
-          active on a channel, even with dynamic bans on</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>sticky</strong>: forces the ban to be always active
+            on a channel, even with dynamicbans on<br>
+            <strong>none</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -626,8 +662,13 @@
           lifetime is not specified, ban-time (usually 60) is used. Setting
           the lifetime to 0 makes it a permanent ban.</p>
 
-          <p><strong>Options:</strong> sticky: forces the ban to be always
-          active on a channel, even with dynamic bans on</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>sticky</strong>: forces the ban to be always active
+            on a channel, even with dynamicbans on<br>
+            <strong>none</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -647,8 +688,13 @@
           once the time period has expired, the exempt will not be removed
           until the corresponding ban has either expired or been removed.</p>
 
-          <p><strong>Options:</strong> sticky: forces the ban to be always
-          active on a channel, even with dynamic bans on</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>sticky</strong>: forces the exempt to be always active
+            on a channel, even with dynamicexempts on<br>
+            <strong>none</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -667,8 +713,13 @@
           permanent exempt. The exempt will not be removed until the
           corresponding ban has been removed.</p>
 
-          <p><strong>Options:</strong> sticky: forces the ban to be always
-          active on a channel, even with dynamic bans on</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>sticky</strong>: forces the exempt to be always active
+            on a channel, even with dynamicexempts on<br>
+            <strong>none</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -686,8 +737,13 @@
           to 0 makes it a permanent invite. The invite will not be removed
           until the channel has gone -i.</p>
 
-          <p><strong>Options:</strong> sticky: forces the ban to be always
-          active on a channel, even with dynamic bans on</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>sticky</strong>: forces the invite to be always active
+            on a channel, even with dynamicinvites on<br>
+            <strong>none</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -705,8 +761,13 @@
           is used. Setting the lifetime to 0 makes it a permanent invite.
           The invite will not be removed until the channel has gone -i.</p>
 
-          <p><strong>Options:</strong> sticky: forces the ban to be always
-          active on a channel, even with dynamic bans on</p>
+          <p><strong>Options:</strong></p>
+
+          <blockquote>
+            <p><strong>sticky</strong>: forces the invite to be always active
+            on a channel, even with dynamicinvites on<br>
+            <strong>none</strong>: no effect</p>
+          </blockquote>
 
           <p><strong>Returns:</strong> nothing</p>
 
@@ -866,7 +927,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified ban is in the
           global ban list; 0 otherwise. If a channel is specified, that
-          channel&#39;s ban list is checked instead.</p>
+          channel&#39;s ban list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -876,8 +937,8 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified ban is in the
           global ban list AND is marked as permanent; 0 otherwise. If a
-          channel is specified, that channel&#39;s ban list is checked
-          instead.</p>
+          channel is specified, that channel&#39;s ban list is checked as
+          well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -887,7 +948,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified exempt is in the
           global exempt list; 0 otherwise. If a channel is specified, that
-          channel&#39;s exempt list is checked instead.</p>
+          channel&#39;s exempt list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -898,7 +959,7 @@
           <p><strong>Returns:</strong> 1 if the specified exempt is in the
           global exempt list AND is marked as permanent; 0 otherwise. If a
           channel is specified, that channel&#39;s exempt list is checked
-          instead.</p>
+          as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -908,7 +969,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified invite is in
           the global invite list; 0 otherwise. If a channel is specified,
-          that channel&#39;s invite list is checked instead.</p>
+          that channel&#39;s invite list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -919,7 +980,7 @@
           <p><strong>Returns:</strong> 1 if the specified invite is in
           the global invite list AND is marked as permanent; 0 otherwise.
           If a channel is specified, that channel&#39;s invite list is
-          checked instead.</p>
+          checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -929,7 +990,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified ban is marked as
           sticky in the global ban list; 0 otherwise. If a channel is
-          specified, that channel&#39;s ban list is checked instead.</p>
+          specified, that channel&#39;s ban list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -939,7 +1000,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified exempt is marked
           as sticky in the global exempt list; 0 otherwise. If a channel is
-          specified, that channel&#39;s exempt list is checked instead.</p>
+          specified, that channel&#39;s exempt list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -949,7 +1010,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified invite is marked
           as sticky in the global invite list; 0 otherwise. If a channel
-          is specified, that channel&#39;s invite list is checked instead.</p>
+          is specified, that channel&#39;s invite list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -959,7 +1020,7 @@
         <dd>
           <p><strong>Returns:</strong> 1 if the specified nick!user@host
           matches a ban in the global ban list; 0 otherwise. If a channel
-          is specified, that channel&#39;s ban list is checked instead.</p>
+          is specified, that channel&#39;s ban list is checked as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -971,7 +1032,7 @@
           <p><strong>Returns:</strong> 1 if the specified nick!user@host
           matches an exempt in the global exempt list; 0 otherwise. If a
           channel is specified, that channel&#39;s exempt list is checked
-          instead.</p>
+          as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -982,7 +1043,7 @@
           <p><strong>Returns:</strong> 1 if the specified nick!user@host
           matches an invite in the global invite list; 0 otherwise. If a
           channel is specified, that channel&#39;s invite list is checked
-          instead.</p>
+          as well.</p>
 
           <p><strong>Module:</strong> channels</p>
         </dd>
@@ -1410,10 +1471,10 @@
           <p><strong>Module:</strong> irc</p>
         </dd>
 
-        <dt><strong>resetexempts [channel]</strong></dt>
+        <dt><strong>resetinvites [channel]</strong></dt>
 
         <dd>
-          <p><strong>Description:</strong> removes all invite on the channel
+          <p><strong>Description:</strong> removes all invites on the channel
           that aren&#39;t in the bot&#39;s invite list and refreshes any
           invites that should be on the channel but aren&#39;t</p>
 
@@ -1625,7 +1686,7 @@
           <p><strong>Module:</strong> channels</p>
         </dd>
 
-        <dt><strong>setudef &lt;flag/int&gt; &lt;name&gt;</strong></dt>
+        <dt><strong>deludef &lt;flag/int&gt; &lt;name&gt;</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> deletes a user defined channel
@@ -2874,7 +2935,8 @@
           <p><strong>Module:</strong> core</p>
         </dd>
 
-        <dt><strong>control &lt;idx&gt; &lt;command&gt;</strong></dt>
+        <dt><strong>sendnote &lt;from&gt; &lt;to[@bot]&gt;
+        &lt;message&gt;</strong></dt>
 
         <dd>
           <p><strong>Description:</strong> simulates what happens when one
@@ -2978,7 +3040,7 @@
 
         <dd>
           <p><strong>Returns:</strong> encrypted string (using the currently
-          loaded encryption module), encoded into ascii using base-64</p>
+          loaded encryption module), encoded into ASCII using base-64</p>
 
           <p><strong>Module:</strong> encryption</p>
         </dd>
@@ -3569,7 +3631,7 @@
               mode does not take an argument. Flags are ignored. The
               bot&#39;s automatic response to a mode change will happen
               AFTER all matching Tcl procs are called. The mask will be
-              matched against &#39;#channel nick!user@host&#39; and can
+              matched against &#39;#channel +/-modes&#39; and can
               contain wildcards.</p>
 
               <p>If it is a server mode, nick will be &quot;&quot;, user@host
@@ -3612,7 +3674,7 @@
 
               <p><strong>Description:</strong> dest will be a nickname (the
               bot&#39;s nickname, obviously) or channel name. keyword is
-              the ctcp command (which can contain wildcards, and text may
+              the ctcp command (which can contain wildcards), and text may
               be empty. If the proc returns 0, the bot will attempt its
               own processing of the ctcp command.</p>
 

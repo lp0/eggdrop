@@ -51,7 +51,7 @@ clean:
 	@rm -f .depend *.o *.a *~
 
 build_msg:
-	@echo "(This may take a while.  Go get some Coca-Cola.)"
+	@echo "(This may take a while.  Go get some runts.)"
 
 main.o:
 	$(CC) $(CFLAGS) $(CPPFLAGS) \

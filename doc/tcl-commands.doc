@@ -1,5 +1,5 @@
 Eggdrop Tcl Commands
-Last revised: March 08, 2002
+Last revised: March 23, 2002
      _________________________________________________________________
 
 This is an exhaustive list of all the Tcl commands added to Eggdrop. All
@@ -21,21 +21,27 @@ marked with vertical bars (|) on the left.
     Description: sends text to the server, like '.dump' (intended for direct
       server commands); output is queued so that the bot won't flood itself
       off the server.
-    Options: -next: push messages to the front of the queue
+    Options:
+      -next:   push messages to the front of the queue
+      -normal: no effect
     Returns: nothing
     Module: server
 
   puthelp <text> [options]
     Description: sends text to the server, like 'putserv', but it uses a
       different queue intended for sending messages to channels or people.
-    Options: -next: push messages to the front of the queue
+    Options:
+      -next:   push messages to the front of the queue
+      -normal: no effect
     Returns: nothing
     Module: server
 
   putquick <text> [options]
     Description: sends text to the server, like 'putserv', but it uses a
       different (and faster) queue.
-    Options: -next: push messages to the front of the queue
+    Options:
+      -next:   push messages to the front of the queue
+      -normal: no effect
     Returns: nothing
     Module: server
 
@@ -127,7 +133,7 @@ marked with vertical bars (|) on the left.
                   last seen place. LASTON #channel returns the time last
                   seen time for the channel or 0 if no info exists.
         INFO    - returns the user's global info line
-        XTRA    - returns the user's xtra info
+        XTRA    - returns the user's XTRA info
         COMMENT - returns the master-visible only comment for the user
         EMAIL   - returns the user's e-mail address
         URL     - returns the user's url
@@ -143,11 +149,11 @@ marked with vertical bars (|) on the left.
         PASS    - sets a users password (no third arg will clear it)
         HOSTS   - if used with no third arg, all hosts for the user will be
                   be cleared. Otherwise, *1* hostmask is added :P
-        LASTON  - This setting has 3 forms. "setuser <handle> laston
-                  <unixtime> <place>" sets global laston time, "setuser
-                  <handle> laston <unixtime>" sets global laston time
+        LASTON  - This setting has 3 forms. "setuser <handle> LASTON
+                  <unixtime> <place>" sets global LASTON time, "setuser
+                  <handle> LASTON <unixtime>" sets global LASTON time
                   (leaving the place field empty), and "setuser <handle>
-                  laston <unixtime> <channel>" sets a users laston time for
+                  LASTON <unixtime> <channel>" sets a users LASTON time for
                   a channel (if it is a  valid channel).
     Returns: nothing
     Module: core
@@ -160,9 +166,10 @@ marked with vertical bars (|) on the left.
 
   chattr <handle> [changes [channel]]
     Description: changes the attributes for a user record, if you include any.
-      Changes are of the form '+f', '-o', '+dk', '-o+d', etc. If a channel is
-      specified, the channel-specific flags for that channel are altered. You
-      can now use the +o|-o #channel format here too.
+      Changes are of the form '+f', '-o', '+dk', '-o+d', etc. If changes are
+      specified in the format of |<changes> <channel>, the channel-specific
+      flags for that channel are altered. You can now use the +o|-o #channel
+      format here too.
     Returns: new flags for the user (if you made no changes, the current
       flags are returned). If a channel was specified, the global AND the
       channel-specific flags for that channel are returned in the format of
@@ -238,8 +245,9 @@ marked with vertical bars (|) on the left.
       minutes. If lifetime is not specified, ban-time (usually 60) is
       used. Setting the lifetime to 0 makes it a permanent ban.
     Options:
-      sticky - forces the ban to be always active on a channel, even
-               with dynamic bans on
+      sticky: forces the ban to be always active on a channel, even
+              with dynamicbans on
+      none:   no effect
     Returns: nothing
     Module: channels
 
@@ -250,8 +258,9 @@ marked with vertical bars (|) on the left.
       ban-time (usually 60) is used. Setting the lifetime to 0 makes it a
       permanent ban.
     Options:
-      sticky - forces the ban to be always active on a channel, even
-               with dynamic bans on
+      sticky: forces the ban to be always active on a channel, even
+              with dynamicbans on
+      none:   no effect
     Returns: nothing
     Module: channels
 
@@ -264,8 +273,9 @@ marked with vertical bars (|) on the left.
       timed bans, once the time period has expired, the exempt will not be
       removed until the corresponding ban has either expired or been removed.
     Options:
-      sticky - forces the exempt to be always active on a channel, even
-                 with dynamicexempts on
+      sticky: forces the exempt to be always active on a channel, even
+              with dynamicexempts on
+      none:   no effect
     Returns: nothing
     Module: channels
 
@@ -277,8 +287,9 @@ marked with vertical bars (|) on the left.
       permanent exempt. The exempt will not be removed until the
       corresponding ban has been removed.
     Options:
-      sticky - forces the exempt to be always active on a channel, even
-                 with dynamicexempts on
+      sticky: forces the exempt to be always active on a channel, even
+              with dynamicexempts on
+      none:   no effect
     Returns: nothing
     Module: channels
 
@@ -289,8 +300,9 @@ marked with vertical bars (|) on the left.
       used. Setting the lifetime to 0 makes it a permanent invite. The invite
       will not be removed until the channel has gone -i.
     Options:
-      sticky - forces the exempt to be always active on a channel, even
-                 with dynamicexempts on
+      sticky: forces the invite to be always active on a channel, even
+              with dynamicinvites on
+      none:   no effect
     Returns: nothing
     Module: channels
 
@@ -302,8 +314,9 @@ marked with vertical bars (|) on the left.
       a permanent invite. The invite will not be removed until the channel
       has gone -i.
     Options:
-      sticky - forces the exempt to be always active on a channel, even
-                 with dynamicexempts on
+      sticky: forces the invite to be always active on a channel, even
+              with dynamicinvites on
+      none:   no effect
     Returns: nothing
     Module: channels
 
@@ -380,73 +393,73 @@ marked with vertical bars (|) on the left.
 
   isban <ban> [channel]
     Returns: 1 if the specified ban is in the global ban list; 0 otherwise.
-      If a channel is specified, that channel's ban list is checked instead.
+      If a channel is specified, that channel's ban list is checked as well.
     Module: channels
 
   ispermban <ban> [channel]
     Returns: 1 if the specified ban is in the global ban list AND is marked
       as permanent; 0 otherwise. If a channel is specified, that channel's
-      ban list is checked instead.
+      ban list is checked as well.
     Module: channels
 
   isexempt <exempt> [channel]
     Returns: 1 if the specified exempt is in the global exempt list; 0
       otherwise. If a channel is specified, that channel's exempt list is
-      checked instead.
+      checked as well.
     Module: channels
 
   ispermexempt <exempt> [channel]
     Returns: 1 if the specified exempt is in the global exempt list AND is
       marked as permanent; 0 otherwise. If a channel is specified, that
-      channel's exempt list is checked instead.
+      channel's exempt list is checked as well.
     Module: channels
 
   isinvite <invite> [channel]
     Returns: 1 if the specified invite is in the global invite list; 0
       otherwise. If a channel is specified, that channel's invite list is
-      checked instead.
+      checked as well.
     Module: channels
 
   isperminvite <invite> [channel]
     Returns: 1 if the specified invite is in the global invite list AND is
       marked as permanent; 0 otherwise. If a channel is specified, that
-      channel's invite list is checked instead.
+      channel's invite list is checked as well.
     Module: channels
 
   isbansticky <ban> [channel]
     Returns: 1 if the specified ban is marked as sticky in the global ban
       list; 0 otherwise. If a channel is specified, that channel's ban list
-      is checked instead.
+      is checked as well.
     Module: channels
 
   isexemptsticky <exempt> [channel]
     Returns: 1 if the specified exempt is marked as sticky in the global
       exempt list; 0 otherwise. If a channel is specified, that channel's
-      exempt list is checked instead.
+      exempt list is checked as well.
     Module: channels
 
   isinvitesticky <invite> [channel]
     Returns: 1 if the specified invite is marked as sticky in the global
       invite list; 0 otherwise. If a channel is specified, that channel's
-      invite list is checked instead.
+      invite list is checked as well.
     Module: channels
 
   matchban <nick!user@host> [channel]
     Returns: 1 if the specified nick!user@host matches a ban in the global
       ban list; 0 otherwise. If a channel is specified, that channel's ban
-      list is checked instead.
+      list is checked as well.
     Module: channels
 
   matchexempt <nick!user@host> [channel]
     Returns: 1 if the specified nick!user@host matches an exempt in the
       global exempt list; 0 otherwise. If a channel is specified, that
-      channel's exempt list is checked instead.
+      channel's exempt list is checked as well.
     Module: channels
 
   matchinvite <nick!user@host> [channel]
     Returns: 1 if the specified nick!user@host matches an invite in the
       global invite list; 0 otherwise. If a channel is specified, that
-      channel's invite list is checked instead.
+      channel's invite list is checked as well.
     Module: channels
 
   banlist [channel]
@@ -684,7 +697,7 @@ marked with vertical bars (|) on the left.
     Module: irc
 
   resetinvites <channel>
-    Description: removes all invite on the channel that aren't in the bot's
+    Description: removes all invites on the channel that aren't in the bot's
       invite list and refreshes any invites that should be on the channel
       but aren't
     Returns: nothing
@@ -1353,7 +1366,7 @@ marked with vertical bars (|) on the left.
 
   encrypt <key> <string>
     Returns: encrypted string (using the currently loaded encryption module),
-      encoded into ascii using base-64
+      encoded into ASCII using base-64
     Module: encryption
 
   decrypt <key> <encrypted-base64-string>
@@ -1669,7 +1682,7 @@ marked with vertical bars (|) on the left.
            mode does not take an argument. Flags are ignored. The bot's
            automatic response to a mode change will happen AFTER all
            matching Tcl procs are called. The mask will be matched against
-           '#channel nick!user@host' and can contain wildcards.
+           '#channel +/-modes' and can contain wildcards.
 
            If it is a server mode, nick will be "", user@host is the server
            name, and handle is *.
@@ -1698,7 +1711,7 @@ marked with vertical bars (|) on the left.
 
          Description: dest will be a nickname (the bot's nickname, obviously)
            or channel name. keyword is the ctcp command (which can contain
-           wildcards, and text may be empty. If the proc returns 0, the bot
+           wildcards), and text may be empty. If the proc returns 0, the bot
            will attempt its own processing of the ctcp command.
          Module: server
 

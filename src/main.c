@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.80 2002/01/16 03:24:17 guppy Exp $
+ * $Id: main.c,v 1.81 2002/03/11 05:17:01 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -81,8 +81,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.6.9";
-int	egg_numver = 1060900;
+char	egg_version[1024] = "1.6.10";
+int	egg_numver = 1061000;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -714,8 +714,13 @@ int main(int argc, char **argv)
 #include "patch.h"
   /* Version info! */
   egg_snprintf(ver, sizeof ver, "eggdrop v%s", egg_version);
-  egg_snprintf(version, sizeof version, "Eggdrop v%s (C) 1997 Robey Pointer (C) 2002 Eggheads",
+#ifdef EASTER_EGG
+  egg_snprintf(version, sizeof version, "Easterdrop v%s (C) 1997 Robey Pointer (C) 2002 Eggheads",
 	       egg_version);
+#else
+  egg_snprintf(version, sizeof version, "Eggdrop v%s (C) 1997 Robey Pointer (C) 2002 Eggheads",
+               egg_version);
+#endif
   /* Now add on the patchlevel (for Tcl) */
   sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);
   strcat(egg_version, egg_xtra);

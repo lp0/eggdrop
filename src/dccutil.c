@@ -6,7 +6,7 @@
  *   memory management for dcc structures
  *   timeout checking for dcc connections
  *
- * $Id: dccutil.c,v 1.36 2002/03/07 15:41:17 guppy Exp $
+ * $Id: dccutil.c,v 1.38 2002/03/27 04:27:29 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -238,7 +238,7 @@ void dcc_chatter(int idx)
 	i = 0;
       dcc[idx].u.chat->channel = i;
       if (dcc[idx].u.chat->channel >= 0) {
-	if (dcc[idx].u.chat->channel < 100000) {
+	if (dcc[idx].u.chat->channel < GLOBAL_CHANS) {
 	  botnet_send_join_idx(idx, -1);
 	}
       }
@@ -314,36 +314,17 @@ void dcc_remove_lost(void)
  */
 void tell_dcc(int zidx)
 {
-  int i, j, x = 0, y;
+  int i, j, k;
   char other[160];
 
- /* search for max. nick size */
-  for (i = 0; i < dcc_total; i++)
-    {
-      if ((y = strlen(dcc[i].nick)) > x)
-        {
-          x = y;
-        }
-    }
- /* check for bounds */
-  if (x < 9)
-    x = 9;
-  else if (x > 32)
-    x = 32;
-  y = x - 9;
-
-  spaces[y] = 0;
-  dprintf(zidx, "SOCK ADDR     PORT  NICK     %s HOST              TYPE\n", spaces);
- /* make dashes */
-  for (i = 0; i < y; i++)
-    spaces[i] = '-';
-  dprintf(zidx, "---- -------- ----- ---------%s ----------------- ----\n", spaces);
-  for (i = 0; i <= y; i++)
-    spaces[i] = ' ';
-
+  spaces[HANDLEN - 9] = 0;
+  dprintf(zidx, "SOCK ADDR     PORT  NICK     %s HOST              TYPE\n"
+	  ,spaces);
+  dprintf(zidx, "---- -------- ----- ---------%s ----------------- ----\n"
+	  ,spaces);
+  spaces[HANDLEN - 9] = ' ';
   /* Show server */
-  for (i = 0; i < dcc_total; i++)
-    {
+  for (i = 0; i < dcc_total; i++) {
     j = strlen(dcc[i].host);
     if (j > 17)
       j -= 17;
@@ -351,12 +332,15 @@ void tell_dcc(int zidx)
       j = 0;
     if (dcc[i].type && dcc[i].type->display)
       dcc[i].type->display(i, other);
-      else
-        {
+    else {
       sprintf(other, "?:%lX  !! ERROR !!", (long) dcc[i].type);
       break;
     }
-      dprintf(zidx, "%-4d %08X %5d %-*s %-17s %s\n", dcc[i].sock, dcc[i].addr, dcc[i].port, x, dcc[i].nick, dcc[i].host + j, other);
+    k = HANDLEN - strlen(dcc[i].nick);
+    spaces[k] = 0;
+    dprintf(zidx, "%-4d %08X %5d %s%s %-17s %s\n", dcc[i].sock, dcc[i].addr,
+	    dcc[i].port, dcc[i].nick, spaces, dcc[i].host + j, other);
+    spaces[k] = ' ';
   }
 }
 
@@ -371,7 +355,7 @@ void not_away(int idx)
   if (dcc[idx].u.chat->channel >= 0) {
     chanout_but(-1, dcc[idx].u.chat->channel,
 		"*** %s is no longer away.\n", dcc[idx].nick);
-    if (dcc[idx].u.chat->channel < 100000) {
+    if (dcc[idx].u.chat->channel < GLOBAL_CHANS) {
       botnet_send_away(-1, botnetnick, dcc[idx].sock, NULL, idx);
     }
   }
@@ -398,7 +382,7 @@ void set_away(int idx, char *s)
   if (dcc[idx].u.chat->channel >= 0) {
     chanout_but(-1, dcc[idx].u.chat->channel,
 		"*** %s is now away: %s\n", dcc[idx].nick, s);
-    if (dcc[idx].u.chat->channel < 100000) {
+    if (dcc[idx].u.chat->channel < GLOBAL_CHANS) {
       botnet_send_away(-1, botnetnick, dcc[idx].sock, s, idx);
     }
   }
@@ -516,7 +500,7 @@ int detect_dcc_flood(time_t * timer, struct chat_info *chat, int idx)
 
 	egg_snprintf(x, sizeof x, DCC_FLOODBOOT, dcc[idx].nick);
 	chanout_but(idx, chat->channel, "*** %s", x);
-	if (chat->channel < 100000)
+	if (chat->channel < GLOBAL_CHANS)
 	  botnet_send_part_idx(idx, x);
       }
       check_tcl_chof(dcc[idx].nick, dcc[idx].sock);
@@ -552,7 +536,7 @@ void do_boot(int idx, char *by, char *reason)
     egg_snprintf(x, sizeof x, DCC_BOOTED3, by, dcc[idx].nick,
 		 reason[0] ? ": " : "", reason);
     chanout_but(idx, dcc[idx].u.chat->channel, "*** %s.\n", x);
-    if (dcc[idx].u.chat->channel < 100000)
+    if (dcc[idx].u.chat->channel < GLOBAL_CHANS)
       botnet_send_part_idx(idx, x);
   }
   check_tcl_chof(dcc[idx].nick, dcc[idx].sock);
