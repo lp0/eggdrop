@@ -1,4 +1,0 @@
-%{+m}
-###  banner <text>
-   Displays a message to everyone currently using the bot's party line
-   or file area -- useful for announcing that the bot will go down, etc.

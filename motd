@@ -1,5 +1,19 @@
-Hey!  This is a new eggdrop bot, and nobody has edited the
-MOTD file yet!  :)
+    ____                __ 
+   / __/___ _ ___ _ ___/ /____ ___   ___ 
+  / _/ / _ `// _ `// _  // __// _ \ / _ \   
+ /___/ \_, / \_, / \_,_//_/   \___// .__/ 
+      /___/ /___/                 /_/
+           ___    ____    ___   
+          <  /   |_  /   / _ \
+          / /_  _/_ < _ / // /
+         /_/(_)/____/(_)\___/ (c) Robey Pointer 1997
 
-It's the file called "motd", although the filename can be
-changed (check the config file).
+
+Hey %b%N!%b  My name is %b%B%b and I am running %b%V%b, on %b%U%b.
+Local time is now %b%T%b
+%{+n}
+You are an owner of this bot. Only +n users can see this! For more info,
+try %b.help set motd%b (please edit the %bmotd%b file in your bot's directory)
+
+
+%{-}

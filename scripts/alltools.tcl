@@ -2,26 +2,13 @@
 # toolbox is Authored by cmwagner@sodre.net
 # toolkit is Authored by (Someone claim this)[unknown]
 # moretools is Authored by David Sesno(walker@shell.pcrealm.net)
+# modified for 1.3.0 bots by TG
+
 ###################
 
 # Descriptions of ALL the avaliable commands:
 ## (toolkit):
-# newflag <flag>
-#   creates a new flag in the next empty slot.  on success it returns
-#   1.  if all the user-defined flags are full (currently there are 10
-#   available), or if the flag you're asking for is invalid or already
-#   being used, it returns 0.
-#
-# user-set <handle> <key> <data>
-#   stores data about a user in the 'xtra' field of the user record.
-#   for example:
-#     userstore robey points 5
-#   puts "5" under "points" for robey.  there's a limited amount of
-#   space in the 'xtra' field for a user record so don't go crazy.
-#
-# user-get <handle> <key>
-#   gets data that was previously stored with 'userstore'.  if there
-#   was no info stored under that key, a blank string is returned.
+# newflag <flag> - REMOVED numeric flags are no longer supported in this way
 #
 # putmsg <nick> <text>
 #   sends a message to someone on irc
@@ -102,7 +89,7 @@
 
 # So scripts can see if allt is loaded.
 set alltools_loaded 1
-set allt_version 100
+set allt_version 101
 
 # For backward comptibility.
 set toolbox_revision 1005
@@ -178,49 +165,7 @@ proc realtime {} {
 }
 
 proc iso {nick chan1} {
- if {[matchattr [nick2hand $nick $chan1] o] || [matchchanattr [nick2hand $nick $chan1] o $chan1]} {
-  return 1
-  break
- }
- return 0
-}
-
-proc newflag {flag} {
-  foreach i {1 2 3 4 5 6 7 8 9 0} {
-    global flag$i
-    if {[eval set flag$i] == $i} {
-      set flag$i $flag
-      if {[eval set flag$i] != $flag} { return 0 }
-      return 1
-    }
-  }
-  return 0
-}
-
-proc user-get {handle key} {
-  set xtra [getxtra $handle]
-  for {set i 0} {$i < [llength $xtra]} {incr i} {
-    set this [lindex $xtra $i]
-    if {[string compare [lindex $this 0] $key] == 0} {
-      return [lindex $this 1]
-    }
-  }
-  return ""
-}
-
-proc user-set {handle key data} {
-  set xtra [getxtra $handle]
-  # is key already there?
-  for {set i 0} {$i < [llength $xtra]} {incr i} {
-    set this [lindex $xtra $i]
-    if {[string compare [lindex $this 0] $key] == 0} {
-      set this [list $key $data]
-      setxtra $handle [lreplace $xtra $i $i $this]
-      return
-    }
-  }
-  lappend xtra [list $key $data]
-  setxtra $handle $xtra
+ return [matchattr [nick2hand $nick $chan1] o|o $chan1]
 }
 
 proc putmsg {nick text} {

@@ -9,41 +9,24 @@ action.fix.tcl
 
 alltools.tcl
    toolbox.tcl, toolkit.tcl and a few more tools all in 1 file
-   
-compat.tcl
-   compatability script for really old eggdrop versions
+   toolbox.tcl
+      cmwagner's collection of handy proc's
+   toolkit.tcl
+      a few useful proc's that may be required by other Tcl scripts
 
-console.tcl
-   saves and restores users' console levels
-
-dike.tcl
-   detects floodnet attacks and puts offending floodnet members on
-   ignore, while sharing the floodnet hostmasks with other bots on
-   your botnet (good example of botnet coordination)
+botchk
+   A shell script which can be used for auto-starting the bot via 'cron'.
 
 getops-1.8.tcl
    a way to get ops from other bots on the botnet (if they're on the
    same channel)
-
-local.tcl
-   uses the FILT binding to send text starting with ' to local users
-   only (not the rest of the botnet)
-
+   
 ques3.tcl
    makes web pages of who's on each channel, updated periodically
    (requires toolkit.tcl)
 
-samples.tcl
-   adds several commands (more good examples)
-
-toolbox.tcl
-   cmwagner's collection of handy proc's
-
-toolkit.tcl
-   a few useful proc's that may be required by other Tcl scripts
-
-unserv.tcl
-   removes a server from the internal server list
+userinfo1.0.tcl
+   cute user info settings things 
  
 wire.tcl
    encrypted communications over a botnet

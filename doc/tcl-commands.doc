@@ -3,11 +3,15 @@ of the normal Tcl built-in commands are still there, of course.  But you
 can also use these to manipulate features of the bot.  They are listed
 according to category.
 
-NOTICE:  This list is accurate for the v1.1 series of eggdrop!
-SCRIPTS WHICH WERE WRITTEN FOR v0.9 OR v1.0 WILL PROBABLY NOT WORK WITHOUT
-MODIFICATION.  Commands which have been changed in the v1.1 series (or are
-just new commands) are marked with vertical bars on the left.
+NOTICE:  This list is accurate for the v1.3 series of eggdrop!
+SCRIPTS WHICH WERE WRITTEN FOR v0.9 OR v1.0 OR v1.1 WILL PROBABLY NOT WORK
+WITHOUT MODIFICATION.  Commands which have been changed in the v1.3 series
+(or are just new commands) are marked with vertical bars on the left.
 
+***### CORE EGGDROP COMMANDS ###***
+
+these are commands provided in the core part of eggdrop, for module
+specific commands, see later.
 
 
 *** OUTPUT COMMANDS ***
@@ -36,14 +40,14 @@ just new commands) are marked with vertical bars on the left.
     returns: nothing
 
   putloglev <level(s)> <channel> <text>
-|   sends text to the log, tagged with all of the valid levels given (use
-|     "*" to indicate all log levels)
+    sends text to the log, tagged with all of the valid levels given (use
+    "*" to indicate all log levels)
     returns: nothing
 
   dumpfile <nick> <filename>
-    dumps out a file from the text directory to a user on IRC via
-      msg (one line per msg); %( and %[ won't work because it will
-      assume the user is not an op or master
+    dumps out a file from the help/text directory to a user on IRC via
+      msg (one line per msg); the user has no flags, so the 
+      flag bindings wont work within the file.
 
 
 *** USER RECORD MANIPULATION COMMANDS ***
@@ -59,38 +63,66 @@ just new commands) are marked with vertical bars on the left.
     returns: the handle found, or "*" if none
 
   userlist [flags]
-    returns: a list of the handles of users on the bot -- if you specify
-      flags, only users who have ALL of those flags will be in the list
-
+    returns: a list of the handles of users on the bot
+|     you can use the new flag matching system here,
+|     usage: [global]{&/|}[chan]{&/|}[bot]
+|     matchs the flags relvantly, (chan matches vs anywhere), & specifies
+|     and when match, | specifies or, only the first of these is relevant
+|     the default is or.
+      
   passwdok <handle> <pass>
     checks the password given against the user's password -- if the user has
       not set a password, will always return "1"; check against the password
       "" (a blank string) to find out if a user has no password set
     returns: "1" if password matches for that user; "0" if not
 
-  chpass <handle> [pass]
-|   attempts to set a new password for a user, if that user exists; if you
-|     leave off the password, it's reset (the user no longer has a password)
+| getuser <handle> <entry-type> [extra info]
+|   this is a generic interface to the new generic userfile support, it
+|   return info specific to each entry-type, valid entry types are:
+|     BOTFL - returns the current bot-specific flags for the user 
+|             (if it's a bot :)
+|     BOTADDR - (another bot-only thing :) returns a list containing
+|             the bots address, the bots telnet port, and it's relay port.
+|     HOSTS - returns a list of the host for the user
+|     LASTON - returns a list containing the unixtime last seen, 
+|             and the last seen place.
+|     INFO   - returns the user's global info line
+|     XTRA   - returns the old xtra info
+|     COMMENT - returns the master-visible only comment for the user
+|     EMAIL  - returns the users email address
+|     URL    - returns the users url address 
+  
+| setuser <handle> <entry-type> [extra info]
+|   this is the counterpart of getuser, it lets you set the various values
+|   extra ones not supported about :
+|     PASS - use this to set a users password (no 3rd arg will clear it)
 
-| chnick <old-handle> <new-handle>
-|   changes a user's handle
-|   returns: "1" on success; "0" if the handle is already used, the handle
-|     is invalid, or the user can't be found
+  chnick <old-handle> <new-handle>
+    changes a user's handle
+    returns: "1" on success; "0" if the handle is already used, the handle
+      is invalid, or the user can't be found
 
-| chattr <handle> [changes [channel]]
-|   changes the attributes for a user record, if you include any -- changes
-|     are of the form "+f", "-o", "+dk", "-o+d", etc; if a channel is 
-|     specified, the channel-specific flags for that channel are altered
-|   returns: new flags for the user (if you made no changes, returns current
-|     flags); if a channel was specified, the channel-specific flags for that
-|     channel are returned -- returns "*" if that user does not exist
+  chattr <handle> [changes [channel]]
+    changes the attributes for a user record, if you include any -- changes
+      are of the form "+f", "-o", "+dk", "-o+d", etc; if a channel is 
+      specified, the channel-specific flags for that channel are altered
+|     you can now use the +o|-o #channel format here too.
+    returns: new flags for the user (if you made no changes, returns current
+      flags); if a channel was specified, the channel-specific flags for that
+      channel are returned -- returns "*" if that user does not exist
 
-  matchattr <handle> <flags>
-    returns: "1" if the specified user has ALL the flags requested
+| botattr <handle> [changes [channel]]
+|   similar to chattr except for bot attributes rather than normal user
+|   attributes, this includes the channel-specific +s share flag
+    
+  matchattr <handle> <flags> [channel]
+|   returns: "1" if the specified user has the matching flags.
+|     (using the new matching system)   
 
-| matchchanattr <handle> <flags> <channel>
-|   returns: "1" if the specified user has ALL the channel-specific flags
-|     requested for that channel
+  matchchanattr <handle> <flags> <channel>
+|   returns: identical to previous command with a channel argument, 
+|            heck they're the same command now :) dont rely on this 
+|            command in new scripts it will go eventually :)
 
   adduser <handle> <hostmask>
     creates a new user entry with the handle and hostmask given (with no pass-
@@ -115,102 +147,59 @@ just new commands) are marked with vertical bars on the left.
     returns: "1" on success, "0" if that hostmask wasn't in the list or the
       user does not exist
 
-| addchanrec <handle> <channel>
-|   add a channel record for the user
-|   returns: "1" on success, "0" if the user does not exist or if there
-|     isn't such a channel
-|
-| delchanrec <handle> <channel>
-|   removes a channel record for the user; this includes all associated
-|    channel flags
-|   returns: "1" on success, "0" if the user does not exist or if there
-|     isn't such a channel
+  addchanrec <handle> <channel>
+    add a channel record for the user
+    returns: "1" on success, "0" if the user does not exist or if there
+      isn't such a channel
+
+  delchanrec <handle> <channel>
+    removes a channel record for the user; this includes all associated
+     channel flags
+    returns: "1" on success, "0" if the user does not exist or if there
+      isn't such a channel
 
   gethosts <handle>
     returns: the hostmask list for that user if there are any, "none" if
       the user exists but there are no hostmasks, "" if the user doesn't
       exist
 
-  getinfo <handle>
-    returns: info line for that user ("" if none exists); always returns
-      an empty string for bots; if the user's info line is locked (ie, that
-      user can't change their info line), the first character of the info
-      line will be '@'
+  getchaninfo <handle> <channel>
+    returns: info line for a specific channel (behaves just like 'getinfo')
 
-| getchaninfo <handle> <channel>
-|   returns: info line for a specific channel (behaves just like 'getinfo')
+  setchaninfo <handle> <channel> <info>
+   sets the info line on a specific channel for a user
+   returns: nothing
 
-  getaddr <handle>
-    returns: link address for that bot ("" if none exists); always returns
-      an empty string for non-bots
+  getchanlaston <handle>
+    returns: last channel the user was seen in.  returns an empty
+      string if the user has never been on any channel or if there is no
+      such user
 
-  getdccdir <handle>
-    returns: dcc directory for that user ("" if none exists)
+  getlaston <handle> <channel>
+    returns: last time that user was on that channel (in unixtime format);
+      may return 0 if the user has never been on that channel or if there
+      is no such user
 
-  getcomment <handle>
-    returns: comment for that user ("" if none exists)
-
-  getemail <handle>
-    returns: email address for that user ("" if none exists)
-
-  getxtra <handle>
-    returns: xtra info for a user ("" if none exists)
-
-| getchanlaston <handle>
-|   returns: last channel the user was seen in.  returns an empty
-|     string if the user has never been on any channel or if there is no
-|     such user
-
-| getlaston <handle> <channel>
-|   returns: last time that user was on that channel (in unixtime format);
-|     may return 0 if the user has never been on that channel or if there
-|     is no such user
-
-  setinfo <handle> <info>
-    sets the info line for a user
+  setlaston <handle> <channel> [timestamp]
+    sets the last time the user was on the channel to the current time (or
+      the time you specify, in unixtime)
     returns: nothing
 
-|  setchaninfo <handle> <channel> <info>
-|   sets the info line on a specific channel for a user
-|   returns: nothing
-
-  setdccdir <handle> <dccdir>
-    sets the dcc directory for a user
+  newchanban <channel> <ban> <creator> <comment> [lifetime] [options]
+    adds a ban to the enforced ban list of a channel; creator is given
+      credit for the ban in the ban list; lifetime is specified in
+      minutes; if lifetime is not specified, ban-time (usually 60) is
+      used; setting the lifetime to 0 makes it a permanent ban; valid
+      options are:
+        sticky     forces the ban to be always active on a channel, even
+                     with dynamic bans on
+        none       (no effect)
     returns: nothing
 
-  setcomment <handle> <comment>
-    sets the comment for a user
+  newban <ban> <creator> <comment> [lifetime] [options]
+    adds a ban to the global ban list (which takes effect on all channels);
+      other arguments work exactly like newchanban
     returns: nothing
-
-  setemail <handle> <email>
-    sets the email address for a user
-    returns: nothing
-
-  setxtra <handle> <xtrastuff>
-    sets the xtra info for a user (this field exists specifically to be used
-      by Tcl scripts)
-    returns: nothing
-
-| setlaston <handle> <channel> [timestamp]
-|   sets the last time the user was on the channel to the current time (or
-|     the time you specify, in unixtime)
-|   returns: nothing
-
-| newchanban <channel> <ban> <creator> <comment> [lifetime] [options]
-|   adds a ban to the enforced ban list of a channel; creator is given
-|     credit for the ban in the ban list; lifetime is specified in
-|     minutes; if lifetime is not specified, ban-time (usually 60) is
-|     used; setting the lifetime to 0 makes it a permanent ban; valid
-|     options are:
-|       sticky     forces the ban to be always active on a channel, even
-|                    with dynamic bans on
-|       none       (no effect)
-|   returns: nothing
-
-| newban <ban> <creator> <comment> [lifetime] [options]
-|   adds a ban to the global ban list (which takes effect on all channels);
-|     other arguments work exactly like newchanban
-|   returns: nothing
 
   killchanban <channel> <ban>
     removes a ban from the enforced ban list for a channel
@@ -267,23 +256,14 @@ just new commands) are marked with vertical bars on the left.
     loads the userfile from disk (replacing whatever's in memory)
     returns: nothing
 
-| backup
-|   makes a simple backup of the userfile that's on disk
-|   returns: nothing
+  backup
+    makes a simple backup of the userfile that's on disk
+    returns: nothing
 
   getting-users
     returns: "1" if the bot is currently downloading a userfile from
       a sharebot (and hence, user records are about to drastically
       change), "0" if not
-
-| notes <user> [number]
-|   gets info on notes stored for a user
-|   returns: (if no numbers specified) number of notes for user,
-|            -1 if no such user, -2 if notefile failure
-|            (if a note number specified) the number'th note for the
-|            user, -1 if no such user, -2 if notefile failure, 0 if
-|            no such note. the note is a list, first element from,
-|            2nd element timestamp, 3rd element the note itself
 
 *** CHANNEL COMMANDS ***
 
@@ -308,13 +288,13 @@ just new commands) are marked with vertical bars on the left.
       monitor that channel
     returns: nothing
 
-| savechannels
-|   saves the channel settings to the channel-file if one is defined.
-|   returns: nothing
+  savechannels
+    saves the channel settings to the channel-file if one is defined.
+    returns: nothing
     
-| loadchannels
-|   reloads the channel settings from the channel-file if one is defined.
-|   returns: nothing
+  loadchannels
+    reloads the channel settings from the channel-file if one is defined.
+    returns: nothing
     
   channels
     returns: list of the channels the bot is monitoring (or trying to)
@@ -350,32 +330,35 @@ just new commands) are marked with vertical bars on the left.
     returns: "1" if that is a ban on the bot's channel
 
   chanbans <channel>
-    returns: a list of the current bans on the channel
+    returns: a list of the current bans on the channel, each element is
+      of the form {ban bywho age} age is seconds from the bots POV
 
-| resetbans <channel>
-|   removes all bans on the channel that aren't in the bot's ban list, and
-|     refreshes any bans that should be on the channel but aren't
-|   returns: nothing
+  resetbans <channel>
+    removes all bans on the channel that aren't in the bot's ban list, and
+      refreshes any bans that should be on the channel but aren't
+    returns: nothing
 
-| resetchan <channel>
-|   rereads in the channel info from the server
-|   returns: nothing
+  resetchan <channel>
+    rereads in the channel info from the server
+    returns: nothing
 
   getchanhost <nickname> <channel>
     returns: user@host of that person if they are on the channel; {} otherwise
 
-| getchanjoin <nickname> <channel>
-|   returns: timestamp of when that person joined the channel    
+  getchanjoin <nickname> <channel>
+    returns: timestamp of when that person joined the channel    
 
   onchansplit <nick> <channel>
     returns: "1" if that nick is split from the channel; "0" otherwise
 
-| chanlist <channel> [flags[&chanflags]]
-|   flags are any flags that are global flags, the '&' denotes to look for
-|   channel specific flags.  Examples:
-|      n         (Botowner)
-|      &n        (Channel owner)
-|      o&m       (Global op, Channel master)
+  chanlist <channel> [flags[&chanflags]]
+    flags are any flags that are global flags, the '&' denotes to look for
+    channel specific flags.  Examples:
+       n         (Botowner)
+       &n        (Channel owner)
+       o&m       (Global op, Channel master)
+|   now you can use even more complex matching of flags, including +&- flags
+|   and & or | (and or or) matching
     returns: list of nicknames currently on the bot's channel that have all
        of the flags specified; if no flags are given, all of the nicknames
        are returned
@@ -405,23 +388,18 @@ just new commands) are marked with vertical bars on the left.
   topic <channel>
     returns: string of the current topic on the specified channel
 
-| validchan <channel>
-|   checks if the bot is monitoring that channel
-|   returns: 1 if the channel exists, 0 if not
-|
-| isdynamic <channel>
-|   returns: 1 if the channel is an existing dynamic channel, 0 if not
+  validchan <channel>
+    checks if the bot is monitoring that channel
+    returns: 1 if the channel exists, 0 if not
+ 
+  isdynamic <channel>
+    returns: 1 if the channel is an existing dynamic channel, 0 if not
 
 *** DCC COMMANDS ***
 
   putdcc <idx> <text>
     sends text to the dcc user indicated
     returns: nothing
-
-| putidx <idx> <text>
-|   useful to  use in script connections, same as putdcc, but a little faster
-|   sends text to the idx indicated
-|   returns: nothing
 
   dccbroadcast <message>
     sends your message to everyone on the party line on the bot net, in the
@@ -433,17 +411,17 @@ just new commands) are marked with vertical bars on the left.
       a form exactly like dccbroadcast does -- valid channels are 0 thru 99999
     returns: nothing
 
-| boot <user@bot> [reason]
-|    boot's a user from the partyline
-|    returns: nothing
+  boot <user@bot> [reason]
+     boot's a user from the partyline
+     returns: nothing
 
-| restart
-|   rehash's the bot and kills all timers
-|   returns: nothing
+  restart
+    rehash's the bot and kills all timers
+    returns: nothing
 
-| rehash
-|   rehash's the bot
-|   returns: nothing
+  rehash
+    rehash's the bot
+    returns: nothing
 
   dccsimul <idx> <text...>
     simulates text typed in by the dcc user specified -- note that in v0.9,
@@ -461,8 +439,8 @@ just new commands) are marked with vertical bars on the left.
   idx2hand <idx>
     returns: handle of the user with that idx
 
-| valididx <idx>
-|   returns: "1" if the idx currently exists; "0" if not
+  valididx <idx>
+    returns: "1" if the idx currently exists; "0" if not
 
   getchan <idx>
     returns: the current party line channel for a user on the party line --
@@ -513,7 +491,7 @@ just new commands) are marked with vertical bars on the left.
       four elements: idx, nickname, hostname, and type; type will be "chat",
       "files", "bot", "file_receiving", "file_sending", "file_send_pending",
       or "script" (or "socket" for connections that haven't been put under
-      'control' yet)
+|     'control' yet) or any new dcc type that gets added.
 
   whom <chan>
     returns: list of people on the botnet who are on that channel (0 is
@@ -537,165 +515,41 @@ just new commands) are marked with vertical bars on the left.
       "", the user is marked un-away
     returns: nothing
 
-  assoc <chan> [name]
-    sets the name associated with a botnet channel, if you specify one
-    returns: current name for that channel, if any
-
-  killassoc <chan>
-    removes the name associated with a botnet channel, if any exists
-    returns: nothing
-
   connect <host> <port>
     makes an outgoing connection attempt and creates a dcc entry for it;
       a 'control' command should be used immediately after a successful
       'connect' so no input is lost
     returns: idx of the new connection
 
-| listen <port> <type> [options]
-|   opens a listening port to accept incoming telnets; type must be one of
-|     "bots", "all", "users", "script", or "off":
-| listen <port> bots [mask]
-|   accepts connections from bots only; the optional mask is used to identify
-|     permitted bot names; if the mask begins with '@' it is interpreted to
-|     be a mask of permitted hosts to accept connections from
-|   returns: port #
-| listen <port> users [mask]
-|   accepts connections from users only (no bots); the optional mask is used
-|     to identify permitted nicknames; if the mask begins with '@' it is
-|     interpreted to be a mask of permitted hosts to accept connections from
-|   returns: port #
-| listen <port> all [mask]
-|   accepts connections from anyone; the optional mask is used to identify
-|     permitted nicknames/botnames; if the mask begins with '@' it is
-|     interpreted to be a mask of permitted hosts to accept connections from
-|   returns: port #
-| listen <port> script <proc>
-|   accepts connections which are immediately routed to a proc; the proc
-|     is called with one parameter: the idx of the new connection
-|   returns: port #
-| listen <port> off
-|   stop listening at a port
-|   returns: nothing
+  listen <port> <type> [options]
+    opens a listening port to accept incoming telnets; type must be one of
+      "bots", "all", "users", "script", or "off":
+  listen <port> bots [mask]
+    accepts connections from bots only; the optional mask is used to identify
+      permitted bot names; if the mask begins with '@' it is interpreted to
+      be a mask of permitted hosts to accept connections from
+    returns: port #
+  listen <port> users [mask]
+    accepts connections from users only (no bots); the optional mask is used
+      to identify permitted nicknames; if the mask begins with '@' it is
+      interpreted to be a mask of permitted hosts to accept connections from
+    returns: port #
+  listen <port> all [mask]
+    accepts connections from anyone; the optional mask is used to identify
+      permitted nicknames/botnames; if the mask begins with '@' it is
+      interpreted to be a mask of permitted hosts to accept connections from
+    returns: port #
+  listen <port> script <proc>
+    accepts connections which are immediately routed to a proc; the proc
+      is called with one parameter: the idx of the new connection
+    returns: port #
+  listen <port> off
+    stop listening at a port
+    returns: nothing
 
   dccdumpfile <idx> <filename>
-    dumps out a file from the text directory to a dcc chat user; %( and
-      %[ will work (unlike 'dumpfile')
-
-
-*** FILE SYSTEM COMMANDS ***
-
-  setpwd <idx> <dir>
-    changes the directory of a file system user, in exactly the same way
-      as a 'cd' command would (ie, the directory can be specified relative
-      or absolute)
-    returns: nothing
-
-  getpwd <idx>
-    returns: the current directory of a file system user
-
-  getfiles <dir>
-    returns: list of files in the directory given; the directory is relative
-      to dcc-path
-
-  getdirs <dir>
-    returns: list of subdirectories in the directory given; the directory
-      is relative to dcc-path
-
-  dccsend <filename> <ircnick>
-    attempts to start a dcc file transfer to the given nick; the filename must
-      be specified either by full pathname or in relation to the bot's startup
-      directory
-    returns: "0" on success, "1" if the dcc table is full (too many con-
-      nections), "2" if it can't open a socket for the transfer, "3" if the
-      file doesn't exist, and "4" if the file was queued for later transfer
-      (which means that person has too many file transfers going right now)
-
-  filesend <idx> <filename> [ircnick]
-    like dccsend, except it operates for a current filesystem user, and
-      the filename is assumed to be a relative path from that user's
-      current directory
-    returns: "0" on failure; "1" on success (either an immediate send
-      or a queued send)
-
-  setdesc <dir> <file> <desc>
-    sets the description for a file in a file system directory; the
-      directory is relative to the dcc-path
-    returns: nothing
-
-  getdesc <dir> <file>
-    returns: the description for a file in the file system, if one
-      exists
-
-  setowner <dir> <file> <handle>
-    changes the owner for a file in the file system; the directory is
-      relative to the dcc-path
-    returns: nothing
-
-  getowner <dir> <file>
-    returns: the owner of a file in the file system
-
-  setlink <dir> <file> <link>
-    creates or changes a linked file (a file that actually exists on
-      another bot); the directory is relative to dcc-path
-    returns: nothing
-
-  getlink <dir> <file>
-    returns: the link for a linked file, if it exists
-
-  getfileq <handle>
-    returns: list of files queued by someone; each item in the list will be
-      a sublist with two elements: nickname the file is being sent to, and
-      the filename
-
-| setuploads <handle> <#uploads> <size-in-k>
-|   sets a user's statistics on the number of files uploaded and the total
-|     kilobytes uploaded
-|   returns: nothing
-|
-| getuploads <handle>
-|   returns: list containing upload statistics for a user: the first
-|     element is the number of files uploaded; the second element is the
-|     total kilobytes uploaded
-|
-| setdnloads <handle> <#dnloads> <size-in-k>
-|   like setuploads, but sets the download statistics
-|   returns: nothing
-|
-| getdnloads <handle>
-|   returns: list containing download statistics, in the same format
-|     as getuploads
-|
-| mkdir <directory> [required-flags]
-|   creates a directory in the files system, only users with the
-|   required flags may access
-|   returns:
-|     0 on success
-|     1 on can't create directory
-|     2 on directory exists but is not a directory
-|
-| rmdir <directory>
-|   removes a directory from the file system.
-|   return: 0 on success, 1 on failure
-|
-| mv <file> <destination>
-|   moves the file from it's source to the given destination, file
-|   can also be a mask, eg /incoming/* provided the destination is
-|   a directory
-|   returns: number of files copied on success or negative numbers
-|     to indicat errors: -1 = invalid source file, -2 = invalid desto
-|     -3 = you're trying to copy onto itself (duh!) -4 = no matchs found
-|
-| cp <file> <destination>
-|   exactly the same as mv except it leaves the original file there
-|   aswell
-|   returns: same as mv
-|
-| getflags <dir>
-|   returns: the flags required to access this directory
-|
-| setflags <dir> [flags]
-|   sets the flags required to access the directory
-|   returns: 0 on success, -1 on failure
+    dumps out a file from the text directory to a dcc chat user;
+    the flag matching that's used everywhere else works here too
 
 *** MISCELLANEOUS COMMANDS ***
 
@@ -704,11 +558,16 @@ just new commands) are marked with vertical bars on the left.
       <attr(s)> are the flags that a user must have to trigger this command;
       the <command-name> for each type is listed below; <proc-name> is the
       name of the Tcl procedure to call for this command (see below for the
-|     format of the procedure call); if the proc-name is omitted, no binding
-|     is added -- instead, the current binding is returned (if it's stackable,
-|     a list of the current bindings is returned)
-|   returns: name of the command that was added, or (if proc-name was omitted),
-|     a list of the current bindings for this command
+      format of the procedure call); if the proc-name is omitted, no binding
+      is added -- instead, the current binding is returned (if it's stackable,
+      a list of the current bindings is returned)
+|     yes, you can use the new flag binding method here too, and this is
+|     where it becomes truely phearfull since you may never need to check
+|     attr's inside functions again...imagine:
+|        bind pub -o&+o command command_proc
+|     to only allow channel-spec ops to use it! no problem! works fine!
+    returns: name of the command that was added, or (if proc-name was omitted),
+      a list of the current bindings for this command
 
   unbind <type> <attr(s)> <command-name> <proc-name>
     removes a previously-made binding
@@ -758,9 +617,9 @@ just new commands) are marked with vertical bars on the left.
   time
     returns: the current time in 24-hour format (ie "14:15")
 
-| strftime <formatstring> [time]
-|   returns: a formatted string of time using standard strftime
-|     format, uses the value of time, or now if no time specified
+  strftime <formatstring> [time]
+    returns: a formatted string of time using standard strftime
+      format, uses the value of time, or now if no time specified
 
   date
     returns: the current date in standard format (ie "21 Dec 1994")
@@ -813,10 +672,13 @@ just new commands) are marked with vertical bars on the left.
   die [reason]
     causes the bot to log a fatal error and exit completely; if no reason
     is given, "EXIT" is used
+  
+| unames
+|  returns:  The current operating system the bot is using.
 
 
 GLOBAL VARIABLES:
-  (All config-file variables are global, too.  But these three variables
+  (All config-file variables are global, too.  But these variables
   are set by the bot.)
 
   botnick
@@ -839,7 +701,7 @@ GLOBAL VARIABLES:
 		MM is the Major release number
 		NN is the Minor release number
 		RR is the sub-release number
-		PP is the patch leavel for that sub-release
+		PP is the patch level for that sub-release
 
   uptime
     unixtime value for when the bot was started
@@ -847,8 +709,8 @@ GLOBAL VARIABLES:
   lastbind
     The last command binding which triggered.   This allows you to 
     identify which command triggered a tcl routine.
-
   
+
 COMMAND EXTENSION:
 
 You can use the 'bind' command to attach Tcl procedures to certain events.
@@ -892,7 +754,8 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
        the same as DCC, except this is triggered if the user is in the file
        area instead of the party line
-
+       (THIS IS ONLY AVALIABLE WHEN THE filesys.so MODULE IS LOADED)
+       
   (4)  PUB
        bind pub <flags> <command> <proc>
        procname <nick> <user@host> <handle> <channel> <args>
@@ -1000,20 +863,20 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        just like ctcp, but this is triggered for a ctcp-reply (ie, ctcp
        embedded in a notice instead of a privmsg)
 
-| (17) RAW   (stackable)
-|      bind raw <flags> <keyword-mask> <proc>
-|      procname <from> <keyword> <args...>
-|
-|      previous versions of eggdrop required a special compile option to
-|      enable this binding, but it's now standard; the mask is checked
-|      against the keyword (either a numeric like "368" or a keyword like
-|      "PRIVMSG"); from will be the server name or the source user (depending
-|      on the keyword); flags are ignored; the order of the arguments is
-|      identical to the order that the IRC server sends to the bot -- the
-|      pre-processing only splits it apart enough to determine the keyword;
-|      if the proc returns 1, eggdrop will not process the line any further
-|      (THIS COULD CAUSE YOUR BOT TO BEHAVE ODDLY IN SOME CASES)
-
+  (17) RAW   (stackable)
+       bind raw <flags> <keyword-mask> <proc>
+       procname <from> <keyword> <args...>
+ 
+       previous versions of eggdrop required a special compile option to
+       enable this binding, but it's now standard; the mask is checked
+       against the keyword (either a numeric like "368" or a keyword like
+       "PRIVMSG"); from will be the server name or the source user (depending
+       on the keyword); flags are ignored; the order of the arguments is 
+       identical to the order that the IRC server sends to the bot -- the
+       pre-processing only splits it apart enough to determine the keyword;
+       if the proc returns 1, eggdrop will not process the line any further
+       (THIS COULD CAUSE YOUR BOT TO BEHAVE ODDLY IN SOME CASES)
+       
   (18) BOT
        bind bot <flags> <command> <proc>
        proc-name <from-bot> <command> <args>
@@ -1051,7 +914,8 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        the file; the path is relative to the dcc directory (unless the file
        transfer was started by a script call to 'dccsend', in which case the
        path is the exact path given in the call to 'dccsend')
-
+       (THIS IS ONLY AVALIABLE WHEN THE transfer.so MODULE IS LOADED)
+       
   (22) RCVD   (stackable)
        bind rcvd <flags> <mask> <proc>
        proc-name <handle> <nick> <path/to/file>
@@ -1060,7 +924,8 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        against the user's handle; nick is the nickname on IRC that the file
        transfer originated from; the path is where the file ended up,
        relative to the dcc directory (usually this is your incoming dir)
-
+       (THIS IS ONLY AVALIABLE WHEN THE transfer.so MODULE IS LOADED)
+       
   (23) CHAT   (stackable)
        bind chat <flags> <mask> <proc>
        proc-name <nick> <channel#> <text>
@@ -1103,14 +968,14 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        someone who was split has rejoined; <mask> can contain wildcards,
        and contains channel and nick!user@host just like join
 
-| (28) FILT   (stackable)
-|      bind filt <flags> <mask> <proc>
-|      procname <idx> <text>
-|
-|      DCC party line and file system users have their text sent through
-|      filt before being processed; if the proc a blank string, the text
-|      is considered parsed; otherwise the bot will use the text returned
-|      from the proc and continue parsing that
+  (28) FILT   (stackable)
+       bind filt <flags> <mask> <proc>
+       procname <idx> <text>
+ 
+       DCC party line and file system users have their text sent through
+       filt before being processed; if the proc a blank string, the text
+       is considered parsed; otherwise the bot will use the text returned
+       from the proc and continue parsing that
 
   (29) FLUD   (stackable)
        bind flud <flags> <type> <proc>
@@ -1163,19 +1028,44 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
        flags is ignored; the mask is checked against the text
 
   (35) CHPT   (stackable)
-       bind chat <flags> <mask> <proc>
-       proc-name <bot> <nick> <sock>
+|      bind chat <flags> <mask> <proc>
+|      proc-name <bot> <nick> <sock> <chan>
 
        when someone parts a botnet channel, it invokes this binding;
-       flags is ignored; the mask is checked against the text
+       flags is ignored; the mask is checked against the channel
 
-| (36) TIME   (stackable)
-|      bind time - <mask> <proc>
-|      proc-name <bot> <min> <hour> <day> <month> <year>
-|      
-|      allows you to schedule procedure calls at certain times,
-|      mask matches 5 space seperated integers of the form:
-|      "min hour day month year"
+  (36) TIME   (stackable)
+       bind time - <mask> <proc>
+       proc-name <min> <hour> <day> <month> <year>
+       
+       allows you to schedule procedure calls at certain times,
+       mask matches 5 space seperated integers of the form:
+       "min hour day month year"
+ 
+  (37) AWAY   (stackable)
+       bind away - <mask> <proc>
+       proc-name <bot> <idx> <msg>
+       
+       triggers when a user goes away or comes back on the botnet
+       (msg == "" when returning)
+       
+  (38) LOAD   (stackable)
+       bind load - <mask> <proc>
+       proc-name <module>
+       
+       triggers when a module is loaded.
+
+  (38) UNLD   (stackable)
+       bind unld - <mask> <proc>
+       proc-name <module>
+       
+       triggers when a module is unloaded.
+
+  (39) NKCH   (stackable)
+       bind nkch - <mask> <proc>
+       proc-name <oldnick> <newnick>
+       
+       triggered whenever a local users nick is changed (in the userfile)
        
 (A) RETURN VALUES
 
@@ -1308,3 +1198,147 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
     ~  matches 1 or more space characters (can be used for whitespace
           between words)
  
+***### NOTES MODULE COMMANDS ###***
+
+these commands are provided by notes.so to allow you to store notes for 
+users to read later
+
+  notes <user> [number]
+    gets info on notes stored for a user
+    returns: (if no numbers specified) number of notes for user,
+             -1 if no such user, -2 if notefile failure
+             (if a note number specified) the number'th note for the
+             user, -1 if no such user, -2 if notefile failure, 0 if
+             no such note. the note is a list, first element from,
+             2nd element timestamp, 3rd element the note itself
+  
+  storenote <from> <to> <msg> <idx>
+    stores a note for later reading, notify idx of any results (use
+    idx == -1 for no notify).
+    return 0 on success non-0 on failure
+
+***### ASSOC MODULE COMMANDS ###***
+
+  assoc <chan> [name]
+    sets the name associated with a botnet channel, if you specify one
+    returns: current name for that channel, if any
+
+  killassoc <chan>
+    removes the name associated with a botnet channel, if any exists,
+    use 'killassoc &' to kill all assocs.
+    returns: nothing
+
+***### FILE SYSTEM MODULE COMMANDS ###***
+
+  setpwd <idx> <dir>
+    changes the directory of a file system user, in exactly the same way
+      as a 'cd' command would (ie, the directory can be specified relative
+      or absolute)
+    returns: nothing
+
+  getpwd <idx>
+    returns: the current directory of a file system user
+
+  getfiles <dir>
+    returns: list of files in the directory given; the directory is relative
+      to dcc-path
+
+  getdirs <dir>
+    returns: list of subdirectories in the directory given; the directory
+      is relative to dcc-path
+
+  dccsend <filename> <ircnick>
+    attempts to start a dcc file transfer to the given nick; the filename must
+      be specified either by full pathname or in relation to the bot's startup
+      directory
+    returns: "0" on success, "1" if the dcc table is full (too many con-
+      nections), "2" if it can't open a socket for the transfer, "3" if the
+      file doesn't exist, and "4" if the file was queued for later transfer
+      (which means that person has too many file transfers going right now)
+
+  filesend <idx> <filename> [ircnick]
+    like dccsend, except it operates for a current filesystem user, and
+      the filename is assumed to be a relative path from that user's
+      current directory
+    returns: "0" on failure; "1" on success (either an immediate send
+      or a queued send)
+
+  setdesc <dir> <file> <desc>
+    sets the description for a file in a file system directory; the
+      directory is relative to the dcc-path
+    returns: nothing
+
+  getdesc <dir> <file>
+    returns: the description for a file in the file system, if one
+      exists
+
+  setowner <dir> <file> <handle>
+    changes the owner for a file in the file system; the directory is
+      relative to the dcc-path
+    returns: nothing
+
+  getowner <dir> <file>
+    returns: the owner of a file in the file system
+
+  setlink <dir> <file> <link>
+    creates or changes a linked file (a file that actually exists on
+      another bot); the directory is relative to dcc-path
+    returns: nothing
+
+  getlink <dir> <file>
+    returns: the link for a linked file, if it exists
+
+  getfileq <handle>
+    returns: list of files queued by someone; each item in the list will be
+      a sublist with two elements: nickname the file is being sent to, and
+      the filename
+
+  setuploads <handle> <#uploads> <size-in-k>
+    sets a user's statistics on the number of files uploaded and the total
+      kilobytes uploaded
+    returns: nothing
+ 
+  getuploads <handle>
+    returns: list containing upload statistics for a user: the first
+      element is the number of files uploaded; the second element is the
+      total kilobytes uploaded
+ 
+  setdnloads <handle> <#dnloads> <size-in-k>
+    like setuploads, but sets the download statistics
+    returns: nothing
+ 
+  getdnloads <handle>
+    returns: list containing download statistics, in the same format
+      as getuploads
+ 
+  mkdir <directory> [required-flags]
+    creates a directory in the files system, only users with the
+    required flags may access
+    returns:
+      0 on success
+      1 on can't create directory
+      2 on directory exists but is not a directory
+ 
+  rmdir <directory>
+    removes a directory from the file system.
+    return: 0 on success, 1 on failure
+ 
+  mv <file> <destination>
+    moves the file from it's source to the given destination, file
+    can also be a mask, eg /incoming/* provided the destination is
+    a directory
+    returns: number of files copied on success or negative numbers
+      to indicat errors: -1 = invalid source file, -2 = invalid desto
+      -3 = you're trying to copy onto itself (duh!) -4 = no matchs found
+ 
+  cp <file> <destination>
+    exactly the same as mv except it leaves the original file there
+    aswell
+    returns: same as mv
+ 
+  getflags <dir>
+    returns: the flags required to access this directory
+ 
+  setflags <dir> [flags]
+    sets the flags required to access the directory
+    returns: 0 on success, -1 on failure

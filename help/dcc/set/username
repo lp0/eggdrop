@@ -1,6 +1,0 @@
-%{+n}
-###  set username <username>
-   specifies the username the bot will try to use on IRC.  if
-   your machine is running ident, this won't work, and the bot
-   will show up as the user who started up the bot.
-see also: set realname

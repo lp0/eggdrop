@@ -1,6 +1,0 @@
-%{+n}
-###  set max-file-users <#>
-   specifies the maximum number of people to allow in the bot's
-   file system at one time.  this can be used to keep your file
-   system from being abused if you offer a lot of files.
-see also: set max-dloads, set max-filesize

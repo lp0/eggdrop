@@ -26,8 +26,5 @@ Some little tricks that you may or may not know about...
 *  You can unlink all bots and clear out the botnet info from memory by
    using '.unlink *'.  It erases all channel assoc's and everything.
 
-*  You can make a selective auto-op flag (called +i) with the script:
-   set flag1 i
-   bind join i * join_auto_op
-   proc join_auto_op {n uh h c} { putserv "MODE $c +o $n" }
-
+*  You can automagically make a ban sticky by adding a * as the first
+   character in the ban reason.

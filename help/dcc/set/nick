@@ -1,6 +1,0 @@
-%{+n}
-###  set nick <nickname>
-   specifies the bot's default nickname to use on IRC and on
-   the botnet.  if you are connected to a botnet, you can't
-   change this without unlinking first.
-see also: set altnick, set botnet-nick

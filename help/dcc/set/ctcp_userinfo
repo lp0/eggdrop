@@ -1,4 +1,0 @@
-%{+n}
-###  set ctcp-userinfo <text>
-   specifies the response to send to a CTCP USERINFO request.
-see also: set ctcp-version, set ctcp-finger

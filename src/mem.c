@@ -40,8 +40,8 @@ static int lastused = 0;
 struct {
    void *ptr;
    short size;
-   char file[15];
    short line;
+   char file[20];
 } memtbl[MEMTBLSIZE];
 
 #endif
@@ -50,13 +50,12 @@ struct {
 #define dprintf dprintf_eggdrop
 #endif
 
+#define DP_HELP         0x7FF4
+
 /* prototypes */
-void mprintf();
-void tprintf();
 void dprintf();
 void putlog();
 int expected_memory();
-int expmem_chan();
 int expmem_chanprog();
 int expmem_misc();
 int expmem_fileq();
@@ -66,12 +65,10 @@ int expmem_botnet();
 int expmem_tcl();
 int expmem_tclhash();
 int expmem_net();
-int expmem_blowfish();
 int expmem_modules();
-int expmem_assoc();
+int expmem_language();
 void tell_netdebug();
-void debug_blowfish();
-void do_module_report();
+void do_module_report(int,int,char *);
 
 /* initialize the memory structure */
 void init_mem()
@@ -89,10 +86,10 @@ void tell_mem_status (char * nick)
 #ifdef DEBUG
    float per;
    per = ((lastused * 1.0) / (MEMTBLSIZE * 1.0)) * 100.0;
-   mprintf(serv, "NOTICE %s :Memory table usage: %d/%d (%.1f%% full)\n", nick,
+   dprintf(DP_HELP, "NOTICE %s :Memory table usage: %d/%d (%.1f%% full)\n", nick,
 	   lastused, MEMTBLSIZE, per);
 #endif
-   mprintf(serv, "NOTICE %s :Think I'm using about %dk.\n", nick,
+   dprintf(DP_HELP, "NOTICE %s :Think I'm using about %dk.\n", nick,
 	   (int) (expected_memory() / 1024));
 }
 
@@ -122,7 +119,8 @@ void debug_mem_to_dcc (int idx)
    char fn[20], sofar[81];
    module_entry *me;
    char *p;
-   exp[0] = expmem_chan();
+   
+   exp[0] = expmem_language();
    exp[1] = expmem_chanprog();
    exp[2] = expmem_misc();
    exp[3] = expmem_users();
@@ -138,45 +136,44 @@ void debug_mem_to_dcc (int idx)
       use[i] = 0;
    for (i = 0; i < lastused; i++) {
       strcpy(fn, memtbl[i].file);
+      p = strchr(fn,':');
+      if (p) 
+	*p = 0;
       l = memtbl[i].size;
-      if (strcasecmp(fn, "chanset.c") == 0)
+      if (!strcasecmp(fn, "language.c"))
 	 use[0] += l;
-      else if (strcasecmp(fn, "chanprog.c") == 0)
+      else if (!strcasecmp(fn, "chanprog.c"))
 	 use[1] += l;
-      else if (strcasecmp(fn, "misc.c") == 0)
+      else if (!strcasecmp(fn, "misc.c"))
 	 use[2] += l;
-      else if (strcasecmp(fn, "userrec.c") == 0)
+      else if (!strcasecmp(fn, "userrec.c"))
 	 use[3] += l;
-      else if (strcasecmp(fn, "net.c") == 0)
+      else if (!strcasecmp(fn, "net.c"))
 	 use[4] += l;
-      else if (strcasecmp(fn, "dccutil.c") == 0)
+      else if (!strcasecmp(fn, "dccutil.c"))
 	 use[5] += l;
-      else if (strcasecmp(fn, "botnet.c") == 0)
+      else if (!strcasecmp(fn, "botnet.c"))
 	 use[6] += l;
-      else if (strcasecmp(fn, "tcl.c") == 0)
+      else if (!strcasecmp(fn, "tcl.c"))
 	 use[7] += l;
-      else if (strcasecmp(fn, "tclhash.c") == 0)
+      else if (!strcasecmp(fn, "tclhash.c"))
 	 use[8] += l;
-      else if (strcasecmp(fn, "modules.c") == 0)
+      else if (!strcasecmp(fn, "modules.c"))
 	 use[9] += l;
-      else if ((p = strchr(fn, ':')) != NULL) {
-	 *p = 0;
+      else if (p) {
 	 for (me = module_list; me; me = me->next)
 	    if (strcmp(fn, me->name) == 0)
 	       me->mem_work += l;
-	 *p = ':';
+      } else {
+	 dprintf(idx, "Not logging file %s!\n", fn);
       }
-      else {
-	 if (idx < 0)
-	    tprintf(-idx, "Not logging file %s!\n", fn);
-	 else
-	    dprintf(idx, "Not logging file %s!\n", fn);
-      }
+      if (p)
+	*p = ':';
    }
    for (i = 0; i < MAX_MEM; i++) {
       switch (i) {
       case 0:
-	 strcpy(fn, "chanset.c");
+	 strcpy(fn, "language.c");
 	 break;
       case 1:
 	 strcpy(fn, "chanprog.c");
@@ -207,39 +204,35 @@ void debug_mem_to_dcc (int idx)
 	 break;
       }
       if (use[i] == exp[i]) {
-	 if (idx < 0)
-	    tprintf(-idx, "File '%-10s' accounted for %lu/%lu (ok)\n", fn, exp[i],
-		    use[i]);
-	 else
-	    dprintf(idx, "File '%-10s' accounted for %lu/%lu (ok)\n", fn, exp[i],
-		    use[i]);
+	 dprintf(idx, "File '%-10s' accounted for %lu/%lu (ok)\n", fn, exp[i],
+		 use[i]);
       } else {
-	 if (idx < 0)
-	    tprintf(-idx, "File '%-10s' accounted for %lu/%lu (debug follows:)\n",
-		    fn, exp[i], use[i]);
-	 else
-	    dprintf(idx, "File '%-10s' accounted for %lu/%lu (debug follows:)\n", fn,
-		    exp[i], use[i]);
+	 dprintf(idx, "File '%-10s' accounted for %lu/%lu (debug follows:)\n", fn,
+		 exp[i], use[i]);
 	 strcpy(sofar, "   ");
-	 for (j = 0; j < lastused; j++)
+	 for (j = 0; j < lastused; j++) {
+	    if ((p = strchr(memtbl[j].file, ':')))
+		*p = 0;
 	    if (strcasecmp(memtbl[j].file, fn) == 0) {
-	       sprintf(&sofar[strlen(sofar)], "%-3d:(%03X) ", memtbl[j].line,
-		       memtbl[j].size);
+	       if (p) 
+		 sprintf(&sofar[strlen(sofar)], "%-10s/%-4d:(%04d) ", 
+			 p+1, memtbl[j].line, memtbl[j].size);
+	       else
+		 sprintf(&sofar[strlen(sofar)], "%-4d:(%04d) ",
+			 memtbl[j].line, memtbl[j].size);
+		 
 	       if (strlen(sofar) > 60) {
 		  sofar[strlen(sofar) - 1] = 0;
-		  if (idx < 0)
-		     tprintf(-idx, "%s\n", sofar);
-		  else
-		     dprintf(idx, "%s\n", sofar);
+		  dprintf(idx, "%s\n", sofar);
 		  strcpy(sofar, "   ");
 	       }
 	    }
+	    if (p)
+	      *p = ':';
+	 }    
 	 if (sofar[0]) {
 	    sofar[strlen(sofar) - 1] = 0;
-	    if (idx < 0)
-	       tprintf(-idx, "%s\n", sofar);
-	    else
-	       dprintf(idx, "%s\n", sofar);
+	    dprintf(idx, "%s\n", sofar);
 	 }
       }
    }
@@ -261,7 +254,7 @@ void debug_mem_to_dcc (int idx)
 	    if ((p = strchr(fn, ':')) != NULL) {
 	       *p = 0;
 	       if (strcasecmp(fn, me->name) == 0) {
-		  sprintf(&sofar[strlen(sofar)], "%-10s/%-3d:(%03X) ", p + 1,
+		  sprintf(&sofar[strlen(sofar)], "%-10s/%-4d:(%04X) ", p + 1,
 			  memtbl[j].line, memtbl[j].size);
 		  if (strlen(sofar) > 60) {
 		     sofar[strlen(sofar) - 1] = 0;
@@ -278,28 +271,23 @@ void debug_mem_to_dcc (int idx)
 	 }
       }
    }
-   if (idx < 0)
-      tprintf(-idx, "--- End of debug memory list.\n");
-   else
       dprintf(idx, "--- End of debug memory list.\n");
 #else
-   if (idx < 0)
-      tprintf(-idx, "Compiled without debug info.\n");
-   else
-      dprintf(idx, "Compiled without extensive memory debugging (sorry).\n");
+   dprintf(idx, "Compiled without extensive memory debugging (sorry).\n");
 #endif
    tell_netdebug(idx);
-   do_module_report(idx);
 }
 
 void *n_malloc (int size, char * file, int line)
 {
    void *x;
+#ifdef DEBUG
    int i = 0;
+
+#endif
    x = (void *) malloc(size);
-   if (x == NULL) {
-      i = i;
-      putlog(LOG_MISC, "*", "*** FAILED MALLOC %s (%d)", file, line);
+   if (x == NULL) { 
+      putlog(LOG_MISC, "*", "*** FAILED MALLOC %s (%d) (%d)", file, line, size);
       return NULL;
    }
 #ifdef DEBUG
@@ -311,7 +299,8 @@ void *n_malloc (int size, char * file, int line)
    memtbl[i].ptr = x;
    memtbl[i].line = line;
    memtbl[i].size = size;
-   strcpy(memtbl[i].file, file);
+   strncpy(memtbl[i].file, file,19);
+   memtbl[i].file[19] = 0;
    memused += size;
    lastused++;
 #endif
@@ -339,7 +328,8 @@ void *n_realloc (void * ptr, int size, char * file, int line)
    memtbl[i].ptr = x;
    memtbl[i].line = line;
    memtbl[i].size = size;
-   strcpy(memtbl[i].file, file);
+   strncpy(memtbl[i].file, file,19);
+   memtbl[i].file[19] = 0;
    memused += size;
 #endif
    return x;

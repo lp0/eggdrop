@@ -7,10 +7,13 @@
    domain.
  */
 
-#define MODULE_NAME "blowfish"
+#define MAKING_BLOWFISH
+#define MODULE_NAME "encryption"
 #include "../module.h"
 #include "blowfish.h"
 #include "bf_tab.h"		/* P-box P-array, S-box  */
+#undef global
+static Function * global = NULL;
 
 /* each box takes up 4k so be very careful here */
 #define BOXES  3
@@ -43,7 +46,7 @@ static UWORD_32bits **bf_S;
 static int blowfish_expmem()
 {
    int i, tot = 0;
-   modcontext;
+   context;
    for (i = 0; i < BOXES; i++)
       if (box[i].P != NULL) {
 	 tot += ((bf_N + 2) * sizeof(UWORD_32bits));
@@ -116,18 +119,22 @@ static void blowfish_decipher (UWORD_32bits * xl, UWORD_32bits * xr)
 }
 
 
-static void blowfish_report (int idx)
+static void blowfish_report (int idx, int details)
 {
    int i, tot = 0;
-   for (i = 0; i < BOXES; i++)
-      if (box[i].P != NULL)
-	 tot++;
-   modprintf(idx, "    %d of %d boxes in use: ", tot, BOXES);
-   for (i = 0; i < BOXES; i++)
-      if (box[i].P != NULL) {
-	 modprintf(idx, "(age: %d) ", time(NULL) - box[i].lastuse);
-      }
-   modprintf(idx, "\n");
+   
+   if (details) {
+      for (i = 0; i < BOXES; i++)
+	if (box[i].P != NULL)
+	  tot++;
+      dprintf(idx, "    Blowfish encryption module:\n");
+      dprintf(idx, "    %d of %d boxes in use: ", tot, BOXES);
+      for (i = 0; i < BOXES; i++)
+	if (box[i].P != NULL) {
+	   dprintf(idx, "(age: %d) ", now - box[i].lastuse);
+	}
+      dprintf(idx, "\n");
+   }
 }
 
 static void blowfish_init (UBYTE_08bits * key, short keybytes)
@@ -145,7 +152,7 @@ static void blowfish_init (UBYTE_08bits * key, short keybytes)
 	 if ((box[i].keybytes == keybytes) &&
 	 (strncmp((char *) (box[i].key), (char *) key, keybytes) == 0)) {
 	    /* match! */
-	    box[i].lastuse = time(NULL);
+	    box[i].lastuse = now;
 	    bf_P = box[i].P;
 	    bf_S = box[i].S;
 	    return;
@@ -162,28 +169,28 @@ static void blowfish_init (UBYTE_08bits * key, short keybytes)
    }
    if (bx < 0) {
       /* find oldest */
-      lowest = time(NULL);
+      lowest = now;
       for (i = 0; i < BOXES; i++)
 	 if (box[i].lastuse <= lowest) {
 	    lowest = box[i].lastuse;
 	    bx = i;
 	 }
-      modfree(box[bx].P);
+      nfree(box[bx].P);
       for (i = 0; i < 4; i++)
-	 modfree(box[bx].S[i]);
-      modfree(box[bx].S);
+	 nfree(box[bx].S[i]);
+      nfree(box[bx].S);
    }
    /* initialize new buffer */
    /* uh... this is over 4k */
-   box[bx].P = (UWORD_32bits *) modmalloc((bf_N + 2) * sizeof(UWORD_32bits));
-   box[bx].S = (UWORD_32bits **) modmalloc(4 * sizeof(UWORD_32bits *));
+   box[bx].P = (UWORD_32bits *) nmalloc((bf_N + 2) * sizeof(UWORD_32bits));
+   box[bx].S = (UWORD_32bits **) nmalloc(4 * sizeof(UWORD_32bits *));
    for (i = 0; i < 4; i++)
-      box[bx].S[i] = (UWORD_32bits *) modmalloc(256 * sizeof(UWORD_32bits));
+      box[bx].S[i] = (UWORD_32bits *) nmalloc(256 * sizeof(UWORD_32bits));
    bf_P = box[bx].P;
    bf_S = box[bx].S;
    box[bx].keybytes = keybytes;
    strncpy(box[bx].key, key, keybytes);
-   box[bx].lastuse = time(NULL);
+   box[bx].lastuse = now;
 
    /* robey: reset blowfish boxes to initial state */
    /* (i guess normally it just keeps scrambling them, but here it's */
@@ -274,14 +281,14 @@ static void blowfish_encrypt_pass (char * text, char * new)
 }
 
 /* returned string must be freed when done with it! */
-char *encrypt_string (char * key, char * str)
+static char *encrypt_string (char * key, char * str)
 {
    UWORD_32bits left, right;
    char *p, *s, *dest, *d;
    int i;
-   dest = (char *) modmalloc((strlen(str) + 9) * 2);
+   dest = (char *) nmalloc((strlen(str) + 9) * 2);
    /* pad fake string with 8 bytes to make sure there's enough */
-   s = (char *) modmalloc(strlen(str) + 9);
+   s = (char *) nmalloc(strlen(str) + 9);
    strcpy(s, str);
    p = s;
    while (*p)
@@ -311,19 +318,19 @@ char *encrypt_string (char * key, char * str)
       }
    }
    *d = 0;
-   modfree(s);
+   nfree(s);
    return dest;
 }
 
 /* returned string must be freed when done with it! */
-char *decrypt_string (char * key, char * str)
+static char *decrypt_string (char * key, char * str)
 {
    UWORD_32bits left, right;
    char *p, *s, *dest, *d;
    int i;
-   dest = (char *) modmalloc(strlen(str) + 12);
+   dest = (char *) nmalloc(strlen(str) + 12);
    /* pad encoded string with 0 bits in case it's bogus */
-   s = (char *) modmalloc(strlen(str) + 12);
+   s = (char *) nmalloc(strlen(str) + 12);
    strcpy(s, str);
    p = s;
    while (*p)
@@ -347,7 +354,7 @@ char *decrypt_string (char * key, char * str)
 	 *d++ = (right & (0xff << ((3 - i) * 8))) >> ((3 - i) * 8);
    }
    *d = 0;
-   modfree(s);
+   nfree(s);
    return dest;
 }
 
@@ -357,7 +364,7 @@ static int tcl_encrypt STDVAR
     BADARGS(3, 3, " key string");
     p = encrypt_string(argv[1], argv[2]);
     Tcl_AppendResult(irp, p, NULL);
-    modfree(p);
+    nfree(p);
     return TCL_OK;
 }
 
@@ -367,7 +374,7 @@ static int tcl_decrypt STDVAR
     BADARGS(3, 3, " key string");
     p = decrypt_string(argv[1], argv[2]);
     Tcl_AppendResult(irp, p, NULL);
-    modfree(p);
+    nfree(p);
     return TCL_OK;
 }
 
@@ -384,32 +391,40 @@ static char *blowfish_close()
    return "You can't unload an encryption module";
 }
 
-char *blowfish_start (int);
+char *blowfish_start (Function *);
 
 static Function blowfish_table[] =
 {
+   /* 0 - 3 */
    (Function) blowfish_start,
    (Function) blowfish_close,
    (Function) blowfish_expmem,
    (Function) blowfish_report,
+   /* 4 - 7 */
+   (Function) encrypt_string,
+   (Function) decrypt_string,
 };
 
 /* initialize buffered boxes */
-char *blowfish_start (int thing)
+char *blowfish_start (Function * global_funcs)
 {
    int i;
-   if (!thing) {
+   if (global_funcs) {
+      global = global_funcs;
+      if (!module_rename("blowfish",MODULE_NAME))
+	return "Already loaded.";
       for (i = 0; i < BOXES; i++) {
 	 box[i].P = NULL;
 	 box[i].S = NULL;
 	 box[i].key[0] = 0;
 	 box[i].lastuse = 0L;
       }
-      modcontext;
+      context;
+      module_register(MODULE_NAME, blowfish_table, 2, 0);
+      if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
+	return "This module requires eggdrop1.3.0 or later";
       add_hook(HOOK_ENCRYPT_PASS, blowfish_encrypt_pass);
-      module_register("blowfish", blowfish_table, 1, 0);
-      module_depend("blowfish", "eggdrop", 102, 0);
-      add_tcl_commands(mytcls);
    }
+   add_tcl_commands(mytcls);
    return NULL;
 }

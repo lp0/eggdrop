@@ -1,6 +1,0 @@
-%{+n}
-###  set ctcp-finger <text>
-   specifies the response to send to a CTCP FINGER request.  one
-   example is:
-      Robey (robey@wc130), idle 0 seconds
-see also: set ctcp-version, set ctcp-userinfo

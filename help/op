@@ -1,5 +1,0 @@
-%{+o|o}
-/MSG %B OP <password> [channel]
-   This will tell me to op you on any channel where I have
-   ops and you don't.  If you give a channel name, I'll just
-   op you on that channel.

@@ -1,8 +1,0 @@
-%{+o|o}
-###  +ban <hostmask> [channel] [comment]
-   Adds a ban to the list of permanent bans stored on the bot,
-   with an optional comment.  This ban will be in effect for every
-   channel on the bot if no channel is supplied, and is stored
-   with your nickname and comment.  Pprefixing a comment with @ will
-   make it only visible within the bot.
-See also: bans, -ban, kickban, stick, unstick

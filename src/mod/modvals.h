@@ -1,21 +1,22 @@
-#define HOOK_XXX0                0 /* these *were* something, but changed */
-#define HOOK_XXX1                1
-#define HOOK_XXX2                2
+#define HOOK_GET_FLAGREC         0 /* these *were* something, but changed */
+#define HOOK_BUILD_FLAGREC       1
+#define HOOK_SET_FLAGREC         2
 #define HOOK_READ_USERFILE       3
-#define HOOK_GOT_DCC             4
+#define HOOK_REHASH              4
 #define HOOK_MINUTELY            5
 #define HOOK_DAILY               6
 #define HOOK_HOURLY              7
 #define HOOK_USERFILE            8
-#define REAL_HOOKS               9
-#define HOOK_GET_ASSOC_NAME      100
-#define HOOK_GET_ASSOC           101
-#define HOOK_DUMP_ASSOC_BOT      102
-#define HOOK_KILL_ASSOCS         103
-#define HOOK_BOT_ASSOC           104
+#define HOOK_SECONDLY            9
+#define HOOK_PRE_REHASH          10
+#define HOOK_IDLE                11
+#define HOOK_5MINUTELY           12
+#define REAL_HOOKS               13
 #define HOOK_SHAREOUT            105
 #define HOOK_SHAREIN             106
 #define HOOK_ENCRYPT_PASS        107
+#define HOOK_QSERV               108
+#define HOOK_ADD_MODE            109
 
 /* these are FIXED once they are in a relase they STAY */
 /* well, unless im feeling grumpy ;) */
@@ -44,8 +45,8 @@ typedef struct _module_entry {
 #endif
 #endif
    struct _module_entry * next;
+   Function * funcs;
 #ifdef EBUG_MEM
    int mem_work;
 #endif
-   Function * funcs;
 } module_entry;

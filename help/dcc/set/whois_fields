@@ -1,9 +1,0 @@
-%{+n}
-###  set whois-fields <field-list>
-   tells the bot what "xtra" fields to display in a '.whois' or
-   '.match' command.  the "xtra" fields are normally set by
-   scripts using 'user-get' or 'user-set' and contain extra info
-   about a user.  an example is:
-      set whois-fields "url pet"
-   which will make '.whois' and '.match' display the values for
-   'url' and 'pet' that have been set by scripts.

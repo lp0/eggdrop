@@ -1,6 +1,0 @@
-%{+n|n}
-### chanload
-     Reloads the channel settings from the file defined by the 
-     "channel-file" setting.  This allows you to return to
-     a previous setting if you've really messed things up.
-See also: %{+n}+chan, -chan,%{+N} chanload, chanset, chaninfo

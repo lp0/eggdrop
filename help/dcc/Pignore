@@ -1,9 +1,0 @@
-%{+m}
-###  +ignore <hostmask> [comment]
-   Adds a hostmask to the ignore list, with your nickname and an
-   optional comment.  An ignore added manually like this becomes
-   "permenent", ie, it will not expire automatically.  To make
-   the bot stop ignoring this hostmask, you must eventually use
-   a '-ignore' command.  This command can be used to either ignore
-   users on irc, or to ignore incoming telnet connections.
-See also: -ignore, ignores

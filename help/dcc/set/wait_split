@@ -1,4 +1,0 @@
-%{+n}
-### set wait-split <#>
-   allows you to set the number of seconds to wait before
-   considering a split user as gone for good.

@@ -1,9 +1,0 @@
-%{+n}
-###  set max-dloads <#>
-   specifies the maximum number of downloads (dcc gets) a user can
-   have going at once.  to effectively disable this, set it to 99.
-   the default is 3.  when a user reaches this limit, she will be
-   unable to 'get' any more files from the file area until either
-   the current transfers complete, or any pending transfers event-
-   ually timeout.
-see also: set max-filesize, set max-file-users

@@ -1,7 +1,0 @@
-%{+B}
-###  unlink <bot>
-   disconnects the named bot from the botnet, assuming it was
-   connected in the first place.
-###  unlink *
-   disconnects from all bots
-see also: link, bots, bottree

@@ -9,7 +9,7 @@ doofus:
 	@cd ../..;make
 	
 clean:
-	@for x in *.mod; do cd $$x;make clean;cd ..;done
+	@for x in *.mod; do cd $$x;${MAKE} clean;cd ..;done
 	@rm -f *.o *~ static.h
 	
 modules:
@@ -18,3 +18,6 @@ modules:
 static:
 	@./buildstatic
 	@for x in *.mod; do cd $$x;${GMAKE} static;cd ..; done
+	
+install:
+	@for x in *.mod; do cd $$x;${GMAKE} install; cd ..; done

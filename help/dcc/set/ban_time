@@ -1,5 +1,0 @@
-%{+n}
-###  set ban-time <#>
-   specifies how long (in minutes) a temporary ban will last
-   on the bot before being purged.
-see also: bans, +ban, kickban, set ignore-time

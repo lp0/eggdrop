@@ -1,6 +1,0 @@
-%{+m|m}
-###  +chrec <handle> [channel]
-   Adds an empty channel record for the user so that channel lastons and info
-   lines can be saved.  No flags are associated with the channel.
-
-See also: chattr

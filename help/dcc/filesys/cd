@@ -1,4 +1,0 @@
-###  cd <directory>
-   changes your current directory if possible.  this works exactly
-   like the unix command.
-see also: pwd

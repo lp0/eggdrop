@@ -1,8 +1,0 @@
-%{+n}
-###  set copy-to-tmp <0/1>
-   sets whether files will be copied into your /tmp directory
-   before they are sent to users who download them from the file
-   system.  turning this on protects ongoing transfers from being
-   affected by people moving files around in the file system, but
-   if you're short of disk space or using a slow disk (** NFS **),
-   you should probably turn this off.

@@ -1,5 +1,0 @@
-%{+o|o}
-###  topic <text>
-   changes the channel's topic, assuming the bot is a chanop or the
-   channel is not +t (uses your current console channel).
-see also: console

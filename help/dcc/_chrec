@@ -1,6 +1,0 @@
-%{+m|m}
-###  -chrec <handle> [channel]
-   Deletes a channel record for the user, including channel lastons, info
-   lines, and flags.
-
-See also: chattr

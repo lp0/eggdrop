@@ -7,21 +7,21 @@
 #   -Wall            if you're using gcc and it supports it (configure
 #                      usually detects this anyway now)
 #   -DEBUG_MEM       to be able to debug memory allocation (.debug)
-#   -DEBUG_OUTPUT    to send everything sent to the server to +d console people
 #   -DEBUG           logs random debugging comments to +d level (annoying
 #                      and useless to most people)
 #   -DREDHATSUX      if you get dprintf already defined errors in redhat
 #
 # *note* -DEBUG_TCL made so little code addition, I moved it into tcl
 #    try set debug-tcl 1
+#        -DEBUG_OUTPUT is now a tcl variable (debug-output)
 #
 # ok, Im a linux weenie, these settings with work for linux
 #
-CFLGS = -g
+CFLGS = 
 
 # configure SHOULD set these...you may need to tweak them to get modules
 # to compile .. if you do...let the devel-team know the working settings
-# btw to turn STRIP of, do STRIP=touch not STRIP=
+# btw to turn STRIP off, do STRIP=touch not STRIP=
 
 CC=@CC@
 LD=@CC@
@@ -32,7 +32,7 @@ MOD_LD = @BEL_MOD_LD@
 MOD_STRIP = @BEL_MOD_STRIP@
 DLFLAGS= @DLFLAGS@
 
-#makind modules
+#making modules
 SHLIB_CC = @SHLIB_CC@
 SHLIB_LD  = @SHLIB_LD@
 SHLIB_STRIP = @SHLIB_STRIP@
@@ -46,7 +46,6 @@ SHLIB_STRIP = @SHLIB_STRIP@
 # stuff for Tcl
 XREQ = @TCL_REQS@
 TCLLIB = @TCLLIB@
-
 CFLAGS = -c @CFLAGS@ -I.. @DEFS@ ${CFLGS}
 @SET_MAKE@
 
@@ -58,10 +57,10 @@ help:
 
 clean: cleanmods
 	@rm -f eggdrop egg core *.o *.a *.so *~ *.stamp
-	@cd src ; rm -f eggdrop egg core *.o *.a *~
+	@cd src ; rm -f eggdrop egg core *.o *.a *~ language/*~
 	
 cleanmods:
-	@cd src/mod ; make clean
+	@cd src/mod ; ${MAKE} clean 'MAKE=${MAKE}'
 
 dist: clean
 	@rm -f Makefile config.cache config.log config.status config.h lush.h
@@ -69,81 +68,200 @@ dist: clean
 	@echo "all:" >Makefile
 	@echo "	@./configure; make" >>Makefile
 
-eggdrop: always modegg modules
+eggdrop: modegg modules
 
-debug: always debugmod moddebug
+debug: debugmod moddebug
 
-always: 
-
-# Justin Slootsky says some systems need this (?)
-src/libtcle.a: ${TCLLIB}/lib@TCLLIBFN@
-	@echo "[ Fixing lib@TCLLIBFN@ -> libtcle.a ]"
-	cp ${TCLLIB}/lib@TCLLIBFN@ src/libtcle.a
-	chmod u+rw src/libtcle.a
-	ar d src/libtcle.a tclMain.o
-	@RANLIB@ src/libtcle.a
+debugmem: memegg moddebug
 
 eggdrop.h:
 	@echo You do not have the eggdrop source!
 	@exit 1
 
-OBJS = botcmd.o botnet.o chan.o chanprog.o chanset.o cmds.o cmdsirc.o \
-	dcc.o dccutil.o gotdcc.o main.o mem.o misc.o mode.o modules.o \
-	msgcmds.o msgnotice.o net.o notes.o \
-	tcl.o tclchan.o tcldcc.o tclhash.o tclmisc.o tcluser.o userrec.o\
-	users.o
+OBJS = botcmd.o botmsg.o botnet.o chanprog.o cmds.o \
+	dcc.o dccutil.o flags.o language.o main.o mem.o misc.o \
+	modules.o net.o \
+	tcl.o tcldcc.o tclhash.o tclmisc.o tcluser.o userent.o \
+	userrec.o users.o
 
 GMAKE_STATIC = ${MAKE} 'CC=${CC}' 'LD=${LD}' 'OBJS=${OBJS}'\
 'STRIP=${MOD_STRIP}' 'CFLAGS=${CFLAGS} -DSTATIC' 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-GMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
-'STRIP=${SHLIB_STRIP}' 'CFLAGS=${CFLAGS}' 'XLIBS=@TCL_LIBS@ @LIBS@'
+GMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' \
+'STRIP=${SHLIB_STRIP}' 'CFLAGS=${CFLAGS}'
 
 GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS}'\
 'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=${MOD_STRIP}' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
-'STRIP=touch' 'CFLAGS=${CFLAGS}' 'XLIBS=@TCL_LIBS@ @LIBS@'
+DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC} -DEBUG' 'LD=${SHLIB_LD} -g' \
+'STRIP=touch' 'CFLAGS=${CFLAGS} -g'
 
-DMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD} -g' 'OBJS=${OBJS}'\
-'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' \
+DMAKE_MOD = ${MAKE} 'CC=${MOD_CC} -DEBUG' 'LD=${MOD_LD} -g' 'OBJS=${OBJS}'\
+'CFLAGS=${CFLAGS} -g' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-static:
+DMAKE_MEM = ${MAKE} 'CC=${MOD_CC} -DEBUG -DEBUG_MEM' 'LD=${MOD_LD} -g' \
+'OBJS=${OBJS}' 'CFLAGS=${CFLAGS} -g' 'XREQ=${XREQ}' \
+'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
+'XLIBS=@TCL_LIBS@ @LIBS@'
+
+DMAKE_STATIC = ${MAKE} 'CC=${CC} -g' 'LD=${LD} -g' 'OBJS=${OBJS}'\
+'STRIP=touch' 'CFLAGS=${CFLAGS} -DSTATIC' 'XLIBS=@TCL_LIBS@ @LIBS@'
+
+static: eggtest
 	@echo ""
 	@echo "Making module objects for static linking..."
 	@echo ""
+	@rm -f src/main.o
 	@cd src/mod;${GMAKE_STATIC} static
 	@echo ""
 	@echo "Making core eggdrop for static linking..."
 	@echo ""
 	@cd src;${GMAKE_STATIC} static
 
-modegg:
+sdebug: eggtest
+	@cd src/mod;${DMAKE_STATIC} static
+	@cd src;${DMAKE_STATIC} static
+
+modegg: modtest
 	@cd src;${GMAKE_MOD} eggdrop
 	@echo
 	@./eggdrop -v
 	@ls -la eggdrop
 	
-modules:
+modules:  modtest
 	@cd src/mod;${GMAKE_SHLIB} modules
 	@echo
 	@echo "modules made:"
 	@ls -la *.so
   
-debugmod:
+debugmod: modtest
 	@cd src;${DMAKE_MOD} eggdrop
 	@echo
 	@./eggdrop -v
 	@ls -la eggdrop
-  	
-moddebug:
+
+memegg:  modtest
+	@cd src;${DMAKE_MEM} eggdrop
+	@echo
+	@./eggdrop -v
+	@ls -la eggdrop
+
+moddebug: modtest
 	@cd src/mod;${DMAKE_SHLIB} modules
 	@echo
 	@echo "modules made:"
 	@ls -la *.so
-	
+
+eggtest:
+	@if [ -f EGGMOD.stamp ]; then \
+		echo You\'re trying to do a STATIC build of eggdrop when you\'ve;\
+		echo already run \'make\' for a module build.;\
+		echo You must first type \"make clean\" before you can build;\
+		echo a static version.;\
+		exit 1;\
+	fi
+	@date >EGGDROP.stamp
+
+modtest:
+	@if [ -f EGGDROP.stamp ]; then \
+		echo You\'re trying to do a MODULE build of eggdrop when you\'ve;\
+		echo already run \'make\' for a static build.;\
+		echo You must first type \"make clean\" before you can build;\
+		echo a module version.;\
+		exit 1;\
+	fi
+	@date >EGGMOD.stamp
+
+install: @DEFAULT_MAKE@ ainstall
+
+dinstall: eggdrop ainstall
+
+sinstall: static ainstall
+
+ainstall:
+	@if test X$(DEST) = X; then \
+		echo "You must specify a destination directory with DEST="; \
+		exit 1; \
+	fi
+	@if test ! -x eggdrop; then \
+		echo "You haven't compiled eggdrop yet."; \
+		exit 1; \
+	fi
+	@./eggdrop -v
+	@echo
+	@echo Installing in directory: $(DEST).
+	@echo
+	@if test ! -d $(DEST); then \
+		echo Creating directory: $(DEST).; \
+		mkdir $(DEST); \
+	fi
+	@cp -f README $(DEST)
+	@if test ! -d $(DEST)/language; then \
+		echo Creating language subdirectory.; \
+		mkdir $(DEST)/language; \
+	fi
+	@cp -f language/* $(DEST)/language/
+	@if test -r $(DEST)/eggdrop; then \
+		rm -f $(DEST)/oeggdrop; \
+	fi
+	@if test -d $(DEST)/modules/; then \
+		echo Moving old modules into \'modules.old\' directory.; \
+		rm -rf $(DEST)/modules.old; \
+		mv -f $(DEST)/modules $(DEST)/modules.old; \
+		mkdir $(DEST)/modules; \
+	fi
+	@if test ! -d $(DEST)/modules/; then \
+		echo Creating module subdirectory.; \
+		mkdir $(DEST)/modules; \
+	fi
+	@if test -r assoc.so; then \
+		echo Copying new modules.; \
+		cp -p *.so $(DEST)/modules/; \
+	fi
+	@if test -r $(DEST)/eggdrop; then \
+		echo Renamed the old \'eggdrop\' executable to \'oeggdrop\'.; \
+		mv -f $(DEST)/eggdrop $(DEST)/oeggdrop; \
+	fi
+	@echo Copying new \'eggdrop\' executable.
+	@cp eggdrop $(DEST)
+
+	@if test ! -d $(DEST)/doc; then \
+		echo Creating \'doc\' subdirectory.; \
+		mkdir $(DEST)/doc; \
+	fi
+	@echo Copying \'doc\' files.
+	@cp -r doc/* $(DEST)/doc/
+	@if test ! -d $(DEST)/help; then \
+		echo Creating \'help\' subdirectory.; \
+		mkdir $(DEST)/help; \
+	fi
+	@cp -r help/* $(DEST)/help/
+
+	@if test ! -d $(DEST)/filesys/; then \
+		echo Creating a skeletal \'filesys\' subdirectory.; \
+		mkdir $(DEST)/filesys; \
+		mkdir $(DEST)/filesys/incoming; \
+	fi
+
+	@if test ! -d $(DEST)/scripts/; then \
+		echo Creating a \'scripts\' subdirectory.; \
+		mkdir $(DEST)/scripts; \
+	fi
+	@echo Copying scripts.
+	@cp scripts/* $(DEST)/scripts
+	@echo
+	@${MAKE} REALDEST=`cd $(DEST);pwd` install2
+	@echo
+	@echo Installation completed.
+	@echo You MUST ensure that you edit/verify your configuration file.
+	@echo \'eggdrop.conf.dist\' lists current options.
+
+install2:
+	@echo Installing mods -- DEST = $(REALDEST)
+	@cd src/mod;${MAKE} REALDEST=$(REALDEST) install; cd ../..
+
 #safety hash

@@ -1,6 +1,0 @@
-%{+o|o}
-###  act [channel] <text>
-   Performs an action on the current console channel (or otherwise
-   specified channel), as if the bot did it.  Just like the /me
-   command in IRC.
-See also: console

@@ -1,5 +1,0 @@
-%{+n}
-### set modes-per-line <3-6>
-   this allows you to set the number of mode changes the bot will
-   send in one line, the irc default is 3 but some networks these
-   days allow up to 6 or more mode changes.

@@ -1,4 +1,0 @@
-###  botinfo
-   Requests information from every bot currently in the botnet.
-   Each bot should eventually send you one line listing its version
-   and other information.

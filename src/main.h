@@ -11,17 +11,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include "lang.h"
 #include "eggdrop.h"
+#include "flags.h"
+#ifndef MAKING_MODS
 #include "proto.h"
+#endif
 #include "cmdt.h"
 #include "tclegg.h"
 #include "tclhash.h"
-extern struct dcc_table DCC_CHAT,DCC_BOT,DCC_SEND,DCC_LOST,DCC_SCRIPT,
-DCC_BOT_NEW,DCC_RELAY,DCC_RELAYING,DCC_FORK_RELAY,DCC_PRE_RELAY,DCC_GET,
-DCC_GET_PENDING,DCC_FILES,DCC_CHAT_PASS,DCC_FORK_SEND,DCC_FORK_BOT,DCC_SOCKET,
-DCC_TELNET_ID,DCC_TELNET_NEW,DCC_FILES_PASS,DCC_TELNET_PW,DCC_FORK_CHAT,
-DCC_FORK_FILES,DCC_TELNET;
-
+#include "chan.h"
+#include "users.h"
+#ifndef MAKING_MODS
+extern struct dcc_table DCC_CHAT,DCC_BOT,DCC_LOST,DCC_SCRIPT,
+DCC_BOT_NEW,DCC_RELAY,DCC_RELAYING,DCC_FORK_RELAY,DCC_PRE_RELAY,
+DCC_CHAT_PASS,DCC_FORK_BOT,DCC_SOCKET,
+DCC_TELNET_ID,DCC_TELNET_NEW,DCC_TELNET_PW,
+DCC_TELNET,DCC_IDENT,DCC_IDENTWAIT;
+#endif
 
 /* from net.h */
 
@@ -35,3 +42,4 @@ DCC_FORK_FILES,DCC_TELNET;
                        (swap_short((ln)&0x0000ffff)<<16))
 #endif
 #define iptolong(a) swap_long((unsigned long)a)
+#define fixcolon(x) if (x[0]==':') {x++;} else {x=newsplit(&x);}

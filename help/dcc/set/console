@@ -1,5 +1,0 @@
-%{+n}
-###  set console <console-flags>
-   specifies the default console mode for masters and ops when
-   they first get on the dcc chat connection with the bot.  for
-   more info about console flags, see 'console'.

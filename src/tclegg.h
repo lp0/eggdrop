@@ -58,6 +58,8 @@
 #define MATCH_PARTIAL       0
 #define MATCH_EXACT         1
 #define MATCH_MASK          2
+#define MATCH_CASE          3
+
 /* bitwise 'or' these: */
 #define BIND_USE_ATTR       4
 #define BIND_STACKABLE      8
@@ -92,16 +94,11 @@ typedef struct timer_str {
     return TCL_ERROR; \
   }
 
-#define X(A) int A()
-#define X5(A,B,C,D,E) X(A);X(B);X(C);X(D);X(E)
-
-X(tcl_channel_add); X(tcl_channel_modify);
-/* functions definitions moved here from proto.h */
-
 unsigned long add_timer (tcl_timer_t **,int, char *,unsigned long);
 int remove_timer (tcl_timer_t **,unsigned long);
 void list_timers (Tcl_Interp *, tcl_timer_t *);
 void wipe_timers (Tcl_Interp *, tcl_timer_t **);
+void do_check_timers (tcl_timer_t **);
 
 typedef struct _tcl_strings {
    char * name;
@@ -113,6 +110,7 @@ typedef struct _tcl_strings {
 typedef struct _tcl_int {
    char * name;
    int * val;
+   int readonly;
 } tcl_ints;
 
 typedef struct _tcl_cmds {
@@ -126,4 +124,7 @@ void add_tcl_strings (tcl_strings *);
 void rem_tcl_strings (tcl_strings *);
 void add_tcl_ints (tcl_ints *);
 void rem_tcl_ints (tcl_ints *);
+/* set Tcl variables to match eggdrop internal variables */
+#define set_tcl_vars() \
+Tcl_SetVar(interp, "tcl_interactive", "0", TCL_GLOBAL_ONLY)
 #endif

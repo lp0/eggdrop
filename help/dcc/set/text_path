@@ -1,5 +1,0 @@
-%{+n}
-###  set text-path <path>
-   specifies the path to the text directory for the bot.  that's
-   where miscellaneous things are stored -- things which aren't
-   really help files, that the bot dumps to people at various times.

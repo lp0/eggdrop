@@ -1,5 +1,0 @@
-%{+m}
-###  +user <nickname> <hostmask>
-   Creates a new user record for the nickname given, with one entry
-   in the hostmask table.  The new user record will have no flags
-   (i.e. not be a master, op, friend, etc) and no password.

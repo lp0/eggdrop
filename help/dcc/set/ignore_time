@@ -1,5 +1,0 @@
-%{+n}
-###  set ignore-time <#>
-   specifies how long (in minutes) a temporary ignore will last
-   on the bot before being purged.
-see also: ignores, +ignore, set ban-time

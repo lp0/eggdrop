@@ -5,9 +5,11 @@
  *
  *      REQUIRED: Eggdrop Module version 1.2.0
  *
- *      0.1     1997-07-29      Initial.
- *      1.0     1997-07-31      Release.
- *      1.1     1997-08-05      Add nick->handle lookup for NICK's.
+ *      0.1     1997-07-29      Initial. [BB]
+ *      1.0     1997-07-31      Release. [BB]
+ *      1.1     1997-08-05      Add nick->handle lookup for NICK's. [BB]
+ *      1.2     1997-08-20      Minor fixes. [BB]
+ *      1.2a    1997-08-24	Minor fixes. [BB]
  *
  */
 
@@ -57,20 +59,16 @@
 #include <time.h>
 #include <varargs.h>
 
-#include "../../users.h"
 #include "../module.h"
+#include "../../users.h"
 #include "../../chan.h"
 
-extern char admin[];
-
-Function *global;
-void wordshift();
-void process_seen();
-void do_seen();
-char *match_trigger();
-char *getxtra();
-char *fixnick();
-extern struct chanset_t *chanset;
+static Function *global = NULL;
+static void wordshift();
+static void do_seen();
+static char *match_trigger();
+static char *getxtra();
+static char *fixnick();
 
 typedef struct {
         char    *key;
@@ -82,7 +80,8 @@ static trig_data trigdata[]  = {
    {"jesus", "Let's not get into a religious discussion, %s"},
    {"shit", "Here's looking at you, %s"},
    {"yourself", "Yeah, whenever I look in a mirror..."},
-   {(char *) botnetnick, "You found me, %s!"},
+   {NULL, "You found me, %s!"},
+   {"elvis", "Last time I was on the moon man."},
    {0, 0}
 };
 
@@ -100,35 +99,35 @@ static int pub_seen (char *nick, char *host, char *hand,
                                                 char *channel, char *text)  
 {
 char prefix[50];
-modcontext;
+context;
    sprintf(prefix, "PRIVMSG %s :", channel);
-   do_seen(DP_SERVER, prefix, nick, hand, channel, text);
+   do_seen(DP_HELP, prefix, nick, hand, channel, text);
    return 0;
 }
 
-static int msg_seen (char *nick, char *host, char *hand, char *text)  
+static int msg_seen (char *nick, char *host, struct userrec * u, char *text)
 {
 char prefix[50];
-modcontext;
-   if(hand[0] == '*') {
+context;
+   if(!u) {
       putlog(LOG_MISC, "*", "[%s!%s] seen %s", nick, host, text);
       return 0;
    }
-   putlog(LOG_MISC, "*", "(%s!%s) !%s! SEEN %s", nick, host, hand, text);
+   putlog(LOG_MISC, "*", "(%s!%s) !%s! SEEN %s", nick, host, u->handle, text);
    sprintf(prefix, "PRIVMSG %s :", nick);
-   do_seen(DP_SERVER, prefix, nick, hand, "", text);
+   do_seen(DP_SERVER, prefix, nick, u->handle, "", text);
    return 0;
 }
 
-static int dcc_seen (int idx, char *par)
+static int dcc_seen (struct userrec * u,int idx, char *par)
 {
-modcontext;
+   context;
    putlog(LOG_CMDS, "*", "#%s# seen %s", dcc[idx].nick, par);
    do_seen(idx, "", dcc[idx].nick, dcc[idx].nick, "", par);
    return 0;
 }
 
-void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel, 
+static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel, 
                                                           char *text)
 {
 char    stuff[512];
@@ -139,10 +138,15 @@ char    *oix;
 char    whoredirect[512];
 struct  userrec *urec;
 struct  chanset_t *chan;
+struct  laston_info * li;
+struct  chanuserrec * cr;
 memberlist *m;
 int     onchan = 0;
 int     i;
-
+time_t  laston = 0;
+time_t  work;
+char *  lastonplace = 0;
+   
    whotarget[0] = 0;
    whoredirect[0] = 0;
    object[0] = 0;
@@ -158,13 +162,13 @@ int     i;
    }
 
    wordshift(word1, text);
-   oix = index(word1, '\'');
+   oix = strchr(word1, '\'');
 
    /* Have we got a NICK's target? */
 
    if (oix == word1) return;       /* Skip anything starting with ' */
 
-modcontext;
+context;
    if( oix && *oix  &&
          ((oix[1] && ( oix[1] == 's' || oix[1]  == 'S') && !oix[2]) ||
         (!oix[1] && (oix[-1] == 's' || oix[-1] == 'z' || oix[-1] == 'x'
@@ -185,17 +189,16 @@ modcontext;
          chan = chanset;
          while(chan) {
             onchan = 0;
-            if (ismember(chan, object)) {
+            if ((m = ismember(chan, object))) {
                onchan = 1;
-               getchanhost (chan->name, object, word2);
-               sprintf(stuff, "%s!%s", object, word2);
-               get_handle_by_host (word2, stuff);
-               if(!strcasecmp(object, word2)) break;
+               sprintf(stuff, "%s!%s", object, m->userhost);
+	       urec = get_user_by_host(stuff);
+               if (!urec || !strcasecmp(object, urec->handle)) break;
                strcat(whoredirect, object);
                strcat(whoredirect, " is ");
-               strcat(whoredirect, word2);
+               strcat(whoredirect, urec->handle);
                strcat(whoredirect, ", and ");
-	       strcpy(object,word2);
+	       strcpy(object,urec->handle);
                break;
             }
             chan = chan->next;
@@ -304,7 +307,8 @@ modcontext;
 
       /* "your admin" */
 
-      if (!strcasecmp(word1, "owner") || !strcasecmp(word1, "admin")) {
+      if (!strcasecmp(word1, "owner") || !strcasecmp(word1, "admin")
+	  || !strcasecmp(word1, "llama")) {
          if(admin[0]) {
             strcpy(word2, admin);
             wordshift(whotarget, word2);
@@ -352,7 +356,7 @@ modcontext;
 
 TARGETCONT:
 
-modcontext;
+context;
 /* Looking for ones own nick? */
 
    if(!strcasecmp(nick, whotarget)) {
@@ -365,15 +369,14 @@ modcontext;
 
    chan = chanset;
    while(chan) {
-      if (ismember(chan, whotarget)) {
+      if ((m = ismember(chan, whotarget))) {
          onchan = 1;
-         getchanhost (chan->name, whotarget, word2);
-         sprintf(word1, "%s!%s", whotarget, word2);
-         get_handle_by_host (word2, word1);
-         if(!strcasecmp(whotarget, word2)) break;
+         sprintf(word1, "%s!%s", whotarget, m->userhost);
+	 urec = get_user_by_host(word1);
+         if (!urec || !strcasecmp(whotarget, urec->handle)) break;
          strcat(whoredirect, whotarget);
          strcat(whoredirect, " is ");
-         strcat(whoredirect, word2);
+         strcat(whoredirect, urec->handle);
          strcat(whoredirect, ", and ");
          break;
       }
@@ -388,8 +391,8 @@ modcontext;
          m = chan->channel.member;
          while (m->nick[0]) {
             sprintf(word2, "%s!%s", m->nick, m->userhost);
-            get_handle_by_host(word1, word2);
-            if(!strcasecmp(word1, whotarget)) {
+	    urec = get_user_by_host(word2);
+            if (urec && !strcasecmp(urec->handle, whotarget)) {
                onchan = 1;
                strcat(whoredirect, whotarget);
                strcat(whoredirect, " is ");
@@ -397,28 +400,32 @@ modcontext;
                strcat(whoredirect, ", and ");
                strcpy(whotarget, m->nick);
                break;
-            } else {
-            }
+            } 
             m = m->next;
          }
          chan = chan->next;
       }
    }
 
+   
 /* Check if the target was on the channel, but is netsplit */
+context;
 
    chan = findchan(channel);
 
-   if (chan && is_split(chan->name, whotarget)) {
-      dprintf(idx, 
-            "%s%s%s was just here, but got netsplit.\n",
-                        prefix, whoredirect, whotarget);
-      return;
+   if (chan) {
+      m = ismember(chan,whotarget);
+      if (m && chan_issplit(m)) {
+	 dprintf(idx, 
+		 "%s%s%s was just here, but got netsplit.\n",
+		 prefix, whoredirect, whotarget);
+	 return;
+      }
    } 
 
 /* Check if the target IS on the channel */
 
-   if (chan && ismember(chan, whotarget)) {
+   if (chan && m) {
       dprintf(idx, "%s%s%s is on the channel right now!\n",
                         prefix, whoredirect, whotarget);
       return;
@@ -428,20 +435,20 @@ modcontext;
 
    chan = chanset;
    while (chan) {
-
-      if (is_split(chan->name, whotarget)) {
+      m = ismember(chan,whotarget);
+      if (m && chan_issplit(m)) {
          dprintf(idx, 
                "%s%s%s was just on %s, but got netsplit.\n",
                         prefix, whoredirect, whotarget, chan->name);
          return;
       }
-      
-      if (ismember(chan, whotarget)) {
+      if (m) {
          dprintf(idx, 
                         "%s%s%s is on %s right now!\n",
                         prefix, whoredirect, whotarget, chan->name);
          return;
       }
+      
       chan = chan->next;
    }
             
@@ -465,7 +472,7 @@ modcontext;
 /* Is the target currently DCC CHAT to me on the botnet? */
 
    for (i = 0; i < dcc_total; i++) {
-      if(dcc[i].type == &DCC_CHAT) {
+      if(dcc[i].type->flags & DCT_CHAT) {
          if(!strcasecmp(whotarget, dcc[i].nick)) {
             if (!strcasecmp(channel, dcc[i].u.chat->con_chan) &&
                         dcc[i].u.chat->con_flags & LOG_PUBLIC) {
@@ -486,31 +493,69 @@ modcontext;
 
 /* Target known, but nowhere to be seen.   Give last IRC and botnet time */
 
-   strftime(word2, 50, "%A, %B %3, %Y at %l:%M%p %Z", 
-                             localtime((time_t *) &urec->laston));
-   word1[0] = 0;
-   if(!urec->lastonchan || !urec->lastonchan[0]){
-      dprintf(idx, "%s%sI've never seen %s around.\n", 
-                           prefix, whoredirect, whotarget);
-   } else {
-      if(urec->lastonchan[0] == '#')
-         sprintf(word1, "on IRC channel %s", urec->lastonchan);
-      else if (urec->lastonchan[0] == '@')
-         sprintf(word1, "on %s", urec->lastonchan + 1);
-      else if(urec->lastonchan[0] != 0)
-         sprintf(word1, "on my %s", urec->lastonchan);
-      else 
-         strcpy(word1, "seen");
-      dprintf(idx, "%s%s%s was last %s on %s\n", 
-               prefix, whoredirect, whotarget, word1, word2);
+   wordshift(word1, text);
+   if (!strcasecmp(word1,"anywhere"))
+     cr = NULL;
+   else
+     for (cr = urec->chanrec;cr;cr = cr->next) {
+	if (!strcasecmp(cr->channel,channel)) {
+	   if (cr->laston) {
+	      laston = cr->laston;
+	      lastonplace = channel;
+	      break;
+	   }
+	}
+     }
+   if (!cr) {
+      li = get_user(&USERENTRY_LASTON,urec);
+      if (!li || !li->lastonplace || !li->lastonplace[0]) {
+	 dprintf(idx, "%s%sI've never seen %s around.\n", 
+		 prefix, whoredirect, whotarget);
+	 return;
+      }	
+      lastonplace = li->lastonplace;
+      laston = li->laston;
    }
+   word1[0] = 0;
+   word2[0] = 0;
+   work = now - laston;
+   if (work >= 86400) {
+      sprintf(word2, "%lu day%s, ",work / 86400,
+	      ((work/86400) == 1)?"":"s");
+      work = work % 86400;
+   }
+   if (work >= 3600) {
+      sprintf(word2+strlen(word2),"%lu hour%s, ", work / 3600,
+	      ((work/3600) == 1)?"":"s");
+      work = work % 3600;
+   }
+   if (work >= 60) {
+      sprintf(word2+strlen(word2),"%lu minute%s, ", work / 60,
+	      ((work/60) == 1)?"":"s");
+   }
+   if (!word2[0] && (work < 60)) {
+      strcpy(word2,"just moments ago!!");
+   } else {
+      strcpy(word2 + strlen(word2) - 2," ago.");
+   }
+   
+   if ((lastonplace[0] == '#') || (lastonplace[0] == '&'))
+     sprintf(word1, "on IRC channel %s", lastonplace);
+   else if (lastonplace[0] == '@')
+     sprintf(word1, "on %s", lastonplace + 1);
+   else if (lastonplace[0] != 0)
+     sprintf(word1, "on my %s", lastonplace);
+   else 
+     strcpy(word1, "seen");
+   dprintf(idx, "%s%s%s was last %s %s\n",
+	   prefix, whoredirect, whotarget, word1, word2);
 }
 
-char  fixednick[512];
-char *fixnick (char *nick)
+static char  fixit[512];
+static char *fixnick (char *nick)
 {
-   strcpy(fixednick, nick);
-   strcat(fixednick, "'");
+   strcpy(fixit, nick);
+   strcat(fixit, "'");
    switch (nick[strlen(nick) - 1]) {
       case 's':
       case 'S':
@@ -520,13 +565,13 @@ char *fixnick (char *nick)
       case 'Z':
          break;
       default:
-         strcat(fixednick, "s");
+         strcat(fixit, "s");
          break;
    }
-   return fixednick;
+   return fixit;
 }
 
-char *match_trigger( char *word)
+static char *match_trigger( char *word)
 {
 trig_data *t = trigdata;
 
@@ -538,48 +583,38 @@ trig_data *t = trigdata;
    return (char *)0;
 }
 
-char   outfield[512];
-
-char *getxtra(char *hand, char *field)
+static char *getxtra(char *hand, char *field)
 {
 
 struct userrec *urec;
-char *p1, *p2;
-
-   outfield[0]=0;
+struct user_entry * ue;
+struct xtra_key * xk;
 
    urec = get_user_by_handle(userlist, hand);
+   ue = find_user_entry(&USERENTRY_XTRA,urec);
 
-   for (p1 = urec->xtra; *p1; p1++) {
-      if (*p1 == '{') {                            /* Find next { */
-         for (p2 = p1++; p2 && *p2 != ' '; p2++);  /* Find next space */
-         if (strlen(p1) > strlen(field)) {
-            if (!strncasecmp(p1, field, strlen(field))) {
-               p1 = p2;
-               for (p2++; p2 && *p2; p2++) {
-                  if (*p2 == '{') p1 = p2 + 1;
-                  if (*p2 == '}') {
-                     p2--; break;
-                  }
-               }
-               strncpy(outfield, p1 + 1, p2 - p1);
-               outfield[p2 - p1] = 0;
-               return outfield;
-            }
-         }
-      }
-   }
-   return outfield;
+   if (ue) 
+     for (xk = ue->u.extra; xk; xk=xk->next) 
+       if (xk->key && !strcasecmp(xk->key,field)) 
+	 if (xk->data[0] == '{' && xk->data[strlen(xk->data)-1] == '}'
+	     && strlen(xk->data) > 2) {
+	    strncpy(fixit, &xk->data[1], strlen(xk->data - 9));
+	    fixit[strlen(xk->data) - 2] = 0;
+	    return fixit;
+	 } else {
+	    return xk->data;
+	 }
+   return "";
 }
 
-void wordshift (char *first, char *rest)
+static void wordshift (char * first, char *rest)
 {
+   char * p, * q = rest;
+   
 LOOPIT:
-   split(first, rest);
-   if(!first[0]) {
-      strcpy(first, rest);
-      rest[0] = 0;
-   }
+   p = newsplit(&q);
+   strcpy(first,p);
+   strcpy(rest,q);
    if (!strcasecmp(first, "and") || !strcasecmp(first, "or"))
       goto LOOPIT;
 }
@@ -588,9 +623,10 @@ LOOPIT:
  * Report on current seen info for .modulestat.
  */
 
-static void seen_report (int idx)
+static void seen_report (int idx, int details)
 {
-   dprintf(idx, "     seen.so - PUB, DCC and MSG \"seen\" commands.\n");
+   if (details)
+     dprintf(idx, "     seen.so - PUB, DCC and MSG \"seen\" commands.\n");
 }
 
 /*
@@ -600,29 +636,51 @@ static void seen_report (int idx)
 static cmd_t seen_pub[] =
 {
    {"seen",   "", pub_seen, 0},
-   {0, 0, 0, 0}
 };
+
 static cmd_t seen_dcc[] =
 {
    {"seen",   "", dcc_seen, 0},
-   {0, 0, 0, 0}
 };
+
 static cmd_t seen_msg[] =
 {
    {"seen",   "", msg_seen, 0},
-   {0, 0, 0, 0}
+};
+
+static int server_seen_setup(char * mod) {
+   p_tcl_bind_list H_temp;
+   
+   if ((H_temp = find_bind_table("msg")))
+     add_builtins(H_temp, seen_msg,1);
+   return 0;
+}
+
+static int irc_seen_setup(char * mod) {
+   p_tcl_bind_list H_temp;
+   
+   if ((H_temp = find_bind_table("pub")))
+     add_builtins(H_temp, seen_pub,1);
+   return 0;
+}
+
+static cmd_t seen_load[] = 
+{ 
+     {"server", "", server_seen_setup, "seen:server"},
+     {"irc", "", irc_seen_setup, "seen:irc"},
 };
 
 static char *seen_close()
 {
-p_tcl_hash_list H_pub;
-    
-   H_pub = find_hash_table("pub");
-   rem_builtins(H_pub, seen_pub);
-   H_pub = find_hash_table("dcc");
-   rem_builtins(H_pub, seen_dcc);
-   H_pub = find_hash_table("msg");
-   rem_builtins(H_pub, seen_msg);
+   p_tcl_bind_list H_temp;
+   
+   add_builtins(H_load, seen_load,2);
+   rem_builtins(H_dcc, seen_dcc,1);
+   rem_help_reference("seen.help");
+   if ((H_temp = find_bind_table("pub")))
+     rem_builtins(H_temp, seen_pub,1);
+   if ((H_temp = find_bind_table("msg")))
+     rem_builtins(H_temp, seen_msg,1);
    module_undepend(MODULE_NAME);
    return NULL;
 }
@@ -639,19 +697,17 @@ static Function seen_table[] =
 
 char *seen_start (Function *egg_func_table)
 {
-p_tcl_hash_list H_pub;
-
    global = egg_func_table;
-   modcontext;
-   module_register(MODULE_NAME, seen_table, 1, 1);
-   if(!module_depend(MODULE_NAME, "eggdrop", 102, 0)) 
+   context;
+   module_register(MODULE_NAME, seen_table, 2, 0);
+   if(!module_depend(MODULE_NAME, "eggdrop", 103, 0))
       return 
-          "MODULE `seen' cannot be loaded on Eggdrops prior to version 1.2.0";
-   H_pub = find_hash_table("pub");
-   add_builtins(H_pub, seen_pub);
-   H_pub = find_hash_table("dcc");
-   add_builtins(H_pub, seen_dcc);
-   H_pub = find_hash_table("msg");
-   add_builtins(H_pub, seen_msg);
+          "MODULE `seen' cannot be loaded on Eggdrops prior to version 1.3.0";
+   add_builtins(H_load, seen_load,2);
+   add_builtins(H_dcc, seen_dcc,1);
+   add_help_reference("seen.help");
+   server_seen_setup(0);
+   irc_seen_setup(0);
+   trigdata[4].key = botnetnick;
    return NULL;
 }

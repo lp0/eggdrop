@@ -4,49 +4,56 @@
  *
  *            by ButchBub - Scott G. Taylor (staylor@mrynet.com) 
  *
- *      REQUIRED: Eggdrop Module version 1.2.0
+ *      REQUIRED: Eggdrop Modules (see dependancies below).  
+ *		  Wire will only compile and work on the latest Required
+ *		  Eggdrop version listed below.
  *
- *	1.0	1997-07-17	Initial.
- *	1.1	1997-07-28	Release version.
+ *    Version   Date            Req'd Eggver	Notes			Who
+ *    .......   ..........      ............    ....................    ......
+ *	1.0	1997-07-17	1.2.0		Initial.		BB
+ *	1.1	1997-07-28	1.2.0		Release version.	BB
+ *      1.2     1997-08-19      1.2.1		Update and bugfixes.	BB
+ *      1.3     1997-09-24      1.2.2.0		Reprogrammed for 1.2.2	BB
  *
  *   This module does not support wire usage in the files area.
- *
- *   TODO:  Reduce char[] sizes and clean up superfluous char[] usage.
  *
  */
 
 #define MAKING_WIRE
 #define MODULE_NAME "wire"
 #include "../module.h"
+#include "../../users.h"
+#include "../../chan.h"
 #include <time.h>
+#include "wire.h"
+
+#undef global
+static Function * global = NULL, * blowfish_funcs = NULL;
 
 typedef struct wire_t {
-   int    idx;
+   int    sock;
    char   *crypt;
    char   *key;
    struct wire_t *next;
 } wire_list;
 
-wire_list *wirelist;
+static wire_list *wirelist;
 
 static cmd_t wire_bot[] =
 {
    {0, 0, 0, 0}, /* Saves having to malloc :P */
-   {0, 0, 0, 0}
 };
 
 static void wire_leave ();
 static void wire_join ();
 static void wire_display ();
-char *encrypt_string(), *decrypt_string();
-char geticon ();
 
 static int wire_expmem()
 {
 wire_list *w = wirelist;
 int size = 0;
 
-   modcontext;
+   context;
    while (w) {
       size += sizeof(wirelist);
       size += strlen(w->crypt);
@@ -54,6 +61,13 @@ int size = 0;
       w = w->next;
    }
    return size;
+}
+
+static void nsplit(char * to, char * from) {
+   char * x, *y = from;
+   x = newsplit(&y);
+   strcpy(to,x);
+   strcpy(from,y);
 }
 
 static void wire_filter (char *from, char *cmd, char *param)
@@ -64,60 +78,65 @@ char   wiretmp2[512];
 char   wiretmp[512];
 char   wirereq[512];
 wire_list *w = wirelist;
-char   reqidx;
-time_t now2 = time(NULL);
+char   reqsock;
+time_t now2 = now;
 char   idle[20];
 char   *enctmp;
 
-   modcontext;
+   context;
    strcpy(wirecrypt, &cmd[5]);
    strcpy(wiretmp, param);
    nsplit(wirereq, param);
 
 /*
- * !wire<crypt"wire"> !wirereq <destbotidx> <crypt"destbotnick">
+ * !wire<crypt"wire"> !wirereq <destbotsock> <crypt"destbotnick">
  * -----  wirecrypt    wirereq    wirewho         param
  */
 
    if (!strcmp(wirereq, "!wirereq")) {
+context;
       nsplit(wirewho, param);
       while(w) { 
          if (!strcmp(w->crypt, wirecrypt)) {
 
-            reqidx = atoi(wirewho);
-            if (now2 - dcc[w->idx].timeval > 300) {
-               unsigned long days, hrs, mins;
-               days = (now2 - dcc[w->idx].timeval) / 86400;
-               hrs = ((now2 - dcc[w->idx].timeval) - (days * 86400)) / 3600;
-               mins = ((now2 - dcc[w->idx].timeval) - (hrs * 3600)) / 60;
-               if (days > 0)
-                  sprintf(idle, " \\[idle %lud%luh\\]", days, hrs);
+            reqsock = atoi(wirewho);
+            if (now2 - dcc[findanyidx(w->sock)].timeval > 300) {
+               unsigned long Days, hrs, mins;
+               Days = (now2 - dcc[findanyidx(w->sock)].timeval) / 86400;
+               hrs = ((now2 - dcc[findanyidx(w->sock)].timeval) 
+					- (Days * 86400)) / 3600;
+               mins = ((now2 - dcc[findanyidx(w->sock)].timeval) 
+					- (hrs * 3600)) / 60;
+               if (Days > 0)
+                  sprintf(idle, " \[%s %lud%luh]", WIRE_IDLE, Days, hrs);
                else if (hrs > 0)
-                  sprintf(idle, " \\[idle %luh%lum\\]", hrs, mins);
+                  sprintf(idle, " \[%s %luh%lum]", WIRE_IDLE, hrs, mins);
                else
-                  sprintf(idle, " \\[idle %lum\\]", mins);
+                  sprintf(idle, " \[%s %lum]", WIRE_IDLE, mins);
             } else
                idle[0] = 0;
 
             sprintf(wirereq, "----- %c%-9s %-9s  %s%s", 
-                                          geticon(w->idx), dcc[w->idx].nick,
-                                          botnetnick, dcc[w->idx].host, idle);
+                                          geticon(findanyidx(w->sock)), 
+					  dcc[findanyidx(w->sock)].nick,
+                                          botnetnick, 
+					  dcc[findanyidx(w->sock)].host, idle);
             enctmp=encrypt_string(w->key, wirereq);
             strcpy(wiretmp, enctmp);
-            modfree(enctmp);
+            nfree(enctmp);
             sprintf(wirereq, "zapf %s %s !wire%s !wireresp %s %s %s",
                botnetnick, from, wirecrypt, wirewho, param, wiretmp);
-            modprintf(nextbot(from),"%s\n", wirereq);
+            dprintf(nextbot(from),"%s\n", wirereq);
 
-            if(dcc[w->idx].u.chat->away) {
-               sprintf(wirereq, "-----    AWAY: %s\n", 
-                                              dcc[w->idx].u.chat->away);
+            if(dcc[findanyidx(w->sock)].u.chat->away) {
+               sprintf(wirereq, "-----    %s: %s\n", WIRE_AWAY,
+                                     dcc[findanyidx(w->sock)].u.chat->away);
                enctmp=encrypt_string(w->key, wirereq);
                strcpy(wiretmp, enctmp);
-               modfree(enctmp);
+               nfree(enctmp);
                sprintf(wirereq, "zapf %s %s !wire%s !wireresp %s %s %s",
                   botnetnick, from, wirecrypt, wirewho, param, wiretmp);
-               modprintf(nextbot(from),"%s\n", wirereq);
+               dprintf(nextbot(from),"%s\n", wirereq);
             }
          }
          w = w->next;
@@ -125,19 +144,20 @@ char   *enctmp;
       return;
    }
    if (!strcmp(wirereq, "!wireresp")) {
+context;
       nsplit(wirewho, param);
-      reqidx = atoi(wirewho);
+      reqsock = atoi(wirewho);
       w = wirelist;
       nsplit(wiretmp2, param);
       while(w) {
-         if(w->idx == reqidx) {
+         if (w->sock == reqsock) {
             enctmp = decrypt_string(w->key, wiretmp2);
             strcpy(wirewho, enctmp);
-            modfree(enctmp);
-            if (!strcmp(dcc[reqidx].nick, wirewho)) {
+            nfree(enctmp);
+            if (!strcmp(dcc[findanyidx(reqsock)].nick, wirewho)) {
                enctmp = decrypt_string(w->key, param);
-               modprintf(reqidx, "%s\n", enctmp);
-               modfree(enctmp);
+               dprintf(findanyidx(reqsock), "%s\n", enctmp);
+               nfree(enctmp);
                return;
             }
          }
@@ -145,9 +165,10 @@ char   *enctmp;
       }
       return;
    }
+context;
    while(w) {
       if (!strcmp(wirecrypt, w->crypt))
-         wire_display(w->idx, w->key, wirereq, param);
+         wire_display(findanyidx(w->sock), w->key, wirereq, param);
       w = w->next;
    }
 }
@@ -156,137 +177,141 @@ static void wire_display (int idx, char *key, char *from, char *message)
 {
    char   *enctmp;
    
+context;
    enctmp = decrypt_string(key, message);
    if(from[0] == '!') 
-      modprintf(idx, "----- > %s %s\n", &from[1], enctmp+1);
+      dprintf(idx, "----- > %s %s\n", &from[1], enctmp+1);
    else
-      modprintf(idx, "----- <%s> %s\n", from, enctmp);
-   modfree(enctmp);
+      dprintf(idx, "----- <%s> %s\n", from, enctmp);
+   nfree(enctmp);
 }
 
-static int cmd_wirelist (int idx, char *par)
+static int cmd_wirelist (struct userrec *u, int idx, char *par)
 {
 wire_list *w = wirelist;
 int      entry = 0;
 
-modcontext;
-   modprintf(idx, "Current Wire table:  (Base table address = %U)\n", w);
+context;
+   dprintf(idx, "Current Wire table:  (Base table address = %U)\n", w);
    while(w) {
-      modprintf(idx, "entry %d: w=%U  idx=%d  next=%U\n",
-                         ++entry, w, w->idx, w->next);
+      dprintf(idx, "entry %d: w=%U  idx=%d  sock=%d  next=%U\n",
+                         ++entry, w, findanyidx(w->sock), w->sock, w->next);
       w = w->next;
    }
    return 0;
 }
 
-static int cmd_onwire (int idx, char *par)
+static int cmd_onwire (struct userrec *u, int idx, char *par)
 {
 wire_list *w, *w2;
 char   wiretmp[512], wirecmd[512], idxtmp[512];
 char   idle[20], *enctmp;
-time_t now2 = time(NULL);
+time_t now2 = now;
 
-modcontext;
+context;
    w = wirelist;
    while(w) {
-      if (w->idx == idx) break;
+      if (w->sock == dcc[idx].sock) break;
       w = w->next;
    }
    if (!w) {
-      modprintf(idx, "You aren't on a wire.\n");
+      dprintf(idx, "%s\n", WIRE_NOTONWIRE);
       return 0;
    }
-   modprintf(idx, "----- Currently on wire '%s':\n", w->key);
-   modprintf(idx, "----- Nick       Bot        Host\n");
-   modprintf(idx, "----- ---------- ---------- ------------------------------\n");
+   dprintf(idx, "----- %s '%s':\n", WIRE_CURRENTLYON, w->key);
+   dprintf(idx, "----- Nick       Bot        Host\n");
+   dprintf(idx, "----- ---------- ---------- ------------------------------\n");
 
    enctmp=encrypt_string(w->key, "wire");
    sprintf(wirecmd, "!wire%s", enctmp);
-   modfree(enctmp);
+   nfree(enctmp);
 
    enctmp=encrypt_string(w->key, dcc[idx].nick);
    strcpy(wiretmp, enctmp);
-   modfree(enctmp);
-   sprintf(idxtmp, "%s !wirereq %d %s", wirecmd, idx, wiretmp);
-   tandout("zapf-broad %s %s\n", botnetnick, idxtmp);
-
+   nfree(enctmp);
+   simple_sprintf(idxtmp, "!wirereq %d %s", dcc[idx].sock, wiretmp);
+   botnet_send_zapf_broad(-1, botnetnick, wirecmd, idxtmp);
+   
    w2 = wirelist;
    while(w2) {
       if (!strcmp(w2->key, w->key)) {
-         if (now2 - dcc[w2->idx].timeval > 300) {
-            unsigned long days, hrs, mins;
-            days = (now2 - dcc[w2->idx].timeval) / 86400;
-            hrs = ((now2 - dcc[w2->idx].timeval) - (days * 86400)) / 3600;
-            mins = ((now2 - dcc[w2->idx].timeval) - (hrs * 3600)) / 60;
-            if (days > 0)
-               sprintf(idle, " \\[idle %lud%luh\\]", days, hrs);
+         if (now2 - dcc[findanyidx(w2->sock)].timeval > 300) {
+            unsigned long Days, hrs, mins;
+            Days = (now2 - dcc[findanyidx(w2->sock)].timeval) / 86400;
+            hrs = ((now2 - dcc[findanyidx(w2->sock)].timeval) - (Days * 86400)) / 3600;
+            mins = ((now2 - dcc[findanyidx(w2->sock)].timeval) - (hrs * 3600)) / 60;
+            if (Days > 0)
+               sprintf(idle, " \[%s %lud%luh]", WIRE_IDLE, Days, hrs);
             else if (hrs > 0)
-               sprintf(idle, " \\[idle %luh%lum\\]", hrs, mins);
+               sprintf(idle, " \[%s %luh%lum]", WIRE_IDLE, hrs, mins);
             else
-               sprintf(idle, " \\[idle %lum\\]", mins);
+               sprintf(idle, " \[%s %lum]", WIRE_IDLE, mins);
          } else
             idle[0] = 0;
 
-         modprintf(idx, "----- %c%-9s %-9s  %s%s\n", 
-                           geticon(w2->idx), dcc[w2->idx].nick,
-                           botnetnick, dcc[w2->idx].host, idle);
-         if(dcc[w2->idx].u.chat->away) 
-            modprintf(idx, "-----    AWAY: %s\n", dcc[w2->idx].u.chat->away);
+         dprintf(idx, "----- %c%-9s %-9s  %s%s\n", 
+                           geticon(findanyidx(w2->sock)), 
+			   dcc[findanyidx(w2->sock)].nick,
+                           botnetnick, dcc[findanyidx(w2->sock)].host, idle);
+         if(dcc[findanyidx(w2->sock)].u.chat->away) 
+            dprintf(idx, "-----    %s: %s\n", WIRE_AWAY,
+				dcc[findanyidx(w2->sock)].u.chat->away);
       }
       w2 = w2->next;
    }
    return 0;
 }
 
-static int cmd_wire (int idx, char *par)
+static int cmd_wire (struct userrec *u, int idx, char *par)
 {
    wire_list *w = wirelist;
 
+context;
    if(!par[0]) {
-      modprintf(idx, "Usage: .wire [<encrypt-key>|OFF|info]\n");
+      dprintf(idx, "%s: .wire [<encrypt-key>|OFF|info]\n", USAGE);
       return 0;
    }
 
    while (w) {
-      if (w->idx == idx) break;
+      if (w->sock == dcc[idx].sock) break;
       w = w->next;
    }
 
    if(!strcmp(par, "OFF") || !strcmp(par, "off")) {
       if (w) {
-         wire_leave(w->idx);
+         wire_leave(w->sock);
+         dprintf(idx, "%s\n", WIRE_NOLONGERWIRED);
          return 0;
       }
-      modprintf(idx, "You are not on a wire.\n");
+      dprintf(idx, "%s\n", WIRE_NOTONWIRE);
       return 0;
    }
 
    if(!strcmp(par, "info") || !strcmp(par, "INFO")) {
       if (w) 
-         modprintf(idx, "You are currently on wire '%s'.\n", w->key);
+         dprintf(idx, "%s '%s'.\n", WIRE_CURRENTLYON, w->key);
       else
-         modprintf(idx, "You are not on a wire.\n");
+         dprintf(idx, "%s\n", WIRE_NOTONWIRE);
       return 0;
    }
 
    if(w) {
-      modprintf(idx, "Changing wire encryption key to %s...\n", par);
-      wire_leave(w->idx);
+      dprintf(idx, "%s %s...\n", WIRE_CHANGINGKEY, par);
+      wire_leave(w->sock);
    } else {
-      modprintf(idx, 
-                "----- All text starting with ; will now go over the wire.\n");
-      modprintf(idx, "----- To see who's on your wire, type '.onwire'.\n");
-      modprintf(idx, "----- To leave, type '.wire off'.\n");
+      dprintf(idx, "----- %s\n", WIRE_INFO1);
+      dprintf(idx, "----- %s\n", WIRE_INFO2);
+      dprintf(idx, "----- %s\n", WIRE_INFO3);
    }
     
    wire_join(idx, par);
-   cmd_onwire(idx, "");
+   cmd_onwire((struct userrec *)0, idx, "");
    return 0;
 }
 
 static char *chof_wire (char *from, int idx)
 {
-   wire_leave(idx);
+   wire_leave(dcc[idx].sock);
    return NULL;
 }
 
@@ -297,48 +322,50 @@ char   wiremsg[512];
 char   wiretmp[512];
 char   *enctmp;
 wire_list *w = wirelist, *w2;
-p_tcl_hash_list H_dcc;
 
-modcontext;
+context;
    while (w) {
       if (w->next == 0) break;
       w = w->next;
    }
 
    if (!wirelist) {
-      wirelist = (wire_list *) modmalloc(sizeof(wire_list));
+      wirelist = (wire_list *) nmalloc(sizeof(wire_list));
       w = wirelist;
    } else {
-      w->next = (wire_list *) modmalloc(sizeof(wire_list));
+      w->next = (wire_list *) nmalloc(sizeof(wire_list));
       w = w->next;
    }
 
-   w->idx = idx;
-   w->key = (char *) modmalloc(strlen(key)+1);
+   w->sock = dcc[idx].sock;
+   w->key = (char *) nmalloc(strlen(key)+1);
    strcpy(w->key, key);
    w->next = 0;
 
-modcontext;
+context;
    enctmp=encrypt_string(w->key, "wire");
    strcpy(wiretmp, enctmp);
-   modfree(enctmp);
-   w->crypt = (char *) modmalloc(strlen(wiretmp)+1);
+   nfree(enctmp);
+   w->crypt = (char *) nmalloc(strlen(wiretmp)+1);
    strcpy(w->crypt, wiretmp);
    sprintf(wirecmd, "!wire%s", wiretmp);
 
    sprintf(wiremsg, "%s joined wire '%s'", dcc[idx].nick, key);
    enctmp=encrypt_string(w->key, wiremsg);
    strcpy(wiretmp, enctmp);
-   modfree(enctmp);
+   nfree(enctmp);
 
-   tandout("zapf-broad %s %s %s %s\n", 
-                     botnetnick, wirecmd, botnetnick, wiretmp);
+     {
+	char x[1024];
+	simple_sprintf(x,"%s %s", botnetnick, wiretmp);
+	botnet_send_zapf_broad(-1, botnetnick, wirecmd, x);
+     }
 
    w2 = wirelist;
    while(w2) {
       if(!strcmp(w2->key, w->key))
-         modprintf(w2->idx, "----- %s joined wire '%s'.\n", 
-                                             dcc[w2->idx].nick, w2->key);
+         dprintf(findanyidx(w2->sock), "----- %s %s '%s'.\n", 
+                      dcc[findanyidx(w->sock)].nick, WIRE_JOINED, w2->key);
       w2 = w2->next;
    }
    
@@ -354,12 +381,11 @@ modcontext;
       wire_bot[0].name = wirecmd;
       wire_bot[0].flags = "";
       wire_bot[0].func = (Function) wire_filter;
-      H_dcc = find_hash_table("bot");
-      add_builtins(H_dcc, wire_bot);
+      add_builtins(H_bot, wire_bot,1);
    }
 }
    
-static void wire_leave (int idx)
+static void wire_leave (int sock)
 {
 char   wirecmd[513];
 char   wiremsg[513];
@@ -369,10 +395,9 @@ wire_list *w = wirelist;
 wire_list *w2 = wirelist;
 wire_list *wlast = wirelist;
 
-p_tcl_hash_list H_dcc;
-
+context;
    while(w) {
-      if (w->idx == idx) break;
+      if (w->sock == sock) break;
       w = w->next;
    }
 
@@ -380,20 +405,25 @@ p_tcl_hash_list H_dcc;
 	
    enctmp=encrypt_string(w->key, "wire");
    strcpy(wirecmd, enctmp);
-   modfree(enctmp);
+   nfree(enctmp);
 
-   sprintf(wiretmp, "%s left the wire.", dcc[w->idx].nick);
+   sprintf(wiretmp, "%s left the wire.", dcc[findanyidx(w->sock)].nick);
    enctmp=encrypt_string(w->key, wiretmp);
    strcpy(wiremsg, enctmp);
-   modfree(enctmp);
+   nfree(enctmp);
 
-   tandout("zapf-broad %s !wire%s %s %s\n", botnetnick, wirecmd, botnetnick, 
-                                       wiremsg);
+     {
+	char x[1024];
+	simple_sprintf(x,"!wire%s %s", wirecmd, botnetnick);
+	botnet_send_zapf_broad(-1, botnetnick, x, wiremsg);
+     }
 
    w2 = wirelist;
    while(w2) {
-      if(!strcmp(w2->key, w->key))
-         modprintf(w2->idx, "----- %s left the wire.\n", dcc[w2->idx].nick);
+      if(w2->sock != sock && !strcmp(w2->key, w->key)) {
+         dprintf(findanyidx(w2->sock), "----- %s %s\n", 
+			dcc[findanyidx(w2->sock)].nick, WIRE_LEFT);
+      }
       w2 = w2->next;
    }
 
@@ -410,8 +440,7 @@ p_tcl_hash_list H_dcc;
       wire_bot[0].name = wirecmd;
       wire_bot[0].flags = "";
       wire_bot[0].func = (Function) wire_filter;
-      H_dcc = find_hash_table("bot");
-      rem_builtins(H_dcc, wire_bot);
+      rem_builtins(H_bot, wire_bot,1);
    }
 
    w2 = wirelist;
@@ -434,13 +463,9 @@ p_tcl_hash_list H_dcc;
       else
          wirelist = w->next;
 
-modcontext;
-   modfree(w->crypt);
-modcontext;
-   modfree(w->key);
-modcontext;
-   modfree(w);
-modcontext;
+   nfree(w->crypt);
+   nfree(w->key);
+   nfree(w);
 
 }
 
@@ -455,8 +480,9 @@ char   wiretmp[512];
 char   wiretmp2[512];
 char   *enctmp;
 
+context;
    while(w) {
-      if (w->idx == idx) break;
+      if (w->sock == dcc[idx].sock) break;
       w = w->next;
    }
 
@@ -464,7 +490,8 @@ char   *enctmp;
 
    if (!message[1]) return "";
 
-   if (strlen(message) > 2 && !strncmp(&message[1], "me", 2)) {
+   if (strlen(message) > 2 && !strncmp(&message[1], "me", 2)
+                       && !message[3]) {
       sprintf(wiretmp2,"!%s@%s", dcc[idx].nick, botnetnick);
       enctmp=encrypt_string(w->key, &message[3]);
       wiretype = 1;
@@ -474,34 +501,36 @@ char   *enctmp;
       wiretype = 0;
    }
    strcpy(wiremsg, enctmp);
-   modfree(enctmp);
+   nfree(enctmp);
 
    enctmp=encrypt_string(w->key, "wire");
-   strcpy(wirecmd, enctmp);
-   modfree(enctmp);
-   sprintf(wiretmp, "!wire%s %s %s", wirecmd, wiretmp2, wiremsg);
-   tandout("zapf-broad %s %s\n", botnetnick, wiretmp);
-   sprintf(wiretmp, "%s%s", wiretype ? "!" : "", dcc[w2->idx].nick); 
+   strcpy(wiretmp, enctmp);
+   nfree(enctmp);
+   sprintf(wirecmd, "!wire%s", wiretmp);
+   sprintf(wiretmp, "%s %s", wiretmp2, wiremsg);
+   botnet_send_zapf_broad(-1, botnetnick, wirecmd, wiretmp);
+   sprintf(wiretmp, "%s%s", wiretype ? "!" : "", dcc[findanyidx(w->sock)].nick); 
    while(w2) {
       if (!strcmp(w2->key, w->key))
-         wire_display(w2->idx, w2->key, wiretmp, wiremsg);
+         wire_display(findanyidx(w2->sock), w2->key, wiretmp, wiremsg);
       w2 = w2->next;
    }
    return "";
 }
 
 /* a report on the module status */
-static void wire_report (int idx)
+static void wire_report (int idx, int details)
 {
    int wiretot = 0; 
    wire_list *w = wirelist;
+context;
    while(w) {
-   wiretot++;
-   w = w->next;
+      wiretot++;
+      w = w->next;
    }
-
-   modprintf(idx, "   %d wire%s using %d bytes\n", wiretot, 
-                            wiretot == 1 ? "" : "s", wire_expmem());
+   if (details)
+     dprintf(idx, "   %d wire%s using %d bytes\n", wiretot, 
+	     wiretot == 1 ? "" : "s", wire_expmem());
 }
 
 static cmd_t wire_dcc[] =
@@ -509,56 +538,51 @@ static cmd_t wire_dcc[] =
    {"wire",   "", cmd_wire, 0},
    {"onwire", "", cmd_onwire, 0},
    {"wirelist","n", cmd_wirelist, 0},
-   {0, 0, 0, 0}
 };
 
 static cmd_t wire_chof[] =
 {
    {"*", "", (Function) chof_wire, "wire:chof" },
-   {0, 0, 0, 0}
 };
 
 static cmd_t wire_filt[] =
 {
-{";*", "", (Function) cmd_putwire, "wire:filt"},
-   {0, 0, 0, 0}
+     {";*", "", (Function) cmd_putwire, "wire:filt"},
 };
 
 static char *wire_close()
 {
 wire_list   *w = wirelist;
-p_tcl_hash_list H_dcc;
 char   wiretmp[512];
 char   *enctmp;
-
+   p_tcl_bind_list H_temp;
+   
     /* Remove any current wire encrypt bindings */
     /* for now, don't worry about duplicate unbinds */
     
-modcontext;
+context;
    while(w) {
       enctmp = encrypt_string(w->key, "wire");
       sprintf(wiretmp, "!wire%s", enctmp);
-      modfree(enctmp);
+      nfree(enctmp);
       wire_bot[0].name = wiretmp;
       wire_bot[0].flags = "";
       wire_bot[0].func = (Function) wire_filter;
-      H_dcc = find_hash_table("bot");
-      rem_builtins(H_dcc, wire_bot);
+      rem_builtins(H_bot, wire_bot,1);
       w = w->next;
    }
    w = wirelist;
-   while(w && w->idx) {
-      modprintf(w->idx, "----- WIRE module being unloaded.\n");
-      modprintf(w->idx, "----- No longer on wire '%s'.\n", w->key);
-      wire_leave(w->idx);
+   while(w && w->sock) {
+      dprintf(findanyidx(w->sock), "----- %s\n", WIRE_UNLOAD);
+      dprintf(findanyidx(w->sock), "----- %s\n", WIRE_NOLONGERWIRED);
+      wire_leave(w->sock);
       w = wirelist;
    }
-   H_dcc = find_hash_table("dcc");
-   rem_builtins(H_dcc, wire_dcc);
-   H_dcc = find_hash_table("filt");
-   rem_builtins(H_dcc, wire_filt);
-   H_dcc = find_hash_table("chof");
-   rem_builtins(H_dcc, wire_chof);
+   rem_builtins(H_bot, wire_dcc,3);
+   H_temp = find_bind_table("filt");
+   rem_builtins(H_temp, wire_filt,1);
+   H_temp = find_bind_table("chof");
+   rem_builtins(H_temp, wire_chof,1);
    module_undepend(MODULE_NAME);
    return NULL;
 }
@@ -573,19 +597,25 @@ static Function wire_table[] =
    (Function) wire_report,
 };
 
-char *wire_start ()
+char *wire_start (Function * global_funcs)
 {
-p_tcl_hash_list H_dcc;
-   modcontext;
-   module_register(MODULE_NAME, wire_table, 1, 1);
-   if(!module_depend(MODULE_NAME, "eggdrop", 102, 0)) 
-      return "MODULE wire cannot be loaded on Eggdrops prior to version 1.2.0";
-   H_dcc = find_hash_table("dcc");
-   add_builtins(H_dcc, wire_dcc);
-   H_dcc = find_hash_table("filt");
-   add_builtins(H_dcc, wire_filt);
-   H_dcc = find_hash_table("chof");
-   add_builtins(H_dcc, wire_chof);
+   module_entry * me;
+   p_tcl_bind_list H_temp;
+   
+   global = global_funcs;
+   context;
+   module_register(MODULE_NAME, wire_table, 2, 0);
+   if(!module_depend(MODULE_NAME, "eggdrop", 103, 0)) {
+      module_undepend(MODULE_NAME);
+      return WIRE_VERSIONERROR;
+   }
+   me = module_find("encryption",2,0);
+   blowfish_funcs = me->funcs;
+   add_builtins(H_dcc, wire_dcc,3);
+   H_temp = find_bind_table("filt");
+   add_builtins(H_filt, wire_filt,1);
+   H_temp = find_bind_table("chof");
+   add_builtins(H_chof, wire_chof,1);
    wirelist = 0; 
    return NULL;
 }

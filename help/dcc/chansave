@@ -1,7 +1,0 @@
-%{+n|n}
-### chansave
-     Saves the channel settings to the file defined by the "channel-file"
-     setting.  This file is reloaded during rehash and restarting the bot.
-     This allows you to change channel modes without having to edit the 
-     config file every time.
-See also: %{+n}+chan, -chan%{+N} chanload, chanset, chaninfo

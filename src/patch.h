@@ -4,111 +4,170 @@
  * HOW TO DO IT:
  * 
  * replace a  *** PATCH GOES HERE *** line with a PATCH("patchname"); 
- * statement, leave the rest of the file alone, this alows better 
- * overlapping patches
+ * statement, leave the rest of the file alone, this allows better 
+ * overlapping patches (I.E. dont touch the 4 blank comment lines BB :P)
  * 
  */
-
 /*
  *
  *
  */
-PATCH("bel1");
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
 /*
  *
  *
  */
-/*** PATCH GOES HERE ***/
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
+/*
+ *
+ *
+ */
+/* PATCH GOES HERE */
 /*
  *
  *

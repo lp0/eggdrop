@@ -1,6 +1,0 @@
-%{+n}
-###  set max-filesize <#>
-   specifies the maximum allowable size (in kilobytes) of a file that
-   the bot will accept in a dcc send.  the default is 1024, which is
-   1 meg.
-see also: set max-dloads, set max-file-users

@@ -1,4 +1,0 @@
-###  su <user>
-   changes your username to that of another. If you 
-   are an owner this does not require a password
-   otherwise, you must enter the password of <user>.

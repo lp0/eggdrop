@@ -1,7 +1,0 @@
-%{+m}
-###  rehash
-   reloads the config file for the bot, which resets all the 'set'
-   variables and reloads any TCL scripts your config loads.  it
-   also saves and reloads the user file from disk, just to give
-   your disk a little extra wear.
-see also: save, reload, restart

@@ -3,6 +3,9 @@ Contents of the doc/ directory:
 UPDATES
    a list of what's changed in recent versions
 
+BOTNET
+   a guid to flags and bot user file sharing
+
 compiling.FAQ
    Chad Wagner's helpful guide to getting eggdrop to compile on odd
    or mis-installed systems
@@ -17,6 +20,9 @@ man1/
 nets.list
    a list of current active eggdrop bot networks ("botnets") that you
    might want to join
+
+Ode_To_Beldin
+   A tribute to the latest acheiver in eggdrop coding.
 
 patch.howto
    a how-to on applying patches to eggdrop, snagged from ftp.sodre.net

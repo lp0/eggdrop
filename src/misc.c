@@ -23,14 +23,16 @@
 #include <fcntl.h>
 #include <varargs.h>
 #include "chan.h"
+#ifdef HAVE_UNAME
+#include <sys/utsname.h>
+#endif
 
 extern int serv;
-extern char notefile[];
 extern int dcc_total;
 extern struct dcc_t * dcc;
 extern char helpdir[];
 extern char version[];
-extern char botname[];
+extern char origbotname[];
 extern char admin[];
 extern int require_p;
 extern int backgrd;
@@ -40,7 +42,6 @@ extern int use_stderr;
 extern char motdfile[];
 extern char ver[];
 extern char textdir[];
-extern int strict_host;
 extern int keep_all_logs;
 extern char botnetnick[];
 extern struct chanset_t *chanset;
@@ -54,36 +55,34 @@ log_t * logs = 0;
 int max_logs = 5;
 /* console mask */
 int conmask = LOG_MODES | LOG_CMDS | LOG_MISC;
-/* total messages queued on main queue */
-int mtot = 0;
-/* total messages queued on help queue */
-int htot = 0;
-/* maximum messages to store in each queue */
-int maxqmsg = 300;
+/* disply output to server to LOG_SERVEROUT */
+int debug_output = 0;
 
-struct msgq {
-   int sock;
-   char *msg;
-   struct msgq *next;
-} *mq = NULL, *hq = NULL;
+struct help_list {
+   struct help_list * next;
+   char * name;
+   int type;
+};
+
+static struct help_ref {
+   char * name;
+   struct help_list * first;
+   struct help_ref * next;
+} * help_list = NULL;
 
 /* expected memory usage */
 int expmem_misc()
 {
-   int tot = max_logs * sizeof(log_t);
-   struct msgq *m = mq, *h = hq;
-   context;
-   while (m != NULL) {
-      tot += strlen(m->msg) + 1;
-      tot += sizeof(struct msgq);
-      m = m->next;
+   struct help_ref * current;
+   struct help_list * item;
+   int tot = 0;
+   
+   for (current = help_list; current; current = current->next) {
+      tot += sizeof(struct help_ref) + strlen(current->name) + 1;
+      for (item = current->first;item;item = item->next)
+	 tot += sizeof(struct help_list) + strlen(item->name) + 1;
    }
-   while (h != NULL) {
-      tot += strlen(h->msg) + 1;
-      tot += sizeof(struct msgq);
-      h = h->next;
-   }
-   return tot;
+   return tot + (max_logs * sizeof(log_t));
 }
 
 void init_misc()
@@ -153,6 +152,14 @@ int strcasecmp (char * s1, char * s2)
 }
 #endif
 
+int my_strcpy(char * a, char * b) {
+   char * c = b;
+   while (*b) 
+     *a++ = *b++;
+   *a = *b;
+   return b-c;
+}
+
 /* split first word off of rest and put it in first */
 void splitc (char * first, char * rest, char divider)
 {
@@ -170,6 +177,36 @@ void splitc (char * first, char * rest, char divider)
       strcpy(rest, p + 1);
 }
 
+
+char * splitnick ( char ** blah ) {
+   char * p = strchr(*blah,'!'), *q = *blah;
+   if (p) {
+      *p = 0;
+      *blah = p + 1;
+      return q;
+   }
+   return "";
+}
+
+char * newsplit ( char ** rest ) {
+   register char * o, * r;
+   
+   if (!rest) 
+     return *rest = "";
+   o = *rest;
+   while (*o == ' ')
+     o++;
+   r = o;
+   while (*o && (*o != ' '))
+     o++;
+   if (*o)
+     *o++ = 0;
+   else
+     *o = 0;
+   *rest = o;
+   return r;
+}
+
 #ifdef EBUG
 /* return the index'd word without changing 'rest' */
 void stridx (char * first, char * rest, int index)
@@ -184,16 +221,6 @@ void stridx (char * first, char * rest, int index)
    }
 }
 #endif
-
-void nsplit (char * first, char * rest)
-{
-   split(first, rest);
-   if (first != NULL)
-      if (!first[0]) {
-	 strcpy(first, rest);
-	 rest[0] = 0;
-      }
-}
 
 /* convert "abc!user@a.b.host" into "*!user@*.b.host"
    or "abc!user@1.2.3.4" into "*!user@1.2.3.*"  */
@@ -297,25 +324,6 @@ int movefile (char * oldpath, char * newpath)
    if (x == 0)
       unlink(oldpath);
    return x;
-}
-
-/* make nick!~user@host into nick!user@host if necessary */
-/* also the new form: nick!+user@host or nick!-user@host */
-void fixfrom (char * s)
-{
-   char nick[NICKLEN], from[UHOSTLEN];
-   if (strict_host)
-      return;
-   if (s == NULL)
-      return;
-   if (strchr(s, '@') == NULL)
-      return;
-   strcpy(from, s);
-   splitnick(nick, from);
-   /* these are ludicrous. */
-   if (strchr("~+-^=", from[0]) != NULL)
-      strcpy(from, &from[1]);
-   sprintf(s, "%s!%s", nick, from);
 }
 
 /* dump a potentially super-long string of text */
@@ -432,7 +440,12 @@ va_dcl
    format = va_arg(va, char *);
    /* format log entry at offset 8, then i can prepend the timestamp */
    out = &s[8];
+#ifdef HAVE_VSNPRINTF
+   if (vsnprintf(out, 759, format, va) < 0)
+     out[767] = 0;
+#else
    vsprintf(out, format, va);
+#endif
    tt = now;
    if (keep_all_logs) {
       strcpy(ct, ctime(&tt));
@@ -482,9 +495,10 @@ va_dcl
 	     (strcasecmp(chname, dcc[i].u.chat->con_chan) == 0))
 	    dprintf(i, "%s", out);
       }
-   if ((type & LOG_MISC) && (use_stderr)) {
-      vsprintf(s, format, va);
-      tprintf(STDERR, "%s\n", s);
+   if ((type & LOG_MISC) && use_stderr) {
+      if (shtime)
+	out += 8;
+      dprintf(DP_STDERR, "%s", s);
    }
    va_end(va);
 }
@@ -498,147 +512,6 @@ void flushlogs()
       if (logs[i].f != NULL)
 	 fflush(logs[i].f);
    context;
-}
-
-/***** BOT AND HELPBOT SERVER QUEUES *****/
-
-/* queue a msg on one of the msg queues */
-static struct msgq *q_msg (struct msgq * qq, int sock, char * s)
-{
-   struct msgq *q;
-   int cnt;
-   if (qq == NULL) {
-      q = (struct msgq *) nmalloc(sizeof(struct msgq));
-      q->sock = sock;
-      q->next = NULL;
-      q->msg = (char *) nmalloc(strlen(s) + 1);
-      strcpy(q->msg, s);
-      return q;
-   }
-   cnt = 0;
-   q = qq;
-   while (q->next != NULL) {
-      q = q->next;
-      cnt++;
-   }
-   if (cnt > maxqmsg)
-      return NULL;		/* return null: did not alter queue */
-   q->next = (struct msgq *) nmalloc(sizeof(struct msgq));
-   q = q->next;
-   q->sock = sock;
-   q->next = NULL;
-   q->msg = (char *) nmalloc(strlen(s) + 1);
-   strcpy(q->msg, s);
-   return qq;
-}
-
-/* use when sending msgs... will spread them out so there's no flooding */
-void mprintf(va_alist)
-va_dcl
-{
-   char s[1024];
-   int sock;
-   char *format;
-   va_list va;
-   struct msgq *q;
-   static int warned = 0;
-   va_start(va);
-   sock = va_arg(va, int);
-   format = va_arg(va, char *);
-   vsprintf(s, format, va);
-   va_end(va);
-   q = q_msg(mq, sock, s);
-#ifdef EBUG_OUTPUT
-   if (s[strlen(s) - 1] == '\n')
-      s[strlen(s) - 1] = 0;
-   debug1("[!m] %s", s);
-#endif
-   if (q != NULL) {
-      mq = q;
-      mtot++;
-      warned = 0;
-   } else {
-      if (!warned)
-	 putlog(LOG_MISC, "*", "!!! OVER MAXIMUM MSG QUEUE");
-      warned = 1;
-   }
-}
-
-/* use when sending help msgs (different queue) */
-void hprintf(va_alist)
-va_dcl
-{
-   char s[1024];
-   int sock;
-   char *format;
-   va_list va;
-   struct msgq *q;
-   static int warned = 0;
-   va_start(va);
-   sock = va_arg(va, int);
-   format = va_arg(va, char *);
-   vsprintf(s, format, va);
-   va_end(va);
-   q = q_msg(hq, sock, s);
-#ifdef EBUG_OUTPUT
-   if (s[strlen(s) - 1] == '\n')
-      s[strlen(s) - 1] = 0;
-   debug1("[!h] %s", s);
-#endif
-   if (q != NULL) {
-      hq = q;
-      htot++;
-      warned = 0;
-   } else {
-      if (!warned)
-	 putlog(LOG_MISC, "*", "!!! OVER MAXIMUM HELP QUEUE");
-      warned = 1;
-   }
-}
-
-/* called periodically to shove out another queued item */
-/* mode queue gets priority now */
-void deq_msg()
-{
-   struct msgq *q = mq;
-   
-   if (q == NULL)
-     q = hq;
-   if (q == NULL)
-     return;
-   
-   tputs(q->sock, q->msg, strlen(q->msg));
-   if (q == mq) {
-      mq = mq->next;
-      mtot--;
-   } else {
-      hq = hq->next;
-      htot--;
-   }
-   nfree(q->msg);
-   nfree(q);
-}
-
-/* clean out the msg queues (like when changing servers) */
-void empty_msgq()
-{
-   struct msgq *q, *qq;
-   q = mq;
-   while (q != NULL) {
-      qq = q->next;
-      nfree(q->msg);
-      nfree(q);
-      q = qq;
-   }
-   q = hq;
-   while (q != NULL) {
-      qq = q->next;
-      nfree(q->msg);
-      nfree(q);
-      q = qq;
-   }
-   mtot = htot = 0;
-   mq = hq = NULL;
 }
 
 /********** STRING SUBSTITUTION **********/
@@ -691,169 +564,259 @@ static void subst_addcol (char * s, char * newcol)
 /* %A = admin line */
 /* %T = current time ("14:15") */
 /* %N = user's nickname */
+/* %U = display system name if possible */
 /* %{+xy}     require flags to read this section */
+/* %{-}       turn of required flag matching only */
 /* %{center}  center this line */
 /* %{cols=N}  start of columnated section (indented) */
+/* %{help=TOPIC} start a section for a particular command */
 /* %{end}     end of section */
+#define HELP_BUF_LEN 256
+#define HELP_BOLD  1
+#define HELP_REV   2
+#define HELP_UNDER 4
+#define HELP_FLASH 8
+#define HELP_IRC   16
 void help_subst (char * s, char * nick, struct flag_record * flags,
-		 int isdcc)
+		 int isdcc, char * topic)
 {
-   char xx[512], sub[161], *p, *q, c;
+   char xx[HELP_BUF_LEN+1], sub[161], *current, *q, chr, *writeidx,
+     *readidx, *towrite;
+   struct chanset_t *chan;
    int i, j, center = 0;
-   time_t tt;
+   static int help_flags;
+#ifdef HAVE_UNAME
+   struct utsname uname_info;
+#endif
+	  
    if (s == NULL) {
       /* used to reset substitutions */
       blind = 0;
       cols = 0;
       subwidth = 70;
       if (colstr != NULL) {
-	 nfree(colstr);
-	 colstr = NULL;
+			nfree(colstr);
+			colstr = NULL;
       }
+      help_flags = isdcc;
       return;
    }
-   strcpy(xx, s);
-   s[0] = 0;
-   p = strchr(xx, '%');
-   while (p != NULL) {
-      c = *(p + 1);
-      sub[0] = 0;
-      *p = 0;
-      if (!blind)
-	 strcat(s, xx);
-      switch (c) {
-      case 'B':
-	 strcpy(sub, (isdcc ? botnetnick : botname));
+   strncpy(xx,s,HELP_BUF_LEN);
+   xx[HELP_BUF_LEN]=0;
+   readidx = xx;
+   writeidx = s;
+   current = strchr(readidx, '%');
+   while (current) {
+      /* are we about to copy a chuck to the end of the buffer? 
+       * if so return */
+      if ((writeidx + (current - readidx)) >= (s + HELP_BUF_LEN)) {
+	 strncpy(writeidx,readidx,(s + HELP_BUF_LEN) - writeidx);
+	 s[HELP_BUF_LEN] = 0;
+	 return;
+      }      
+      chr = *(current + 1);
+      *current = 0;
+      if (!blind)    
+		  writeidx += my_strcpy(writeidx, readidx);
+      towrite = NULL;
+      switch (chr) {
+	case 'b':
+	 if (glob_hilite(*flags)) 
+	   if (help_flags & HELP_IRC) {
+	      towrite = "\002";
+	   } else if (help_flags & HELP_BOLD) {
+	      help_flags &= ~HELP_BOLD;
+	      towrite = "\033[0m";
+	   } else {
+	      help_flags |= HELP_BOLD;
+	      towrite = "\033[1m";
+	   }
 	 break;
-      case 'V':
-	 strcpy(sub, ver);
+	case 'v':
+	 if (glob_hilite(*flags)) 
+	   if (help_flags & HELP_IRC) {
+	      towrite = "\026";
+	   } else if (help_flags & HELP_REV) {
+	      help_flags &= ~HELP_REV;
+	      towrite = "\033[0m";
+	   } else {
+	      help_flags |= HELP_REV;
+	      towrite = "\033[7m";
+	   }
 	 break;
-      case 'C':
-	   {
-	      struct chanset_t *chan = chanset;
-	      sub[0] = 0;
-	      while (chan != NULL) {
-		 if (strlen(s) + strlen(chan->name) + 1 > 160)
-		   break;
-		 if (s[0])
-		   strcat(s, " ");
-		 strcat(s, chan->name);
-		 chan = chan->next;
+	case '_':
+	 if (glob_hilite(*flags)) 
+	   if (help_flags & HELP_IRC) {
+	      towrite = "\037";
+	   } else if (help_flags & HELP_UNDER) {
+	      help_flags &= ~HELP_UNDER;
+	      towrite = "\033[0m"; 
+	   } else {
+	      help_flags |= HELP_UNDER;
+	      towrite = "\033[4m";
+	   }
+	 break;
+	case 'f':
+	 if (glob_hilite(*flags))
+	   if (help_flags & HELP_FLASH) {
+	      if (help_flags & HELP_IRC) {
+		 towrite = "\002\037";
+	      } else {
+		 towrite = "\033[0m";
+	      }
+	      help_flags &= ~HELP_FLASH;
+	   } else {
+	      help_flags |= HELP_FLASH;
+	      if (help_flags & HELP_IRC) {
+		 towrite = "\037\002";
+	      } else {
+		 towrite = "\033[5m";
 	      }
 	   }
 	 break;
-      case 'E':
-	 strcpy(sub, version);
+	case 'U':
+#ifdef HAVE_UNAME
+	 if (!uname(&uname_info)) {
+	    simple_sprintf(sub, "%s %s",uname_info.sysname,
+			   uname_info.release);
+	    towrite = sub;
+	 } else
+#endif
+	   towrite = "*UNKNOWN*";
 	 break;
-      case 'A':
-	 strcpy(sub, admin);
+	case 'B':
+	 towrite = (isdcc ? botnetnick : origbotname);
 	 break;
-      case 'T':
-	 tt = now;
-	 strcpy(sub, ctime(&tt));
-	 strcpy(sub, &sub[11]);
-	 sub[5] = 0;
+	case 'V':
+	 towrite = ver;
 	 break;
-      case 'N':
-           {
-              char * p = strchr(nick,':');
-              if (p)
-                p++;
-              else
-                p = nick;
-              strcpy(sub, p);
-           }
-         break;
-      case '{':
-	 q = p;
-	 p++;
-	 while ((*p != '}') && (*p))
-	    p++;
-	 if (*p) {
-	    *p = 0;
-	    p--;
+	case 'E':
+	 towrite = version;
+	 break;
+	case 'A':
+	 towrite = admin;
+	 break;
+	case 'T':
+	 strcpy(sub, ctime(&now));
+	 sub[16] = 0;
+	 towrite = sub+11;
+	 break;
+	case 'N':
+	 towrite = strchr(nick,':');
+	 if (towrite)
+	   towrite++;
+	 else
+	   towrite = nick;
+	 break;
+	case 'C':
+	 if (!blind) 
+	   for (chan = chanset;chan; chan = chan->next) {
+	      if ((strlen(chan->name) + writeidx + 2) >=
+		  (s + HELP_BUF_LEN)) {
+		 strncpy(writeidx,chan->name,(s + HELP_BUF_LEN) - writeidx);
+		 s[HELP_BUF_LEN] = 0;
+		 return;
+	      }
+	      writeidx += my_strcpy(writeidx,chan->name);
+	      if (chan->next) {
+		 *writeidx++ = ',';
+		 *writeidx++ = ' ';
+	      }
+	   }
+	 break;
+	case '{':
+	 q = current;
+	 current++;
+	 while ((*current != '}') && (*current))
+	   current++;
+	 if (*current) {
+	    *current = 0;
+	    current--;
 	    q += 2;
 	    /* now q is the string and p is where the rest of the fcn expects */
-	    if (q[0] == '+') {
-	       char *r;
-	       struct flag_record fr = {0,0,FR_OR};
-	       c = 0;
-	       if ((r = strchr(q,'|'))) {
-		  c = '|';
-	       } else if ((r = strchr(q,'&'))) {
-		  fr.match = FR_AND;
-		  c = '&';
-	       }
-	       if (r) {
-		  *r = 0;
-		  fr.chan = str2chflags(r+1);
-	       }
-	       fr.global = str2flags(q+1);
-	       if (r) {
-		  *r = c;
-	       }
-	       if (!flagrec_ok(&fr, flags))
-		  blind = 1;
+	    if (!strncmp(q, "help=",5)) {
+	       if (topic && strcasecmp(q+5,topic))
+		 blind |= 2;
 	       else
-		  blind = 0;
-	    }
-	    if (q[0] == '-')
-	       blind = 0;
-	    if (strcasecmp(q, "end") == 0) {
-	       blind = 0;
-	       subwidth = 70;
-	       if (cols) {
-		  subst_addcol(s, "\377");
-		  nfree(colstr);
-		  colstr = NULL;
-		  cols = 0;
+		 blind &= ~2;
+	    } else if (!(blind & 2)) {
+	       if (q[0] == '+') {
+		  struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
+		  break_down_flags(q+1,&fr,NULL);
+		  if (!flagrec_ok(&fr, flags))
+		    blind |= 1;
+		  else 
+		    blind &= ~1;
+	       } else if (q[0] == '-') {
+		  blind &= ~1;
+	       } else if (strcasecmp(q, "end") == 0) {
+		  blind &= ~1;
+		  subwidth = 70;
+		  if (cols) {
+		     subst_addcol(s, "\377");
+		     nfree(colstr);
+		     colstr = NULL;
+		     cols = 0;
+		  }
+	       } else if (!strcasecmp(q, "center"))
+		    center = 1;
+	       else if (!strncmp(q, "cols=", 5)) {
+		  char * r;
+		  cols = atoi(q + 5);
+		  colsofar = 0;
+		  colstr = (char *) nmalloc(1);
+		  colstr[0] = 0;
+		  r = strchr(q + 5, '/');
+		  if (r != NULL)
+		    subwidth = atoi(r + 1);
 	       }
-	    }
-	    if (strcasecmp(q, "center") == 0)
-	       center = 1;
-	    if (strncmp(q, "cols=", 5) == 0) {
-	       char *r;
-	       cols = atoi(q + 5);
-	       colsofar = 0;
-	       colstr = (char *) nmalloc(1);
-	       colstr[0] = 0;
-	       r = strchr(q + 5, '/');
-	       if (r != NULL)
-		  subwidth = atoi(r + 1);
 	    }
 	 } else
-	    p = q;		/* no } so ignore */
+	   current = q;		/* no } so ignore */
 	 break;
-      case '%':
-	 strcpy(sub, "%");
-	 break;
-      default:
-	 strcpy(sub, "%_");
-	 sub[1] = c;
-	 break;
+	default:
+	 if (!blind) {
+	    *writeidx++ = chr;
+	    if (writeidx >= (s + HELP_BUF_LEN)) {
+	       *writeidx = 0;
+	       return;
+	    }
+	 }
       }
-      i = strlen(sub);
-      if (!blind)
-	 strcat(s, sub);
-      if (c != 0)
-	 strcpy(xx, p + 2);
-      else
-	 xx[0] = 0;
-      p = strchr(xx, '%');
+      if (towrite && !blind) {
+	 if ((writeidx + strlen(towrite)) >= (s + HELP_BUF_LEN)) {
+	    strncpy(writeidx,towrite,(s + HELP_BUF_LEN) - writeidx);
+	    s[HELP_BUF_LEN] = 0;
+	    return;
+	 }
+	 writeidx += my_strcpy(writeidx,towrite);
+      }
+      if (chr) {
+	 readidx = current + 2;
+	 current = strchr(readidx,'%');
+      } else {
+	 readidx = current + 1;
+	 current = NULL;
+      }
    }
-   if (!blind)
-      strcat(s, xx);
-   if (strlen(s) > 120)
-      s[120] = 0;
+   if (!blind) {
+      i = strlen(readidx);
+      if (i && ((writeidx + i) >= (s + HELP_BUF_LEN))) {
+			strncpy(writeidx,readidx,(s + HELP_BUF_LEN) - writeidx);
+			s[HELP_BUF_LEN] = 0;
+			return;
+      }      
+      strcpy(writeidx,readidx);
+   } else
+     *writeidx = 0;
    if (center) {
       strcpy(xx, s);
       i = 35 - (strlen(xx) / 2);
       if (i > 0) {
 	 s[0] = 0;
 	 for (j = 0; j < i; j++)
-	    s[j] = ' ';
-	 s[i] = 0;
-	 strcat(s, xx);
+	   s[j] = ' ';
+	 strcpy(s+i, xx);
       }
    }
    if (cols) {
@@ -863,166 +826,239 @@ void help_subst (char * s, char * nick, struct flag_record * flags,
    }
 }
 
-void showhelp (char * who, char * file, struct flag_record * flags)
-{
-   FILE *f;
-   char s[1024], *p;
-   int lines = 0;
-   for (p = file; *p != 0; p++) {
-      if ((*p == ' ') || (*p == '.'))
-	 *p = '/';
-      if (*p == '-')
-	 *p = '_';
-      if (*p == '+')
-	 *p = 'P';
+static void scan_help_file (struct help_ref * current, char * filename, 
+			    int type) {
+   FILE * f;
+   char s[HELP_BUF_LEN + 1], *p, *q;
+   struct help_list * list;
+
+   if (is_file(filename) && (f = fopen(filename,"r"))) {
+      while (!feof(f)) {
+	 fgets(s, HELP_BUF_LEN, f);
+	 if (!feof(f)) {
+	    p = s;
+	    while ((q = strstr(p,"%{help="))) {
+	       q += 7;
+	       if ((p = strchr(q,'}'))) {
+		  *p = 0;
+		  list = nmalloc(sizeof(struct help_list));
+		  list->name = nmalloc(p - q + 1);
+		  strcpy(list->name,q);
+		  list->next = current->first;
+		  list->type = type;
+		  current->first = list;
+		  p++;
+	       } else 
+		 p = "";
+	    }
+	 }
+      }
+      fclose(f);
    }
-   sprintf(s, "%s%s", helpdir, file);
-   s[256] = 0;
+}
+	       
+void add_help_reference (char * file) {
+   char s[1024];
+   struct help_ref * current;
+   
+   for (current = help_list; current; current = current->next) 
+     if (!strcmp(current->name,file))
+       return; /* already exists, can't re-add :P */
+   current = nmalloc(sizeof(struct help_ref));
+   current->name = nmalloc(strlen(file)+1);
+   strcpy(current->name,file);
+   current->next = help_list;
+   current->first = NULL;
+   help_list = current;
+   simple_sprintf(s,"%smsg/%s",helpdir, file);
+   scan_help_file(current,s,0);
+   simple_sprintf(s,"%s%s",helpdir, file);
+   scan_help_file(current,s,1);
+   simple_sprintf(s,"%sset/%s",helpdir, file);
+   scan_help_file(current,s,2);
+};
+
+void rem_help_reference (char * file) {
+   struct help_ref * current, *last = NULL;
+   struct help_list * item;
+   
+   for (current = help_list; current; last = current, current = current->next) 
+     if (!strcmp(current->name,file)) {
+	while ((item = current->first)) {
+	   current->first = item->next;
+	   nfree(item->name);
+	   nfree(item);
+	}
+	nfree(current->name);
+	if (last) 
+	  last->next = current->next;
+	else
+	  help_list = current->next;
+	nfree(current);
+	return;
+     }
+}
+
+void reload_help_data (void) {
+   struct help_ref * current = help_list, *next;
+   struct help_list * item;
+   
+   help_list = NULL;
+   while (current) {
+      while ((item = current->first)) {
+	 current->first = item->next;
+	 nfree(item->name);
+	 nfree(item);
+      }
+      add_help_reference(current->name);
+      nfree(current->name);
+      next = current->next;
+      nfree(current);
+      current = next;
+   }
+}  
+
+#ifdef EBUG
+void debug_help (int idx) {
+   struct help_ref * current;
+   struct help_list * item;
+   
+   for (current = help_list; current; current = current->next) {
+      dprintf(idx,"HELP FILE(S): %s\n", current->name);
+      for (item = current->first;item;item = item->next) {
+	 dprintf(idx,"   %s (%s)\n", item->name, (item->type == 0) ? "msg/" : 
+		 (item->type == 1) ? "" : "set/");
+      }
+   } 
+}
+#endif
+
+FILE * resolve_help(int dcc, char * file) {
+   char s[1024], *p;
+   FILE * f;
+   struct help_ref * current;
+   struct help_list * item;
+   
+   /* somewhere here goes the eventual substituation */
+   if (!(dcc & HELP_TEXT))
+     for (current = help_list; current; current = current->next) 
+       for (item = current->first; item; item = item->next) 
+	 if (!strcmp(item->name,file)) {
+	    if (!item->type && !dcc) {
+	       simple_sprintf(s,"%smsg/%s",helpdir,current->name);
+	       if ((f = fopen(s,"r")))
+		 return f;
+	    } else if (dcc && item->type) {
+	       if (item->type == 1) 
+		 simple_sprintf(s,"%s%s",helpdir,current->name);
+	       else
+		 simple_sprintf(s,"%sset/%s",helpdir,current->name);
+	       if ((f = fopen(s,"r")))
+		 return f;
+	    }
+	 }
+   for (p = s + simple_sprintf(s, "%s%s", helpdir, dcc ? "" : "msg/");
+	*file && (p < s + 1023); file++, p++) {
+      switch(*file) {
+       case ' ':
+       case '.':
+	 *p = '/';
+	 break;
+       case '-':
+	 *p = '-';
+	 break;
+       case '+':
+	 *p = 'P';
+	 break;
+       default:
+	 *p = *file;
+      }
+   }
+   *p = 0;
    if (!is_file(s)) {
       strcat(s, "/");
       strcat(s, file);
-      if (!is_file(s)) {
-	 hprintf(serv, "NOTICE %s :%s\n", who, IRC_NOHELP2);
-	 return;
-      }
+      if (!is_file(s)) 
+	return NULL;
    }
-   f = fopen(s, "r");
-   if (f == NULL) {
-      hprintf(serv, "NOTICE %s :%s\n", who, IRC_NOHELP2);
-      return;
-   }
-   help_subst(NULL, NULL, 0, 0);	/* clear flags */
-   while (!feof(f)) {
-      fgets(s, 120, f);
-      if (!feof(f)) {
-	 if (s[strlen(s) - 1] == '\n')
-	    s[strlen(s) - 1] = 0;
-	 if (!s[0])
-	    strcpy(s, " ");
-	 help_subst(s, who, flags, 0);
-	 if (s[0]) {
-	    hprintf(serv, "NOTICE %s :%s\n", who, s);
-	    lines++;
-	 }
-      }
-   }
-   fclose(f);
-   if (!lines)
-      hprintf(serv, "NOTICE %s :%s\n", who, IRC_NOHELP2);
+   return fopen(s, "r");
 }
 
-void showtext (char * who, char * file, struct flag_record * flags)
+void showhelp (char * who, char * file, struct flag_record * flags, int fl)
 {
-   FILE *f;
-   char s[1024], *p;
-   for (p = file; *p != 0; p++)
-      if ((*p == ' ') || (*p == '.'))
-	 *p = '/';
-   sprintf(s, "%s%s", textdir, file);
-   s[256] = 0;
-   f = fopen(s, "r");
-   if (f == NULL)
-      return;
-   if (!is_file(s)) {
-      fclose(f);
-      hprintf(serv, "NOTICE %s :'%s' %s\n", who, s, IRC_NOTNORMFILE);
-      return;
-   }
-   help_subst(NULL, NULL, 0, 0);
-   while (!feof(f)) {
-      fgets(s, 120, f);
-      if (!feof(f)) {
-	 if (s[strlen(s) - 1] == '\n')
-	    s[strlen(s) - 1] = 0;
-	 if (!s[0])
-	    strcpy(s, " ");
-	 help_subst(s, who, flags, 0);
-	 if (s[0])
-	    hprintf(serv, "NOTICE %s :%s\n", who, s);
-      }
-   }
-   fclose(f);
-}
-
-void tellhelp (int idx, char * file, struct flag_record * flags)
-{
-   FILE *f;
-   char s[1024], *p;
    int lines = 0;
-   for (p = file; *p != 0; p++) {
-      if ((*p == ' ') || (*p == '.'))
-	 *p = '/';
-      if (*p == '-')
-	 *p = '_';
-      if (*p == '+')
-	 *p = 'P';
-   }
-   sprintf(s, "%sdcc/%s", helpdir, file);
-   s[256] = 0;
-   if (!is_file(s)) {
-      strcat(s, "/");
-      strcat(s, file);
-      if (!is_file(s)) {
-	 dprintf(idx, "%s\n", IRC_NOHELP2);
-	 return;
-      }
-   }
-   f = fopen(s, "r");
-   if (f == NULL) {
-      dprintf(idx, "%s\n", IRC_NOHELP2);
-      return;
-   }
-   help_subst(NULL, NULL, 0, 1);
-   while (!feof(f)) {
-      fgets(s, 120, f);
-      if (!feof(f)) {
-	 if (s[strlen(s) - 1] == '\n')
-	    s[strlen(s) - 1] = 0;
-	 if (!s[0])
-	    strcpy(s, " ");
-	 help_subst(s, dcc[idx].nick, flags, 1);
-	 if (s[0]) {
-	    dprintf(idx, "%s\n", s);
-	    lines++;
+   char s[HELP_BUF_LEN+1];
+   FILE * f = resolve_help(fl,file);
+
+   if (f) {
+      help_subst(NULL, NULL, 0, HELP_IRC, NULL);	/* clear flags */
+      while (!feof(f)) {
+	 fgets(s, HELP_BUF_LEN, f);
+	 if (!feof(f)) {
+	    if (s[strlen(s) - 1] == '\n')
+	      s[strlen(s) - 1] = 0;
+	    if (!s[0])
+	      strcpy(s, " ");
+	    help_subst(s, who, flags, 0, file);
+	    if (s[0]) {
+	       dprintf(DP_HELP, "NOTICE %s :%s\n", who, s);
+	       lines++;
+	    }
 	 }
       }
+      fclose(f);
    }
-   if (!lines)
-      dprintf(idx, "%s\n", IRC_NOHELP2);
-   fclose(f);
+   if (!lines && !(fl & HELP_TEXT))
+     dprintf(DP_HELP, "NOTICE %s :%s\n", who, IRC_NOHELP2);
 }
 
-void telltext (int idx, char * file, struct flag_record * flags)
+void tellhelp (int idx, char * file, struct flag_record * flags, int fl)
 {
-   FILE *f;
-   char s[1024], *p;
-   for (p = file; *p != 0; p++)
-      if ((*p == ' ') || (*p == '.'))
-	 *p = '/';
-   sprintf(s, "%s%s", textdir, file);
-   s[256] = 0;
-   f = fopen(s, "r");
-   if (f == NULL)
-      return;
-   if (!is_file(s)) {
-      fclose(f);
-      dprintf(idx, "### '%s' %s\n", s, IRC_NOTNORMFILE);
-      return;
-   }
-   help_subst(NULL, NULL, 0, 1);
-   while (!feof(f)) {
-      fgets(s, 120, f);
-      if (!feof(f)) {
-	 if (s[strlen(s) - 1] == '\n')
-	    s[strlen(s) - 1] = 0;
-	 if (!s[0])
-	    strcpy(s, " ");
-	 help_subst(s, dcc[idx].nick, flags, 1);
-	 if (s[0])
-	    dprintf(idx, "%s\n", s);
+   char s[HELP_BUF_LEN+1];
+   int lines = 0;
+   FILE *f = resolve_help(HELP_DCC|fl,file);
+   
+   if (f) {
+      help_subst(NULL, NULL, 0, 
+		 (dcc[idx].status & STAT_TELNET) ? 0 : HELP_IRC,  NULL);
+      while (!feof(f)) {
+	 fgets(s, HELP_BUF_LEN, f);
+	 if (!feof(f)) {
+	    if (s[strlen(s) - 1] == '\n')
+	      s[strlen(s) - 1] = 0;
+	    if (!s[0])
+	      strcpy(s, " ");
+	    help_subst(s, dcc[idx].nick, flags, 1, file);
+	    if (s[0]) {
+	       dprintf(idx, "%s\n", s);
+	       lines++;
+	    }
+	 }
       }
+      fclose(f);
    }
-   fclose(f);
+   if (!lines && !(fl & HELP_TEXT))
+      dprintf(idx, "%s\n", IRC_NOHELP2);
+}
+
+/* substitute vars in a lang text to dcc chatter */
+void sub_lang (int idx, char * text)
+{
+   char s[1024];
+   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
+   
+   get_user_flagrec(dcc[idx].user,&fr,dcc[idx].u.chat->con_chan);
+
+      help_subst(NULL, NULL, 0, 
+		 (dcc[idx].status & STAT_TELNET) ? 0 : HELP_IRC , NULL);
+	 strncpy(s, text, 1024);
+	    if (s[strlen(s) - 1] == '\n')
+	      s[strlen(s) - 1] = 0;
+	    if (!s[0])
+	      strcpy(s, " ");
+	    help_subst(s, dcc[idx].nick, &fr, 1, botnetnick);
+	    if (s[0])
+	      dprintf(idx, "%s\n", s);
 }
 
 /* show motd to dcc chatter */
@@ -1030,11 +1066,9 @@ void show_motd (int idx)
 {
    FILE *vv;
    char s[1024];
-   struct flag_record fr = {0,0,0};
+   struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    
-   
-   fr.global = get_attr_handle(dcc[idx].nick);
-   fr.chan = get_chanattr_handle(dcc[idx].nick,dcc[idx].u.chat->con_chan);
+   get_user_flagrec(dcc[idx].user,&fr,dcc[idx].u.chat->con_chan);
    vv = fopen(motdfile, "r");
    if (vv != NULL) {
       if (!is_file(motdfile)) {
@@ -1043,20 +1077,22 @@ void show_motd (int idx)
 	 return;
       }
       dprintf(idx, "\n");
-      help_subst(NULL, NULL, 0, 1);
+      help_subst(NULL, NULL, 0, 
+		 (dcc[idx].status & STAT_TELNET) ? 0 : HELP_IRC , NULL);
       while (!feof(vv)) {
 	 fgets(s, 120, vv);
 	 if (!feof(vv)) {
 	    if (s[strlen(s) - 1] == '\n')
-	       s[strlen(s) - 1] = 0;
+	      s[strlen(s) - 1] = 0;
 	    if (!s[0])
-	       strcpy(s, " ");
-	    help_subst(s, dcc[idx].nick, &fr, 1);
+	      strcpy(s, " ");
+	    help_subst(s, dcc[idx].nick, &fr, 1, botnetnick);
 	    if (s[0])
-	       dprintf(idx, "%s\n", s);
+	      dprintf(idx, "%s\n", s);
 	 }
       }
       fclose(vv);
       dprintf(idx, "\n");
    }
 }
+

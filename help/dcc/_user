@@ -1,4 +1,0 @@
-%{+m}
-###  -user <nickname>
-   Erases the user record for the nickname given.
-See also:  +user, +bot, -bot

@@ -1,5 +1,0 @@
-%{+m}
-###  comment <user> <comment...>
-   Creates or changes the comment field for a user.  The comment field
-   can only be seen via 'user' or 'match'.  Non-masters cannot see the
-   comment field.

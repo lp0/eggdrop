@@ -1,6 +1,0 @@
-%{+n}
-###  set ctcp-version <text>
-   specifies the response to send to a CTCP VERSION request.  one
-   example is:
-      ircII 2.8 Linux 1.2.4 :ircii 2.6: almost there...
-see also: set ctcp-finger, set ctcp-userinfo

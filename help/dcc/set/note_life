@@ -1,4 +1,0 @@
-%{+n}
-### set note-life <#>
-   sets the number of days to hold a note before expiring it
-   (erasing it from the bot).

@@ -1,8 +1,0 @@
-%{+n}
-###  set strict-host <0/1>
-   specifies whether the bot should leave leading ~ in users' host-
-   names.  if this is on, leading ~ will be left in (the bot will
-   differentiate between valid-ident usernames and invalid ones).
-   typically this is set off, since most sites are not running the
-   ident protocol, and therefore may get ~ put in front of their
-   username when their username is valid.

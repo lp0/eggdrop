@@ -1,0 +1,224 @@
+#! /bin/sh
+# script to copy vital files into another directory
+
+if test "$1" = ""; then
+  echo ""
+  echo "Usage: putegg <directory>"
+  echo ""
+  exit 1
+fi
+
+if test ! -d $1; then
+  echo ""
+  echo "Attemping to create directory $1 ..."
+  mkdir $1
+  if test ! -d $1; then
+    echo ""
+    echo "Directory $1 is invalid."
+    echo ""
+    exit 1
+  fi
+fi
+if test ! -d $1/modules/; then
+  if test -r assoc.so; then
+    echo "Making module directory $1/modules ..."
+    mkdir $1/modules/
+  fi
+fi
+if test ! -d $1/language/; then
+  echo "Making language directory $1/language ..."
+  mkdir $1/language/
+fi
+if test ! -r $1; then
+  echo ""
+  echo "You don't have permission there!"
+  echo ""
+  exit 1
+fi
+if test ! -w $1; then
+  echo ""
+  echo "You don't have permission there!"
+  echo ""
+  exit 1
+fi
+if test ! -x $1; then
+  echo ""
+  echo "You don't have permission there!"
+  echo ""
+  exit 1
+fi
+
+if test ! -r eggdrop; then
+  echo ""
+  echo "You must run 'putegg' from the eggdrop directory!"
+  echo ""
+  exit 1
+fi
+
+if test ! -r $1/eggdrop; then
+echo ""
+  ./eggdrop -v
+  echo "Copying eggdrop files into $1 ..."
+  cp README $1
+  cp language/* $1/language/
+  if test -r assoc.so; then
+    cp -p *.so $1/modules/
+  fi
+  cp eggdrop $1
+else
+  if test "$2" = "-q"; then
+    ans=y
+  else 
+    echo "This appears to be an upgrade"
+    echo "I can copy your old binary to oeggdrop"
+    echo "to do this answer y/n"
+    echo -n "   Rename old binary? (y/n) "
+    read ans
+    echo ""
+  fi
+  if test "$ans" = "y"; then
+    echo "Renaming binary and Copying eggdrop files ..."
+    echo ""
+    ./eggdrop -v
+    cp README $1
+    cp language/* $1/language/
+    if test -r assoc.so; then
+      rm -f $1/modules/*.so.bak
+      for i in $1/modules/*.so; do mv -f $i $i.bak; done
+      cp -p *.so $1/modules/
+    fi
+    rm -f $1/oeggdrop
+    mv -f $1/eggdrop $1/oeggdrop
+    cp eggdrop $1
+    echo ""
+  else
+    echo "Skipping Rename Coping the rest..."
+    echo ""
+    ./eggdrop -v
+    cp README $1
+    cp language/* $1/language/
+    if test -r assoc.so; then
+      cp -p *.so $1/modules
+    fi
+    rm -f $1/eggdrop
+    cp eggdrop $1
+    echo ""  
+  fi
+fi
+if test "$2" = "-q"; then
+  echo "Skipping rest 'cause it's not quick & dirty :P"
+  exit 1
+fi
+
+#botcheck -- This BELONGS in scripts, as it is useless as-is, and customised
+# 	     botchk's are frequently kept in the base directory.
+#if test ! -r $1/botchk;then
+#    echo "Copying botchk"
+#    cp botchk $1
+#else 
+#  echo "You appear to already have a botchk, would you like"
+#  echo "to keep it or would you like me to copy over it."
+#  echo -n "    Copy new botchk? (y/n)"
+#  read ans
+#  if test "$ans" = "y";then
+#  echo ""
+#  echo "Copying new botchk"
+#  echo ""
+#  rm -f $1/botchk
+#  cp botchk $1
+#  fi
+#fi
+
+#eggdrop.conf.dist
+echo "Copying example configuration file: eggdrop.conf.dist"
+cp eggdrop.conf.dist $1
+#
+if test -r $1/doc; then
+  if test ! -d $1/doc; then
+    echo "$1/doc is not a directory!  Skipping..."
+  else
+    echo "Copying documentation (please read it!) into $1/doc ..."
+    cp -r doc/* $1/doc
+  fi
+else
+  echo "Creating doc/ directory ..."
+  mkdir $1/doc
+  echo "Copying documentation (please read it!) into $1/doc ..."
+  cp -r doc/* $1/doc
+fi
+
+if test -r $1/help; then
+  if test ! -d $1/help; then
+    echo "$1/help is not a directory!  Skipping..."
+  else
+    if test "$2" = "-q"; then
+      ans = y
+    else  
+      echo ""
+      echo "You already have a help directory."
+      echo "I can copy the new help files on top of your old ones.  That will"
+      echo "overwrite any changes you've made, but any new help files you've"
+      echo "written should be safe."
+      echo -n "   Overwrite the old help files? (y/n) "
+      read ans
+      echo ""
+    fi
+    if test "$ans" = "y"; then
+      echo "Copying help files ..."
+      cp -r help/* $1/help
+    else
+      echo "Okay, skipping help files ..."
+    fi
+  fi
+else
+  echo "Creating help directory and copying help files ..."
+  mkdir $1/help
+  cp -r help/* $1/help
+fi
+
+if test -r $1/text; then
+  if test ! -d $1/text; then
+    echo "$1/text is not a directory!  Skipping..."
+  else 
+    echo "Skipping text directory because you already have one ..."
+  fi
+else
+  echo "Creating text directory and copying those files ..."
+  mkdir $1/text
+  cp text/* $1/text
+  if test ! -r $1/motd; then
+    cp motd $1
+  fi
+fi
+
+if test -r $1/filesys; then
+  if test ! -d $1/filesys; then
+    echo "$1/filesys is not a directory!  Skipping..."
+  fi
+else
+  echo "Creating basic file-system directories ..."
+  mkdir $1/filesys
+  mkdir $1/filesys/incoming
+fi
+
+if test -r $1/scripts; then
+  if test ! -d $1/scripts; then
+    echo "$1/scripts is not a directory!  Skipping..."
+  else
+    echo "Updating the scripts that come with eggdrop ..."
+    echo "   (If you modify these, be sure to use different names.)"
+    cp scripts/* $1/scripts
+  fi
+else
+  echo "Creating scripts directory ..."
+  mkdir $1/scripts
+  cp scripts/* $1/scripts
+fi
+
+echo ""
+echo "Okay, copied the important stuff."
+echo "If you haven't read the README file, then READ IT NOW!!!"
+echo "If you're just upgrading, then you can safely erase this directory."
+echo "Otherwise, you should probably keep it around for reference for a"
+echo "little while."
+echo ""

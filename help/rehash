@@ -1,3 +1,0 @@
-%{+m}
-/MSG %B REHASH <password>
-   This makes me reload my config file.

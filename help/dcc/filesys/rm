@@ -1,3 +1,0 @@
-%{+m}
-###  rm <file(s)>
-   erase a file for good.

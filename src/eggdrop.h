@@ -14,38 +14,35 @@
 #ifndef _H_EGGDROP
 #define _H_EGGDROP
 
-/*
- *   Settings which toggle certain features of the bot to be enabled
- *   or disabled -- use "#define" to enable and "#undef" to disable
+/* 
+ * if you're *only* going to link to new version bots (1.2.1 or higher)
+ * then you can safely define this 
  */
 
-/*
- *   Choose a language or dialect for the bot's messages by uncommenting
- *   only ONE of the following #include's:
- */
-
-/* #include "lang/english.h"		 Standard English messages 
- * #include "lang/slang.h"		 Fun slang and rude messages 
- */
-
-#include "lang/english.h"
-
-   /* standalone bot, not connected to any IRC server? ("in limbo") */
-   /* this shaves about 55k from the executable on my linux system */
-   /* (including the 45k saved by dropping the file system) but will */
-   /* make your bot useless for protecting channels or interacting on */
-   /* any IRC network. */
-#undef NO_IRC
+#undef NO_OLD_BOTNET
 
 /***********************************************************************/
 /***** the 'configure' script should make this next part automatic *****/
 /***********************************************************************/
 
+/*
+ * define the maximum length a handle on the bot can be.
+ * (standard is 9 characters long)
+ * (DO NOT MAKE THIS VALUE LESS THAN 9 UNLESS YOU WANT TROUBLE!)
+ * (beware that using lengths over 9 chars is 'non-standard' and if you
+ * wish to link to other bots, they _must_ both have the same maximum
+ * handle length)
+ */
+
+#define HANDLEN		9    /* valid values 9->NICKMAX */
+
 /* handy maximum string lengths */
-#define NICKLEN       32     /* thanks to dalnet */
+#define NICKMAX       15     /* valid values HANDLEN->32 */
 #define UHOSTLEN     161     /* reasonable, i think? */
 #define DIRLEN       256     /* paranoia */
 
+#define NICKLEN		NICKMAX + 1
+#define NOTENAMELEN     ((HANDLEN * 2) + 1)
 /* have to use a weird way to make the compiler error out cos not all
    compilers support #error or error */
 #if !HAVE_VSPRINTF
@@ -64,6 +61,18 @@
 
 #if !defined(STDC_HEADERS)
 #include "you_need_to_upgrade_your_compiler_to_a_standard_c_one_mate!"
+#endif
+
+#if (NICKMAX < 9) || (NICKMAX > 32)
+#include "invalid NIXMAX value"
+#endif
+
+#if (HANDLEN < 9) || (HANDLEN > 32)
+#include "invalid HANDLEN value"
+#endif
+
+#if HANDLEN > NICKMAX
+#include "HANDLEN MUST BE <= NICKMAX"
 #endif
 
 /* almost every module needs some sort of time thingy, so... */
@@ -169,29 +178,20 @@ typedef unsigned long IP;
 #define debug4(x,a1,a2,a3,a4) ;
 #endif
 
-#define flags_eq(req,have) (((have)&(req))==(req))
-
 /***********************************************************************/
-
-
-/* used to queue a lot of things */
-struct eggqueue {
-  char *item;
-  time_t stamp;
-  struct eggqueue *next;
-};
-
 
 /* public structure of all the dcc connections */
 struct dcc_table {
+   char * name;
+   int flags;
    void (*eof) (int);
    void (*activity) (int,char *,int);
    int * timeout_val;
    void (*timeout) ();
    void (*display) (int,char *);
-   int (*expmem) (int);
-   void (*kill) (int);
-   void (*output)  (int,char *);
+   int (*expmem) (void *);
+   void (*kill) (int,void *);
+   void (*output)  (int,char *,void *);
 };
 
 struct userrec;
@@ -202,10 +202,12 @@ struct dcc_t {
   unsigned int port;
   struct userrec *user;
   char nick[NICKLEN];
-  char host[UHOSTLEN];
+  char host[UHOSTLEN+1]; /* extra safety char ;) */
   struct dcc_table * type;
   time_t timeval;        /* use for any timing stuff 
 			  - this is used for timeout checking*/
+  unsigned long status;  /* A LOT of dcc types have status thingos, this
+			  * makes it more avaliabe */
   union {
     struct chat_info *chat;
     struct file_info *file;
@@ -214,34 +216,33 @@ struct dcc_t {
     struct bot_info *bot;
     struct relay_info *relay;
     struct script_info *script;
+    int ident_sock;
     void *other;
   } u;    /* special use depending on type */
 };
  
 struct chat_info {
   char *away;               /* non-NULL if user is away */
-  unsigned long status;     /* status flags */
   int msgs_per_sec;         /* used to stop flooding */
   int con_flags;            /* with console: what to show */
-  int strip_flags;          /* what codes to strip (b,r,u,c) */
+  int strip_flags;          /* what codes to strip (b,r,u,c,a,g,*) */
   char con_chan[81];        /* with console: what channel to view */
   int channel;              /* 0=party line, -1=off */
-  struct eggqueue * buffer; /* a buffer of outgoing lines (for .page cmd) */
+  struct msgq * buffer;     /* a buffer of outgoing lines (for .page cmd) */
   int max_line;             /* maximum lines at once */
   int line_count;           /* number of lines sent since last page */
-  int current_lines;        /* number of lines total stoerd */
+  int current_lines;        /* number of lines total stored */
 };
 
 struct file_info {
   struct chat_info *chat;
-  char dir[121];
+  char dir[161];
 };
 
 struct xfer_info {
   char filename[121];
   char dir[121];            /* used when uploads go to the current dir */
   unsigned long length;
-  unsigned long sent;
   unsigned long acked;
   char buf[4];              /* you only need 5 bytes! */
   unsigned char sofar;      /* how much of the byte count received */
@@ -250,17 +251,16 @@ struct xfer_info {
 };
 
 struct bot_info {
-  unsigned long status;
-  char version[121];        /* channel/version info */
-  char linker[21];          /* who requested this link */
+  char version[121];          /* channel/version info */
+  char linker[NOTENAMELEN+1]; /* who requested this link */
   int numver;
-  int x;
   int port;                 /* base port */
 };
 
 struct relay_info {
-  struct chat_info *chat;
-  int sock;
+   struct chat_info *chat;
+   int sock;
+   int port;
 };
 
 struct script_info {
@@ -273,6 +273,21 @@ struct script_info {
   char command[121];
 };
 
+/* flags about dcc types */
+#define DCT_CHAT      0x00000001 /* this dcc type receives botnet chatter */
+#define DCT_MASTER    0x00000002 /* received master chatter */
+#define DCT_SHOWWHO   0x00000004 /* show the user in .who */
+#define DCT_REMOTEWHO 0x00000008 /* show in remote who */
+#define DCT_VALIDIDX  0x00000010 /* valid idx for outputting to in tcl */
+#define DCT_SIMUL     0x00000020 /* can be tcl_simul'd */
+#define DCT_CANBOOT   0x00000040 /* can be booted */
+#define DCT_GETNOTES  DCT_CHAT   /* can received notes */
+#define DCT_FILES     0x00000080 /* gratuitous hack ;) */
+#define DCT_FORKTYPE  0x00000100 /* a forking type */
+#define DCT_BOT       0x00000200 /* a bot connection of some sort... */
+#define DCT_FILETRAN  0x00000400 /* a file transfer of some sort */
+#define DCT_FILESEND  0x00000800 /* a sending file transfer, getting = !this */
+#define DCT_LISTEN    0x00001000 /* a listening port of some sort */
 
 /* for dcc chat & files: */
 #define STAT_ECHO    1      /* echo commands back? */
@@ -291,7 +306,8 @@ struct script_info {
 #define STRIP_REV    4      /* remove reverse video codes */
 #define STRIP_UNDER  8      /* remove underline codes */
 #define STRIP_ANSI   16     /* remove ALL ansi codes */
-#define STRIP_ALL    31     /* remove every damn thing! */
+#define STRIP_BELLS  32     /* remote ctrl-g's */
+#define STRIP_ALL    63     /* remove every damn thing! */
 
 /* for dcc bot links: */
 #define STAT_PINGED  0x01   /* waiting for ping to return */
@@ -302,75 +318,20 @@ struct script_info {
 #define STAT_GETTING 0x20   /* in the process of getting a user list */
 #define STAT_WARNED  0x40   /* warned him about unleaflike behavior */
 #define STAT_LEAF    0x80   /* this bot is a leaf only */
+#define STAT_LINKING 0x100  /* the bot is currently going through the linking 
+                             * stage */
+#define STAT_AGGRESSIVE 0x200  /* aggressively sharing with this bot */
 
-/* bug: changing the order of these will mess up filedb */
-#define USER_GLOBAL   0x00000001  /* o   user is +o on all channels */
-#define USER_DEOP     0x00000002  /* d   user is global de-op */
-#define USER_KICK     0x00000004  /* k   user is global auto-kick */
-#define USER_FRIEND   0x00000008  /* f   user is global friend*/
-#define USER_MASTER   0x00000010  /* m   user has full bot access */
-#define USER_OWNER    0x00000020  /* n   user is the bot owner */
-#define USER_FLAG1    0x00000040  /* 1   user-defined flag #1 */
-#define USER_FLAG2    0x00000080  /* 2   user-defined flag #2 */
-#define USER_FLAG3    0x00000100  /* 3   user-defined flag #3 */
-#define USER_FLAG4    0x00000200  /* 4   user-defined flag #4 */
-#define USER_FLAG5    0x00000400  /* 5   user-defined flag #5 */
-#define USER_FLAG6    0x00000800  /* 6   user-defined flag #6 */
-#define USER_FLAG7    0x00001000  /* 7   user-defined flag #7 */
-#define USER_FLAG8    0x00002000  /* 8   user-defined flag #8 */
-#define USER_FLAG9    0x00004000  /* 9   user-defined flag #9 */
-#define USER_FLAG0    0x00008000  /* 0   user-defined flag #10 */
-#define USER_JANITOR  0x00400000  /* j   user has file area master */
-#define USER_UNSHARED 0x00800000  /* u   not shared with sharebots */
-#define USER_XFER     0x01000000  /* x   user has file area access */
-#define USER_PARTY    0x02000000  /* p   user has party line access */
-#define USER_COMMON   0x04000000  /* c   user is actually a public irc site */
-#define USER_BOTMAST  0x08000000  /* B   user is botnet master */
-#define USER_MASK    (0xffff003f) /* all non-userdef flags */
-#define USER_CHANMASK 0x0000003f  /* flags common to global & chan records */
-
-/*   ????Bcpx ujbarlhs 09876543 21nmfkdo   */
-/*   (users)    (bots) (users)  (users)    */
-/*   unused letters: egiqtvwyz          */
-
-#define BOT_MASK     (0xffC0ffff)     /* all non-bot flags */
-
-/* flags specifically for bots */
-#define BOT_SHARE     0x00010000  /* s   bot shares user files */
-#define BOT_HUB       0x00020000  /* h   auto-link to ONE of these bots */
-#define BOT_LEAF      0x00040000  /* l   may not link other bots */
-#define BOT_REJECT    0x00080000  /* r   automatically reject anywhere */
-#define BOT_ALT       0x00100000  /* a   auto-link here if all +h's fail */
-#define USER_BOT      0x00200000  /* b   user is a bot (previously 't') */
-
-/*   ???????? ???????s 09876543 21nmfkdo   */
-
-/* channel-specific flags */
-#define CHANUSER_OP       0x00000001  /* o   bot will op the user */
-#define CHANUSER_DEOP     0x00000002  /* d   make sure user never gets ops */
-#define CHANUSER_KICK     0x00000004  /* k   kick user off the channel */
-#define CHANUSER_FRIEND   0x00000008  /* f   exempt from revenge */
-#define CHANUSER_MASTER   0x00000010  /* m   master of one channel */
-#define CHANUSER_OWNER    0x00000020  /* n   owner of one channel */
-#define CHANUSER_1        0x00000040  /* 1   user defined */
-#define CHANUSER_2        0x00000080  /* 2   user defined */
-#define CHANUSER_3        0x00000100  /* 3   user defined */
-#define CHANUSER_4        0x00000200  /* 4   user defined */
-#define CHANUSER_5        0x00000400  /* 5   user defined */
-#define CHANUSER_6        0x00000800  /* 6   user defined */
-#define CHANUSER_7        0x00001000  /* 7   user defined */
-#define CHANUSER_8        0x00002000  /* 8   user defined */
-#define CHANUSER_9        0x00004000  /* 9   user defined */
-#define CHANUSER_0        0x00008000  /* 0   user defined */
-#define CHANBOT_SHARE     0x00010000  /* s   bot shares user files */
-#define CHANUSER_MASK    (0xffff003f) /* all non-use-defined */
-
-/* for detecting floods: */
-#define FLOOD_NICK      0
-#define FLOOD_PRIVMSG   1
-#define FLOOD_NOTICE    2
-#define FLOOD_CTCP      3
-#define FLOOD_JOIN      4
+/* chan & global */
+#define FLOOD_PRIVMSG    0
+#define FLOOD_NOTICE     1
+#define FLOOD_CTCP       2
+#define FLOOD_NICK       3
+#define FLOOD_JOIN       4
+#define FLOOD_KICK       5
+#define FLOOD_DEOP       6
+#define FLOOD_CHAN_MAX   7
+#define FLOOD_GLOBAL_MAX 3
 
 /* for local console: */
 #define STDIN      0
@@ -386,28 +347,30 @@ typedef struct {
 } log_t;
 
 /* logfile display flags */
-#define LOG_MSGS   0x00001  /* m   msgs/notice/ctcps */
-#define LOG_PUBLIC 0x00002  /* p   public msg/notice/ctcps */
-#define LOG_JOIN   0x00004  /* j   channel joins/parts/etc */
-#define LOG_MODES  0x00008  /* k   mode changes/kicks/bans */
-#define LOG_CMDS   0x00010  /* c   user dcc or msg commands */
-#define LOG_MISC   0x00020  /* o   other misc bot things */
-#define LOG_BOTS   0x00040  /* b   bot notices */
-#define LOG_RAW    0x00080  /* r   raw server stuff coming in */
-#define LOG_FILES  0x00100  /* x   file transfer commands and stats */
-#define LOG_LEV1   0x00200  /* 1   user log level */
-#define LOG_LEV2   0x00400  /* 2   user log level */
-#define LOG_LEV3   0x00800  /* 3   user log level */
-#define LOG_LEV4   0x01000  /* 4   user log level */
-#define LOG_LEV5   0x02000  /* 5   user log level */
-#define LOG_LEV6   0x04000  /* 6   user log level */
-#define LOG_LEV7   0x08000  /* 7   user log level */
-#define LOG_LEV8   0x10000  /* 8   user log level */
-#define LOG_SERV   0x20000  /* s   server information */
-#define LOG_DEBUG  0x40000  /* d   debug */
-#define LOG_WALL   0x80000  /* w   wallops */
-#define LOG_ALL    0xfffff  /* (dump to all logfiles) */
-
+#define LOG_MSGS   0x000001  /* m   msgs/notice/ctcps */
+#define LOG_PUBLIC 0x000002  /* p   public msg/notice/ctcps */
+#define LOG_JOIN   0x000004  /* j   channel joins/parts/etc */
+#define LOG_MODES  0x000008  /* k   mode changes/kicks/bans */
+#define LOG_CMDS   0x000010  /* c   user dcc or msg commands */
+#define LOG_MISC   0x000020  /* o   other misc bot things */
+#define LOG_BOTS   0x000040  /* b   bot notices */
+#define LOG_RAW    0x000080  /* r   raw server stuff coming in */
+#define LOG_FILES  0x000100  /* x   file transfer commands and stats */
+#define LOG_LEV1   0x000200  /* 1   user log level */
+#define LOG_LEV2   0x000400  /* 2   user log level */
+#define LOG_LEV3   0x000800  /* 3   user log level */
+#define LOG_LEV4   0x001000  /* 4   user log level */
+#define LOG_LEV5   0x002000  /* 5   user log level */
+#define LOG_LEV6   0x004000  /* 6   user log level */
+#define LOG_LEV7   0x008000  /* 7   user log level */
+#define LOG_LEV8   0x010000  /* 8   user log level */
+#define LOG_SERV   0x020000  /* s   server information */
+#define LOG_DEBUG  0x040000  /* d   debug */
+#define LOG_WALL   0x080000  /* w   wallops */
+#define LOG_SRVOUT 0x100000  /* v   server output */
+#define LOG_BOTNET 0x200000  /* t   botnet traffic */
+#define LOG_BOTSHARE 0x400000  /* h   share traffic */
+#define LOG_ALL    0x7fffff  /* (dump to all logfiles) */
 
 #define FILEDB_HIDE     1
 #define FILEDB_UNHIDE   2
@@ -421,12 +384,15 @@ typedef struct {
 #define SOCK_CONNECT    0x08    /* connection attempt */
 #define SOCK_NONSOCK    0x10    /* used for file i/o on debug */
 #define SOCK_STRONGCONN 0x20    /* don't report success until sure */
+#define SOCK_EOFD       0x40    /* it EOF'd recently during a write */
 
-/* fake idx's for dprintf - these should be rediculously large +ve nums */
+/* fake idx's for dprintf - these should be ridiculously large +ve nums */
 #define DP_STDOUT       0x7FF1
 #define DP_LOG          0x7FF2
 #define DP_SERVER       0x7FF3
 #define DP_HELP         0x7FF4
+#define DP_STDERR       0x7FF5
+#define DP_MODE         0x7FF6
 
 #define NORMAL          0
 #define QUICK           1
@@ -438,15 +404,13 @@ typedef struct {
 #define NOTE_FULL       3   /* too many notes stored */
 #define NOTE_TCL        4   /* tcl binding caught it */
 #define NOTE_AWAY       5   /* away; stored */
+#define NOTE_FWD        6   /* away; forwarded */
 
-/* builtins values for add_builins */
-#define BUILTIN_DCC   1
-#define BUILTIN_MSG   2
-#define BUILTIN_FILES 3
-#define BUILTIN_FILT  4
-#define BUILTIN_BOT   5
 #define STR_PROTECT  2
 #define STR_DIR      1
+
+#define HELP_DCC     1
+#define HELP_TEXT    2
 
 /* it's used in so many places, let's put it here */
 typedef int (*Function)();

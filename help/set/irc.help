@@ -1,0 +1,34 @@
+%{help=set learn-users}%{+n}
+###  %bset learn-users%b <0/1>
+   specifies whether the bot will add users on the fly when they
+   send the "hello" msg.  if turned off, the only way to add users
+   is with the %b'.adduser'%b or %b'.+user'%b commands.  if turned on,
+   users can introduce themselves without your intervention.
+%{help=set wait-split}%{+n}
+### %bset wait-split%b <#>
+   allows you to set the number of seconds to wait before
+   considering a split user as gone for good.
+%{help=set wait-info}%{+n}
+### %bset wait-info%b <#>
+   allows you to set the number of seconds to wait before 
+   redisplaying a users info line when they join the channel
+   (only relevant if %buse-info%b is 1).
+%{help=set modes-per-line}%{+n}
+### %bset modes-per-line%b <3-6>
+   this allows you to set the number of mode changes the bot will
+   send in one line, the irc default is 3 but some networks these
+   days allow up to 6 or more mode changes.
+%{help=set mode-buf-length}%{+n}
+### %bset mode-buf-length%b <#>
+   most servers limit the amount of data that can be sent in the
+   arguments of mode changes, this setting allows you to match it,
+   should your server be using a non-standard setup (200 is standard)
+%{help=set bounce-bans}%{+n}
+### %bset bounce-bans%b 0/1
+   do you want the bot to unban any bans set by servers?
+%{help=set use-354}%{+n}
+### %bset use-354%b 0/1
+   ircu has a new format for /who channel (which returns 354 numeric)
+   by using this you reduce the amount of data retrieved about each
+   user when the bot joins the channel to the minimum required,
+   saving bandwidth, and being a good netizen ;)

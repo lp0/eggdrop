@@ -1,7 +1,0 @@
-%{+n}
-###  set altnick <nickname>
-   sets an alternate nickname to use if the preferred nickname
-   (in 'nick') is in use.  if the alternate nickname is also in
-   use, or is blank, the bot will try sticking digits at the end
-   of the preferred nick until it gets one that works.
-see also: set nick, set botnet-nick

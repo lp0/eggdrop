@@ -1,6 +1,0 @@
-%{+o|o}
-###  invite <nickname>
-   invites someone from irc into your current console channel.  this
-   is most useful when the channel is +i.  a user with the +o flag
-   can also request an invite from the bot with /MSG INVITE
-see also: console

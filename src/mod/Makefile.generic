@@ -20,6 +20,11 @@ static: ../${FILENAME}.o
 ${FILENAME}.o: ${FILENAME}.c ../module.h ../modvals.h ../../eggdrop.h
 	${CC} ${CFLAGS} -DMAKING_MODS ${FILENAME}.c
 
-../${FILENAME}.o: ${FILENAME}.c ../module.h ../modvals.h ../../eggdrop.h
-	${CC} ${CFLAGS} -o ../${FILENAME}.o -DMAKING_MODS ${FILENAME}.c
+../${FILENAME}.o: ${FILENAME}.o
+	@rm -f ../${FILENAME}.o
+	@ln -s ${FILENAME}.mod/${FILENAME}.o ..
+	
+#../${FILENAME}.o: ${FILENAME}.c ../module.h ../modvals.h ../../eggdrop.h
+#	${CC} ${CFLAGS} -o ../${FILENAME}.o -DMAKING_MODS ${FILENAME}.c
 
+install:

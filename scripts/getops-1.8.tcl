@@ -220,7 +220,8 @@ proc lbots {} {
 }
 
 proc iso {nick chan1} {
- if {[matchattr [nick2hand $nick $chan1] o] || [matchchanattr [nick2hand $nick $chan1] o $chan1]} {
+ if {[matchattr [nick2hand $nick $chan1] o] || 
+ [matchchanattr [nick2hand $nick $chan1] o $chan1]} {
   return 1
   break
  }

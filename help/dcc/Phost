@@ -1,7 +1,0 @@
-%{+m|m}
-###  +host <nickname> <hostmask>
-   Adds a hostmask to a user's record on the bot.  The hostmasks
-   are where the bot will identify that user from.  Usually you
-   will not need to use this command since a user can add hostmasks
-   to her own record via the /MSG IDENT command, but it's here if
-   you need it.

@@ -1,4 +1,0 @@
-%{+n}
-###  set help-path <path>
-   specifies the path to the help/ directory for the bot.  if
-   you can read this, it was set right. :)

@@ -21,12 +21,23 @@ typedef struct memstruct {
   struct memstruct *next;
 } memberlist;
 
-#define CHANOP     1    /* channel +o */
-#define CHANVOICE  2    /* channel +v */
-#define FAKEOP     4    /* op'd by server */
-#define SENTOP     8    /* a mode +o was already sent out for this user */
-#define SENTDEOP   16   /* a mode -o was already sent out for this user */
-#define SENTKICK   32   /* a kick was already sent out for this user */
+#define CHANOP      0x0001    /* channel +o */
+#define CHANVOICE   0x0002    /* channel +v */
+#define FAKEOP      0x0004    /* op'd by server */
+#define SENTOP      0x0008    /* a mode +o was already sent out for this user */
+#define SENTDEOP    0x0010    /* a mode -o was already sent out for this user */
+#define SENTKICK    0x0020    /* a kick was already sent out for this user */
+#define SENTVOICE   0x0040    /* a voice has been sent since a deop */
+#define SENTDEVOICE 0x0080    /* a devoice has been sent */
+
+#define chan_hasvoice(x) (x->flags & CHANVOICE)
+#define chan_hasop(x) (x->flags & CHANOP)
+#define chan_fakeop(x) (x->flags & FAKEOP)
+#define chan_sentop(x) (x->flags & SENTOP)
+#define chan_sentdeop(x) (x->flags & SENTDEOP)
+#define chan_sentkick(x) (x->flags & SENTKICK)
+#define chan_sentvoice(x) (x->flags & SENTVOICE)
+#define chan_issplit(x) (x->split > 0)
 
 typedef struct banstruct {
   char *ban;
@@ -39,7 +50,7 @@ typedef struct banstruct {
 struct chan_t {
   memberlist *member;
   banlist *ban;
-  char topic[256];
+  char *topic;
   char *key;
   unsigned short int mode;
   int maxmembers;
@@ -54,47 +65,53 @@ struct chan_t {
 #define CHANNOMSG  0x0020  /* +n */
 #define CHANLIMIT  0x0040  /* -l */  /* used only for protecting modes */
 #define CHANKEY    0x0080  /* -k */  /* used only for protecting modes */
-#define CHANANON   0x0100  /* +a */  /* irc 2.9 */
-#define CHANQUIET  0x0200  /* +q */  /* irc 2.9 */
+#define CHANANON   0x0100  /* +a */  /* ircd 2.9 */
+#define CHANQUIET  0x0200  /* +q */  /* ircd 2.9 */
 
 /* for every channel i'm supposed to be active on */
 struct chanset_t {
-  struct chan_t channel;    /* current information */
-  char name[81];
-  char need_op[121];
-  char need_key[121];
-  char need_limit[121];
-  char need_unban[121];
-  char need_invite[121];
-  int stat;
-  int idle_kick;
-  struct userrec *bans;     /* temporary channel bans */
-  /* desired channel modes: */
-  int mode_cur;             /* current chan modes */
-  int mode_pls_prot;        /* modes to enforce */
-  int mode_mns_prot;        /* modes to reject */
-  int limit_prot;           /* desired limit */
-  char key_prot[121];       /* desired password */
-  /* queued mode changes: */
-  char pls[21];             /* positive mode changes */
-  char mns[21];             /* negative mode changes */
-  char key[81];             /* new key to set */
-  char rmkey[81];           /* old key to remove */
-  int limit;                /* new limit to set */
-  struct {
-    char *op;
-    char type;
-  } cmode[6];  /* parameter-type mode changes - */
-  /* detect mass-deop */
-  char deopnick[NICKLEN];   /* last person to deop */
-  char deopd[NICKLEN];      /* last person deop'd (must change) */
-  time_t deoptime;          /* start time of a deop chain */
-  int deops;                /* how many deops in this chain */
-  /* detect mass-kick */
-  char kicknick[NICKLEN];   /* last person to kick */
-  time_t kicktime;          /* start time of a kick chain */
-  int kicks;                /* how many kicks in this chain */
-  struct chanset_t *next;
+   struct chanset_t *next;
+   struct chan_t channel;    /* current information */
+   char name[81];
+   char need_op[121];
+   char need_key[121];
+   char need_limit[121];
+   char need_unban[121];
+   char need_invite[121];
+   int flood_pub_thr;
+   int flood_pub_time;
+   int flood_join_thr;
+   int flood_join_time;
+   int flood_deop_thr;
+   int flood_deop_time;
+   int flood_kick_thr;
+   int flood_kick_time;
+   int flood_ctcp_thr;
+   int flood_ctcp_time;
+   int status;
+   int idle_kick;
+   struct banrec *bans;      /* temporary channel bans */
+   /* desired channel modes: */
+   int mode_pls_prot;        /* modes to enforce */
+   int mode_mns_prot;        /* modes to reject */
+   int limit_prot;           /* desired limit */
+   char key_prot[121];       /* desired password */
+   /* queued mode changes: */
+   char pls[21];             /* positive mode changes */
+   char mns[21];             /* negative mode changes */
+   char key[81];             /* new key to set */
+   char rmkey[81];           /* old key to remove */
+   int limit;                /* new limit to set */
+   int bytes;                /* total bytes so far */
+   struct {
+      char *op;
+      char type;
+   } cmode[6];  /* parameter-type mode changes - */
+   /* detect floods */
+   char floodwho[FLOOD_CHAN_MAX][81];
+   time_t floodtime[FLOOD_CHAN_MAX];
+   int floodnum[FLOOD_CHAN_MAX];
+   char deopd[NICKLEN];      /* last person deop'd (must change) */
 };
 
 /* behavior modes for the channel */
@@ -110,25 +127,63 @@ struct chanset_t {
 #define CHAN_STOPNETHACK    0x0200    /* deop netsplit hackers */
 #define CHAN_REVENGE        0x0400    /* get revenge on bad people */
 #define CHAN_SECRET         0x0800    /* don't advertise channel on botnet */
-#define CHANACTIVE          0x1000    /* like i'm actually on the channel and
+#define CHAN_AUTOVOICE      0x1000    /* dish out voice stuff automatically */
+#define CHAN_ACTIVE          0x1000000    /* like i'm actually on the channel and
                                        * stuff */
-#define CHANPEND            0x2000    /* just joined; waiting for end of 
+#define CHAN_PEND            0x2000000    /* just joined; waiting for end of 
                                        * WHO list */
-#define CHANFLAGGED         0x4000    /* flagged during rehash for delete */
-#define CHANSTATIC          0x8000    /* channels that are NOT dynamic */
-#define CHAN_SHARED        0x10000    /* channel is being shared */
-
+#define CHAN_FLAGGED         0x4000000    /* flagged during rehash for delete */
+#define CHAN_STATIC          0x8000000    /* channels that are NOT dynamic */
+#define CHAN_SHARED        0x10000000    /* channel is being shared */
+#define CHAN_ASKEDBANS     0x20000000
 
 /* prototypes */
-memberlist *ismember();
-memberlist *newmember();
+memberlist *ismember(struct chanset_t *, char *);
 struct chanset_t *findchan();
 
 /* is this channel +s/+p? */
 #define channel_hidden(chan) (chan->channel.mode & (CHANPRIV | CHANSEC))
 /* is this channel +t? */
 #define channel_optopic(chan) (chan->channel.mode & CHANTOPIC)
-#define channel_active(chan)  (chan->stat & CHANACTIVER)
-#define newly_chanop(chan) recheck_channel(chan)
+#define channel_active(chan)  (chan->status & CHAN_ACTIVE)
+#define channel_pending(chan)  (chan->status & CHAN_PEND)
+#define channel_bitch(chan) (chan->status & CHAN_BITCH)
+#define channel_autoop(chan) (chan->status & CHAN_OPONJOIN)
+#define channel_autovoice(chan) (chan->status & CHAN_AUTOVOICE)
+#define channel_greet(chan) (chan->status & CHAN_GREET)
+#define channel_logstatus(chan) (chan->status & CHAN_LOGSTATUS)
+#define channel_clearbans(chan) (chan->status & CHAN_CLEARBANS)
+#define channel_enforcebans(chan) (chan->status & CHAN_ENFORCEBANS)
+#define channel_revenge(chan) (chan->status & CHAN_REVENGE)
+#define channel_dynamicbans(chan) (chan->status & CHAN_DYNAMICBANS)
+#define channel_nouserbans(chan) (chan->status & CHAN_NOUSERBANS)
+#define channel_protectops(chan) (chan->status & CHAN_PROTECTOPS)
+#define channel_stopnethack(chan) (chan->status & CHAN_STOPNETHACK)
+#define channel_secret(chan) (chan->status & CHAN_SECRET)
+#define channel_shared(chan) (chan->status & CHAN_SHARED)
+#define channel_static(chan) (chan->status & CHAN_STATIC)
+
+struct server_list {
+   struct server_list * next;
+   char * name;
+   int port;
+   char * pass;
+   char * realname;
+};
+
+struct msgq_head {
+   struct msgq * head;
+   struct msgq * last;
+   int tot;
+   int warned;
+};
+
+/* used to queue a lot of things */
+
+struct msgq {
+   struct msgq *next;
+   int len;
+   char *msg;
+};
 
 #endif

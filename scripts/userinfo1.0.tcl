@@ -1,9 +1,10 @@
 #
-# userinfo.tcl v1.00 for Eggdrop 1.1.6 and higher 
+# userinfo.tcl v1.01 for Eggdrop 1.1.6 and higher 
 #			Scott G. Taylor -- ButchBub!staylor@mrynet.com
 #
 # V1.00	     ButchBub	  14 July      1997  Original release.  Based on
 #						whois.tcl "URL" commands.
+# v1.01      Beldin       11 November  1997  1.3 only version
 #
 # TO USE:  o	Set the desired userinfo field keywords to the 
 #		`userinfo-fields' line below where indicated.
@@ -42,12 +43,13 @@
 #	IRL	In Real Life name
 #	BF	Boyfriend
 #	GF	Girlfriend
-#		
+#	DOB     Birthday (Date Of Birth)
+#       EMAIL   Email address
 
-# This script is NOT for pre-1.1.6 versions.
+# This script is NOT for pre-1.3.0 versions.
 
-if {![info exists numversion] || $numversion < 1020000} {
-  putlog "*** Can't load $userinfover -- At least Eggdrop v1.2.0 required"
+if {![info exists numversion] || $numversion < 01030000} {
+  putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
   return 0
 }
 
@@ -55,7 +57,7 @@ if {![info exists numversion] || $numversion < 1020000} {
 # Set your desired fields here #
 ################################
 
-set userinfo-fields "URL BF GF IRL"
+set userinfo-fields "URL BF GF IRL EMAIL DOB"
 
 # This script's identification
 
@@ -111,16 +113,16 @@ proc msg_setuserinfo {nick uhost hand arg} {
       if {$arg != ""} {
          if {[string tolower $arg] == "none"} {
             putserv "NOTICE $nick :Removed your $userinfo line."
-            user-set $hand $userinfo ""
+            setuser $hand XTRA $userinfo ""
          } {
             putserv "NOTICE $nick :Now: $arg"
-            user-set $hand $userinfo "$arg"
+            setuser $hand XTRA $userinfo "[string range $arg 0 159]"
          }
       } {
-         if {[user-get $hand $userinfo] == ""} {
+         if {[getuser $hand XTRA $userinfo] == ""} {
             putserv "NOTICE $nick :You have no $userinfo set."
          } {
-            putserv "NOTICE $nick :Now: [user-get $hand $userinfo]"
+            putserv "NOTICE $nick :Now: [getuser $hand XTRA $userinfo]"
          }
       }
    } else {
@@ -141,16 +143,16 @@ global lastbind
   if {$arg != ""} {
     if {[string tolower $arg] == "none"} {
       putdcc $idx "Removed your $userinfo line."
-      user-set $hand $userinfo ""
+      setuser $hand XTRA $userinfo ""
     } {
       putdcc $idx "Now: $arg"
-      user-set $hand $userinfo "$arg"
+      setuser $hand XTRA $userinfo "[string range $arg 0 159]"
     }
   } {
-    if {[user-get $hand $userinfo] == ""} {
+    if {[getuser $hand XTRA $userinfo] == ""} {
       putdcc $idx "You have no $userinfo set."
     } {
-      putdcc $idx "Currently: [user-get $hand $userinfo]"
+      putdcc $idx "Currently: [getuser $hand XTRA $userinfo]"
     }
   }
   return 1
@@ -179,18 +181,18 @@ global lastbind
   if {$info != ""} {
     if {[string tolower $info] == "none"} {
       putdcc $idx "Removed $who's $userinfo line."
-      user-set $who $userinfo ""
+      setuser $who XTRA $userinfo ""
       putcmdlog "$userinfo for $who removed by $hand"
     } {
       putdcc $idx "Now: $info"
-      user-set $who $userinfo "$info"
+      setuser $who XTRA $userinfo "$info"
       putcmdlog "$userinfo for $who set to \"$info\" by $hand"
     }
   } {
-    if {[user-get $who $userinfo] == ""} {
+    if {[getuser $who $userinfo] == ""} {
       putdcc $idx "$who has no $userinfo set."
     } {
-      putdcc $idx "Currently: [user-get $who $userinfo]"
+      putdcc $idx "Currently: [getuser $who $userinfo]"
     }
   }
   return 0

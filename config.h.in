@@ -119,6 +119,15 @@
 /* use hpux dynamic linking ? */
 #undef HPUX_HACKS
 
+/* do you actually have dlfcn.h ? */
+#undef HAVE_DLFCN_H
+
 /* assume nothing */
 #define SIZEOF_INT 0
 #define SIZEOF_LONG 0
+
+/*define for the system uname*/
+#undef HAVE_UNAME
+
+/* have vsnpritf to use */
+#undef HAVE_VSNPRINTF

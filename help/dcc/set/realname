@@ -1,8 +1,0 @@
-%{+n}
-###  set realname <text>
-   specifies the real name field to use on IRC.  this usually
-   shows up in a /WHOIS as the thing in parenthesis after some-
-   one's user@host.  it can be anything you want, but IRC sets
-   a maximum length so it might get cut off if you set it too
-   long.
-see also: set username

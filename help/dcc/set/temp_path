@@ -1,8 +1,0 @@
-%{+n}
-###  set temp-path <path>
-   specifies a temporary directory where eggdrop can store
-   files for a short period of time.  right now this is used
-   to hold copies of files while people dcc-transfer them,
-   so that changes made to the file in the file transfer area
-   won't affect the dcc-get.  under all normal circumstances,
-   this ought to be set to "/tmp".

@@ -280,7 +280,7 @@ register unsigned char *ma, *na;
  *=======================================================================*/
 
 
-int wild_match (register unsigned char * m, register unsigned char * n)
+int _wild_match (register unsigned char * m, register unsigned char * n)
 {
    unsigned char *ma = m, *na = n, *lsm = 0, *lsn = 0;
    int match = 1;

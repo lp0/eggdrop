@@ -9,44 +9,44 @@
 #include "../module.h"
 #include <stdlib.h>
 
+#undef global
+static Function * global = NULL;
+
 static int woobie_expmem()
 {
    int size = 0;
 
-   modcontext;
+   context;
    return size;
 }
 
-static int cmd_woobie (int idx, char * par)
+static int cmd_woobie (struct userrec *u, int idx, char * par)
 {
-   modcontext;
+   context;
    putlog(LOG_CMDS, "*", "#%s# woobie", dcc[idx].nick);
-   modprintf(idx, "WOOBIE!\n");
+   dprintf(idx, "WOOBIE!\n");
    return 0;
 }
 
 /* a report on the module status */
-static void woobie_report (int idx)
+static void woobie_report (int idx, int details)
 {
    int size = 0;
 
-   modcontext;
-   modprintf(idx, "     0 woobies using %d bytes\n",size);
+   context;
+   if (details)
+     dprintf(idx, "     0 woobies using %d bytes\n",size);
 }
 
 static cmd_t mydcc[] =
 {
-   {"woobie", "", cmd_woobie, NULL },
-   {0, 0, 0, 0 }
+     {"woobie", "", cmd_woobie, NULL },
 };
 
 static char *woobie_close()
 {
-   p_tcl_hash_list H_dcc;
-
-   modcontext;
-   H_dcc = find_hash_table("dcc");
-   rem_builtins(H_dcc, mydcc);
+   context;
+   rem_builtins(H_dcc, mydcc,1);
    module_undepend(MODULE_NAME);
    return NULL;
 }
@@ -61,14 +61,13 @@ static Function woobie_table[] =
    (Function) woobie_report,
 };
 
-char *woobie_start ()
+char *woobie_start (Function * global_funcs)
 {
-   p_tcl_hash_list H_dcc;
-
-   modcontext;
-   module_register(MODULE_NAME, woobie_table, 1, 0);
-   module_depend(MODULE_NAME, "eggdrop", 102, 0);
-   H_dcc = find_hash_table("dcc");
-   add_builtins(H_dcc, mydcc);
+   global = global_funcs;
+   context;
+   module_register(MODULE_NAME, woobie_table, 2, 0);
+   if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
+     return "This module requires eggdrop1.3.0 or later";
+   add_builtins(H_dcc, mydcc,1);
    return NULL;
 }

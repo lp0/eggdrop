@@ -5,5 +5,5 @@ proc filt_act {idx text} {
 
 bind filt - "/me *" filt_telnet_act
 proc filt_telnet_act {idx text} {
-  return $idx ".me [lrange $text 1 end]"
+  return ".me [lrange $text 1 end]"
 }

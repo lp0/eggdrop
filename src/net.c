@@ -48,7 +48,6 @@
 
 extern int backgrd;
 extern int use_stderr;
-extern char botuser[];
 
 /* hostname can be specified in the config file */
 char hostname[121] = "";
@@ -58,6 +57,8 @@ char myip[121] = "";
 char firewall[121] = "";
 /* socks server port */
 int firewallport = 178;
+/* username of the user running the bot */
+char botuser[21] = "llama";
 
 sock_list * socklist = 0;	/* enough to be safe */
 int MAXSOCKS = 0;
@@ -65,7 +66,6 @@ int MAXSOCKS = 0;
 /* types of proxy */
 #define PROXY_SOCKS   1
 #define PROXY_SUN     2
-
 
 /* i need an UNSIGNED long for dcc type stuff */
 IP my_atoul (char * s)
@@ -309,7 +309,7 @@ static int proxy_connect (int sock, char * host, int port, int proxy)
 	    killsock(sock);
 	    return -2;
 	 }
-	 my_memcpy(x, (char *) hp->h_addr, hp->h_length);
+	 my_memcpy((char *)x, (char *) hp->h_addr, hp->h_length);
       }
       sprintf(s, "\004\001%c%c%c%c%c%c%s", (port >> 8) % 256, (port % 256), x[0], x[1], x[2],
 	      x[3], botuser);
@@ -348,7 +348,7 @@ int open_telnet_raw (int sock, char * server, int sport)
    /* patch by tris for multi-hosted machines: */
    bzero((char *) &name, sizeof(struct sockaddr_in));
    name.sin_family = AF_INET;
-   name.sin_addr.s_addr = (*myip ? getmyip() : INADDR_ANY);
+   name.sin_addr.s_addr = (myip[0] ? getmyip() : INADDR_ANY);
    if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0) {
       killsock(sock);
       return -1;
@@ -412,7 +412,7 @@ int open_listen (int * port)
    bzero((char *) &name, sizeof(struct sockaddr_in));
    name.sin_family = AF_INET;
    name.sin_port = my_htons(*port);	/* 0 = just assign us a port */
-   name.sin_addr.s_addr = (*myip ? getmyip() : INADDR_ANY);
+   name.sin_addr.s_addr = (myip[0] ? getmyip() : INADDR_ANY);
    if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0) {
       killsock(sock);
       return -1;
@@ -447,7 +447,8 @@ char *hostnamefromip (unsigned long ip)
       sprintf(s, "%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
       return s;
    }
-   strcpy(s, hp->h_name);
+   strncpy(s, hp->h_name,120);
+   s[120] = 0;
    return s;
 }
 
@@ -465,7 +466,8 @@ int answer (int sock, char * caller, unsigned long * ip,
       return -1;
    if (ip != NULL) {
       *ip = from.sin_addr.s_addr;
-      strcpy(caller, hostnamefromip(*ip));
+      strncpy(caller, hostnamefromip(*ip),120);
+      caller[120] = 0;
       *ip = my_ntohl(*ip);
    }
    if (port != NULL)
@@ -566,7 +568,7 @@ static int sockread (char * s, int * len)
 	    if (x <= 0) {	/* eof */
 	       *len = socklist[i].sock;
 	       socklist[i].flags &= ~SOCK_CONNECT;
-	       debug1("net: eof! socket %d", socklist[i].sock);
+	       debug1("net: eof!(read) socket %d", socklist[i].sock);
 	       return -1;
 	    }
 	    s[x] = 0;
@@ -629,8 +631,8 @@ int sockgets (char * s, int * len)
    char xx[514], *p, *px;
    int ret, i, data = 0;
    context;
-   /* check for stored-up data waiting to be processed */
    for (i = 0; i < MAXSOCKS; i++) {
+      /* check for stored-up data waiting to be processed */
       if (!(socklist[i].flags & SOCK_UNUSED) && (socklist[i].inbuf != NULL)) {
 	 /* look for \r too cos windows can't follow RFCs */
 	 p = strchr(socklist[i].inbuf, '\n');
@@ -656,6 +658,14 @@ int sockgets (char * s, int * len)
 	    *len = strlen(s);	
 	    return socklist[i].sock;
 	 }
+      }
+      /* also check any sockets that might have EOF'd during write */
+      if (!(socklist[i].flags & SOCK_UNUSED) 
+	  && (socklist[i].flags & SOCK_EOFD)) {
+	 context;
+	 s[0] = 0;
+	 *len = socklist[i].sock;
+	 return -1;
       }
    }
    /* no pent-up data of any worth -- down to business */
@@ -756,7 +766,7 @@ int sockgets (char * s, int * len)
 }
 
 /* dump something to a socket */
-/* DO NOT PUT CONTEXTS IN HERE IF YOU WANT DEBUG TO BE MEANINGFULL!!! */
+/* DO NOT PUT CONTEXTS IN HERE IF YOU WANT DEBUG TO BE MEANINGFUL!!! */
 void tputs (int z, char * s, unsigned int len)
 {
    int i, x;
@@ -777,13 +787,6 @@ void tputs (int z, char * s, unsigned int len)
 	    socklist[i].outbuflen += len;
 	    return;
 	 }
-/* this fucks up dcc chat */
-/*      if (socklist[i].flags & SOCK_CONNECT) {
-   * hold yer fuckin' horses! *
-   socklist[i].outbuf=(char *)nmalloc(strlen(s)+1);
-   strcpy(socklist[i].outbuf,s); return;
-   }
- */
 	 /* try. */
 	 x = write(z, s, len);
 	 if (x == (-1))
@@ -805,44 +808,42 @@ void tputs (int z, char * s, unsigned int len)
 /* possible */
 void dequeue_sockets()
 {
-   int i;
-   char *p;
+   int i,x;
+   
    for (i = 0; i < MAXSOCKS; i++) {
       if (!(socklist[i].flags & SOCK_UNUSED) 
 	  && (socklist[i].outbuf != NULL)) {
 	 /* trick tputs into doing the work */
-	 p = socklist[i].outbuf;
-	 socklist[i].outbuf = NULL;
-	 tputs(socklist[i].sock, p, socklist[i].outbuflen);
-	 nfree(p);
+	 x = write(socklist[i].sock, socklist[i].outbuf,
+		   socklist[i].outbuflen);
+	 if ((x < 0) && (errno != EAGAIN) 
+#ifdef EBADSLT 
+	     && (errno != EBADSLT)
+#else
+#ifdef ENOTCONN
+	     && (errno != ENOTCONN)
+#endif
+#endif
+	     ) {
+	    /* this detects an EOF during writing */
+	    debug3("net: eof!(write) socket %d (%s,%d)", socklist[i].sock,
+		   strerror(errno),errno);
+	    socklist[i].flags |= SOCK_EOFD;
+	 } else if (x == socklist[i].outbuflen) {
+	    /* if the whole buffer was sent, nuke it */
+	    nfree(socklist[i].outbuf);
+	    socklist[i].outbuf = NULL;
+	    socklist[i].outbuflen = 0;
+	 } else if (x > 0) {
+	    char * p = socklist[i].outbuf;
+	    /* this removes any sent bytes from the beginning of the buffer */
+	    socklist[i].outbuf = (char *) nmalloc(socklist[i].outbuflen - x);
+	    my_memcpy(socklist[i].outbuf, p+x, socklist[i].outbuflen - x);
+	    socklist[i].outbuflen -= x;
+	    nfree(p);
+	 }
       }
    }
-}
-
-/* like fprintf, but instead of preceding the format string with a FILE
-   pointer, precede with a socket number */
-/* please stop using this one except for server output.  dcc output
-   should now use dprintf(idx,"format",[params]);   */
-void tprintf(va_alist)
-va_dcl
-{
-   char *format;
-   int sock;
-   va_list va;
-   static char SBUF2[768];
-   va_start(va);
-   sock = va_arg(va, int);
-   format = va_arg(va, char *);
-   vsprintf(SBUF2, format, va);
-   if (strlen(SBUF2) > 510)
-      SBUF2[510] = 0;		/* server can only take so much */
-   tputs(sock, SBUF2, strlen(SBUF2));
-#ifdef EBUG_OUTPUT
-   if (SBUF2[strlen(SBUF2) - 1] == '\n')
-      SBUF2[strlen(SBUF2) - 1] = 0;
-   debug1("[!t] %s", SBUF2);
-#endif
-   va_end(va);
 }
 
 /* DEBUGGING STUFF */
@@ -851,10 +852,7 @@ void tell_netdebug (int idx)
 {
    int i;
    char s[80];
-   if (idx < 0)
-      tprintf(-idx, "Open sockets:");
-   else
-      dprintf(idx, "Open sockets:");
+   dprintf(idx, "Open sockets:");
    for (i = 0; i < MAXSOCKS; i++) {
       if (!(socklist[i].flags & SOCK_UNUSED)) {
 	 sprintf(s, " %d", socklist[i].sock);
@@ -873,14 +871,8 @@ void tell_netdebug (int idx)
 	 if (socklist[i].outbuf != NULL)
 	    sprintf(&s[strlen(s)], " (outbuf: %06lX)", socklist[i].outbuflen);
 	 strcat(s, ",");
-	 if (idx < 0)
-	    tprintf(-idx, "%s", s);
-	 else
-	    dprintf(idx, "%s", s);
+	 dprintf(idx, "%s", s);
       }
    }
-   if (idx < 0)
-      tprintf(-idx, " done.\n");
-   else
-      dprintf(idx, " done.\n");
+   dprintf(idx, " done.\n");
 }

@@ -1,8 +1,0 @@
-%{+n}
-###  set my-ip <ip-address>
-   overrides the network IP used by the bot to identify itself
-   over dcc connections.  this is really only useful if your
-   machine has multiple IPs and you would like the bot to use
-   a particular one, or if the bot has trouble detecing your
-   IP automatically.
-see also: set my-hostname

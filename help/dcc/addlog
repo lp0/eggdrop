@@ -1,5 +1,0 @@
-%{+o|o}
-###  addlog <text>
-   Writes your comment into the bot's log file.  Bot masters can go
-   back later and review the log, and will see your comment (with your
-   handle attached).  This is useful for explaining confusing activity.

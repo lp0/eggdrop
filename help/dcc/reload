@@ -1,6 +1,0 @@
-%{+m|m}
-###  reload
-   reloads the user file of the bot, discarding any changes made
-   since the last '.save' or hourly user file save.  sharebots
-   should probably not ever do this.
-see also: rehash, save
