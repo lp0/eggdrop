@@ -13,7 +13,7 @@ clean:
 	@rm -f *.o *~ static.h
 	
 modules:
-	@for x in *.mod; do cd $$x;${GMAKE} modules;cd ..; done
+	for x in *.mod; do cd $$x;${GMAKE} modules;cd ..; done
 
 static:
 	@./buildstatic

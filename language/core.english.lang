@@ -169,7 +169,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x622,To remove it:
 0x623,You have no email address set.
 0x624,Your info line is locked
-0x625,Removed your info line on" /* channel */
+0x625,Removed your info line on
 0x626,Removed your info line.
 0x627,You have no info set on
 0x628,You have no info set.
@@ -238,6 +238,10 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x667,You now get to pick a nick to use on the bot,\nand a password so nobody else can pretend to be you.\nPlease remember both!
 0x668,From now on, you dont need to use the -m option to start the bot.\nEnjoy !!
 0x669,Telnet connection flood from %s!  Placing on ignore!
+0x66a,banned
+0x66b,lemmingbot
+0x66c,don't kick my friends, bud
+0x66d,...and don't come back.
 
 0x700,Command line arguments:\n\
   -h   help\n\
@@ -268,6 +272,9 @@ use .-ban' in dcc chat if you want it gone for good.
 0x909,Abusing ill-gained server ops
 0x90a,Mode change by non-chanop on %s!  Reversing...
 0x90b,Abusing desync
+0x90c,flood
+0x90d,bogus ban
+0x90e,bogus username
 
 0xa00,No ignores
 0xa01,Currently ignoring

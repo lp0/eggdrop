@@ -24,7 +24,7 @@ extern int dcc_total;
 extern char ver[];
 extern char admin[];
 extern Tcl_Interp * interp;
-extern time_t now;
+extern time_t now, online_since;
 extern char network[];
 extern struct userrec *userlist;
 extern int remote_boots;
@@ -429,11 +429,27 @@ static void bot_endlink (int idx, char * par) {
 
 /* info? <from@bot>   -> send priv */
 static void bot_infoq (int idx, char * par) {
-   char s[161];
+   char s[161], s2[32];
    struct chanset_t *chan;
-   chan = chanset;
+   time_t now2;
+   int hr, min;
    
    context;
+   chan = chanset;
+   now2 = now - online_since;
+   s2[0] = 0;
+   if (now2 > 86400) {
+      /* days */
+      sprintf(s2, "%d day", (int) (now2 / 86400));
+      if ((int) (now2 / 86400) >= 2)
+	 strcat(s2, "s");
+      strcat(s2, ", ");
+      now2 -= (((int) (now2 / 86400)) * 86400);
+   }
+   hr = (time_t) ((int) now2 / 3600);
+   now2 -= (hr * 3600);
+   min = (time_t) ((int) now2 / 60);
+   sprintf(&s2[strlen(s2)], "%02d:%02d", (int) hr, (int) min);
    if (module_find("server",0,0)) {
       s[0] = 0;
       while (chan != NULL) {
@@ -446,13 +462,14 @@ static void bot_infoq (int idx, char * par) {
       if (s[0]) {
 	 s[strlen(s) - 2] = 0;
 	 botnet_send_priv(idx, botnetnick, par, NULL,
-			  "%s <%s> (%s)", ver, network, s);
+			  "%s <%s> (%s) [UP %s]", ver, network, s, s2);
       } else
 	botnet_send_priv(idx, botnetnick, par, NULL,
-			 "%s <%s> (%s)", ver, network, BOT_NOCHANNELS);
+			 "%s <%s> (%s) [UP %s]", ver, network, BOT_NOCHANNELS,
+			 s2);
    } else
      botnet_send_priv(idx, botnetnick, par, NULL,
-		      "%s <NO_IRC>", ver);
+		      "%s <NO_IRC> [UP %s]", ver, s2);
    botnet_send_infoq(idx,par);
 }
 

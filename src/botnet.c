@@ -948,6 +948,7 @@ static void failed_tandem_relay (int idx)
       nfree(dcc[uidx].u.relay);
       dcc[uidx].u.chat = ci;
       dcc[uidx].type = &DCC_CHAT;
+      dcc[uidx].status = dcc[uidx].u.relay->old_status;
       killsock(dcc[idx].sock);
       lostdcc(idx);
       return;
@@ -1000,6 +1001,7 @@ void tandem_relay (int idx, char * nick,int i)
    dcc[i].user = u;
    strcpy(dcc[i].host, bi->address);
    dcc[i].u.relay->chat->away = NULL;
+   dcc[i].u.relay->old_status = dcc[i].status;
    dcc[i].status = 0;
    dcc[i].timeval = now;
    dcc[i].u.relay->chat->msgs_per_sec = 0;
@@ -1049,6 +1051,7 @@ static void pre_relay (int idx, char * buf,int i)
 	     dcc[tidx].nick);
       nfree(dcc[idx].u.relay);
       dcc[idx].u.chat = ci;
+      dcc[idx].status = dcc[idx].u.relay->old_status;
       dcc[idx].type = &DCC_CHAT;
       killsock(dcc[tidx].sock);
       lostdcc(tidx);
@@ -1155,6 +1158,7 @@ static void eof_dcc_relay (int idx) {
       if (dcc[j].u.chat->channel < 100000)
 	botnet_send_join_idx(j,-1);
    }
+   dcc[j].status = dcc[j].u.relay->old_status;
    check_tcl_chon(dcc[j].nick, dcc[j].sock);
    check_tcl_chjn(botnetnick, dcc[j].nick, dcc[j].u.chat->channel,
 		  geticon(j), dcc[j].sock, dcc[j].host);
@@ -1239,6 +1243,7 @@ static void dcc_relaying (int idx, char * buf,int j)
    nfree(dcc[idx].u.relay);
    dcc[idx].u.chat = ci;
    dcc[idx].type = &DCC_CHAT;
+   dcc[idx].status = dcc[idx].u.relay->old_status;
    check_tcl_chon(dcc[idx].nick,dcc[idx].sock);
    if (dcc[idx].u.chat->channel >= 0)
       check_tcl_chjn(botnetnick, dcc[idx].nick, dcc[idx].u.chat->channel,

@@ -416,7 +416,8 @@ static void got_ban (struct chanset_t * chan, char * nick, char * from,
 	     (who[i] != 2) && (who[i] != 22) && (who[i] != 31))
 	    bogus = 1;
       if (bogus) {
-	 if (glob_bot(user) || glob_friend(user) || chan_friend(user)) {
+	 if (glob_bot(user) || glob_friend(user) || chan_friend(user) ||
+            (channel_dontkickops(chan) && (chan_op(user) || (glob_op(user) && !chan_deop(user))))) { /* arthur2 */
 	    /* fix their bogus ban */
 	    int ok = 0;
 	    strcpy(s1, who);
@@ -438,7 +439,7 @@ static void got_ban (struct chanset_t * chan, char * nick, char * from,
 	    if (!m || !chan_sentkick(m)) {
 	       if (m)
 		 m->flags |= SENTKICK;
-	       dprintf(DP_MODE, "KICK %s %s :bogus ban\n", chan->name, nick);
+	       dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick, CHAN_BOGUSBAN);
 	    }
 	 }
 	 return;
@@ -591,7 +592,10 @@ static void gotmode (char * from, char * msg) {
 	 m = ismember(chan, nick);
 	 if (m)
 	   m->last = now;
-	 if (allow_desync == 0) {
+	 if ((allow_desync == 0) && /* arthur2: added flag tests */
+                !(glob_friend(user) || chan_friend(user) ||
+                (channel_dontkickops(chan) && (chan_op(user) ||
+                                               (glob_op(user) && !chan_deop(user)))))) {
 	   if (m && me_op(chan)) {
 	     if (chan_fakeop(m)) {
 	        putlog(LOG_MODES, ch, CHAN_FAKEMODE, ch);

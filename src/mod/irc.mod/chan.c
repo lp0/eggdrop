@@ -114,9 +114,8 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
    case FLOOD_PRIVMSG:
    case FLOOD_NOTICE:
       thr = chan->flood_pub_thr;
-      if (thr) {
-	 lapse = chan->flood_pub_time;
-      } else {
+      lapse = chan->flood_pub_time;
+      if (!thr && !lapse) {
 	 thr = flud_thr;
 	 lapse = flud_time;
       }
@@ -124,9 +123,8 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
       break;
     case FLOOD_CTCP:
       thr = chan->flood_ctcp_thr;
-      if (thr) {
-	 lapse = chan->flood_ctcp_time;
-      } else {
+      lapse = chan->flood_ctcp_time;
+      if (!thr && !lapse) {
 	 thr = flud_ctcp_thr;
 	 lapse = flud_ctcp_time;
       }
@@ -210,7 +208,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	 /* flooding chan! either by public or notice */
 	 if (me_op(chan)) {
 	    putlog(LOG_MODES, chan->name, IRC_FLOODKICK, floodnick);
-	    dprintf(DP_MODE, "KICK %s %s :flood\n", chan->name, floodnick);
+	    dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, floodnick, CHAN_FLOOD);
 	 }
 	 return 1;	 
        case FLOOD_JOIN:
@@ -235,7 +233,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	       if (wild_match(h, s) && 
 		   (m->joined >= chan->floodtime[which]) && (!chan_sentkick(m))) {
 		  m->flags |= SENTKICK;
-		  dprintf(DP_SERVER, "KICK %s %s :lemmingbot\n", chan->name, m->nick);
+		  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick, IRC_LEMMINGBOT);
 	       }
 	       m = m->next;
 	    }
@@ -266,6 +264,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 static char *quickban (struct chanset_t * chan, char * uhost) {
    static char s1[512];
    maskhost(uhost, s1);
+   s1[2] = '*';
    do_ban(chan, s1);
    return s1;
 }
@@ -338,8 +337,12 @@ static void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick)
 	       do_ban(chan, u->banmask);
 	       u->lastactive = now;
                c[0] = 0;
-               if (u->desc && (u->desc[0] != '@'))
-                  sprintf(c, "%s: %s", IRC_BANNED, u->desc);
+               if (u->desc && (u->desc[0] != '@')) {
+                  if (strcmp(IRC_PREBANNED, "")) 
+                     sprintf(c, "%s: %s", IRC_PREBANNED, u->desc);
+                  else 
+                     sprintf(c, "%s", u->desc);
+	       }
                kick_all(chan, u->banmask, c[0] ? c : IRC_YOUREBANNED);
 	       return; /* drop out on 1st ban */
 	    }
@@ -661,7 +664,7 @@ static int got352or4 (struct chanset_t * chan, char * user, char * host,
        && !chan_friend(fr) && !glob_friend(fr) /* arthur2 */
        && !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) /* arthur2 */
      /* *bewm* */
-     dprintf(DP_SERVER, "KICK %s %s :banned\n", chan->name, nick);
+     dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick, IRC_BANNED);
    /* if the user is a +k */
    else if ((chan_kick(fr) || glob_kick(fr))
 	    /* and it's not me :) who'd set me +k anyway, a sicko? 
@@ -1076,9 +1079,12 @@ static int gotjoin (char * from, char * chname) {
 		/* channel is +autoop... */
 		&& ((chan->status & CHAN_OPONJOIN)
 		    /* OR user is maked autoop */
-		    || glob_autoop(fr) || chan_autoop(fr)))
-	      /* give them a special surprise */
-	      add_mode(chan, '+', 'o', nick);
+		    || glob_autoop(fr) || chan_autoop(fr))) {
+	       /* give them a special surprise */
+	       add_mode(chan, '+', 'o', nick);
+	       /* also prevent +stopnethack automatically de-opping them */
+	       m->flags |= WASOP;
+	    }
 	    if (newmode) {
 	       putlog(LOG_JOIN, chname, "%s (%s) returned to %s (with +%s).", 
 		      nick, uhost, chname, newmode);
@@ -1124,8 +1130,8 @@ static int gotjoin (char * from, char * chname) {
 	       if (me_op(chan)) 
 		 for (p = m->userhost; *p; p++)
 		   if ((((unsigned char )*p) < 32) && kick_bogus) {
-		      dprintf(DP_MODE, "KICK %s %s :bogus username\n",
-			      chname, nick);
+		      dprintf(DP_MODE, "KICK %s %s :%s\n",
+			      chname, nick, CHAN_BOGUSUSERNAME);
 		      return 0;
 		   }
 	       /* ok, the op-on-join,etc, tests...first only both if Im opped */
@@ -1133,11 +1139,12 @@ static int gotjoin (char * from, char * chname) {
 		  /* are they a chan op, or global op without chan deop */
 		  if ((chan_op(fr) || (glob_op(fr) && !chan_deop(fr)))
 		      /* is it op-on-join or is the use marked auto-op */
-		      && (channel_autoop(chan) || glob_autoop(fr) || chan_autoop(fr)))
+		      && (channel_autoop(chan) || glob_autoop(fr) || chan_autoop(fr))) {
 		    /* yes! do the honors */
-		    add_mode(chan, '+', 'o', nick);
+		     add_mode(chan, '+', 'o', nick);
+		     m->flags |= WASOP; /* nethack sanity */
 		  /* if it matches a ban, dispose of them */
-		  else {
+ 		  } else {
 		     if (u_match_ban(global_bans,from) || u_match_ban(chan->bans, from))
 		       refresh_ban_kick(chan, from, nick);
 		     /* likewise for kick'ees */
@@ -1145,7 +1152,7 @@ static int gotjoin (char * from, char * chname) {
 			quickban(chan, from);
 			p = get_user(&USERENTRY_COMMENT,m->user);
 			dprintf(DP_MODE, "KICK %s %s :%s\n", chname, nick, 
-				(p && (p[0] != '@')) ? p : "...and don't come back.");
+				(p && (p[0] != '@')) ? p : IRC_COMMENTKICK);
 		     } else /* for the llama's, auto-voice support */
 		       if (channel_autovoice(chan) && 
 			   (chan_voice(fr) || (glob_voice(fr) && !chan_quiet(fr))))
@@ -1268,8 +1275,8 @@ static int gotkick (char * from, char * msg)
 	     && strcasecmp(whodid,nick) 
 	     /* and Im opped ? */
              && me_op(chan))
-	   dprintf(DP_MODE, "KICK %s %s :don't kick my friends, bud\n", chname,
-		   whodid);
+	   dprintf(DP_MODE, "KICK %s %s :%s\n", chname,
+		   whodid, IRC_PROTECT);
 	 putlog(LOG_MODES, chname, "%s kicked from %s by %s: %s", s1, chname,
 		from, msg);
       }
@@ -1472,7 +1479,7 @@ static int gotmsg (char * from, char * msg)
 	       code = newsplit(& ctcp);
 	       u = get_user_by_host(from);
 	       if (!ignoring || trigger_on_ignore) {
-		 if (!check_tcl_ctcp(nick, uhost, u, to, code, ctcp))
+		  if (!check_tcl_ctcp(nick, uhost, u, to, code, ctcp))
 		    update_idle(realto, nick);
 		  if (!ignoring) {
 		     /* hell! log DCC, it's too a channel damnit! */

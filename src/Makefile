@@ -19,7 +19,7 @@ doofus:
 	
 eggdrop: ../eggdrop
 
-eggdrop.h: ../Makefile
+eggdrop.h: 
 	@touch eggdrop.h
 
 static: ${OBJS} ${XREQ}

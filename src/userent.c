@@ -946,7 +946,7 @@ static int hosts_set (struct userrec * u, struct user_entry * e, void * buf) {
       while (*t) {
 	 if (wild_match(host,(*t)->extra))  {
 	    struct list_type * u;
-	    
+
 	    u = *t;
 	    *t = (*t)->next;
 	    if (u->extra)

@@ -34,7 +34,11 @@ void * dlsym (void *,char *);
 #ifndef RTLD_NOW
 #define RTLD_NOW 1
 #endif
-#define DLFLAGS RTLD_NOW|RTLD_GLOBAL
+#ifdef RTLD_LAZY
+#define DLFLAGS RTLD_LAZY|RTLD_GLOBAL     
+#else
+#define DLFLAGS RTLD_NOW|RTLD_GLOBAL      
+#endif
 #endif /* DLOPEN_1 */
 #endif /* OSF1_HACKS */
 #endif /* HPUX_HACKS */
@@ -534,7 +538,7 @@ const char *module_load (char * name)
      
    sprintf(workbuf, "%s_start", name);
 #ifdef HPUX_HACKS
-   if (shl_findsym(&hand, procname, (short) TYPE_PROCEDURE, (void *)&f))
+   if (shl_findsym(&hand, workbuf, (short) TYPE_PROCEDURE, (void *)&f))
      f = NULL;
 #else
 #ifdef OSF1_HACKS
@@ -546,7 +550,7 @@ const char *module_load (char * name)
    if (f == NULL) {		/* some OS's need the _ */
       sprintf(workbuf, "_%s_start", name);
 #ifdef HPUX_HACKS
-      if (shl_findsym(&hand, procname, (short) TYPE_PROCEDURE, (void *)&f))
+      if (shl_findsym(&hand, workbuf, (short) TYPE_PROCEDURE, (void *)&f))
 	f = NULL;
 #else
 #ifdef OSF1_HACKS

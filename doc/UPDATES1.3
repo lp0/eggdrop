@@ -1,10 +1,31 @@
 Changes in eggdrop: (since v1.3.0)
 ----------------------------------
 
+1.3.22
+Foundby   Fixedby   What....
+Butthead  Beldin    grab new version number from src/main.c
+Butthead  Beldin    .echo settings were being set off on return from relay
+Butthead  Beldin    chon calls for notes was still slightly broken
+          Mixter    tcl_jump's QUIT message was dangerous
+poptix    Beldin    .deluser was using u after it was deleted.
+various   Beldin    flood-chan & flood-ctcp for a channel use global on 0:0
+                    and are turned off on 0:1
+          Kirk      HP-UX fixes
+toot      Kirk      fixed problem where bot crashed when taking revenge
+          Butthead  Made alarm timeouts for hostname/addy lookup actually work
+                    rather than hang the bot.  New TCL var resolve-timeout
+                    allows setting this.
+Someone-who-didnt-fill-in-updates more lang files
+Daklop    Beldin    quickbans really need a * in case of ~'s etc
+|SKY|     Beldin    it was possibly to create arbritary directories anywhere
+                    on the shell with the filesys
+|SKY|     Beldin    getting files linked to the current bot cause SEGV case
+Q         Beldin    botinfo response now includes bot uptime
+
 1.3.21
 Foundby   Fixedby   What....
-Toby Verall Beldin  hmm, console needs check_tcl_chjn, it aint exported.
-Arty2     Q & Solal ban time limit added to +ban
+toot      Beldin    hmm, console needs check_tcl_chjn, it aint exported.
+Arthur2   Q & Solal ban time limit added to +ban
 ScottDrake Beldin   crash on channel join with no-chanrec-info on
           Arthur2   better +m/+f checking & +dontkickops flag
 	  Arthur2   kick-bogus flag

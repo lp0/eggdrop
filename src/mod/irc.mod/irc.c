@@ -50,7 +50,7 @@ static void take_revenge (struct chanset_t * chan, char * who, char * reason)
    int i;
    time_t tm;
    struct userrec * u;
-   memberlist * mx;
+   memberlist * mx = NULL;
    struct flag_record fr = {
       FR_GLOBAL|FR_CHAN, 0,0,0,0,0
    };
@@ -123,8 +123,8 @@ static void take_revenge (struct chanset_t * chan, char * who, char * reason)
    fr.chan = USER_DEOP;
    fr.udef_chan = 0;
    u = get_user_by_handle(userlist, s1);
-   mx = ismember(chan, who);
-   mx->user = u;
+   if ((mx = ismember(chan, nick)))
+     mx->user = u;
    set_user_flagrec(u,&fr,chan->name);
    simple_sprintf(s, "(%s) %s (%s)", ct, reason, who);
    set_user(&USERENTRY_COMMENT,u,(void *)&s);

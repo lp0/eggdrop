@@ -63,6 +63,7 @@ extern tcl_timer_t *timer, *utimer;
 extern time_t online_since;
 extern log_t * logs;
 extern int tands;
+extern int resolve_timeout;
 extern char natip[];
 /* confvar patch by aaronwl */
 extern char configfile[];
@@ -388,6 +389,7 @@ static tcl_ints def_tcl_ints[] =
    {"share-unlinks", &share_unlinks, 0},
    {"log-time", &shtime, 0},
    {"allow-dk-cmds", &allow_dk_cmds, 0},
+   {"resolve-timeout", &resolve_timeout, 0},
    {0, 0}
 };
 

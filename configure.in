@@ -30,10 +30,6 @@ AC_PROG_MAKE_SET
 AC_CHECK_PROG(STRIP,strip,strip)
 AC_CHECK_PROG(UNAME,uname,uname)
 
-dnl 'nawk' is NOT compatable! dammit!
-dnl no longer use awk for anything
-dnl AC_CHECK_PROGS(AWK,awk gawk mawk)
-
 AC_PROG_RANLIB
 
 dnl stop putting -g in there!  @#$!#$%!
@@ -176,6 +172,9 @@ case $system in
     AC_CHECK_LIB(dld,shl_load)
     AC_DEFINE(MODULES_OK)
     AC_DEFINE(HPUX_HACKS)
+    if test x`uname -r | cut -d . -f 2` = "x10"; then
+       AC_DEFINE(HPUX10_HACKS)
+    fi
     BEL_MOD_LD="gcc -Wl,-E"
     SHLIB_CC="gcc -fPIC"
     SHLIB_LD="ld -b"

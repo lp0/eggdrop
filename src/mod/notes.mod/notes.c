@@ -894,9 +894,8 @@ static void away_notes ( char * bot, int sock, char * msg ) {
      notes_read(dcc[idx].nick, 0, "+", idx);
 }
 
-static int chon_notes ( char * nick, int sock ) {
-   int idx = findanyidx(sock);
-   
+static int chon_notes ( char * nick, int idx ) {
+   context;
    if (dcc[idx].type == &DCC_CHAT)
      notes_read(nick, 0, "+", idx);
    return 0;

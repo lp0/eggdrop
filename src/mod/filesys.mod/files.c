@@ -364,7 +364,7 @@ static void cmd_get (int idx, char * par)
    filedb fdb;
    FILE *f;
    long where = 0;
-   
+
    if (!par[0]) {
       dprintf(idx, "%s: get <file(s)> [nickname]\n", USAGE);
       return;
@@ -402,7 +402,9 @@ static void cmd_get (int idx, char * par)
 	    char bot[121], whoto[NICKLEN];
 	    /* this is a link to a file on another bot... */
 	    splitc(bot,fdb.sharelink,':');
-	    if (!in_chain(bot)) {
+	    if (!strcasecmp(bot, botnetnick)) {
+	       dprintf(idx, "Can't get that file, it's linked to this bot!\n");
+	    } else if (!in_chain(bot)) {
 	       dprintf(idx, FILES_NOTAVAIL, fdb.filename);
 	    } else {
 	       i = nextbot(bot);
@@ -619,8 +621,7 @@ static void cmd_unshare (int idx, char * par)
 }
 
 /* link a file from another bot */
-static void cmd_ln (int idx, char * par)
-{
+static void cmd_ln (int idx, char * par) {
    char *share, newpath[DIRLEN + 1], newfn[81], *p;
    FILE *f;
    filedb fdb;
@@ -631,63 +632,64 @@ static void cmd_ln (int idx, char * par)
    if (strlen(share)>60) 
      share[60] = 0;
    /* correct format? */
-   if (!strchr(share, ':') || !par[0]) {
-      dprintf(idx, "%s: ln <bot:path> <localfile>\n", USAGE);
-      return;
-   }
-   p = strrchr(par, '/');
-   if (p != NULL) {
-      *p = 0;
-      strncpy(newfn, p + 1, 80);
-      newfn[80] = 0;
-      if (!resolve_dir(dcc[idx].u.file->dir, par, newpath, idx)) {
-	 dprintf(idx, FILES_NOSUCHDIR);
+   if (!(p = strchr(share, ':')) || !par[0]) 
+     dprintf(idx, "%s: ln <bot:path> <localfile>\n", USAGE);
+   else if (p[1] != '/') 
+      dprintf(idx, "Links to other bots must have absolute paths.\n");
+   else {
+      if ((p = strrchr(par, '/'))) {
+	 *p = 0;
+	 strncpy(newfn, p + 1, 80);
+	 newfn[80] = 0;
+	 if (!resolve_dir(dcc[idx].u.file->dir, par, newpath, idx)) {
+	    dprintf(idx, FILES_NOSUCHDIR);
 	 return;
+	 }
+      } else {
+	 strncpy(newpath, dcc[idx].u.file->dir,121);
+	 newpath[121]=0;
+	 strncpy(newfn, par, 80);
+	 newfn[80] = 0;
       }
-   } else {
-      strncpy(newpath, dcc[idx].u.file->dir,121);
-      newpath[121]=0;
-      strncpy(newfn, par, 80);
-      newfn[80] = 0;
-   }
-   f = filedb_open(newpath, 0);
-   ret = findmatch(f, newfn, &where, &fdb);
-   if (ret) {
-      if (!fdb.sharelink[0]) {
-	 dprintf(idx, FILES_NORMAL, newfn);
+      f = filedb_open(newpath, 0);
+      ret = findmatch(f, newfn, &where, &fdb);
+      if (ret) {
+	 if (!fdb.sharelink[0]) {
+	    dprintf(idx, FILES_NORMAL, newfn);
+	    filedb_close(f);
+	 } else {
+	    strcpy(fdb.sharelink, share);
+	    fseek(f, where, SEEK_SET);
+	    fwrite(&fdb, sizeof(filedb), 1, f);
+	    filedb_close(f);
+	    dprintf(idx, FILES_CHGLINK, share);
+	    putlog(LOG_FILES, "*", "files: #%s# ln %s %s",
+		   dcc[idx].nick, par, share);
+	 }
+      } else {
+	 /* new entry */
+	 where = findempty(f);
+	 fdb.version = FILEVERSION;
+	 fdb.desc[0] = 0;
+	 fdb.flags_req[0] = 0;
+	 fdb.chname[0] = 0;
+	 fdb.size = 0;
+	 fdb.gots = 0;
+	 strncpy(fdb.filename, newfn, 30);
+	 fdb.filename[30] = 0;
+	 strncpy(fdb.uploader, dcc[idx].nick, HANDLEN);
+	 fdb.uploader[HANDLEN] = 0;
+	 fdb.uploaded = now;
+	 strcpy(fdb.sharelink, share);
+	 fdb.stat = 0;
+	 fseek(f, where, SEEK_SET);
+	 fwrite(&fdb, sizeof(filedb), 1, f);
 	 filedb_close(f);
-	 return;
+	 dprintf(idx, "%s %s -> %s\n", FILES_ADDLINK, fdb.filename, share);
+	 putlog(LOG_FILES, "*", "files: #%s# ln /%s%s%s %s", dcc[idx].nick, newpath,
+		newpath[0] ? "/" : "", newfn, share);
       }
-      strcpy(fdb.sharelink, share);
-      fseek(f, where, SEEK_SET);
-      fwrite(&fdb, sizeof(filedb), 1, f);
-      filedb_close(f);
-      dprintf(idx, FILES_CHGLINK, share);
-      putlog(LOG_FILES, "*", "files: #%s# ln %s %s",
-	     dcc[idx].nick, par, share);
-      return;
    }
-   /* new entry */
-   where = findempty(f);
-   fdb.version = FILEVERSION;
-   fdb.desc[0] = 0;
-   fdb.flags_req[0] = 0;
-   fdb.chname[0] = 0;
-   fdb.size = 0;
-   fdb.gots = 0;
-   strncpy(fdb.filename, newfn, 30);
-   fdb.filename[30] = 0;
-   strncpy(fdb.uploader, dcc[idx].nick, HANDLEN);
-   fdb.uploader[HANDLEN] = 0;
-   fdb.uploaded = now;
-   strcpy(fdb.sharelink, share);
-   fdb.stat = 0;
-   fseek(f, where, SEEK_SET);
-   fwrite(&fdb, sizeof(filedb), 1, f);
-   filedb_close(f);
-   dprintf(idx, "%s %s -> %s\n", FILES_ADDLINK, fdb.filename, share);
-   putlog(LOG_FILES, "*", "files: #%s# ln /%s%s%s %s", dcc[idx].nick, newpath,
-	  newpath[0] ? "/" : "", newfn, share);
 }
 
 static void cmd_desc (int idx, char * par)
@@ -841,66 +843,70 @@ static void cmd_mkdir (int idx, char * par)
      name[(ret = 60)] = 0;
    if (name[ret] == '/')
      name[ret] = 0;
-   flags = newsplit(&par);
-   chan = newsplit(&par);
-   if (!chan[0] && ((flags[0] == '#') || (flags[0] == '&'))) {
-      chan = flags;
-      flags = par;
-   }
-   if (chan[0] && !findchan(chan)) {
-      dprintf(idx, "Invalid channel!\n");
-      return;
-   }	    
-   f = filedb_open(dcc[idx].u.file->dir, 0);
-   ret = findmatch(f, name, &where, &fdb);
-   if (!ret) {
-      sprintf(s, "%s%s/%s", dccdir, dcc[idx].u.file->dir, name);
-      if (mkdir(s, 0755) != 0) {
-	 dprintf(idx, FAILED);
+   if (strchr(name, '/')) 
+      dprintf(idx, "You can only create directories in the current directory\n");
+   else {
+      flags = newsplit(&par);
+      chan = newsplit(&par);
+      if (!chan[0] && ((flags[0] == '#') || (flags[0] == '&'))) {
+	 chan = flags;
+	 flags = par;
+      }
+      if (chan[0] && !findchan(chan)) {
+	 dprintf(idx, "Invalid channel!\n");
+	 return;
+      }	    
+      f = filedb_open(dcc[idx].u.file->dir, 0);
+      ret = findmatch(f, name, &where, &fdb);
+      if (!ret) {
+	 sprintf(s, "%s%s/%s", dccdir, dcc[idx].u.file->dir, name);
+	 if (mkdir(s, 0755) != 0) {
+	    dprintf(idx, FAILED);
+	    filedb_close(f);
+	    return;
+	 }
+	 fdb.version = FILEVERSION;
+	 fdb.stat = FILE_DIR;
+	 fdb.desc[0] = 0;
+	 fdb.uploader[0] = 0;
+	 strcpy(fdb.filename, name);
+	 fdb.flags_req[0] = 0;
+	 fdb.chname[0] = 0;
+	 fdb.uploaded = now;
+	 fdb.size = 0;
+	 fdb.gots = 0;
+	 fdb.sharelink[0] = 0;
+	 dprintf(idx, "%s /%s%s%s\n", FILES_CREADIR, dcc[idx].u.file->dir,
+		dcc[idx].u.file->dir[0] ? "/" : "", name);
+	 where = findempty(f);
+      } else if (!(fdb.stat & FILE_DIR)) {
+	 dprintf(idx, FILES_NOSUCHDIR);
 	 filedb_close(f);
 	 return;
       }
-      fdb.version = FILEVERSION;
-      fdb.stat = FILE_DIR;
-      fdb.desc[0] = 0;
-      fdb.uploader[0] = 0;
-      strcpy(fdb.filename, name);
-      fdb.flags_req[0] = 0;
-      fdb.chname[0] = 0;
-      fdb.uploaded = now;
-      fdb.size = 0;
-      fdb.gots = 0;
-      fdb.sharelink[0] = 0;
-      dprintf(idx, "%s /%s%s%s\n", FILES_CREADIR, dcc[idx].u.file->dir,
-		dcc[idx].u.file->dir[0] ? "/" : "", name);
-      where = findempty(f);
-   } else if (!(fdb.stat & FILE_DIR)) {
-      dprintf(idx, FILES_NOSUCHDIR);
+      if (flags[0]) {
+	 break_down_flags(flags,&fr,NULL);
+	 build_flags(s,&fr,NULL);
+	 strncpy(fdb.flags_req, s, 21);
+	 fdb.flags_req[21] = 0;
+	 dprintf(idx, FILES_CHGACCESS, name, s);
+      } else if (!chan[0]) {
+	 fdb.flags_req[0] = 0;
+	 dprintf(idx, FILES_CHGNACCESS, name);
+      }
+      if (chan[0]) {
+	 strncpy(fdb.chname,chan,80);
+	 fdb.chname[80] = 0;
+	 dprintf(idx, "Access set to channel: %s\n",chan);
+      } else if (!flags[0]) {
+	 fdb.chname[0] = 0;
+	 dprintf(idx, "Access set to all channels.\n");
+      }
+      fseek(f, where, SEEK_SET);
+      fwrite(&fdb, sizeof(filedb), 1, f);
       filedb_close(f);
-      return;
+      putlog(LOG_FILES, "*", "files: #%s# mkdir %s %s", dcc[idx].nick, name, par);
    }
-   if (flags[0]) {
-      break_down_flags(flags,&fr,NULL);
-      build_flags(s,&fr,NULL);
-      strncpy(fdb.flags_req, s, 21);
-      fdb.flags_req[21] = 0;
-      dprintf(idx, FILES_CHGACCESS, name, s);
-   } else if (!chan[0]) {
-      fdb.flags_req[0] = 0;
-      dprintf(idx, FILES_CHGNACCESS, name);
-   }
-   if (chan[0]) {
-      strncpy(fdb.chname,chan,80);
-      fdb.chname[80] = 0;
-      dprintf(idx, "Access set to channel: %s\n",chan);
-   } else if (!flags[0]) {
-      fdb.chname[0] = 0;
-      dprintf(idx, "Access set to all channels.\n");
-   }
-   fseek(f, where, SEEK_SET);
-   fwrite(&fdb, sizeof(filedb), 1, f);
-   filedb_close(f);
-	 putlog(LOG_FILES, "*", "files: #%s# mkdir %s %s", dcc[idx].nick, name, par);
 }
 
 static void cmd_rmdir (int idx, char * par)
@@ -914,35 +920,39 @@ static void cmd_rmdir (int idx, char * par)
    name[80] = 0;
    if (name[strlen(name) - 1] == '/')
       name[strlen(name) - 1] = 0;
-   f = filedb_open(dcc[idx].u.file->dir,0);
-   if (!findmatch(f, name, &where, &fdb)) {
-      dprintf(idx, FILES_NOSUCHDIR);
+   if (strchr(name, '/')) 
+      dprintf(idx, "You can only create directories in the current directory\n");
+   else {
+      f = filedb_open(dcc[idx].u.file->dir,0);
+      if (!findmatch(f, name, &where, &fdb)) {
+	 dprintf(idx, FILES_NOSUCHDIR);
+	 filedb_close(f);
+	 return;
+      }
+      if (!(fdb.stat & FILE_DIR)) {
+	 dprintf(idx, FILES_NOSUCHDIR);
+	 filedb_close(f);
+	 return;
+      }
+      /* erase '.filedb' and '.files' if they exist */
+      sprintf(s, "%s%s/%s/.filedb", dccdir, dcc[idx].u.file->dir, name);
+      unlink(s);
+      sprintf(s, "%s%s/%s/.files", dccdir, dcc[idx].u.file->dir, name);
+      unlink(s);
+      sprintf(s, "%s%s/%s", dccdir, dcc[idx].u.file->dir, name);
+      if (rmdir(s) == 0) {
+	 dprintf(idx, "%s /%s%s%s\n", FILES_REMDIR, dcc[idx].u.file->dir,
+		 dcc[idx].u.file->dir[0] ? "/" : "", name);
+	 fdb.stat |= FILE_UNUSED;
+	 fseek(f, where, SEEK_SET);
+	 fwrite(&fdb, sizeof(filedb), 1, f);
+	 filedb_close(f);
+	 putlog(LOG_FILES, "*", "files: #%s# rmdir %s", dcc[idx].nick, name);
+	 return;
+      }
+      dprintf(idx, FAILED);
       filedb_close(f);
-      return;
    }
-   if (!(fdb.stat & FILE_DIR)) {
-      dprintf(idx, FILES_NOSUCHDIR);
-      filedb_close(f);
-      return;
-   }
-   /* erase '.filedb' and '.files' if they exist */
-   sprintf(s, "%s%s/%s/.filedb", dccdir, dcc[idx].u.file->dir, name);
-   unlink(s);
-   sprintf(s, "%s%s/%s/.files", dccdir, dcc[idx].u.file->dir, name);
-   unlink(s);
-   sprintf(s, "%s%s/%s", dccdir, dcc[idx].u.file->dir, name);
-   if (rmdir(s) == 0) {
-      dprintf(idx, "%s /%s%s%s\n", FILES_REMDIR, dcc[idx].u.file->dir,
-		dcc[idx].u.file->dir[0] ? "/" : "", name);
-      fdb.stat |= FILE_UNUSED;
-      fseek(f, where, SEEK_SET);
-      fwrite(&fdb, sizeof(filedb), 1, f);
-      filedb_close(f);
-      putlog(LOG_FILES, "*", "files: #%s# rmdir %s", dcc[idx].nick, name);
-      return;
-   }
-   dprintf(idx, FAILED);
-   filedb_close(f);
 }
 
 static void cmd_mv_cp (int idx, char * par, int copy)
@@ -1206,7 +1216,7 @@ static int files_get (int idx, char * fn, char * nick)
    filedb fdb;
    FILE *f;
    long where = 0;
-   
+
    p = strrchr(fn, '/');
    if (p != NULL) {
       *p = 0;
@@ -1235,7 +1245,11 @@ static int files_get (int idx, char * fn, char * nick)
       char bot[121], whoto[NICKLEN];
       /* this is a link to a file on another bot... */
       splitc(bot, fdb.sharelink, ':');
-      if (!in_chain(bot)) {
+      if (!strcasecmp(bot, botnetnick)) {
+	 /* linked to myself *duh* */
+	 filedb_close(f);
+	 return 0;
+      } else if (!in_chain(bot)) {
 	 filedb_close(f);
 	 return 0;
       } else {

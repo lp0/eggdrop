@@ -248,6 +248,7 @@ struct relay_info {
    struct chat_info *chat;
    int sock;
    int port;
+   int old_status;
 };
 
 struct script_info {

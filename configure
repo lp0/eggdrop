@@ -1229,6 +1229,12 @@ EOF
 #define HPUX_HACKS 1
 EOF
 
+    if test x`uname -r | cut -d . -f 2` = "x10"; then
+       cat >> confdefs.h <<\EOF
+#define HPUX10_HACKS 1
+EOF
+
+    fi
     BEL_MOD_LD="gcc -Wl,-E"
     SHLIB_CC="gcc -fPIC"
     SHLIB_LD="ld -b"

@@ -273,6 +273,10 @@
 #define IRC_TELNET1             get_language(0x667)
 #define IRC_LIMBO               get_language(0x668)
 #define IRC_TELNETFLOOD         get_language(0x669)
+#define IRC_PREBANNED           get_language(0x66a)
+#define IRC_LEMMINGBOT          get_language(0x66b)
+#define IRC_PROTECT             get_language(0x66c)		
+#define IRC_COMMENTKICK         get_language(0x66d)
 
 /* Eggdrop command line usage */
 
@@ -313,6 +317,9 @@
 #define CHAN_FAKEMODE_KICK	get_language(0x909)
 #define CHAN_DESYNCMODE	get_language(0x90a)
 #define CHAN_DESYNCMODE_KICK	get_language(0x90b)
+#define CHAN_FLOOD get_language(0x90c)
+#define CHAN_BOGUSUSERNAME get_language(0x90d)
+#define CHAN_BOGUSBAN get_language(0x90e)
 
 /* Messages referring to ignores */
 #define IGN_NONE	get_language(0xa00)

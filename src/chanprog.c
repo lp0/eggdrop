@@ -217,7 +217,7 @@ void tell_verbose_status (int idx, int showchan)
    if (!uname(&un) < 0) {
 #endif
       vers_t = " ";
-      uni_t = "*unkown*";
+      uni_t = "*unknown*";
 #ifdef HAVE_UNAME
    } else {
       vers_t = un.release;

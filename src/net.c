@@ -22,6 +22,7 @@
 #include <unistd.h>
 #endif
 #include <fcntl.h>
+#include <setjmp.h>
 
 #if !HAVE_GETDTABLESIZE
 #ifdef FD_SETSIZE
@@ -33,6 +34,7 @@
 
 extern int backgrd;
 extern int use_stderr;
+extern int resolve_timeout;
 
 /* hostname can be specified in the config file */
 char hostname[121] = "";
@@ -51,6 +53,9 @@ int MAXSOCKS = 0;
 /* types of proxy */
 #define PROXY_SOCKS   1
 #define PROXY_SUN     2
+
+/* env buffer for alarm() returns */
+jmp_buf alarmret;
 
 /* i need an UNSIGNED long for dcc type stuff */
 IP my_atoul (char * s)
@@ -289,9 +294,13 @@ static int proxy_connect (int sock, char * host, int port, int proxy)
 	 my_memcpy((char *)x, (char *)ip, 4);
       } else {
 	 /* no, must be host.domain */
-	 alarm(10);
-	 hp = gethostbyname(host);
-	 alarm(0);
+         if(!setjmp(alarmret)) {
+	    alarm(resolve_timeout);
+	    hp = gethostbyname(host);
+	    alarm(0);
+         } else {
+            hp = NULL;
+         }
 	 if (hp == NULL) {
 	    killsock(sock);
 	    return -2;
@@ -316,8 +325,9 @@ int open_telnet_raw (int sock, char * server, int sport)
 {
    struct sockaddr_in name;
    struct hostent *hp;
-   int i, port, proxy = 0;
    char host[121];
+   int i, port;
+   volatile int proxy;
    /* firewall?  use socks */
    if (firewall[0]) {
       if (firewall[0] == '!') {
@@ -329,6 +339,7 @@ int open_telnet_raw (int sock, char * server, int sport)
       }
       port = firewallport;
    } else {
+      proxy = 0;
       strcpy(host, server);
       port = sport;
    }
@@ -348,9 +359,13 @@ int open_telnet_raw (int sock, char * server, int sport)
       name.sin_addr.s_addr = inet_addr(host);
    else {
       /* no, must be host.domain */
-      alarm(10);
-      hp = gethostbyname(host);
-      alarm(0);
+      if(!setjmp(alarmret)) {
+         alarm(resolve_timeout);
+         hp = gethostbyname(host);
+         alarm(0);
+      } else {
+         hp = NULL;
+      }
       if (hp == NULL) {
 	 killsock(sock);
 	 return -2;
@@ -426,9 +441,14 @@ char *hostnamefromip (unsigned long ip)
    unsigned long addr = ip;
    unsigned char *p;
    static char s[121];
-   alarm(10);
-   hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
-   alarm(0);
+   if(!setjmp(alarmret)) {
+      alarm(resolve_timeout);
+      hp = gethostbyaddr((char *) &addr, sizeof(addr), AF_INET);
+      alarm(0);
+   } else {
+      hp = NULL;
+   }
+
    if (hp == NULL) {
       p = (unsigned char *) &addr;
       sprintf(s, "%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
@@ -520,8 +540,12 @@ static int sockread (char * s, int * len)
 	 else
 	    FD_SET(socklist[i].sock, &fd);
       }
-#ifdef HPUX
+#ifdef HPUX_HACKS
+# ifndef HPUX10_HACKS
    x = select(fds, (int *) &fd, (int *) NULL, (int *) NULL, &t);
+# else
+   x = select(fds, &fd, NULL, NULL, &t);
+# endif
 #else
    x = select(fds, &fd, NULL, NULL, &t);
 #endif

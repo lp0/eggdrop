@@ -119,6 +119,9 @@
 /* use hpux dynamic linking ? */
 #undef HPUX_HACKS
 
+/* using hpux 10.x ? */
+#undef HPUX10_HACKS
+
 /* do you actually have dlfcn.h ? */
 #undef HAVE_DLFCN_H
 

@@ -37,6 +37,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <netdb.h>
+#include <setjmp.h>
 #ifdef STOP_UAC			/* osf/1 complains a lot */
 #include <sys/sysinfo.h>
 #define UAC_NOPRINT    0x00000001	/* Don't report unaligned fixups */
@@ -69,6 +70,7 @@ extern Tcl_Interp *interp;
 extern char hostname[];
 extern int max_logs;
 extern tcl_timer_t *timer, *utimer;
+extern jmp_buf alarmret;
 
 /*
    Please use the PATCH macro instead of directly altering the version
@@ -77,8 +79,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.21";
-int egg_numver = 1032100;
+char egg_version[1024] = "1.3.22";
+int egg_numver = 1032200;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -130,6 +132,8 @@ int do_restart = 0;
 int die_on_sighup = 0;
 /* die if bot receives SIGTERM */
 int die_on_sigterm = 0;
+/* hostname/address lookup timeout */
+int resolve_timeout = 15;
 /* duh, now :) */
 time_t now;
 
@@ -298,8 +302,9 @@ static void got_hup (int z)
 
 static void got_alarm (int z)
 {
-   /* connection to a server was ended prematurely */
-   return;
+   /* a call to resolver (gethostbyname, etc) timed out */
+   longjmp(alarmret, 1);
+   /*return;*/ /* STUPID STUPID STUPID */
 }
 
 static void got_usr1 (int z)

@@ -825,7 +825,7 @@ static int tcl_jump STDVAR {
 	strcpy(newserverpass, argv[3]);
    }
    cycle_time = 0;
-   nuke_server("QUIT :changing servers\n");
+   nuke_server("changing servers\n");
    return TCL_OK;
 }
 

@@ -5,7 +5,7 @@
 
 prefix = @prefix@
 DEST=@DEST@
-NEWVERSION=1.3.20
+NEWVERSION=`grep 'char * egg_version' src/main.c | awk '{print $4}' | sed s/\"//g | sed s/\;// | sed s/.\*=\ //`
 
 SHELL=/bin/sh
 
