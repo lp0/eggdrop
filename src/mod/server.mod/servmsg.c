@@ -488,9 +488,9 @@ static int gotmsg(char *from, char *msg)
       *p = 0;
       strncpyz(ctcpbuf, p1, sizeof(ctcpbuf));
       ctcp = ctcpbuf;
-      /* copy the part after the second : in front of it after
-       * the first :, this is temporary copied to ctcpbuf */
-      strncpy(p1 - 1, p + 1, strlen(ctcpbuf) - 1);
+
+      /* remove the ctcp in msg */
+      memmove(p1 - 1, p + 1, strlen(p + 1) + 1);
 
       if (!ignoring)
         detect_flood(nick, uhost, from,
