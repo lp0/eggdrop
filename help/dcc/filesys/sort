@@ -1,0 +1,4 @@
+%{+m}
+###  sort
+   sorts the files in the current directory into ascending
+   alphabetical order.

@@ -32,53 +32,35 @@
    The author (Robey Pointer) can be reached at:  robey@netcom.com
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "main.h"
 #include <time.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <signal.h>
-#include <sys/types.h>
+#include <netdb.h>
 #ifdef STOP_UAC			/* osf/1 complains a lot */
 #include <sys/sysinfo.h>
 #define UAC_NOPRINT    0x00000001	/* Don't report unaligned fixups */
 #endif
 /* some systems have a working sys/wait.h even though configure will */
 /* decide it's not bsd compatable.  oh well. */
-#include "eggdrop.h"
 #include "chan.h"
-#include "tclegg.h"
-#ifdef MODULES
 #include "modules.h"
-
-#else
-#ifndef NO_FILE_SYSTEM
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <netinet/in.h>
-#include "../lush.h"
-#include "files.h"
-#endif
-#endif
 
 /* number of seconds to wait between transmitting queued lines to the server */
 /* lower this value at your own risk.  ircd is known to start flood control */
 /* at 512 bytes/2 seconds */
 #define msgrate 2
 
+#ifndef _POSIX_SOURCE
 /* solaris needs this */
 #define _POSIX_SOURCE 1
+#endif
 
 extern char botname[];
 extern char origbotname[];
 extern int dcc_total;
-extern struct dcc_t dcc[];
-extern char dccdir[];
-extern char dccin[];
+extern struct dcc_t * dcc;
 extern char admin[];
 extern char notefile[];
 extern char newserver[];
@@ -93,35 +75,29 @@ extern struct chanset_t *chanset;
 extern int ban_time;
 extern int ignore_time;
 extern char botnetnick[];
-extern log_t logs[];
+extern log_t * logs;
 extern char ctcp_finger[];
 extern char ctcp_userinfo[];
 extern char ctcp_version[];
 extern Tcl_Interp *interp;
 extern int default_port;
+extern int check_stoned;
+extern int serverror_quit;
+extern int quiet_reject;
+extern int server_timeout;
+extern char hostname[];
+extern int use_silence;
+extern int max_logs;
 
-#ifndef MODULES
-extern char tempdir[];
-#include "mod/transfer.mod/transfer.c"
-#include "mod/filesys.mod/filedb.c"
-#include "mod/filesys.mod/files.c"
-#endif
 /*
    Please use the PATCH macro instead of directly altering the version
    string from now on (it makes it much easier to maintain patches).
    Also please read the README file regarding your rights to distribute
    modified versions of this bot.
 
-   Note: Loading more than 10 patches could make your patch level "roll
-   over" to the next release!  So try not to do that. :)
  */
-#ifdef MODULES
-char egg_version[1024] = "1.1.5.mod";
-#else
-char egg_version[1024] = "1.1.5";
-#endif
-int egg_numver = 1010500;
-int min_share = 1010300;	/* minimum version I will share with */
+char egg_version[1024] = "1.2.0";
+int egg_numver = 1020000;
 
 /* socket that the server is on */
 int serv = (-1);
@@ -201,6 +177,12 @@ int never_give_up = 0;
 char owner[121] = "";
 /* keep trying to regain my intended nickname? */
 int keepnick = 1;
+/* Check for a stoned server? */
+int check_stoned = 1;
+/* Disconnect from server if ERROR messages received? */
+int serverror_quit = 1;
+/* Quietly reject dcc chat or sends to users without access? */
+int quiet_reject = 1;
 /* set when i unidle myself, cleared when i get the response */
 int waiting_for_awake = 0;
 /* name of the file for the pid to be stored in */
@@ -221,10 +203,16 @@ char egg_xtra[1024];
 time_t server_online = 0L;
 /* send stuff to stderr instead of logfiles? */
 int use_stderr = 1;
+#ifndef STATIC
 /* .restart has been called, restart a.s.a.p. */
 int do_restart = 0;
+#endif
+/* die if bot receives SIGHUP */
+int die_on_sighup = 0;
+/* die if bot receives SIGTERM */
+int die_on_sigterm = 0;
 
-void fatal PROTO2(char *, s, int, recoverable)
+void fatal (char * s, int recoverable)
 {
    int i;
    putlog(LOG_MISC, "*", "* %s", s);
@@ -245,20 +233,52 @@ int expected_memory()
    tot = expmem_chan() + expmem_chanprog() + expmem_misc() + expmem_users() +
        expmem_dccutil() + expmem_botnet() + expmem_tcl() + expmem_tclhash() +
        expmem_net();
-#ifndef MODULES
-   tot += expmem_assoc() + expmem_blowfish();
-#ifndef NO_FILE_SYSTEM
-   tot += expmem_fileq();
-#endif
-#else
    tot += expmem_modules(0);
-#endif
    return tot;
+}
+
+static void check_expired_dcc()
+{
+   int i;
+   time_t now;
+   now = time(NULL);
+#ifndef NO_IRC
+   /* server connect? */
+   if ((trying_server) && (serv >= 0)) {
+      if (now - trying_server > server_timeout) {
+	 putlog(LOG_SERV, "*", "Timeout: connect to %s", botserver);
+	 killsock(serv);
+	 serv = (-1);
+      }
+   }
+#endif
+   for (i = 0; i < dcc_total; i++) {
+      if (dcc[i].type && dcc[i].type->timeout_val) {
+	 if ((now - dcc[i].timeval) > *(dcc[i].type->timeout_val)) {
+	    if (dcc[i].type->timeout)
+	       dcc[i].type->timeout(i);
+	    else if (dcc[i].type->eof) 
+	      dcc[i].type->eof(i);
+	 }
+      }
+   }
+}
+
+/* reset all the channels, as if we just left a server or something */
+static void clear_channels()
+{
+   struct chanset_t *chan;
+   chan = chanset;
+   while (chan != NULL) {
+      clear_channel(chan, 1);
+      chan->stat &= ~(CHANPEND | CHANACTIVE);
+      chan = chan->next;
+   }
 }
 
 /* fix the last parameter... if it starts with ':' then accept all of it,
    otherwise return only the first word */
-void fixcolon PROTO1(char *, s)
+void fixcolon (char * s)
 {
    if (s[0] == ':')
       strcpy(s, &s[1]);
@@ -266,201 +286,16 @@ void fixcolon PROTO1(char *, s)
       split(s, s);
 }
 
-#ifndef NO_IRC
-
-/* given <in> (raw stuff from server), pull off who it's from & the code */
-void parsemsg PROTO4(char *, in, char *, from, char *, code, char *, params)
-{
-   char *p;
-   from[0] = 0;
-   if (in[0] == ':') {
-      strcpy(in, &in[1]);
-      p = strchr(in, ' ');
-      if (p == NULL) {
-	 from[0] = params[0] = 0;
-	 strcpy(code, in);
-	 return;
-      }
-      strcpy(params, p + 1);
-      *p = 0;
-      strcpy(from, in);
-      *p = ' ';
-      p++;
-      strcpy(in, p);
-   }
-   p = strchr(in, ' ');
-   if (p == NULL) {
-      strcpy(code, in);
-      params[0] = 0;
-      return;
-   }
-   *p = 0;
-   strcpy(code, in);
-   *p = ' ';
-   strcpy(params, p + 1);
-}
-
-/* ping from server */
-void gotpong PROTO2(char *, from, char *, msg)
-{
-   split(NULL, msg);
-   fixcolon(msg);		/* scrap server name */
-   waiting_for_awake = 0;
-   server_lag = time(NULL) - my_atoul(msg);
-   if (server_lag > 99999) {
-      /* bogus */
-      server_lag = (-1);
-   }
-}
-
-/* 302 : USERHOST to be used at a later date in a tcl command mebbe */
-void got302 PROTO2(char *, from, char *, msg)
-{
-/*  char userhost[UHOSTLEN],nick[NICKLEN];
-   int i,oper=0,away=0;
-   context;
-   split(NULL,msg); fixcolon(msg); strcpy(s,msg);
-   * now we have to interpret this shit *
-   * <nick>['*']'='<'+'|'-'><hostname> *
-   for (i=0; i<strlen(s); i++) {
-   if (s[i]==61) s[i]=' ';
-   if (s[i]==42) oper=1;
-   if (s[i]==43) away=1;
-   }
-   split(nick,s); strcpy(userhost,&s[1]);
-   if (oper) nick[strlen(nick)-1]=0;
-
-   I had specific uses for what I put here but I 
-   thought I would throw the above in for starters
- */
-}
-
-/* trace failed! meaning my nick is not in use!
-   206 (undernet)
-   401 (other non-efnet)
-   402 (Efnet)
- */
-void trace_fail PROTO2(char *, from, char *, msg)
-{
-   debug1("%s\n", msg);
-   if (strcasecmp(botname, origbotname) == 0)
-      return;
-   putlog(LOG_MISC, "*", "Switching back to nick %s", origbotname);
-   strcpy(newbotname, botname);	/* save, just in case */
-   strcpy(botname, origbotname);
-   tprintf(serv, "NICK %s\n", botname);
-}
-
-/* 432 : bad nickname */
-void got432 PROTO2(char *, from, char *, msg)
-{
-   putlog(LOG_MISC, "*", "Server says my nickname is invalid.");
-   /* make random nick. */
-   if (!newbotname[0]) {	/* if it's due to an attempt to change nicks .. */
-      strcpy(newbotname, botname);	/* store it, just in case it's raist playing */
-      makepass(botname);
-      botname[NICKLEN] = 0;	/* raist sux :P */
-      tprintf(serv, "NICK %s\n", botname);
-   } else {			/* go back to old nick */
-      strcpy(botname, newbotname);
-      newbotname[0] = 0;
-   }
-}
-
-/* 433 : nickname in use */
-/* change nicks till we're acceptable or we give up */
-void got433 PROTO2(char *, from, char *, msg)
-{
-   char c, *oknicks = "^-_\\[]`", *p;
-   /* could be futile attempt to regain nick: */
-   if (newbotname[0]) {
-      tprintf(serv, "NICK %s\n", newbotname);
-      strcpy(botname, newbotname);
-      newbotname[0] = 0;
-      return;
-   }
-   /* alternate nickname defined? */
-   if ((altnick[0]) && (strcasecmp(altnick, botname) != 0)) {
-      strcpy(botname, altnick);
-   }
-   /* if alt nickname failed, drop thru to here */
-   else {
-      c = botname[strlen(botname) - 1];
-      p = strchr(oknicks, c);
-      if (((c >= '0') && (c <= '9')) || (p != NULL)) {
-	 if (p == NULL) {
-	    if (c == '9')
-	       botname[strlen(botname) - 1] = oknicks[0];
-	    else
-	       botname[strlen(botname) - 1] = c + 1;
-	 } else {
-	    p++;
-	    if (!*p)
-	       botname[strlen(botname) - 1] = 'a' + random() % 26;
-	    else
-	       botname[strlen(botname) - 1] = (*p);
-	 }
-      } else {
-	 if (strlen(botname) == NICKLEN)
-	    botname[strlen(botname) - 1] = '0';
-	 else {
-	    botname[strlen(botname) + 1] = 0;
-	    botname[strlen(botname)] = '0';
-	 }
-      }
-   }
-   putlog(LOG_MISC, "*", "NICK IN USE: Trying '%s'", botname);
-   tprintf(serv, "NICK %s\n", botname);
-}
-
-/* 437 : nickname juped (Euronet) */
-void got437 PROTO2(char *, from, char *, msg)
-{
-   char s[512];
-   struct chanset_t *chan;
-   split(NULL, msg);
-   split(s, msg);
-   if (strchr("#&+", s[0]) != NULL) {
-      chan = findchan(s);
-      if (chan != NULL) {
-	 if (chan->stat & CHANACTIVE) {
-	    putlog(LOG_MISC, "*", "Can't change nickname on %s.  Is my nickname banned?", s);
-	    got433(from, NULL);
-	 } else {
-	    putlog(LOG_MISC, "*", "Channel %s is juped. :(", s);
-	 }
-      }
-   } else {
-      putlog(LOG_MISC, "*", "Nickname has been juped.");
-      got433(from, NULL);
-   }
-}
-
-/* 451 : Not registered */
-void got451 PROTO2(char *, from, char *, msg)
-{
-/* usually if we get this then we really fucked up somewhere
-   or this is a non-standard server, so we log it and kill the socket
-   hoping the next server will work :) -poptix */
-   putlog(LOG_MISC, "*", "%s says I'm not registered, trying next one.", from);
-   tprintf(serv, "QUIT :You have a fucked up server.\n");
-   if (serv >= 0)
-      killsock(serv);
-   serv = (-1);
-}
-
-#endif				/* !NO_IRC */
-
-int lastmsgs[5] =
+static int lastmsgs[5] =
 {0, 0, 0, 0, 0};
-char lastmsghost[5][81] =
+static char lastmsghost[5][81] =
 {"", "", "", "", ""};
-time_t lastmsgtime[5] =
+static time_t lastmsgtime[5] =
 {0L, 0L, 0L, 0L, 0L};
 
 /* do on NICK, PRIVMSG, and NOTICE -- and JOIN */
-int detect_flood PROTO4(char *, from, struct chanset_t *, chan, int, which,
-			int, tochan)
+int detect_flood (char * from, struct chanset_t * chan, int which,
+		  int tochan)
 {
    char *p;
    time_t t;
@@ -551,21 +386,19 @@ int detect_flood PROTO4(char *, from, struct chanset_t *, chan, int, which,
       if (((which == FLOOD_PRIVMSG) || (which == FLOOD_NOTICE)) && (!tochan)) {
 	 /* private msg */
 	 sprintf(h, "*!*@%s", p);
-	 putlog(LOG_MISC, "*", "Flood from @%s!  Placing on ignore!", p);
-	 addignore(h, origbotname, "msg/notice flood", time(NULL) + (60 * ignore_time));
-#ifdef SILENCE
-	 /* attempt to use ircdu's SILENCE command */
-	 mprintf(serv, "SILENCE *@%s\n", p);
-#endif
+	 putlog(LOG_MISC, "*", IRC_FLOODIGNORE1, p);
+	 addignore(h, origbotname, "MSG/NOTICE flood", time(NULL) + (60 * ignore_time));
+	 if (use_silence)
+	   /* attempt to use ircdu's SILENCE command */
+	   mprintf(serv, "SILENCE *@%s\n", p);
 	 return 1;
       } else if ((which == FLOOD_CTCP) && (!tochan)) {	/* ctcp flood (off-chan) */
 	 sprintf(h, "*!*@%s", p);
-	 putlog(LOG_MISC, "*", "CTCP flood from @%s!  Placing on ignore!", p);
-	 addignore(h, origbotname, "ctcp flood", time(NULL) + (60 * ignore_time));
-#ifdef SILENCE
-	 /* attempt to use ircdu's SILENCE command */
-	 mprintf(serv, "SILENCE *@%s\n", p);
-#endif
+	 putlog(LOG_MISC, "*", IRC_FLOODIGNORE2, p);
+	 addignore(h, origbotname, "CTCP flood", time(NULL) + (60 * ignore_time));
+	 if (use_silence)
+	   /* attempt to use ircdu's SILENCE command */
+	   mprintf(serv, "SILENCE *@%s\n", p);
 	 return 1;
       } else if (which == FLOOD_JOIN) {		/* join flood */
 	 char sx[21];
@@ -577,7 +410,7 @@ int detect_flood PROTO4(char *, from, struct chanset_t *, chan, int, which,
 	 }
 	 if ((match_ban(from)) || (u_match_ban(chan->bans, from)))
 	    return 1;		/* already banned */
-	 putlog(LOG_MISC | LOG_JOIN, chan->name, "Join flood from @%s!  Banning.", p);
+	 putlog(LOG_MISC | LOG_JOIN, chan->name, IRC_FLOODIGNORE3, p);
 	 u_addban(chan->bans, h, origbotname, sx, time(NULL) + (60 * ban_time));
 	 if (!(chan->stat & CHAN_ENFORCEBANS))
 	    kick_match_since(chan, h, lastmsgtime[which]);
@@ -609,8 +442,7 @@ int detect_flood PROTO4(char *, from, struct chanset_t *, chan, int, which,
 	 /* flooding chan! either by public or notice */
 	 p = strchr(from, '!');
 	 if (p != NULL) {
-	    putlog(LOG_MODES, chan->name, "Channel flood from %s -- kicking",
-		   from);
+	    putlog(LOG_MODES, chan->name, IRC_FLOODKICK, from);
 	    *p = 0;
 	    mprintf(serv, "KICK %s %s :flood\n", chan->name, from);
 	    *p = '!';
@@ -621,7 +453,7 @@ int detect_flood PROTO4(char *, from, struct chanset_t *, chan, int, which,
    return 0;
 }
 
-void write_debug()
+static void write_debug()
 {
    int x;
    time_t now = time(NULL);
@@ -685,63 +517,62 @@ void write_debug()
    }
 }
 
-void got_bus PROTO1(int, z)
+static void got_bus (int z)
 {
    write_debug();
    fatal("BUS ERROR -- CRASHING!", 1);
 }
 
-void got_segv PROTO1(int, z)
+static void got_segv (int z)
 {
+   if (serv >= 0)
+     tprintf(serv,"QUIT :Gah! SigSegv!  All Raistlin's fault!\n");
    write_debug();
    fatal("SEGMENT VIOLATION -- CRASHING!", 1);
 }
 
-void got_fpe PROTO1(int, z)
+static void got_fpe (int z)
 {
    write_debug();
    fatal("FLOATING POINT ERROR -- CRASHING!", 1);
 }
 
-void got_term PROTO1(int, z)
+static void got_term (int z)
 {
-#ifdef DIE_ON_SIGTERM
    write_userfile();
-   tprintf(serv, "QUIT :terminate signal\n");
-   fatal("TERMINATE SIGNAL -- SIGNING OFF", 0);
-#else
-   putlog(LOG_MISC, "*", "RECEIVED TERMINATE SIGNAL (IGNORING)");
-   write_userfile();
-   return;
-#endif
+   if (die_on_sigterm) {
+      tprintf(serv, "QUIT :terminate signal\n");
+      fatal("TERMINATE SIGNAL -- SIGNING OFF", 0);
+   } else {
+      putlog(LOG_MISC, "*", "RECEIVED TERMINATE SIGNAL (IGNORING)");
+   }
 }
 
-void got_quit PROTO1(int, z)
+static void got_quit (int z)
 {
    putlog(LOG_MISC, "*", "RECEIVED QUIT SIGNAL (IGNORING)");
    return;
 }
 
-void got_hup PROTO1(int, z)
+static void got_hup (int z)
 {
-#ifdef DIE_ON_SIGHUP
    write_userfile();
-   tprintf(serv, "QUIT :hangup signal\n");
-   fatal("HANGUP SIGNAL -- SIGNING OFF", 0);
-#else
-   putlog(LOG_MISC, "*", "Received HUP signal: rehashing...");
+   if (die_on_sighup) {
+      tprintf(serv, "QUIT :hangup signal\n");
+      fatal("HANGUP SIGNAL -- SIGNING OFF", 0);
+   } else
+     putlog(LOG_MISC, "*", "Received HUP signal: rehashing...");
    rehash();
    return;
-#endif
 }
 
-void got_alarm PROTO1(int, z)
+static void got_alarm (int z)
 {
    /* connection to a server was ended prematurely */
    return;
 }
 
-void got_usr1 PROTO1(int, z)
+static void got_usr1 (int z)
 {
    int i;
    putlog(LOG_MISC, "*", "* USER1 SIGNAL: Debugging sockets");
@@ -752,7 +583,9 @@ void got_usr1 PROTO1(int, z)
       serv = (-1);
    }
    for (i = 0; i < dcc_total; i++) {
-      if ((dcc[i].type != DCC_FORK) && (dcc[i].type != DCC_LOST))
+      if ((dcc[i].type != &DCC_FORK_SEND) && (dcc[i].type != &DCC_LOST) &&
+	  (dcc[i].type != &DCC_FORK_CHAT) && (dcc[i].type != &DCC_FORK_FILES)
+	  && (dcc[i].type != &DCC_FORK_RELAY) && (dcc[i].type != &DCC_FORK_BOT))
 	 if (fcntl(dcc[i].sock, F_GETFD, 0) < 0) {
 	    putlog(LOG_MISC, "*",
 		   "* DCC socket %d (type %d, nick '%s') expired -- pfft",
@@ -766,7 +599,7 @@ void got_usr1 PROTO1(int, z)
 }
 
 /* got USR2 signal -- crash */
-void got_usr2 PROTO1(int, z)
+static void got_usr2 (int z)
 {
    putlog(LOG_MISC, "*", "* Last context: %s/%d", cx_file, cx_line);
    write_debug();
@@ -774,80 +607,12 @@ void got_usr2 PROTO1(int, z)
 }
 
 /* got ILL signal -- log context and continue */
-void got_ill PROTO1(int, z)
+static void got_ill (int z)
 {
    putlog(LOG_MISC, "*", "* Context: %s/%d", cx_file, cx_line);
 }
 
-/* for relays: swallow all codes as if they don't exist */
-void swallow_telnet_codes PROTO1(char *, buf)
-{
-   unsigned char *p = (unsigned char *) buf;
-   int mark;
-   while (*p != 0) {
-      while ((*p != 255) && (*p != 0))
-	 p++;			/* search for IAC */
-      if (*p == 255) {
-	 mark = 2;
-	 if (!*(p + 1))
-	    mark = 1;		/* bogus */
-	 if ((*(p + 1) >= 251) && (*(p + 1) <= 254)) {
-	    mark = 3;
-	    if (!*(p + 2))
-	       mark = 2;	/* bogus */
-	 }
-	 strcpy((char *) p, (char *) (p + mark));
-      }
-   }
-}
-
-void strip_telnet PROTO3(int, sock, char *, buf, int *, len)
-{
-   unsigned char *p = (unsigned char *) buf;
-   int mark;
-   while (*p != 0) {
-      while ((*p != 255) && (*p != 0))
-	 p++;			/* search for IAC */
-      if (*p == 255) {
-	 p++;
-	 mark = 2;
-	 if (!*p)
-	    mark = 1;		/* bogus */
-	 if ((*p >= 251) && (*p <= 254)) {
-	    mark = 3;
-	    if (!*(p + 1))
-	       mark = 2;	/* bogus */
-	 }
-	 if (*p == 251) {
-	    /* WILL X -> response: DONT X */
-	    /* except WILL ECHO which we just smile and ignore */
-	    if (!(*(p + 1) == 1)) {
-	       write(sock, "\377\376", 2);
-	       write(sock, p + 1, 1);
-	    }
-	 }
-	 if (*p == 253) {
-	    /* DO X -> response: WONT X */
-	    /* except DO ECHO which we just smile and ignore */
-	    if (!(*(p + 1) == 1)) {
-	       write(sock, "\377\374", 2);
-	       write(sock, p + 1, 1);
-	    }
-	 }
-	 if (*p == 246) {
-	    /* "are you there?" */
-	    /* response is: "hell yes!" */
-	    write(sock, "\r\nHell, yes!\r\n", 14);
-	 }
-	 /* anything else can probably be ignored */
-	 p--;
-	 strcpy((char *) p, (char *) (p + mark));	/* wipe code from buffer */
-	 *len = *len - mark;
-      }
-   }
-}
-
-void do_arg PROTO1(char *, s)
+static void do_arg (char * s)
 {
    int i;
    if (s[0] == '-')
@@ -876,14 +641,7 @@ void do_arg PROTO1(char *, s)
 	 }
 	 if (s[i] == 'h') {
 	    printf("\n%s\n\n", version);
-	    printf("Command line arguments:\n");
-	    printf("  -h   help\n");
-	    printf("  -v   print version and exit\n");
-	    printf("  -n   don't go into the background\n");
-	    printf("  -c   (with -n) display channel stats every 10 seconds\n");
-	    printf("  -t   (with -n) use terminal to simulate dcc-chat\n");
-	    printf("  -m   userfile creation mode\n");
-	    printf("  optional config filename (default 'egg.config')\n");
+	    printf(EGG_USAGE);
 	    printf("\n");
 	    exit(0);
 	 }
@@ -893,7 +651,7 @@ void do_arg PROTO1(char *, s)
 
 /* hook up to a server */
 /* works a little differently now... async i/o is your friend */
-void connect_server()
+static void connect_server()
 {
    char s[121], pass[121];
    static int oldserv = (-1);
@@ -914,15 +672,14 @@ void connect_server()
       oldserv = (-1);
    }
    next_server(&curserv, botserver, &botserverport, pass);
-   putlog(LOG_SERV, "*", "Trying server %s:%d", botserver,
-	  botserverport);
+   putlog(LOG_SERV, "*", "%s %s:%d", IRC_SERVERTRY, botserver, botserverport);
    serv = open_telnet(botserver, botserverport);
    if (serv < 0) {
       if (serv == (-2))
-	 strcpy(s, "DNS lookup failed");
+	 strcpy(s, IRC_DNSFAILED);
       else
 	 neterror(s);
-      putlog(LOG_SERV, "*", "Failed connect to %s (%s)", botserver, s);
+      putlog(LOG_SERV, "*", "%s %s (%s)", IRC_FAILEDCONNECT, botserver, s);
       if ((oldserv == curserv) && !(never_give_up))
 	 fatal("NO SERVERS WILL ACCEPT MY CONNECTION.", 1);
    } else {
@@ -940,7 +697,7 @@ void connect_server()
 void backup_userfile()
 {
    char s[150];
-   putlog(LOG_MISC, "*", "Backing up user file...");
+   putlog(LOG_MISC, "*", USERF_BACKUP);
    strcpy(s, userfile);
    strcat(s, "~bak");
    copyfile(userfile, s);
@@ -950,12 +707,12 @@ void backup_userfile()
 static int cnt = 0, timecnt = 0, fivemin = 0, midnite = 0, hourly = 0,
  hourli = 0;
 static int switched = 0, lastmin = 99, miltime;
-static time_t then, now;
+static time_t then;
+time_t now;
 static struct tm *nowtm;
 
-void periodic_timers()
+static void periodic_timers()
 {
-   time_t now;
    int i, j, k, l;
    char s[520];
 #ifndef NO_IRC
@@ -993,11 +750,9 @@ void periodic_timers()
       context;
       lastmin = (lastmin + 1) % 60;
       check_tcl_time(nowtm);
-#ifdef MODULES
       context;
       call_hook(HOOK_MINUTELY);
       context;
-#endif
 #ifndef NO_IRC
       check_lonely_channels();
       if (keepnick) {
@@ -1025,7 +780,6 @@ void periodic_timers()
       check_expired_chanbans();
 #endif				/* ifndef NO_IRC */
       check_expired_dcc();
-      check_expired_tbufs();
       autolink_cycle(NULL);	/* attempt autolinks */
       check_timers();
       /* in case for some reason more than 1 min has passed: */
@@ -1037,11 +791,9 @@ void periodic_timers()
 	 i++;
 	 lastmin = (lastmin + 1) % 60;
 	 check_tcl_time(nowtm);
-#ifdef MODULES
 	 context;
 	 call_hook(HOOK_MINUTELY);
 	 context;
-#endif
       }
       if (i > 1)
 	 putlog(LOG_MISC, "*", "(!) timer drift -- spun %d minutes", i);
@@ -1052,21 +804,21 @@ void periodic_timers()
 	 fivemin = 1;
 #ifndef NO_IRC
 	 log_chans();
-#ifdef CHECK_STONED
-	 if (waiting_for_awake) {
+         if (check_stoned == 1) {
+	   if (waiting_for_awake) {
 	    /* uh oh!  never got pong from last time, five minutes ago! */
 	    /* server is probably stoned */
-	    killsock(serv);
-	    serv = (-1);	/* will reconnect about 50 lines down */
-	    putlog(LOG_SERV, "*", "Server got stoned; jumping...");
-	 } else {
-	    /* check for server being stoned */
-	    if ((serv >= 0) && !trying_server) {
-	       tprintf(serv, "PING :%lu\n", (unsigned long) time(NULL));
-	       waiting_for_awake = 1;
-	    }
-	 }
-#endif				/* CHECK_STONED */
+	      killsock(serv);
+	      serv = (-1);	/* will reconnect about 50 lines down */
+	      putlog(LOG_SERV, "*", IRC_SERVERSTONED);
+	   } else {
+	      /* check for server being stoned */
+	      if ((serv >= 0) && !trying_server) {
+	         tprintf(serv, "PING :%lu\n", (unsigned long) time(NULL));
+	         waiting_for_awake = 1;
+	      }
+	   }
+         }
 #endif				/* !NO_IRC */
 	 check_botnet_pings();
 	 flushlogs();
@@ -1078,17 +830,15 @@ void periodic_timers()
    if (miltime == 0) {		/* at midnight */
       if (!midnite) {
 	 midnite = 1;
-#ifdef MODULES
 	 context;
 	 call_hook(HOOK_DAILY);
 	 context;
-#endif
 	 strcpy(s, ctime(&now));
 	 s[strlen(s) - 1] = 0;
 	 strcpy(&s[11], &s[20]);
 	 putlog(LOG_MISC, "*", "--- %s", s);
 	 backup_userfile();
-	 for (j = 0; j < MAXLOGS; j++) {
+	 for (j = 0; j < max_logs; j++) {
 	    if (logs[j].filename != NULL && logs[j].f != NULL) {
 	       fclose(logs[j].f);
 	       logs[j].f = NULL;
@@ -1103,8 +853,8 @@ void periodic_timers()
 	 switched = 1;
 	 expire_notes();
 	 if (!keep_all_logs) {
-	    putlog(LOG_MISC, "*", "Switching logfiles...");
-	    for (i = 0; i < MAXLOGS; i++)
+	    putlog(LOG_MISC, "*", MISC_LOGSWITCH);
+	    for (i = 0; i < max_logs; i++)
 	       if (logs[i].filename != NULL) {
 		  if (logs[i].f != NULL) {
 		     fclose(logs[i].f);
@@ -1135,11 +885,9 @@ void periodic_timers()
       context;
       if (!hourli) {
 	 hourli = 1;
-#ifdef MODULES
 	 context;
 	 call_hook(HOOK_HOURLY);
 	 context;
-#endif
 #ifndef NO_IRC
 	 chan = chanset;
 	 while (chan != NULL) {
@@ -1149,14 +897,14 @@ void periodic_timers()
 	       get_handle_by_host(hand, s1);
 	       k = num_notes(hand);
 	       for (l = 0; l < dcc_total; l++) {
-		  if ((dcc[l].type == DCC_CHAT) && (strcasecmp(dcc[l].nick, hand) == 0))
+		  if ((dcc[l].type == &DCC_CHAT) 
+		      && (strcasecmp(dcc[l].nick, hand) == 0))
 		     k = 0;	/* they already know they have notes */
 	       }
 	       if (k) {
-		  hprintf(serv, "NOTICE %s :You have %d note%s waiting on %s.\n",
-			  m->nick, k, k == 1 ? "" : "s", botname);
-		  hprintf(serv, "NOTICE %s :For a list, /MSG %s NOTES [pass] INDEX\n",
-			  m->nick, botname);
+		  hprintf(serv, BOT_NOTESWAIT1, BOT_NOTESWAIT1_ARGS);
+		  hprintf(serv, "NOTICE %s :%s /MSG %s NOTES [pass] INDEX\n",
+			  m->nick, BOT_NOTESWAIT2, botname);
 	       }
 	       m = m->next;
 	    }
@@ -1165,9 +913,9 @@ void periodic_timers()
 #endif
 	 for (l = 0; l < dcc_total; l++) {
 	    k = num_notes(dcc[l].nick);
-	    if (k > 0 && dcc[l].type == DCC_CHAT) {
-	       dprintf(l, "### You have %d note%s waiting.\n", k, k == 1 ? "" : "s");
-	       dprintf(l, "### Use '.notes read' to read them.\n");
+	    if (k > 0 && dcc[l].type == &DCC_CHAT) {
+	       dprintf(l, BOT_NOTESWAIT3, BOT_NOTESWAIT3_ARGS);
+	       dprintf(l, BOT_NOTESWAIT4);
 	    }
 	 }
       }
@@ -1176,14 +924,55 @@ void periodic_timers()
 }
 
 void kill_tcl();
-#ifdef MODULES
-extern Function global_funcs[];
 extern module_entry *module_list;
-#endif
-extern log_t logs[];
 void restart_chons();
 
-int main PROTO2(int, argc, char **, argv)
+
+/* puts full hostname in s */
+static void getmyhostname (char * s)
+{
+   struct hostent *hp;
+   char *p;
+   if (hostname[0]) {
+      strcpy(s, hostname);
+      return;
+   }
+   p = getenv("HOSTNAME");
+   if (p != NULL) {
+      strcpy(s, p);
+      if (strchr(s, '.') != NULL)
+	 return;
+   }
+   gethostname(s, 80);
+   if (strchr(s, '.') != NULL)
+      return;
+   hp = gethostbyname(s);
+   if (hp == NULL)
+      fatal("Hostname self-lookup failed.", 0);
+   strcpy(s, hp->h_name);
+   if (strchr(s, '.') != NULL)
+      return;
+   if (hp->h_aliases[0] == NULL)
+      fatal("Can't determine your hostname!", 0);
+   strcpy(s, hp->h_aliases[0]);
+   if (strchr(s, '.') == NULL)
+      fatal("Can't determine your hostname!", 0);
+}
+
+#ifdef STATIC
+static void check_static(char * name, char *(*func)()) {
+   char * p;
+   
+   if (!module_find(name,0,0)) {
+      p = func(0);
+      if (p)
+	putlog(LOG_MISC,"*","Error loading %s: %s",name,p);
+   }
+}
+#include "mod/static.h"
+#endif
+
+int main (int argc, char ** argv)
 {
    int xx, i;
    char buf[520], s[520];
@@ -1191,7 +980,6 @@ int main PROTO2(int, argc, char **, argv)
    struct sigaction sv;
    int modecnt = 0;
 #ifndef NO_IRC
-   char from[121], code[520], msg[520];
    struct chanset_t *chan;
    int j;
 #endif
@@ -1200,10 +988,8 @@ int main PROTO2(int, argc, char **, argv)
       context;
    }
 
-   /* --- PATCH INFO GOES HERE --- */
+#include "patch.h"
    
-   /* --- END OF PATCH INFO --- */
-
    /* version info! */
    sprintf(ver, "eggdrop v%s", egg_version);
    sprintf(version, "Eggdrop v%s  (c)1997 Robey Pointer", egg_version);
@@ -1266,31 +1052,30 @@ int main PROTO2(int, argc, char **, argv)
    nowtm = localtime(&now);
    lastmin = nowtm->tm_min;
    srandom(time(NULL));
+   init_dcc_max();
    init_mem();
    init_misc();
    init_bots();
    init_net();
-#ifdef MODULES
-   init_modules();
-#else
-   init_blowfish();
-#endif
+   init_modules(1);
    init_tcl();
+#ifdef STATIC
+   link_statics ();
+#endif
+     
+   context;
    chanprog();
    context;
-#ifdef MODULES
    if (encrypt_pass == 0) {
-      printf("You have installed modules but have not selected an encryption\n");
-      printf("module, please consult the default config file for info.\n");
+	printf(MOD_NOCRYPT);
       exit(1);
    }
-#endif
    cache_miss = 0;
    cache_hit = 0;
    getmyhostname(bothost);
    context;
    sprintf(botuserhost, "%s@%s", botuser, bothost);	/* wishful thinking */
-   get_first_server();
+   curserv = 999;
    context;
    sprintf(pid_file, "pid.%s", botnetnick);
    context;
@@ -1299,10 +1084,10 @@ int main PROTO2(int, argc, char **, argv)
    if (f != NULL) {
       fgets(s, 10, f);
       xx = atoi(s);
-      kill(xx, SIGCHLD);	/* meaningless kill to determine if pid is used */
+      kill(xx, SIGCHLD);  /* meaningless kill to determine if pid is used */
       if (errno != ESRCH) {
-	 printf("I detect %s already running from this directory.\n", origbotname);
-	 printf("If this is incorrect, erase the '%s' file.\n\n", pid_file);
+	printf(EGG_RUNNING1, origbotname);
+	printf(EGG_RUNNING2, pid_file);
 	 exit(1);
       }
    }
@@ -1377,11 +1162,11 @@ int main PROTO2(int, argc, char **, argv)
       dcc[n].addr = iptolong(getmyip());
       dcc[n].port = 0;
       dcc[n].sock = STDOUT;
-      dcc[n].type = DCC_CHAT;
-      set_chat(n);
+      dcc[n].type = &DCC_CHAT;
+      dcc[n].u.chat = get_data_ptr(sizeof(struct chat_info));
       dcc[n].u.chat->away = NULL;
       dcc[n].u.chat->status = 0;
-      dcc[n].u.chat->timer = time(NULL);
+      dcc[n].timeval = time(NULL);
       dcc[n].u.chat->msgs_per_sec = 0;
       dcc[n].u.chat->con_flags = conmask;
       dcc[n].u.chat->channel = 0;
@@ -1405,9 +1190,6 @@ int main PROTO2(int, argc, char **, argv)
 #else
    /* initialize irc things so they won't bother us */
    serv = (-1);
-#ifndef NO_FILE_SYSTEM
-   dccdir[0] = 0;
-#endif
    strcpy(botname, origbotname);
 #endif
    then = time(NULL);
@@ -1415,22 +1197,27 @@ int main PROTO2(int, argc, char **, argv)
    autolink_cycle(NULL);	/* hurry and connect to tandem bots */
    debug0("main: entering loop");
    while (1) {
+      context;
       periodic_timers();
+      context;
 #ifndef NO_IRC
       if (serv < 0) {
 	 clear_channels();
 	 connect_server();
       }
 #endif
+      context;
       /* clean up sockets that were just left for dead */
-      for (i = 0; i < dcc_total; i++)
-	 if (dcc[i].type == DCC_LOST) {
-	    dcc[i].type = dcc[i].sock;
+      for (i = 0; i < dcc_total; i++) {
+	 if (dcc[i].type == &DCC_LOST) {
+	    dcc[i].type = (struct dcc_table *)(dcc[i].sock);
 	    lostdcc(i);
 	    i--;
 	 }
+      }
       /* check for server or dcc activity */
       dequeue_sockets();
+      context;
       /* new net routines: help me mary! */
       xx = sockgets(buf, &i);
       if (xx >= 0) {		/* non-error */
@@ -1439,110 +1226,8 @@ int main PROTO2(int, argc, char **, argv)
 #else
 	 if (xx != serv)
 	    dcc_activity(xx, buf, i);
-	 else {			/* SERVER ACTIVITY */
-	    if (trying_server) {
-	       putlog(LOG_SERV, "*", "Connected to %s", botserver);
-	       server_online = time(NULL);
-	       trying_server = 0;
-	       waiting_for_awake = 0;
-	    }
-	    strcpy(s, buf);
-	    parsemsg(buf, from, code, msg);
-	    fixfrom(from);
-#ifdef USE_CONSOLE_R
-	    if ((strcmp(code, "PRIVMSG") == 0) || (strcmp(code, "NOTICE") == 0)) {
-	       if (!match_ignore(from))
-		  putlog(LOG_RAW, "*", "[@] %s", s);
-	    } else
-	       putlog(LOG_RAW, "*", "[@] %s", s);
-#endif
-	    context;
-#ifdef RAW_BINDS
-	    if (check_tcl_raw(from, code, msg)) {	/* nothing */
-	    } else if (strcmp(code, "PRIVMSG") == 0)
-	       gotmsg(from, msg, match_ignore(from));
-#else
-	    if (strcmp(code, "PRIVMSG") == 0)
-	       gotmsg(from, msg, match_ignore(from));
-#endif
-	    else if (strcmp(code, "NOTICE") == 0)
-	       gotnotice(from, msg, match_ignore(from));
-	    else if (strcmp(code, "MODE") == 0)
-	       gotmode(from, msg);
-	    else if (strcmp(code, "JOIN") == 0)
-	       gotjoin(from, msg);
-	    else if (strcmp(code, "PART") == 0)
-	       gotpart(from, msg);
-	    else if (strcmp(code, "ERROR") == 0)
-	       goterror(from, msg);
-	    else if (strcmp(code, "PONG") == 0)
-	       gotpong(from, msg);
-	    else if (strcmp(code, "WALLOPS") == 0)
-	       gotwall(from, msg);
-	    else if (strcmp(code, "001") == 0)
-	       got001(from, msg);
-	    else if (strcmp(code, "206") == 0)
-	       trace_fail(from, msg);	/* undernet */
-	    else if (strcmp(code, "251") == 0)
-	       got251(from, msg);
-	    else if (strcmp(code, "302") == 0)
-	       got302(from, msg);
-	    else if (strcmp(code, "315") == 0)
-	       got315(from, msg);
-	    else if (strcmp(code, "324") == 0)
-	       got324(from, msg);
-	    else if (strcmp(code, "331") == 0)
-	       got331(from, msg);
-	    else if (strcmp(code, "332") == 0)
-	       got332(from, msg);
-	    else if (strcmp(code, "352") == 0)
-	       got352(from, msg);
-	    else if (strcmp(code, "367") == 0)
-	       got367(from, msg);
-	    else if (strcmp(code, "368") == 0)
-	       got368(from, msg);
-	    else if (strcmp(code, "401") == 0)
-	       trace_fail(from, msg);	/* other */
-	    else if (strcmp(code, "402") == 0)
-	       trace_fail(from, msg);	/* efnet */
-	    else if (strcmp(code, "405") == 0)
-	       got405(from, msg);
-	    else if (strcmp(code, "432") == 0)
-	       got432(from, msg);
-	    else if (strcmp(code, "433") == 0)
-	       got433(from, msg);
-	    else if (strcmp(code, "437") == 0)
-	       got437(from, msg);
-	    else if (strcmp(code, "442") == 0)
-	       got442(from, msg);
-	    else if (strcmp(code, "451") == 0)
-	       got451(from, msg);
-	    else if (strcmp(code, "471") == 0)
-	       got471(from, msg);
-	    else if (strcmp(code, "473") == 0)
-	       got473(from, msg);
-	    else if (strcmp(code, "474") == 0)
-	       got474(from, msg);
-	    else if (strcmp(code, "475") == 0)
-	       got475(from, msg);
-	    else if (strcmp(code, "QUIT") == 0)
-	       gotquit(from, msg);
-	    else if (strcmp(code, "NICK") == 0) {
-	       detect_flood(from, NULL, FLOOD_NICK, 0);
-	       gotnick(from, msg);
-	    } else if (strcmp(code, "KICK") == 0)
-	       gotkick(from, msg);
-	    else if (strcmp(code, "INVITE") == 0)
-	       gotinvite(from, msg);
-	    else if ((strcmp(code, "375") == 0) || (strcmp(code, "376") == 0) ||
-		     (strcmp(code, "372") == 0));	/* ignore motd */
-	    else if (strcmp(code, "TOPIC") == 0)
-	       gottopic(from, msg);
-	    else if (strcmp(code, "PING") == 0) {
-	       fixcolon(msg);
-	       tprintf(serv, "PONG :%s\n", msg);
-	    }
-	 }
+	 else 			/* SERVER ACTIVITY */
+	    server_activity(buf);
 	 /* in periods of high traffic (sockgets always returns info), only */
 	 /* flush the stacked modes every 5th time -- in calmer times (when */
 	 /* sockgets sometimes spends a whole second with no input) dump out */
@@ -1562,14 +1247,19 @@ int main PROTO2(int, argc, char **, argv)
 #else
 	 if (i == serv) {
 	    /* we lost this server, dammit */
-	    putlog(LOG_SERV, "*", "Disconnected from %s", botserver);
+	    putlog(LOG_SERV, "*", "%s %s", IRC_DISCONNECTED, botserver);
+	    printf("clearing channels...\n");
 	    clear_channels();	/* we're not on any channels any more */
+	    printf("killing socket...\n");
 	    killsock(serv);
+	    printf("re-connecting...\n");
 	    connect_server();
+	    printf("woooi!!...\n");
 	 } else if ((i != STDOUT) || backgrd)
 	    eof_dcc(i);
 	 else
 	    fatal("END OF FILE ON TERMINAL", 1);
+	 context;
 #endif
       } else if ((xx == -2) && (errno != EINTR)) {	/* select() error */
 	 context;
@@ -1582,7 +1272,9 @@ int main PROTO2(int, argc, char **, argv)
 	 }
 #endif
 	 for (i = 0; i < dcc_total; i++) {
-	    if ((dcc[i].type != DCC_LOST) && (dcc[i].type != DCC_FORK))
+	    if ((dcc[i].type != &DCC_FORK_SEND) && (dcc[i].type != &DCC_LOST) &&
+		(dcc[i].type != &DCC_FORK_CHAT) && (dcc[i].type != &DCC_FORK_FILES)
+		&& (dcc[i].type != &DCC_FORK_RELAY) && (dcc[i].type != &DCC_FORK_BOT))
 	       if (fcntl(dcc[i].sock, F_GETFD, 0) == (-1)) {
 		  putlog(LOG_MISC, "*",
 		    "DCC socket %d (type %d, name '%s') expired -- pfft",
@@ -1599,9 +1291,9 @@ int main PROTO2(int, argc, char **, argv)
 	    modecnt = 0;
 	 }
       }
+#ifndef STATIC
       if (do_restart) {
 	 /* unload as many modules as possible */
-#ifdef MODULES
 	 int f = 1;
 	 module_entry *p;
 	 Function x;
@@ -1613,13 +1305,13 @@ int main PROTO2(int, argc, char **, argv)
 	       dependancy * d = dependancy_list;
 	       int ok = 1;
 	       while (ok && d) {
-		  if (d->needing == p) 
+		  if (d->needed == p) 
 		    ok = 0;
 		  d=d->next;
 	       }
 	       if (ok) {
 		  strcpy(xx, p->name);
-		  if (unload_module(xx,botname) == NULL) {
+		  if (module_unload(xx,botname) == NULL) {
 		     f = 1;
 		     break;
 		  }
@@ -1627,15 +1319,16 @@ int main PROTO2(int, argc, char **, argv)
 	    }
 	 }
 	 p = module_list;
-	 if (p->next != NULL)	/* should be only 1 module now - encryption */
-	    putlog(LOG_MISC, "*",
-		   "*** stagnant module, there WILL be memory leaks!");
-#endif
+	 if (p && p->next && p->next->next)
+	   /* should be only 2 modules now -
+	    * blowfish & eggdrop */
+	    putlog(LOG_MISC, "*", MOD_STAGNANT);
 	 context;
 	 flushlogs();
 	 context;
-	 for (i = 0; i < MAXLOGS; i++) {
+	 for (i = 0; i < max_logs; i++) {
 	    if (logs[i].f != NULL) {
+	       fclose(logs[i].f);
 	       nfree(logs[i].filename);
 	       nfree(logs[i].chname);
 	       logs[i].filename = NULL;
@@ -1646,17 +1339,14 @@ int main PROTO2(int, argc, char **, argv)
 	 }
 	 context;
 	 kill_tcl();
+	 init_modules(0);
 	 init_tcl();
-#ifdef MODULES
-	 init_modules();
-	 p->next = module_list;
-	 module_list = p;
 	 x = p->funcs[MODCALL_START];
-	 x(0);
-#endif
+	 x(1);
 	 rehash();
 	 restart_chons();
 	 do_restart = 0;
       }
+#endif
    }
 }

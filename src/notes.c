@@ -13,21 +13,13 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include "main.h"
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "eggdrop.h"
-#include "proto.h"
 
 extern char notefile[];
 extern int dcc_total;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern char botnetnick[];
 extern int serv;
 
@@ -37,7 +29,7 @@ int maxnotes = 50;
 int note_life = 60;
 
 /* determine how many notes are waiting for a user */
-int num_notes PROTO1(char *, user)
+int num_notes (char * user)
 {
    int tot = 0;
    FILE *f;
@@ -65,7 +57,7 @@ int num_notes PROTO1(char *, user)
 }
 
 /* change someone's handle */
-void notes_change PROTO3(int, idx, char *, oldnick, char *, newnick)
+void notes_change (int idx, char * oldnick, char * newnick)
 {
    FILE *f, *g;
    char s[513], to[30];
@@ -157,7 +149,7 @@ void expire_notes()
 }
 
 /* add note to notefile */
-int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
+int add_note (char * to, char * from, char * msg, int idx, int echo)
 {
    FILE *f;
    int status, i, iaway, sock;
@@ -178,7 +170,7 @@ int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
       i = nextbot(p);
       if (i < 0) {
 	 if (idx >= 0)
-	    dprintf(idx, "That bot isn't here.\n");
+	    dprintf(idx, BOT_NOTHERE);
 	 return NOTE_ERROR;
       }
       if ((idx >= 0) && (echo))
@@ -209,39 +201,40 @@ int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
    }
    if (!is_user(to)) {
       if (idx >= 0)
-	 dprintf(idx, "I don't know anyone by that name.\n");
+	 dprintf(idx, USERF_UNKNOWN);
       return NOTE_ERROR;
    }
    if (get_attr_handle(to) & USER_BOT) {
       if (idx >= 0)
-	 dprintf(idx, "That's a bot.  You can't leave notes for a bot.\n");
+	 dprintf(idx, BOT_NONOTES);
       return NOTE_ERROR;
    }
    status = NOTE_STORED;
    iaway = 0;
    /* online right now? */
    for (i = 0; i < dcc_total; i++) {
-      if (((dcc[i].type == DCC_CHAT) || (dcc[i].type == DCC_FILES)) &&
+      if (((dcc[i].type == &DCC_CHAT) || (dcc[i].type == &DCC_FILES)) &&
 	  ((sock == (-1)) || (sock == dcc[i].sock)) &&
 	  (strcasecmp(dcc[i].nick, to) == 0)) {
 	 int aok = 1;
-	 if (dcc[i].type == DCC_CHAT)
+	 if (dcc[i].type == &DCC_CHAT)
 	    if ((dcc[i].u.chat->away != NULL) &&
 		(idx != (-2))) {
 	       /* only check away if it's not from a bot */
 	       aok = 0;
 	       if (idx >= 0)
-		  dprintf(idx, "%s is away: %s\n", dcc[i].nick, dcc[i].u.chat->away);
+		  dprintf(idx, "%s %s: %s\n", dcc[i].nick, BOT_USERAWAY,
+					dcc[i].u.chat->away);
 	       if (!iaway)
 		  iaway = i;
 	       status = NOTE_AWAY;
 	    }
-	 if (dcc[i].type == DCC_FILES)
+	 if (dcc[i].type == &DCC_FILES)
 	    if ((dcc[i].u.file->chat->away != NULL) &&
 		(idx != (-2))) {
 	       aok = 0;
 	       if (idx >= 0)
-		  dprintf(idx, "%s is away: %s\n", dcc[i].nick,
+		  dprintf(idx, "%s %s: %s\n", dcc[i].nick, BOT_USERAWAY,
 			  dcc[i].u.file->chat->away);
 	       if (!iaway)
 		  iaway = i;
@@ -254,10 +247,7 @@ int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
 	       else
 		  dprintf(i, "*** [%s (%s)] %s\n", from, ssf, msg);
 	    else {
-	       if (!ssf[0])
 		  dprintf(i, "%cNote [%s]: %s\n", 7, from, msg);
-	       else
-		  dprintf(i, "%cNote [%s (%s)]: %s\n", 7, from, ssf, msg);
 	    }
 	    if ((idx >= 0) && (echo))
 	       dprintf(idx, "-> %s: %s\n", to, msg);
@@ -267,14 +257,14 @@ int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
    }
    if (notefile[0] == 0) {
       if (idx >= 0)
-	 dprintf(idx, "Notes are not supported by this bot.\n");
+	 dprintf(idx, BOT_NOTEUNSUPP);
       return NOTE_ERROR;
    }
    if (idx == (-2))
       return NOTE_OK;		/* error msg from a tandembot: don't store */
    if (num_notes(to) >= maxnotes) {
       if (idx >= 0)
-	 dprintf(idx, "Sorry, that user has too many notes already.\n");
+	 dprintf(idx, BOT_NOTES2MANY);
       return NOTE_FULL;
    }
    f = fopen(notefile, "a");
@@ -282,18 +272,18 @@ int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
       f = fopen(notefile, "w");
    if (f == NULL) {
       if (idx >= 0)
-	 dprintf(idx, "Can't create notefile.  Sorry.\n");
-      putlog(LOG_MISC, "*", "Notefile unreachable!");
+	 dprintf(idx, BOT_NOTESERROR1);
+      putlog(LOG_MISC, "*", BOT_NOTESERROR2);
       return NOTE_ERROR;
    }
    fprintf(f, "%s %s %lu %s\n", to, from, time(NULL), msg);
    fclose(f);
    if (idx >= 0)
-      dprintf(idx, "Stored message.\n");
+      dprintf(idx, "%s.\n", BOT_NOTESTORED);
    if (status == NOTE_AWAY) {
       /* user is away in all sessions -- just notify the user that a */
       /* message arrived and was stored.  (only oldest session is notified.) */
-      dprintf(iaway, "*** Note arrived for you.\n");
+      dprintf(iaway, "*** %s.\n", BOT_NOTEARRIVED);
    }
    return status;
 }
@@ -304,7 +294,7 @@ int add_note PROTO5(char *, to, char *, from, char *, msg, int, idx, int, echo)
 
    idx=-1 : /msg
  */
-void notes_read PROTO4(char *, hand, char *, nick, int, rd, int, idx)
+void notes_read (char * hand, char * nick, int rd, int idx)
 {
    FILE *f;
    char s[601], to[15], dt[81], from[81];
@@ -312,17 +302,17 @@ void notes_read PROTO4(char *, hand, char *, nick, int, rd, int, idx)
    int ix = 1;
    if (!notefile[0]) {
       if (idx >= 0)
-	 dprintf(idx, "You have no messages.\n");
+	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else
-	 hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
       return;
    }
    f = fopen(notefile, "r");
    if (f == NULL) {
       if (idx >= 0)
-	 dprintf(idx, "You have no messages.\n");
+	 dprintf(idx, "%s.\n",BOT_NOMESSAGES);
       else
-	 hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
       return;
    }
    while (!feof(f)) {
@@ -344,10 +334,11 @@ void notes_read PROTO4(char *, hand, char *, nick, int, rd, int, idx)
 	       lapse = (int) ((time(NULL) - tt) / 86400);
 	       if (lapse > note_life - 7) {
 		  if (lapse >= note_life)
-		     strcat(dt, " -- EXPIRES TODAY");
+		     strcat(dt, BOT_NOTEEXP1);
 		  else
-		     sprintf(&dt[strlen(dt)], " -- EXPIRES IN %d DAY%s",
-			     note_life - lapse, (note_life - lapse) == 1 ? "" : "S");
+		     sprintf(&dt[strlen(dt)], BOT_NOTEEXP2,
+			     note_life - lapse, 
+			     (note_life - lapse) == 1 ? "" : "S");
 	       }
 	       if ((ix == rd) || (rd == 0)) {
 		  if (idx >= 0)
@@ -359,7 +350,7 @@ void notes_read PROTO4(char *, hand, char *, nick, int, rd, int, idx)
 	       if (rd < 0) {
 		  if (idx >= 0) {
 		     if (ix == 1)
-			dprintf(idx, "### You have the following notes waiting:\n");
+			dprintf(idx, "### %s:\n", BOT_NOTEWAIT);
 		     dprintf(idx, "  %2d. %s (%s)\n", ix, from, dt);
 		  } else
 		     hprintf(serv, "NOTICE %s :%2d. %s (%s)\n", nick, ix, from, dt);
@@ -372,58 +363,58 @@ void notes_read PROTO4(char *, hand, char *, nick, int, rd, int, idx)
    fclose(f);
    if ((rd >= ix) && (rd > 0)) {
       if (idx >= 0)
-	 dprintf(idx, "You don't have that many messages.\n");
+	 dprintf(idx, "%s.\n", BOT_NOTTHATMANY);
       else
-	 hprintf(serv, "NOTICE %s :You don't have that many messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOTTHATMANY);
    }
    if (rd < 0) {
       if (ix == 1) {
 	 if (idx >= 0)
-	    dprintf(idx, "You have no messages waiting.\n");
+	    dprintf(idx, "%s.\n", BOT_NOMESSAGES);
 	 else
-	    hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	    hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
       } else {
 	 if (idx >= 0)
-	    dprintf(idx, "### Use '.notes read' to read them.\n");
+	    dprintf(idx, "### %s.\n", BOT_NOTEUSAGE);
 	 else
-	    hprintf(serv, "NOTICE %s :(%d total)\n", nick, ix - 1);
+	    hprintf(serv, "NOTICE %s :(%d %s)\n", nick, ix - 1, MISC_TOTAL);
       }
    }
    if ((rd == 0) && (ix == 1)) {
       if (idx >= 0)
-	 dprintf(idx, "You have no messages waiting.\n");
+	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else
-	 hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
    }
 }
 
-void notes_del PROTO4(char *, hand, char *, nick, int, dl, int, idx)
+void notes_del (char * hand, char * nick, int dl, int idx)
 {
    FILE *f, *g;
    char s[513], to[81];
    int in = 1;
    if (!notefile[0]) {
       if (idx >= 0)
-	 dprintf(idx, "You have no messages.\n");
+	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else
-	 hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
       return;
    }
    f = fopen(notefile, "r");
    if (f == NULL) {
       if (idx >= 0)
-	 dprintf(idx, "You have no messages.\n");
+	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else
-	 hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :BOT_NOMESSAGES.\n", nick);
       return;
    }
    sprintf(s, "%s~new", notefile);
    g = fopen(s, "w");
    if (g == NULL) {
       if (idx >= 0)
-	 dprintf(idx, "Can't modify the note file. :(\n");
+	 dprintf(idx, "%s. :(\n", BOT_CANTMODNOTE);
       else
-	 hprintf(serv, "NOTICE %s :Can't modify the note file. :(\n", nick);
+	 hprintf(serv, "NOTICE %s :%s. :(\n", nick, BOT_CANTMODNOTE);
       fclose(f);
       return;
    }
@@ -456,26 +447,27 @@ void notes_del PROTO4(char *, hand, char *, nick, int, dl, int, idx)
 #endif
    if ((dl >= in) && (dl > 0)) {
       if (idx >= 0)
-	 dprintf(idx, "You don't have that many messages.\n");
+	 dprintf(idx, "%s.\n", BOT_NOTTHATMANY);
       else
-	 hprintf(serv, "NOTICE %s :You don't have that many messages.\n",
-		 nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOTTHATMANY);
    } else if (in == 1) {
       if (idx >= 0)
-	 dprintf(idx, "You have no messages.\n");
+	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else
-	 hprintf(serv, "NOTICE %s :You have no messages.\n", nick);
+	 hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
    } else {
       if (dl == 0) {
 	 if (idx >= 0)
-	    dprintf(idx, "Erased all notes.\n");
+	    dprintf(idx, "%s.\n", BOT_NOTESERASED);
 	 else
-	    hprintf(serv, "NOTICE %s :Erased all notes.\n", nick);
+	    hprintf(serv, "NOTICE %s :%s.\n", nick, BOT_NOTESERASED);
       } else {
 	 if (idx >= 0)
-	    dprintf(idx, "Erased #%d; %d left.\n", dl, in - 2);
+	    dprintf(idx, "%s #%d; %d left.\n", MISC_ERASED, dl, in - 2,
+					MISC_LEFT);
 	 else
-	    hprintf(serv, "NOTICE %s :Erased #%d; %d left.\n", nick, dl, in - 2);
+	    hprintf(serv, "NOTICE %s :%s #%d; %d %s.\n", MISC_ERASED,
+			nick, dl, in - 2, MISC_LEFT);
       }
    }
 }

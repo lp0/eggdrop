@@ -1,4 +1,4 @@
-%{+O}
+%{+o|o}
 ###  servers
    lists the servers that the bot has in its server list.  this is
    the list it rotates through when changing servers.  it starts

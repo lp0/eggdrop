@@ -15,27 +15,15 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include "main.h"
 #include <sys/stat.h>
 #include <varargs.h>
 #include <errno.h>
-#include "eggdrop.h"
 #include "chan.h"
-#include "proto.h"
-#ifdef MODULES
 #include "modules.h"
-#else
-extern int dcc_maxsize;
-#endif
 
 extern int serv;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char dccin[];
 extern int conmask;
@@ -43,38 +31,136 @@ extern char botname[];
 extern char botnetnick[];
 extern int require_p;
 extern char dccdir[];
-extern int flood_thr;
+extern int dcc_flood_thr;
 extern int upload_to_cd;
 extern char tempdir[];
 extern struct chanset_t *chanset;
 extern int backgrd;
+extern int quiet_reject;
+extern time_t now;
+extern int connect_timeout;
+extern int max_dcc;
 
-/* use special port for dcc requests? */
 int reserved_port = 0;
-
-
 #ifndef NO_IRC
+static void failed_got_dcc (int idx)
+{
+   char s1[121];
+   if (strcmp(dcc[idx].nick, "*users") == 0) {
+      int x, y = 0;
+      for (x = 0; x < dcc_total; x++)
+	 if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
+	     (dcc[x].type == &DCC_BOT))
+	    y = x;
+      if (y != 0) {
+	 dcc[y].u.bot->status &= ~STAT_GETTING;
+	 dcc[y].u.bot->status &= ~STAT_SHARE;
+      }
+      putlog(LOG_MISC, "*", USERF_FAILEDXFER);
+      fclose(dcc[idx].u.xfer->f);
+      unlink(dcc[idx].u.xfer->filename);
+      killsock(dcc[idx].sock);
+      lostdcc(idx);
+      return;
+   }
+   neterror(s1);
+   mprintf(serv, "NOTICE %s :%s (%s)\n", dcc[idx].nick, DCC_CONNECTFAILED1, s1);
+   putlog(LOG_MISC, "*", "%s: %s %s (%s!%s)", DCC_CONNECTFAILED2,
+	  	dcc[idx].type == &DCC_FORK_SEND ? "SEND" : "CHAT", 
+		dcc[idx].type == &DCC_FORK_SEND ? 
+		    dcc[idx].u.xfer->filename : "", dcc[idx].nick,
+	  	dcc[idx].host);
+   putlog(LOG_MISC, "*", "    (%s)", s1);
+   if (dcc[idx].type == &DCC_FORK_SEND) {
+      /* erase the 0-byte file i started */
+      fclose(dcc[idx].u.xfer->f);
+      sprintf(s1, "%s%s", tempdir, dcc[idx].u.xfer->filename);
+      unlink(s1);
+   }
+   killsock(dcc[idx].sock);
+   lostdcc(idx);
+}
+
+static void cont_got_dcc (int idx,char * buf,int len)
+{
+   char s1[121];
+   sprintf(s1, "%s!%s", dcc[idx].nick, dcc[idx].host);
+   putlog(LOG_MISC, "*", "DCC connection: CHAT (%s)", 
+	  s1);
+   get_handle_by_host(dcc[idx].nick, s1);
+   dcc[idx].timeval = now;
+   if (pass_match_by_host("-", s1)) {
+      /* no password set -  if you get here, something is WEIRD */
+      dprintf(idx, IRC_NOPASS2);
+      dcc[idx].type = &DCC_CHAT;
+      if (get_attr_handle(dcc[idx].nick) & USER_MASTER)
+	dcc[idx].u.chat->con_flags = conmask;
+      dcc_chatter(idx);
+   } else {
+      dprintf(idx, "%s\n", DCC_ENTERPASS);
+      dcc[idx].type = &DCC_CHAT_PASS;
+   }
+}
+
+static int expmem_fork_chat (int idx) {
+   return sizeof(struct chat_info);
+}
+
+static void kill_fork_chat (int idx) {
+   nfree(dcc[idx].u.chat);
+}
+
+static void display_fork_chat (int idx,char * buf) {
+   sprintf(buf,"conn  chat");
+}
+
+static int expmem_fork_send (int idx) {
+   return sizeof(struct xfer_info) + sizeof(struct chat_info);
+}
+
+static void kill_fork_send (int idx) {
+   nfree(dcc[idx].u.xfer);
+}
+
+static void display_fork_send (int idx,char * buf) {
+   sprintf(buf,"conn  send");
+}
+
+struct dcc_table DCC_FORK_CHAT = {
+   failed_got_dcc,
+   cont_got_dcc,
+   &connect_timeout,
+   failed_got_dcc,
+   display_fork_chat,
+   expmem_fork_chat,
+   kill_fork_chat,
+   0
+};
+
+struct dcc_table DCC_FORK_FILES = {
+   failed_got_dcc,
+   cont_got_dcc,
+   &connect_timeout,
+   failed_got_dcc,
+   display_fork_send,
+   expmem_fork_send,
+   kill_fork_send,
+   0
+};
+
+   
+
 /* received a ctcp-dcc */
-void gotdcc PROTO3(char *, nick, char *, from, char *, msg)
+void gotdcc (char * nick, char * from, char * msg)
 {
    char code[512], param[512], ip[512], s1[512], prt[81], nk[10];
-   int z = 0, i, atr;
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   FILE *f;
-#endif
-#endif
+   int i, atr;
+   struct dcc_table * z = 0;
    nsplit(code, msg);
-   if ((strcasecmp(code, "chat") != 0))
-#ifndef MODULES
-      if ((strcasecmp(code, "send") != 0))
-	 return;
-#else
-   {
+   if ((strcasecmp(code, "chat") != 0)) {
       call_hook_cccc(HOOK_GOT_DCC, nick, from, code, msg);
       return;
    }
-#endif
    /* dcc chat or send! */
    nsplit(param, msg);
    nsplit(ip, msg);
@@ -89,375 +175,129 @@ void gotdcc PROTO3(char *, nick, char *, from, char *, msg)
       if (atr & (USER_MASTER | USER_XFER | USER_PARTY))
 	 ok = 1;
       if (!ok) {
-#ifndef QUIET_REJECTION
-	 mprintf(serv, "NOTICE %s :I don't accept dcc chats from strangers. :)\n",
-		 nick);
-#endif
-	 putlog(LOG_MISC, "*", "Refused DCC chat (no access): %s!%s", nick, from);
-	 return;
+        if (quiet_reject == 0) {
+	  mprintf(serv, "NOTICE %s :%s\n", nick, DCC_NOSTRANGERS);
+        }
+	putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED, nick, from);
+	return;
       } else {
 	 if (atr & USER_BOT) {
 	    if (in_chain(nk)) {
 	       mprintf(serv, "NOTICE %s :You're already connected.\n", nick);
-	       putlog(LOG_BOTS, "*", "Refused tandem connection from %s (duplicate)",
-		      nk);
+	       putlog(LOG_BOTS, "*", DCC_REFUSEDTAND, nk);
 	       return;
 	    }
 	 }
       }
    }
-#ifndef MODULES
-   if (strcasecmp(code, "send") == 0) {
-#ifdef NO_FILE_SYSTEM
-      return;			/* ignore */
-#else
-      int ok = 0;
-      if (atr & (USER_MASTER | USER_XFER))
-	 ok = 1;
-      if (!ok) {
-#ifndef QUIET_REJECTION
-	 mprintf(serv, "NOTICE %s :I don't accept files from strangers. :)\n",
-		 nick);
-#endif
-	 putlog(LOG_FILES, "*", "Refused DCC SEND %s (no access): %s!%s", param,
-		nick, from);
-	 return;
-      }
-#endif				/* NO_FILE_SYSTEM */
-   }
-#endif
-   if (dcc_total == MAXDCC) {
-      mprintf(serv, "NOTICE %s :Sorry, too many DCC connections.\n", nick);
-      putlog(LOG_MISC, "*", "DCC connections full: %s %s (%s!%s)", code, param,
-	     nick, from);
+   if (dcc_total == max_dcc) {
+      mprintf(serv, "NOTICE %s :%s\n", nick, DCC_TOOMANYDCCS1);
+      putlog(LOG_MISC, "*", DCC_TOOMANYDCCS1, code, param, nick, from);
       return;
    }
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   if ((dccin[0] == 0) && (!upload_to_cd) && (strcasecmp(code, "send") == 0)) {
-      mprintf(serv, "NOTICE %s :DCC file transfers not supported.\n", nick);
-      putlog(LOG_FILES, "*", "Refused dcc send %s from %s!%s", param, nick, from);
-      return;
-   }
-   if ((strchr(param, '/') != NULL) && (strcasecmp(code, "send") == 0)) {
-      mprintf(serv, "NOTICE %s :Filename cannot have '/' in it...\n", nick);
-      putlog(LOG_FILES, "*", "Refused dcc send %s from %s!%s", param, nick, from);
-      return;
-   }
-#endif
-#endif
    i = dcc_total;
    dcc[i].addr = my_atoul(ip);
    dcc[i].port = atoi(prt);
    dcc[i].sock = (-1);
-   dcc[i].type = DCC_FORK;
    strcpy(dcc[i].nick, nick);
    strcpy(dcc[i].host, from);
    dcc[i].u.other = NULL;
-   set_fork(i);
-#if !(defined(NO_FILE_SYSTEM) || defined(MODULES))
-   if (strcasecmp(code, "send") == 0) {
-      char nk[40], s9[121];
-      get_xfer_ptr(&(dcc[i].u.fork->u.xfer));
-      if (param[0] == '.')
-	 param[0] = '_';
-      strncpy(dcc[i].u.fork->u.xfer->filename, param, 120);
-      dcc[i].u.fork->u.xfer->filename[120] = 0;
-      if (upload_to_cd) {
-	 get_handle_by_host(nk, s1);
-	 get_handle_dccdir(nk, s9);
-	 sprintf(dcc[i].u.fork->u.xfer->dir, "%s%s/", dccdir, s9);
-      } else
-	 strcpy(dcc[i].u.fork->u.xfer->dir, dccin);
-      dcc[i].u.fork->u.xfer->length = atol(msg);
-      dcc[i].u.fork->u.xfer->sent = 0;
-      dcc[i].u.fork->u.xfer->sofar = 0;
-      if (atol(msg) == 0) {
-	 mprintf(serv, "NOTICE %s :Sorry, file size info must be included.\n",
-		 nick);
-	 putlog(LOG_FILES, "*", "Refused dcc send %s (%s): no file size", param,
-		nick);
-	 nfree(dcc[i].u.fork->u.xfer);
-	 nfree(dcc[i].u.fork);
+   dcc[i].u.chat = get_data_ptr(sizeof(struct chat_info));
+   dcc[i].u.chat->away = NULL;
+   dcc[i].u.chat->status = STAT_ECHO;
+   dcc[i].timeval = now;
+   dcc[i].u.chat->msgs_per_sec = 0;
+   dcc[i].u.chat->con_flags = 0;
+   dcc[i].u.chat->buffer = NULL;
+   dcc[i].u.chat->max_line = 0;
+   dcc[i].u.chat->line_count = 0;
+   dcc[i].u.chat->current_lines = 0;
+   strcpy(dcc[i].u.chat->con_chan, chanset->name);
+   dcc[i].u.chat->channel = 0;
+   if (atr & USER_MASTER)
+     z = &DCC_FORK_CHAT;
+   else if (op_anywhere(nk)) {
+      if ((!require_p) || (atr & USER_PARTY))
+	z = &DCC_FORK_CHAT;
+      else if (atr & USER_XFER)
+	z = &DCC_FORK_FILES;
+      else {
+	 if (quiet_reject == 0) {
+	    mprintf(serv, "NOTICE %s :%s.\n", nick, DCC_REFUSED2);
+	 }
+	 putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED, nick, from);
 	 return;
       }
-      if (atol(msg) > (dcc_maxsize * 1024)) {
-	 mprintf(serv, "NOTICE %s :Sorry, file too large.\n", nick);
-	 putlog(LOG_FILES, "*", "Refused dcc send %s (%s): file too large", param,
-		nick);
-	 nfree(dcc[i].u.fork->u.xfer);
-	 nfree(dcc[i].u.fork);
-	 return;
-      }
+   } else if (atr & USER_PARTY) {
+      z = &DCC_FORK_CHAT;
+      dcc[i].u.chat->status |= STAT_PARTY;
+   } else if (atr & USER_XFER) {
+      z = &DCC_FORK_FILES;
    } else {
-#else
-   {
-#endif
-      get_chat_ptr(&(dcc[i].u.fork->u.chat));
-      dcc[i].u.fork->u.chat->away = NULL;
-      dcc[i].u.fork->u.chat->status = STAT_ECHO;
-      dcc[i].u.fork->u.chat->timer = time(NULL);
-      dcc[i].u.fork->u.chat->msgs_per_sec = 0;
-      dcc[i].u.fork->u.chat->con_flags = 0;
-      dcc[i].u.fork->u.chat->buffer = NULL;
-      dcc[i].u.fork->u.chat->max_line = 0;
-      dcc[i].u.fork->u.chat->line_count = 0;
-      dcc[i].u.fork->u.chat->current_lines = 0;
-      strcpy(dcc[i].u.fork->u.chat->con_chan, chanset->name);
-      dcc[i].u.fork->u.chat->channel = 0;
-   }
-#ifndef MODULES
-   if (strcasecmp(code, "chat") == 0) {
-#endif
-      if (atr & USER_MASTER)
-	 z = DCC_CHAT;
-      else if (op_anywhere(nk)) {
-	 if ((!require_p) || (atr & USER_PARTY))
-	    z = DCC_CHAT;
-	 else if (atr & USER_XFER)
-	    z = DCC_FILES;
-	 else {
-#ifndef QUIET_REJECTION
-	    mprintf(serv, "NOTICE %s :No access.\n", nick);
-#endif
-	    putlog(LOG_MISC, "*", "Refused dcc chat (no access): %s!%s", nick, from);
-	    return;
-	 }
-      } else if (atr & USER_PARTY) {
-	 z = DCC_CHAT;
-	 dcc[i].u.fork->u.chat->status |= STAT_PARTY;
-      } else if (atr & USER_XFER) {
-	 z = DCC_FILES;
-      } else {
-#ifndef QUIET_REJECTION
+      if (quiet_reject == 0) {
 	 mprintf(serv, "NOTICE %s :No access.\n", nick);
-#endif
-	 putlog(LOG_MISC, "*", "Refused dcc chat (no access): %s!%s", nick, from);
-	 return;
       }
-      if (pass_match_by_host("-", s1)) {
-	 mprintf(serv, "NOTICE %s :You must have a password set.\n", nick);
-	 putlog(LOG_MISC, "*", "Refused dcc chat (no password): %s!%s", nick, from);
-	 return;
-      }
-      if (z == DCC_FILES) {
-#ifdef NO_FILE_SYSTEM
-	 return;		/* ignore */
-#else
-	 struct file_info *fi;
-#ifdef MODULES
-	 if (!find_module("filesys", 1, 0)) {
-#else
-	 if (!dccdir[0]) {
-#endif
-#ifndef QUIET_REJECTION
-	    mprintf(serv, "NOTICE %s :No access.\n", nick);
-#endif
-	    putlog(LOG_MISC, "*", "Refused dcc chat (+x but no file area): %s!%s",
-		   nick, from);
-	    return;
-	 }
-#ifndef MODULES			/* in modules, this is handled in the cont_got_dcc code */
-	 if (too_many_filers()) {
-	    mprintf(serv, "NOTICE %s :Too many people are in the file area right now.\n", nick);
-	    mprintf(serv, "NOTICE %s :Please try again later.\n", nick);
-	    putlog(LOG_MISC, "*", "Refused dcc chat (file area full): %s!%s", nick,
-		   from);
-	    return;
-	 }
-#endif
-	 /* ARGH: three level nesting */
-	 get_file_ptr(&fi);
-	 fi->chat = dcc[i].u.fork->u.chat;
-	 dcc[i].u.fork->u.file = fi;
-#endif				/* NO_FILE_SYSTEM */
-      }
-#ifndef MODULES
+      putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED, nick, from);
+      return;
    }
-#endif
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   else {
-      int j;
-      z = DCC_SEND;
-      sprintf(s1, "%s%s", dcc[i].u.fork->u.xfer->dir, param);
-      f = fopen(s1, "r");
-      if (f != NULL) {
-	 fclose(f);
-	 mprintf(serv, "NOTICE %s :That file already exists.\n", nick);
-	 nfree(dcc[i].u.fork->u.xfer);
-	 nfree(dcc[i].u.fork);
-	 return;
-      }
-      /* check for dcc-sends in process with the same filename */
-      for (j = 0; j < dcc_total; j++) {
-	 if (dcc[j].type == DCC_SEND) {
-	    if (strcmp(param, dcc[j].u.xfer->filename) == 0) {
-	       mprintf(serv, "NOTICE %s :That file is already being sent.\n", nick);
-	       nfree(dcc[i].u.fork->u.xfer);
-	       nfree(dcc[i].u.fork);
-	       return;
-	    }
-	 }
-	 if ((dcc[j].type == DCC_FORK) && (dcc[j].u.fork->type == DCC_SEND)) {
-	    if (strcmp(param, dcc[j].u.fork->u.xfer->filename) == 0) {
-	       mprintf(serv, "NOTICE %s :That file is already being sent.\n", nick);
-	       nfree(dcc[i].u.fork->u.xfer);
-	       nfree(dcc[i].u.fork);
-	       return;
-	    }
-	 }
-      }
-      /* put uploads in /tmp first */
-      sprintf(s1, "%s%s", tempdir, param);
-      dcc[i].u.fork->u.xfer->f = fopen(s1, "w");
-      if (dcc[i].u.fork->u.xfer->f == NULL) {
-	 mprintf(serv, "NOTICE %s :Can't create that file (temp dir error)\n",
-		 nick);
-	 nfree(dcc[i].u.fork->u.xfer);
-	 nfree(dcc[i].u.fork);
-	 return;
-      }
+   if (pass_match_by_host("-", s1)) {
+      mprintf(serv, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
+      putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
+      return;
    }
-#endif
-#endif				/* !NO_FILE_SYSTEM */
-   dcc[i].u.fork->type = z;	/* store future type */
-   dcc[i].u.fork->start = time(NULL);
+   if (z == &DCC_FORK_FILES) {
+      struct file_info *fi;
+      module_entry * me = module_find("filesys", 1, 0);
+      
+      if (!me || !me->funcs[FILESYS_ISVALID] 
+	  || !(me->funcs[FILESYS_ISVALID])()) {
+	 if (quiet_reject == 0) {
+	    mprintf(serv, "NOTICE %s :%s.\n", nick, DCC_REFUSED2);
+	 }
+	 putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED5, nick, from);
+	 return;
+      }
+      /* ARGH: three level nesting */
+      fi = get_data_ptr(sizeof(struct file_info));   
+      fi->chat = dcc[i].u.chat;
+      dcc[i].u.file = fi;
+   }
+   dcc[i].type = z;	/* store future type */
+   dcc[i].timeval = now;
    dcc_total++;
    /* ok, we're satisfied with them now: attempt the connect */
-   if ((z == DCC_CHAT) || (z == DCC_FILES))
-      dcc[i].sock = getsock(0);
+   if ((z == &DCC_FORK_CHAT) || (z == &DCC_FORK_FILES))
+     dcc[i].sock = getsock(0);
    else
-      dcc[i].sock = getsock(SOCK_BINARY);	/* doh. */
+     dcc[i].sock = getsock(SOCK_BINARY);	/* doh. */
    if (open_telnet_dcc(dcc[i].sock, ip, prt) < 0) {
       /* can't connect (?) */
       failed_got_dcc(i);
       return;
    }
    /* assume dcc chat succeeded, and move on */
-   if ((z == DCC_CHAT) || (z == DCC_FILES))
-      cont_got_dcc(i);
-}
-
-void failed_got_dcc PROTO1(int, idx)
-{
-   char s1[121];
-   if (strcmp(dcc[idx].nick, "*users") == 0) {
-      int x, y = 0;
-      for (x = 0; x < dcc_total; x++)
-	 if ((strcasecmp(dcc[x].nick, dcc[idx].host) == 0) &&
-	     (dcc[x].type == DCC_BOT))
-	    y = x;
-      if (y != 0) {
-	 dcc[y].u.bot->status &= ~STAT_GETTING;
-	 dcc[y].u.bot->status &= ~STAT_SHARE;
-      }
-      putlog(LOG_MISC, "*", "Failed connection; aborted userfile transfer.");
-      fclose(dcc[idx].u.fork->u.xfer->f);
-      unlink(dcc[idx].u.fork->u.xfer->filename);
-      killsock(dcc[idx].sock);
-      lostdcc(idx);
-      return;
-   }
-   neterror(s1);
-   mprintf(serv, "NOTICE %s :Failed to connect (%s)\n", dcc[idx].nick, s1);
-   putlog(LOG_MISC, "*", "DCC connection failed: %s %s (%s!%s)",
-	  dcc[idx].u.fork->type == DCC_SEND ? "SEND" : "CHAT", dcc[idx].u.fork->type
-     == DCC_SEND ? dcc[idx].u.fork->u.xfer->filename : "", dcc[idx].nick,
-	  dcc[idx].host);
-   putlog(LOG_MISC, "*", "    (%s)", s1);
-   if (dcc[idx].u.fork->type == DCC_SEND) {
-      /* erase the 0-byte file i started */
-      fclose(dcc[idx].u.fork->u.xfer->f);
-      sprintf(s1, "%s%s", tempdir, dcc[idx].u.fork->u.xfer->filename);
-      unlink(s1);
-   }
-   killsock(dcc[idx].sock);
-   lostdcc(idx);
+   if ((z == &DCC_FORK_CHAT) || (z == &DCC_FORK_FILES))
+     z->activity(i,0,0);
+      
 }
 #endif				/* !NO_IRC */
 
-void cont_got_dcc PROTO1(int, idx)
-{
-   char s1[121];
-   sprintf(s1, "%s!%s", dcc[idx].nick, dcc[idx].host);
-   dcc[idx].type = dcc[idx].u.fork->type;
-   {
-      /* cut out the fork part of the chain */
-      struct fork_info *fi = dcc[idx].u.fork;
-      dcc[idx].u.other = fi->u.other;
-      nfree(fi);
-   }
-#ifdef MODULES
-   if (dcc[idx].type != DCC_CHAT) {
-      call_hook_i(HOOK_CONNECT, idx);
-      return;
-   }
-#else
-   if (strcmp(dcc[idx].nick, "*users") != 0) {
-      putlog(LOG_MISC, "*", "DCC connection: %s %s (%s)", dcc[idx].type == DCC_SEND ?
-	     "SEND" : "CHAT", dcc[idx].type == DCC_SEND ? dcc[idx].u.xfer->filename : "",
-	     s1);
-   }
-   if (dcc[idx].type != DCC_SEND) {
-#endif
-      get_handle_by_host(dcc[idx].nick, s1);
-      dcc[idx].u.chat->timer = time(NULL);
-      if (pass_match_by_host("-", s1)) {
-	 /* no password set */
-	 dprintf(idx, "( YOU HAVE NO PASSWORD SET )\n");
-#ifndef MODULES
-	 if (dcc[idx].type == DCC_CHAT) {
-#endif
-	    if (get_attr_handle(dcc[idx].nick) & USER_MASTER)
-	       dcc[idx].u.chat->con_flags = conmask;
-	    dcc_chatter(idx);
-#ifndef MODULES
-	 }
-#ifndef NO_FILE_SYSTEM
-	 else {
-	    putlog(LOG_FILES, "*", "File system: [%s]%s/%d", dcc[idx].nick,
-		   dcc[idx].host, dcc[idx].port);
-	    if (!welcome_to_files(idx)) {
-	       putlog(LOG_FILES, "*", "File system broken.");
-	       killsock(dcc[idx].sock);
-	       dcc[idx].sock = dcc[idx].type;
-	       dcc[idx].type = DCC_LOST;
-	    }
-	 }
-#endif
-#endif
-      } else {
-	 dprintf(idx, "Enter your password.\n");
-#ifndef MODULES
-	 if (dcc[idx].type == DCC_CHAT)
-#endif
-	    dcc[idx].type = DCC_CHAT_PASS;
-#ifndef MODULES
-	 else
-	    dcc[idx].type = DCC_FILES_PASS;
-      }
-#endif
-   }
-}
-
-int detect_dcc_flood PROTO2(struct chat_info *, chat, int, idx)
+int detect_dcc_flood (time_t * timer,struct chat_info * chat, int idx)
 {
    time_t t;
-   if (flood_thr == 0)
+   if (dcc_flood_thr == 0)
       return 0;
-   t = time(NULL);
-   if (chat->timer != t) {
-      chat->timer = t;
+   t = now;
+   if (*timer != t) {
+      *timer = t;
       chat->msgs_per_sec = 0;
    } else {
       chat->msgs_per_sec++;
-      if (chat->msgs_per_sec > flood_thr) {
+      if (chat->msgs_per_sec > dcc_flood_thr) {
 	 /* FLOOD */
-	 dprintf(idx, "*** FLOOD: Goodbye.\n");
+	 dprintf(idx, "*** FLOOD: %s.\n", IRC_GOODBYE);
 	 if (dcc[idx].u.chat->channel >= 0) {
-	    chanout2_but(idx, dcc[idx].u.chat->channel,
-			 "%s has been forcibly removed for flooding.\n",
+	    chanout2_but(idx, dcc[idx].u.chat->channel, DCC_FLOODBOOT,
 			 dcc[idx].nick);
 	    if (dcc[idx].u.chat->channel < 100000)
 	       tandout("part %s %s %d\n", botnetnick, dcc[idx].nick, dcc[idx].sock);
@@ -477,12 +317,11 @@ int detect_dcc_flood PROTO2(struct chat_info *, chat, int, idx)
 }
 
 /* handle someone being booted from dcc chat */
-void do_boot PROTO3(int, idx, char *, by, char *, reason)
+void do_boot (int idx, char * by, char * reason)
 {
-   int files = (dcc[idx].type == DCC_FILES);
-   dprintf(idx, "-=- poof -=-\n");
-   dprintf(idx, "You've been booted from the %s by %s%s%s\n", files ?
-	   "file section" : "bot", by, reason[0] ? ": " : ".", reason);
+   int files = (dcc[idx].type == &DCC_FILES);
+   dprintf(idx, DCC_BOOTED1);
+   dprintf(idx, DCC_BOOTED2, DCC_BOOTED2_ARGS);
    if ((!files) && (dcc[idx].u.chat->channel >= 0)) {
       chanout2_but(idx, dcc[idx].u.chat->channel,
 	     "%s booted %s from the party line%s%s\n", by, dcc[idx].nick,
@@ -493,8 +332,8 @@ void do_boot PROTO3(int, idx, char *, by, char *, reason)
    check_tcl_chof(dcc[idx].nick, dcc[idx].sock);
    if ((dcc[idx].sock != STDOUT) || backgrd) {
       killsock(dcc[idx].sock);
-      dcc[idx].sock = dcc[idx].type;
-      dcc[idx].type = DCC_LOST;
+      dcc[idx].sock = (long)dcc[idx].type;
+      dcc[idx].type = &DCC_LOST;
       /* entry must remain in the table so it can be logged by the caller */
    } else {
       tprintf(STDOUT, "\n### SIMULATION RESET\n\n");

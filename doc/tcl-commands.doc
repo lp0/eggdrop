@@ -115,6 +115,17 @@ just new commands) are marked with vertical bars on the left.
     returns: "1" on success, "0" if that hostmask wasn't in the list or the
       user does not exist
 
+| addchanrec <handle> <channel>
+|   add a channel record for the user
+|   returns: "1" on success, "0" if the user does not exist or if there
+|     isn't such a channel
+|
+| delchanrec <handle> <channel>
+|   removes a channel record for the user; this includes all associated
+|    channel flags
+|   returns: "1" on success, "0" if the user does not exist or if there
+|     isn't such a channel
+
   gethosts <handle>
     returns: the hostmask list for that user if there are any, "none" if
       the user exists but there are no hostmasks, "" if the user doesn't
@@ -144,6 +155,11 @@ just new commands) are marked with vertical bars on the left.
 
   getxtra <handle>
     returns: xtra info for a user ("" if none exists)
+
+| getchanlaston <handle>
+|   returns: last channel the user was seen in.  returns an empty
+|     string if the user has never been on any channel or if there is no
+|     such user
 
 | getlaston <handle> <channel>
 |   returns: last time that user was on that channel (in unixtime format);
@@ -631,24 +647,24 @@ just new commands) are marked with vertical bars on the left.
       a sublist with two elements: nickname the file is being sent to, and
       the filename
 
-  setuploads <handle> <#uploads> <size-in-k>
-    sets a user's statistics on the number of files uploaded and the total
-      kilobytes uploaded
-    returns: nothing
-
-  getuploads <handle>
-    returns: list containing upload statistics for a user: the first
-      element is the number of files uploaded; the second element is the
-      total kilobytes uploaded
-
-  setdnloads <handle> <#dnloads> <size-in-k>
-    like setuploads, but sets the download statistics
-    returns: nothing
-
-  getdnloads <handle>
-    returns: list containing download statistics, in the same format
-      as getuploads
-
+| setuploads <handle> <#uploads> <size-in-k>
+|   sets a user's statistics on the number of files uploaded and the total
+|     kilobytes uploaded
+|   returns: nothing
+|
+| getuploads <handle>
+|   returns: list containing upload statistics for a user: the first
+|     element is the number of files uploaded; the second element is the
+|     total kilobytes uploaded
+|
+| setdnloads <handle> <#dnloads> <size-in-k>
+|   like setuploads, but sets the download statistics
+|   returns: nothing
+|
+| getdnloads <handle>
+|   returns: list containing download statistics, in the same format
+|     as getuploads
+|
 | mkdir <directory> [required-flags]
 |   creates a directory in the files system, only users with the
 |   required flags may access
@@ -744,7 +760,7 @@ just new commands) are marked with vertical bars on the left.
 
 | strftime <formatstring> [time]
 |   returns: a formatted string of time using standard strftime
-|     fromat, uses the value of time, or now if no time specified
+|     format, uses the value of time, or now if no time specified
 
   date
     returns: the current date in standard format (ie "21 Dec 1994")
@@ -817,8 +833,20 @@ GLOBAL VARIABLES:
       first item is the text version, second item is a numerical version,
       and any following items are the names of patches that have been added
 
+  numversion
+    current numeric bot version (ie: "1010201");
+      Numerical version is "MMNNRRPP" where:
+		MM is the Major release number
+		NN is the Minor release number
+		RR is the sub-release number
+		PP is the patch leavel for that sub-release
+
   uptime
     unixtime value for when the bot was started
+
+  lastbind
+    The last command binding which triggered.   This allows you to 
+    identify which command triggered a tcl routine.
 
   
 COMMAND EXTENSION:

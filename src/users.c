@@ -18,25 +18,13 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "eggdrop.h"
+#include "main.h"
 #include "users.h"
 #include "chan.h"
-#include "proto.h"
-#ifdef MODULES
 #include "modules.h"
-#endif
-#ifdef HAVE_NAT
 char natip[121] = "";
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
 /* 
    bans:
    <banmask>:<expire-time>:[+<time-added>:<last-active>]:<user>:<encoded-desc>
@@ -58,13 +46,17 @@ extern char botname[];
 extern char botuser[];
 extern char botuserhost[];
 extern int serv;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
 extern int noshare;
 extern struct userrec *userlist, *lastuser, *banu, *ignu;
 extern char origbotname[];
 extern char botnetnick[];
 extern struct chanset_t *chanset;
+extern Tcl_Interp * interp;
+extern char whois_fields[];
+extern int use_silence;
+extern time_t now;
 
 /* where the user records are stored */
 char userfile[121] = "";
@@ -77,7 +69,7 @@ int gban_total = 0;
 
 
 /* is this nick!user@host being ignored? */
-int match_ignore PROTO1(char *, uhost)
+int match_ignore (char * uhost)
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -97,7 +89,7 @@ int match_ignore PROTO1(char *, uhost)
 }
 
 /* is this ban sticky? */
-int u_sticky_ban PROTO2(struct userrec *, u, char *, uhost)
+int u_sticky_ban (struct userrec * u, char * uhost)
 {
    struct eggqueue *q;
    char host[UHOSTLEN], s[256];
@@ -118,7 +110,7 @@ int u_sticky_ban PROTO2(struct userrec *, u, char *, uhost)
 }
 
 /* set sticky attribute for a ban */
-int u_setsticky_ban PROTO3(struct userrec *, u, char *, uhost, int, sticky)
+int u_setsticky_ban (struct userrec * u, char * uhost, int sticky)
 {
    struct eggqueue *q;
    char host[UHOSTLEN], s[256], s1[256], *p;
@@ -144,12 +136,10 @@ int u_setsticky_ban PROTO3(struct userrec *, u, char *, uhost, int, sticky)
 	 chg_q(q, s1);
 	 if (!noshare) {
 	    if (strcasecmp(u->handle, BAN_NAME) == 0)
-	       shareout("stick %s %c\n", uhost, sticky);
-	    else {
-	       struct chanset_t *cst = findchan(u->info);
-	       if (cst->stat & CHAN_SHARED)
-		  shareout("stick %s %c %s\n", uhost, sticky, u->info);
-	    }
+	      shareout(NULL,"stick %s %d\n", uhost, sticky);
+	    else 
+	      shareout(findchan(u->info),"stick %s %d %s\n", uhost, sticky,
+		       u->info);
 	 }
 	 return 1;
       }
@@ -162,7 +152,7 @@ int u_setsticky_ban PROTO3(struct userrec *, u, char *, uhost, int, sticky)
 }
 
 /* returns 1 if temporary ban, 2 if permban, 0 if not a ban at all */
-int u_equals_ban PROTO2(struct userrec *, u, char *, uhost)
+int u_equals_ban (struct userrec * u, char * uhost)
 {
    struct eggqueue *q;
    char host[UHOSTLEN], s[256], *p;
@@ -184,7 +174,7 @@ int u_equals_ban PROTO2(struct userrec *, u, char *, uhost)
    return 0;			/* not equal */
 }
 
-int sticky_ban PROTO1(char *, uhost)
+int sticky_ban (char * uhost)
 {
    struct userrec *u;
    u = get_user_by_handle(userlist, BAN_NAME);
@@ -193,7 +183,7 @@ int sticky_ban PROTO1(char *, uhost)
    return u_sticky_ban(u, uhost);
 }
 
-int setsticky_ban PROTO2(char *, uhost, int, par)
+int setsticky_ban (char * uhost, int par)
 {
    struct userrec *u;
    u = get_user_by_handle(userlist, BAN_NAME);
@@ -202,7 +192,7 @@ int setsticky_ban PROTO2(char *, uhost, int, par)
    return u_setsticky_ban(u, uhost, par);
 }
 
-int equals_ban PROTO1(char *, uhost)
+int equals_ban (char * uhost)
 {
    struct userrec *u;
    u = get_user_by_handle(userlist, BAN_NAME);
@@ -211,7 +201,7 @@ int equals_ban PROTO1(char *, uhost)
    return u_equals_ban(u, uhost);
 }
 
-int equals_ignore PROTO1(char *, uhost)
+int equals_ignore (char * uhost)
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -234,7 +224,7 @@ int equals_ignore PROTO1(char *, uhost)
    return 0;			/* not equal */
 }
 
-int u_match_ban PROTO2(struct userrec *, u, char *, uhost)
+int u_match_ban (struct userrec * u, char * uhost)
 {
    struct eggqueue *q;
    char host[UHOSTLEN], s[256];
@@ -249,7 +239,7 @@ int u_match_ban PROTO2(struct userrec *, u, char *, uhost)
    return 0;
 }
 
-int match_ban PROTO1(char *, uhost)
+int match_ban (char * uhost)
 {
    struct userrec *u;
    u = get_user_by_handle(userlist, BAN_NAME);
@@ -259,7 +249,7 @@ int match_ban PROTO1(char *, uhost)
 }
 
 /* if any bans match this wildcard expression, refresh them on the channel */
-void refresh_ban_kick PROTO3(struct chanset_t *, chan, char *, user, char *, nick)
+void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick)
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -273,12 +263,12 @@ void refresh_ban_kick PROTO3(struct chanset_t *, chan, char *, user, char *, nic
 	 strcpy(s, q->item);
 	 splitc(host, s, ':');
 	 if (wild_match(host, user)) {
-	    /* if this ban was placed in the last 60 seconds, it may not have */
-	    /* propagated yet -- or it could be a desync, which can't be solved */
-	    /* from here. :(  */
-	    if (q->stamp < time(NULL) - 60) {
+	    /* if this ban was placed in the last 60 seconds, it may not */
+	    /* have propagated yet -- or it could be a desync, which */
+            /* can't be solved from here. :(  */
+	    if (q->stamp < now - 60) {
 	       if (member_op(chan->name, nick))
-		  add_mode(chan, '-', 'o', nick);	/* guess it can't hurt */
+		  add_mode(chan, '-', 'o', nick);  /* guess it can't hurt */
 	       add_mode(chan, '+', 'b', host);
 	       flush_mode(chan, QUICK);		/* do it IMMEDIATELY */
 	       splitc(ts, s, ':');
@@ -297,8 +287,9 @@ void refresh_ban_kick PROTO3(struct chanset_t *, chan, char *, user, char *, nic
 		  splitc(ts, s, ':');
 		  last_active = (time_t) atol(ts);
 		  /* (update last-active timestamp) */
-		  sprintf(s1, "%s:%s%lu%s:+%lu:%lu:%s", host, new_expire ? "+" : "",
-			  expire_time, sticky ? "*" : "", time_added, time(NULL), s);
+		  sprintf(s1, "%s:%s%lu%s:+%lu:%lu:%s", 
+			host, new_expire ? "+" : "", expire_time, 
+				sticky ? "*" : "", time_added, now, s);
 		  chg_q(q, s1);
 	       }
 	       /* split off nick */
@@ -315,9 +306,11 @@ void refresh_ban_kick PROTO3(struct chanset_t *, chan, char *, user, char *, nic
 		     *p = ',';
 		     p = strchr(s, '`');
 		  }
-		  mprintf(serv, "KICK %s %s :banned: %s\n", chan->name, nick, s);
+		  mprintf(serv, "KICK %s %s :%s: %s\n", chan->name, nick, 
+				IRC_BANNED, s);
 	       } else
-		  mprintf(serv, "KICK %s %s :You are banned.\n", chan->name, nick);
+		  mprintf(serv, "KICK %s %s :%s\n", chan->name, nick,
+				IRC_YOUREBANNED);
 	    }
 	 }
 	 q = q->next;
@@ -330,12 +323,11 @@ void refresh_ban_kick PROTO3(struct chanset_t *, chan, char *, user, char *, nic
    }
 }
 
-int u_delban PROTO2(struct userrec *, u, char *, who)
+int u_delban (struct userrec * u, char * who)
 {
    int i, j;
    struct eggqueue *q;
    char s[256], host[UHOSTLEN];
-   struct chanset_t *cst;
    i = 0;
    if (atoi(who)) {
       j = atoi(who);
@@ -371,18 +363,15 @@ int u_delban PROTO2(struct userrec *, u, char *, who)
       if (!noshare) {
 	 /* distribute chan bans differently */
 	 if (strcasecmp(u->handle, BAN_NAME) == 0)
-	    shareout("-ban %s\n", who);
-	 else {
-	    cst = findchan(u->info);
-	    if (cst->stat & CHAN_SHARED)
-	       shareout("-banchan %s %s\n", u->info, who);
-	 }
+	   shareout(NULL,"-ban %s\n", who);
+	 else 
+	   shareout(findchan(u->info),"-banchan %s %s\n", u->info, who);
       }
    }
    return i;
 }
 
-int delban PROTO1(char *, who)
+int delban (char * who)
 {
    struct userrec *u;
    int i;
@@ -397,7 +386,7 @@ int delban PROTO1(char *, who)
    return i;
 }
 
-int delignore PROTO1(char *, ign)
+int delignore (char * ign)
 {
    struct userrec *u;
    int i, j;
@@ -437,20 +426,19 @@ int delignore PROTO1(char *, ign)
       if (u->host == NULL)
 	 deluser(IGNORE_NAME);
       if (!noshare)
-	 shareout("-ignore %s\n", ign);
+	 shareout(NULL,"-ignore %s\n", ign);
    }
    return i;
 }
 
 /* new method of creating bans */
 /* if first char of note is '*' it's a sticky ban */
-int u_addban PROTO5(struct userrec *, u, char *, ban, char *, from, char *, note,
-		     time_t, expire_time)
+int u_addban (struct userrec * u, char * ban, char * from, char * note,
+		     time_t expire_time)
 {
    char s[UHOSTLEN], host[UHOSTLEN], *p, oldnote[256];
-   time_t t, now = time(NULL);
+   time_t t;
    int sticky = 0;
-   struct chanset_t *cst;
    strcpy(host, ban);
    /* choke check: fix broken bans (must have '!' and '@') */
    if ((strchr(host, '!') == NULL) && (strchr(host, '@') == NULL))
@@ -466,7 +454,7 @@ int u_addban PROTO5(struct userrec *, u, char *, ban, char *, from, char *, note
    }
    sprintf(s, "%s!%s", botname, botuserhost);
    if (wild_match(host, s)) {
-      putlog(LOG_MISC, "*", "Wanted to ban myself: deflected.");
+      putlog(LOG_MISC, "*", IRC_IBANNEDME);
       return 0;
    }
    if (u_equals_ban(u, host))
@@ -475,8 +463,8 @@ int u_addban PROTO5(struct userrec *, u, char *, ban, char *, from, char *, note
    if (expire_time != 0L && note[0] == '*')
       strcpy(note, &note[1]);
    /* new format: */
-   sprintf(s, "%s:+%lu%s:+%lu:%lu:%s:", host, expire_time, note[0] == '*' ? "*" : "",
-	   now, now, from);
+      sprintf(s, "%s:+%lu%s:+%lu:%lu:%s:", 
+	    host, expire_time, note[0] == '*' ? "*" : "", now, now, from);
    if (note[0] == '*') {
       strcpy(note, &note[1]);
       sticky = 1;
@@ -511,18 +499,17 @@ int u_addban PROTO5(struct userrec *, u, char *, ban, char *, from, char *, note
       } else
 	 strcpy(note, oldnote);
       if (strcasecmp(u->handle, BAN_NAME) == 0)
-	 shareout("+ban %s +%lu %s %s\n", host, t, from, note);
-      else {
-	 cst = findchan(u->info);
-	 if (cst->stat & CHAN_SHARED)
-	    shareout("+banchan %s +%lu %s %s %s\n", host, t, u->info, from, note);
-      }
+	shareout(NULL,"+ban %s +%lu %s %s\n", host, t, from, note);
+      else 
+	shareout(findchan(u->info),"+banchan %s +%lu %s %s %s\n", 
+		 host, t, u->info, from, note);
    }
    strcpy(note, oldnote);
    return 1;
 }
 
-void addban PROTO4(char *, ban, char *, from, char *, note, time_t, expire_time)
+void addban (char * ban, char * from, char * note, 
+	     time_t expire_time)
 {
    struct userrec *u;
    u = get_user_by_handle(userlist, BAN_NAME);
@@ -534,12 +521,11 @@ void addban PROTO4(char *, ban, char *, from, char *, note, time_t, expire_time)
    u_addban(u, ban, from, note, expire_time);
 }
 
-void addignore PROTO4(char *, ign, char *, from, char *, mnote, time_t, expire_time)
+void addignore (char * ign, char * from, char * mnote, time_t expire_time)
 {
    struct userrec *u;
    char s[UHOSTLEN], oldnote[256], *p, note[81];
-   time_t t, now;
-   now = time(NULL);
+   time_t t;
    strcpy(note, mnote);
    if (equals_ignore(ign))
       delignore(ign);		/* remove old ban */
@@ -572,12 +558,12 @@ void addignore PROTO4(char *, ign, char *, from, char *, mnote, time_t, expire_t
    else
       u->host = add_q(s, u->host);
    if (!noshare)
-      shareout("+ignore %s +%lu %s %s\n", ign, t, from, oldnote);
+      shareout(NULL,"+ignore %s +%lu %s %s\n", ign, t, from, oldnote);
    strcpy(note, oldnote);
 }
 
 /* grabs and translates the note from a ban (in host form) */
-void getbannote PROTO3(char *, host, char *, from, char *, note)
+void getbannote (char * host, char * from, char * note)
 {
    char *p;
    /* scratch off ban and timestamps */
@@ -606,7 +592,7 @@ void getbannote PROTO3(char *, host, char *, from, char *, note)
 }
 
 /* grabs and translates the note from an ignore (in host form) */
-void getignorenote PROTO3(char *, host, char *, from, char *, note)
+void getignorenote (char * host, char * from, char * note)
 {
    char *p;
    /* scratch off ignore and timestamp */
@@ -635,14 +621,13 @@ void getignorenote PROTO3(char *, host, char *, from, char *, note)
 }
 
 /* take host entry from ban list and display it ban-style */
-void display_ban PROTO5(int, idx, int, number, char *, host, struct chanset_t *, chan,
-			int, show_inact)
+void display_ban (int idx, int number, char * host, 
+		  struct chanset_t * chan, int show_inact)
 {
    char ban[UHOSTLEN], ts[21], note[121], dates[81], from[81], s[41],
    *p;
-   time_t expire_time, time_added, last_active, now;
+   time_t expire_time, time_added, last_active;
    int sticky = 0;
-   now = time(NULL);
    /* split off ban and expire-time */
    splitc(ban, host, ':');
    splitc(ts, host, ':');
@@ -666,9 +651,11 @@ void display_ban PROTO5(int, idx, int, number, char *, host, struct chanset_t *,
       splitc(ts, host, ':');
       last_active = (time_t) atol(ts);
       daysago(now, time_added, note);
-      sprintf(dates, "Created %s", note);
+      sprintf(dates, "%s %s", BANS_CREATED, note);
       if (time_added < last_active) {
-	 strcat(dates, ", last used ");
+	 strcat(dates, ", ");
+	 strcat(dates, BANS_LASTUSED);
+	 strcat(dates, " ");
 	 daysago(now, last_active, note);
 	 strcat(dates, note);
       }
@@ -722,7 +709,7 @@ void display_ban PROTO5(int, idx, int, number, char *, host, struct chanset_t *,
 	 if (dates[0])
 	    dprintf(idx, "        %s\n", dates);
       } else {
-	 dprintf(idx, "BAN (inactive): %s %s\n", ban, s);
+	 dprintf(idx, "BAN (%s): %s %s\n", BANS_INACTIVE, ban, s);
 	 dprintf(idx, "  %s: %s\n", from, note);
 	 if (dates[0])
 	    dprintf(idx, "  %s\n", dates);
@@ -731,12 +718,11 @@ void display_ban PROTO5(int, idx, int, number, char *, host, struct chanset_t *,
 }
 
 /* take host entry from ignore list and display it ignore-style */
-void display_ignore PROTO3(int, idx, int, number, char *, host)
+void display_ignore (int idx, int number, char * host)
 {
    char ign[UHOSTLEN], ts[21], note[121], dates[81], from[81], s[41],
    *p;
-   time_t expire_time, time_added, now;
-   now = time(NULL);
+   time_t expire_time, time_added;
    /* split off host and expire-time */
    splitc(ign, host, ':');
    splitc(ts, host, ':');
@@ -791,7 +777,7 @@ void display_ignore PROTO3(int, idx, int, number, char *, host)
       if (note[0])
 	 dprintf(idx, "        %s: %s\n", from, note);
       else
-	 dprintf(idx, "        placed by %s\n", from);
+	 dprintf(idx, "        %s %s\n", BANS_PLACEDBY, from);
       if (dates[0])
 	 dprintf(idx, "        %s\n", dates);
    } else {
@@ -799,13 +785,13 @@ void display_ignore PROTO3(int, idx, int, number, char *, host)
       if (note[0])
 	 dprintf(idx, "  %s: %s\n", from, note);
       else
-	 dprintf(idx, "  placed by %s\n", from);
+	 dprintf(idx, "  %s %s\n", BANS_PLACEDBY, from);
       if (dates[0])
 	 dprintf(idx, "  %s\n", dates);
    }
 }
 
-void tell_bans PROTO3(int, idx, int, show_inact, char *, match)
+void tell_bans (int idx, int show_inact, char * match)
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -819,7 +805,7 @@ void tell_bans PROTO3(int, idx, int, show_inact, char *, match)
       if ((chname[0] == '#') || (chname[0] == '+') || (chname[0] == '&')) {
 	 chan = findchan(chname);
 	 if (chan == NULL) {
-	    dprintf(idx, "No such channel defined.\n");
+	    dprintf(idx, "%s.\n", CHAN_NOSUCH);
 	    return;
 	 }
       } else
@@ -832,9 +818,10 @@ void tell_bans PROTO3(int, idx, int, show_inact, char *, match)
    if (chan == NULL)
       return;			/* i give up then. */
    if (show_inact)
-      dprintf(idx, "Global bans:   (! = not active on %s)\n", chan->name);
+      dprintf(idx, "%s:   (! = %s %s)\n", BANS_GLOBAL, 
+	      BANS_NOTACTIVE, chan->name);
    else
-      dprintf(idx, "Global bans:\n");
+      dprintf(idx, "%s:\n", BANS_GLOBAL);
    u = get_user_by_handle(userlist, BAN_NAME);
    cycle = 0;
    if (u == NULL) {
@@ -844,11 +831,14 @@ void tell_bans PROTO3(int, idx, int, show_inact, char *, match)
    while (u != NULL) {
       if (cycle == 1) {
 	 if (show_inact)
-	    dprintf(idx, "Channel bans for %s:   (! = not active, * = not placed by bot)\n",
-		    chan->name);
+	    dprintf(idx, "%s %s:   (! = %s, * = %s)\n",
+		    BANS_BYCHANNEL, chan->name, 
+		    BANS_NOTACTIVE2,
+		    BANS_NOTBYBOT);
 	 else
-	    dprintf(idx, "Channel bans for %s:  (* = not placed by bot)\n",
-		    chan->name);
+	    dprintf(idx, "%s %s:  (* = %s)\n",
+		    BANS_BYCHANNEL, chan->name, 
+		    BANS_NOTBYBOT);
       }
       q = u->host;
       while ((q != NULL) && (strcasecmp(q->item, "none") != 0)) {
@@ -874,11 +864,11 @@ void tell_bans PROTO3(int, idx, int, show_inact, char *, match)
    }
    tell_chanbans(chan, idx, k, match);
    if ((!show_inact) && (!match[0]))
-      dprintf(idx, "Use '.bans all' to see the total list.\n");
+      dprintf(idx, "%s.\n", BANS_USEBANSALL);
 }
 
 /* list the ignores and how long they've been active */
-void tell_ignores PROTO2(int, idx, char *, match)
+void tell_ignores (int idx, char * match)
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -891,8 +881,8 @@ void tell_ignores PROTO2(int, idx, char *, match)
    }
    q = u->host;
    if (q == NULL)
-      dprintf(idx, "No ignores.\n");
-   dprintf(idx, "Currently ignoring:\n");
+      dprintf(idx, "%s.\n",IGN_NONE);
+   dprintf(idx, "%s:\n", IGN_CURRENT);
    while ((q != NULL) && (strcasecmp(q->item, "none") != 0)) {
       strcpy(s, q->item);
       getignorenote(s, from, note);
@@ -916,9 +906,8 @@ void check_expired_ignores()
    struct userrec *u;
    struct eggqueue *q;
    char s[UHOSTLEN], host[UHOSTLEN];
-   time_t now, expire_time;
+   time_t expire_time;
    u = get_user_by_handle(userlist, IGNORE_NAME);
-   now = time(NULL);
    if (u == NULL)
       return;
    q = u->host;
@@ -938,11 +927,11 @@ void check_expired_ignores()
       }
       if ((expire_time != 0L) && (now >= expire_time)) {
 	 /* expired */
-	 putlog(LOG_MISC, "*", "No longer ignoring %s (expired)", host);
+	 putlog(LOG_MISC, "*", "%s %s (%s)", IGN_NOLONGER, host,
+					MISC_EXPIRED);
 	 delignore(host);
 	 u = get_user_by_handle(userlist, IGNORE_NAME);
-#ifdef SILENCE
-	 {
+	 if (use_silence) {
 	    char *p;
 	    /* possibly an ircu silence was added for this user */
 	    p = strchr(host, '!');
@@ -952,7 +941,6 @@ void check_expired_ignores()
 	       p++;
 	    mprintf(serv, "SILENCE -%s\n", p);
 	 }
-#endif
 	 if (u != NULL)
 	    q = u->host;	/* start over, check for more */
       }
@@ -970,9 +958,8 @@ void check_expired_bans()
    struct eggqueue *q;
    struct chanset_t *chan;
    char s[256], host[UHOSTLEN], note[81];
-   time_t now, ti;
+   time_t ti;
    int expired;
-   now = time(NULL);
    u = get_user_by_handle(userlist, BAN_NAME);
    if (u == NULL)
       q = NULL;
@@ -992,7 +979,8 @@ void check_expired_bans()
 	 expired = ((ti != 0L) && (now - ti >= 60 * ban_time));
       }
       if (expired) {
-	 putlog(LOG_MISC, "*", "No longer banning %s (expired)", host);
+	 putlog(LOG_MISC, "*", "%s %s (%s)", BANS_NOLONGER,
+			 host, MISC_EXPIRED);
 	 chan = chanset;
 	 while (chan != NULL) {
 	    add_mode(chan, '-', 'b', host);
@@ -1025,8 +1013,9 @@ void check_expired_bans()
 	    expired = ((ti != 0L) && (now - ti >= 60 * ban_time));
 	 }
 	 if (expired) {
-	    putlog(LOG_MISC, chan->name, "No longer banning %s on %s (expired)",
-		   host, chan->name);
+	    putlog(LOG_MISC, chan->name, "%s %s %s %s (%s)",
+			BANS_NOLONGER, host, MISC_ONLOCALE,
+			chan->name, MISC_EXPIRED);
 	    add_mode(chan, '-', 'b', host);
 	    u_delban(chan->bans, host);
 	    q = chan->bans->host;
@@ -1037,212 +1026,23 @@ void check_expired_bans()
    }
 }
 
-/* erase old user list, switch to new one */
-void finish_share PROTO1(int, idx)
-{
-   struct userrec *u;
-   int i, j = 0;
-   for (i = 0; i < dcc_total; i++)
-      if ((strcasecmp(dcc[i].nick, dcc[idx].host) == 0) &&
-	  (dcc[i].type == DCC_BOT))
-	 j = i;
-   if (j == 0)
-      return;			/* oh well. */
-   dcc[j].u.bot->status &= ~STAT_GETTING;
-   /* copy the bots over */
-   u = dup_userlist(1);
-   /* read the rest in */
-   if (!readuserfile(dcc[idx].u.xfer->filename, &u)) {
-      putlog(LOG_MISC, "*", "CAN'T READ NEW USERFILE");
-      return;
-   }
-   putlog(LOG_MISC, "*", "Userlist transfer complete; switched over.");
-   clear_userlist(userlist);
-   userlist = u;
-   restore_chandata();
-   unlink(dcc[idx].u.xfer->filename);	/* done with you! */
-   reaffirm_owners();		/* make sure my owners are +n */
-   clear_chanlist();
-   lastuser = banu = ignu = NULL;
-}
-
-void restore_chandata()
-{
-   FILE *f;
-   struct userrec *tbu = NULL;
-   struct chanset_t *cst;
-   char s[181], hand[181], code[181];
-   context;
-   f = fopen(userfile, "r");
-   if (f == NULL) {
-      putlog(LOG_MISC, "*", "* Cannot open userfile to reread channel data");
-      return;
-   }
-   context;
-   fgets(s, 180, f);
-   /* Disregard opening statement.  We already know it should be good */
-   while (!feof(f)) {
-      fgets(s, 180, f);
-      if (!feof(f)) {
-	 rmspace(s);
-	 if ((s[0] != '#') && (s[0] != ';') && (s[0])) {
-	    nsplit(code, s);
-	    rmspace(code);
-	    rmspace(s);
-	    if (strcasecmp(code, "!") == 0) {
-	       if ((hand[0]) && (tbu != NULL)) {
-		  char chname[181], st[181], fl[181];
-		  int flags;
-		  time_t last;
-		  struct chanuserrec *cr = NULL;
-		  nsplit(chname, s);
-		  rmspace(chname);
-		  rmspace(s);
-		  nsplit(st, s);
-		  rmspace(st);
-		  rmspace(s);
-		  nsplit(fl, s);
-		  rmspace(fl);
-		  rmspace(s);
-		  flags = str2chflags(fl);
-		  last = (time_t) atol(st);
-		  if (defined_channel(chname)) {
-		     cst = findchan(chname);
-		     if (!(cst->stat & CHAN_SHARED)) {
-			cr = get_chanrec(tbu, chname);
-			if (cr == NULL) {
-			   add_chanrec_by_handle(tbu, hand, chname, flags, last);
-			   if (s[0])
-			      set_handle_chaninfo(tbu, hand, chname, s);
-			} else {
-			   cr->flags = flags;
-			   cr->laston = last;
-			   if (s[0])
-			      set_handle_chaninfo(tbu, hand, chname, s);
-			}
-		     }
-		  }
-	       }
-	    } else if ((strcasecmp(code, "-") == 0) || (strcasecmp(code, "+") == 0) ||
-		       (strcasecmp(code, "*") == 0) || (strcasecmp(code, "=") == 0) ||
-		       (strcasecmp(code, ":") == 0) || (strcasecmp(code, ".") == 0) ||
-		       (strcasecmp(code, "!!") == 0) || (strcasecmp(code, "::") == 0)) {
-	       /* do nothing */
-	    } else {
-	       strcpy(hand, code);
-	       tbu = get_user_by_handle(userlist, hand);
-	    }
-	 }
-      }
-   }
-}
-
-/* begin the user transfer process */
-void start_sending_users PROTO1(int, idx)
-{
-   struct userrec *u;
-   char s[161], s1[64];
-   int i = 1;
-   struct eggqueue *q;
-   struct chanuserrec *ch;
-   struct chanset_t *cst;
-   sprintf(s, ".share.user%lu", time(NULL));
-   debug0("ufsend: copying userlist");
-   u = dup_userlist(0);		/* only non-bots */
-   debug0("ufsend: writing temporary userfile");
-   write_tmp_userfile(s, u);
-   clear_userlist(u);
-   debug0("ufsend: starting file transfer socket");
-#ifdef MODULES
-   {
-      module_entry *fs = find_module("transfer", 0, 0);
-      if (fs != NULL) {
-	 Function f = fs->funcs[TRANSFER_RAW_DCC];
-	 i = f(s, "*users", "(users)", s);
-      }
-   }
-#else
-#ifndef NO_FILE_SYSTEM
-   i = raw_dcc_send(s, "*users", "(users)", s);
-#endif
-#endif
-   if (i > 0) {			/* abort */
-      unlink(s);
-      tprintf(dcc[idx].sock, "error Can't send userfile to you (internal error)\n");
-      dcc[idx].u.bot->status &= ~STAT_SHARE;
-      return;
-   }
-   dcc[idx].u.bot->status |= STAT_SENDING;
-   i = dcc_total - 1;
-   strcpy(dcc[i].host, dcc[idx].nick);	/* store bot's nick */
-#ifdef HAVE_NAT
-   tprintf(dcc[idx].sock, "ufsend %lu %d %lu\n", iptolong((IP) inet_addr(natip)), dcc[i].port,
-	   dcc[i].u.xfer->length);
-#else
-   tprintf(dcc[idx].sock, "ufsend %lu %d %lu\n", iptolong(getmyip()), dcc[i].port,
-	   dcc[i].u.xfer->length);
-#endif
-   debug0("ufsend: queueing bot info");
-   /* start up a tbuf to queue outgoing changes for this bot until the */
-   /* userlist is done transferring */
-   new_tbuf(dcc[idx].nick);
-   /* immediately, queue bot hostmasks & addresses (jump-start) */
-   u = userlist;
-   while (u != NULL) {
-      if ((u->flags & USER_BOT) && !(u->flags & USER_UNSHARED)) {
-	 /* send hostmasks */
-	 q = u->host;
-	 while (q != NULL) {
-	    if (strcmp(q->item, "none") != 0) {
-	       sprintf(s, "+bothost %s %s\n", u->handle, q->item);
-	       q_tbuf(dcc[idx].nick, s);
-	    }
-	    q = q->next;
-	 }
-	 /* send address */
-	 sprintf(s, "chaddr %s %s\n", u->handle, u->info);
-	 q_tbuf(dcc[idx].nick, s);
-	 /* send user-flags */
-	 flags2str((u->flags & BOT_MASK), s1);
-	 sprintf(s, "chattr %s %s\n", u->handle, s1);
-	 q_tbuf(dcc[idx].nick, s);
-	 ch = u->chanrec;
-	 while (ch) {
-	    if (ch->flags) {
-	       cst = findchan(ch->channel);
-	       if (cst->stat & CHAN_SHARED) {
-		  chflags2str(ch->flags, s1);
-		  sprintf(s, "chattr %s %s %s\n", u->handle, s1, ch->channel);
-		  q_tbuf(dcc[idx].nick, s);
-	       }
-	    }
-	    ch = ch->next;
-	 }
-      }
-      u = u->next;
-   }
-   /* wish could unlink the file here to avoid possibly leaving it lying */
-   /* around, but that messes up NFS clients. */
-   debug0("ufsend: waiting for connect");
-}
-
 /* update a user's last signon, by host */
-void update_laston PROTO2(char *, chan, char *, host)
+void update_laston (char * chan, char * host)
 {
    struct userrec *u;
    struct chanuserrec *ch;
    u = get_user_by_host(host);
    if (u == NULL)
       return;
-   touch_laston(u, chan, time(NULL));
+   touch_laston(u, chan, now);
    ch = get_chanrec(u, chan);
    if (ch == NULL)
       return;
-   ch->laston = time(NULL);
+   ch->laston = now;
 }
 
 /* return laston time */
-void get_handle_laston PROTO3(char *, chan, char *, nick, time_t *, n)
+void get_handle_laston (char * chan, char * nick, time_t * n)
 {
    struct userrec *u;
    struct chanuserrec *ch;
@@ -1270,7 +1070,7 @@ void get_handle_laston PROTO3(char *, chan, char *, nick, time_t *, n)
    }
 }
 
-void get_handle_chanlaston PROTO2(char *, nick, char *, chan)
+void get_handle_chanlaston (char * nick, char * chan)
 {
    time_t n;
    struct userrec *u;
@@ -1299,7 +1099,7 @@ void get_handle_chanlaston PROTO2(char *, nick, char *, chan)
    }
 }
 
-void set_handle_laston PROTO3(char *, chan, char *, nick, time_t, n)
+void set_handle_laston (char * chan, char * nick, time_t n)
 {
    struct userrec *u;
    struct chanuserrec *ch;
@@ -1316,7 +1116,7 @@ void set_handle_laston PROTO3(char *, chan, char *, nick, time_t, n)
 /* since i was getting a ban list, i assume i'm chop */
 /* recheck_bans makes sure that all who are 'banned' on the userlist are
    actually in fact banned on the channel */
-void recheck_bans PROTO1(struct chanset_t *, chan)
+void recheck_bans (struct chanset_t * chan)
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -1345,7 +1145,7 @@ void recheck_bans PROTO1(struct chanset_t *, chan)
 }
 
 /* find info line for a user and display it if there is one */
-void showinfo PROTO3(struct chanset_t *, chan, char *, who, char *, nick)
+void showinfo (struct chanset_t * chan, char * who, char * nick)
 {
    char s[121], s1[121];
    if (get_attr_handle(who) & USER_BOT)
@@ -1361,12 +1161,46 @@ void showinfo PROTO3(struct chanset_t *, chan, char *, who, char *, nick)
       mprintf(serv, "PRIVMSG %s :[%s] %s\n", chan->name, nick, s);
 }
 
-void tell_user PROTO3(int, idx, struct userrec *, u, int, master)
+/* show user-defined whois fields */
+static void tcl_tell_whois (int idx, char * xtra)
+{
+   int code, lc, xc, qc, i, j;
+   char **list, **xlist, **qlist;
+   context;
+   code = Tcl_SplitList(interp, whois_fields, &lc, &list);
+   if (code == TCL_ERROR)
+      return;
+   context;
+   code = Tcl_SplitList(interp, xtra, &xc, &xlist);
+   if (code == TCL_ERROR) {
+      n_free(list, "", 0);
+      return;
+   }
+   /* scan thru xtra field, searching for matches */
+   context;
+   for (i = 0; i < xc; i++) {
+      code = Tcl_SplitList(interp, xlist[i], &qc, &qlist);
+      context;
+      if ((code == TCL_OK) && (qc == 2)) {
+	 /* ok, it's a valid xtra field entry */
+	 context;
+	 for (j = 0; j < lc; j++)
+	    if (strcasecmp(list[j], qlist[0]) == 0) {
+	       dprintf(idx, "  %s: %s\n", qlist[0], qlist[1]);
+	    }
+	 n_free(qlist, "", 0);
+      }
+   }
+   n_free(list, "", 0);
+   n_free(xlist, "", 0);
+   context;
+}
+
+void tell_user (int idx, struct userrec * u, int master)
 {
    char s[81], s1[81];
-   time_t now;
    int n;
-   time_t t;
+   time_t t,now2;
    struct eggqueue *q;
    struct chanuserrec *ch;
    if (strcmp(u->handle, BAN_NAME) == 0)
@@ -1379,9 +1213,9 @@ void tell_user PROTO3(int, idx, struct userrec *, u, int, master)
    if (t == 0L)
       strcpy(s1, "never");
    else {
-      now = time(NULL) - t;
+      now2 = now - t;
       strcpy(s1, ctime(&t));
-      if (now > 86400) {
+      if (now2 > 86400) {
 	 s1[7] = 0;
 	 strcpy(&s1[11], &s1[4]);
 	 strcpy(s1, &s1[8]);
@@ -1390,17 +1224,17 @@ void tell_user PROTO3(int, idx, struct userrec *, u, int, master)
 	 strcpy(s1, &s1[11]);
       }
    }
-   dprintf(idx, "%-10s%-5s%5d %-25s %s\n", u->handle, u->pass[0] == '-' ? "no" : "yes",
-	   n, s, s1);
+   dprintf(idx, "%-10s%-5s%5d %-25s %s (%-14.14s)\n", u->handle, u->pass[0] == '-' ? "no" : "yes",
+	   n, s, s1, u->lastonchan?u->lastonchan:"nowhere");
    /* channel flags? */
    ch = u->chanrec;
    while (ch != NULL) {
       if (ch->laston == 0L)
 	 strcpy(s1, "never");
       else {
-	 now = time(NULL) - (ch->laston);
+	 now2 = now - (ch->laston);
 	 strcpy(s1, ctime(&(ch->laston)));
-	 if (now > 86400) {
+	 if (now2 > 86400) {
 	    s1[7] = 0;
 	    strcpy(&s1[11], &s1[4]);
 	    strcpy(s1, &s1[8]);
@@ -1455,14 +1289,14 @@ void tell_user PROTO3(int, idx, struct userrec *, u, int, master)
 }
 
 /* show user by ident */
-void tell_user_ident PROTO3(int, idx, char *, id, int, master)
+void tell_user_ident (int idx, char * id, int master)
 {
    struct userrec *u;
    u = get_user_by_handle(userlist, id);
    if (u == NULL)
       u = get_user_by_host(id);
    if (u == NULL) {
-      dprintf(idx, "Can't find anyone matching that.\n");
+      dprintf(idx, "%s.\n", USERF_NOMATCH);
       return;
    }
    dprintf(idx, "HANDLE    PASS NOTES FLAGS                     LAST\n");
@@ -1471,19 +1305,19 @@ void tell_user_ident PROTO3(int, idx, char *, id, int, master)
 
 /* match string: wildcard to match nickname or hostmasks */
 /*               +attr to find all with attr */
-void tell_users_match PROTO6(int, idx, char *, mtch, int, start, int, limit,
-			     int, master, char *, chname)
+void tell_users_match (int idx, char * mtch, int start, int limit,
+		       int master, char * chname)
 {
    struct userrec *u = userlist;
    int fnd = 0, cnt, not = 0, fl;
    struct eggqueue *q;
    char s[UHOSTLEN], *t;
    struct chanuserrec *ch;
-   dprintf(idx, "*** Matching '%s':\n", mtch);
+   dprintf(idx, "*** %s '%s':\n", MISC_MATCHING, mtch);
    cnt = 0;
    dprintf(idx, "HANDLE    PASS NOTES FLAGS                     LAST\n");
    if (start > 1)
-      dprintf(idx, "(skipping first %d)\n", start - 1);
+      dprintf(idx, "(%s %d)\n", MISC_SKIPPING, start - 1);
    t = mtch;
    while ((t != NULL) && ((*t == '+') || (*t == '-'))) {
       char c = 0, *tt;
@@ -1523,14 +1357,14 @@ void tell_users_match PROTO6(int, idx, char *, mtch, int, start, int, limit,
 	    if ((cnt <= limit) && (cnt >= start))
 	       tell_user(idx, u, master);
 	    if (cnt == limit + 1)
-	       dprintf(idx, "(more than %d matches; list truncated)\n", limit);
+	       dprintf(idx, MISC_TRUNCATED, limit);
 	 }
       } else if (wild_match(mtch, u->handle)) {
 	 cnt++;
 	 if ((cnt <= limit) && (cnt >= start))
 	    tell_user(idx, u, master);
 	 if (cnt == limit + 1)
-	    dprintf(idx, "(more than %d matches; list truncated)\n", limit);
+	    dprintf(idx, MISC_TRUNCATED, limit);
       } else {
 	 fnd = 0;
 	 q = u->host;
@@ -1551,14 +1385,14 @@ void tell_users_match PROTO6(int, idx, char *, mtch, int, start, int, limit,
 		     tell_user(idx, u, master);
 	       }
 	       if (cnt == limit + 1)
-		  dprintf(idx, "(more than %d matches; list truncated)\n", limit);
+	          dprintf(idx, MISC_TRUNCATED, limit);
 	    }
 	    q = q->next;
 	 }
       }
       u = u->next;
    }
-   dprintf(idx, "--- Found %d match%s.\n", cnt, cnt == 1 ? "" : "es");
+   dprintf(idx, MISC_FOUNDMATCH, cnt, cnt == 1 ? "" : "es");
 }
 
 /*
@@ -1576,7 +1410,7 @@ void tell_users_match PROTO6(int, idx, char *, mtch, int, start, int, limit,
    :: channel-specific bans
  */
 
-int readuserfile PROTO2(char *, file, struct userrec **, ret)
+int readuserfile (char * file, struct userrec ** ret)
 {
    char *p, s[181], lasthand[181], host[181], attr[181], pass[181],
     code[181];
@@ -1603,11 +1437,10 @@ int readuserfile PROTO2(char *, file, struct userrec **, ret)
    fgets(s, 180, f);
    if (s[1] < '2') {
       convpw = 1;
-      putlog(LOG_MISC, "*", "* Old userfile (unencrypted passwords)");
-      putlog(LOG_MISC, "*", "* Encrypting as I load ...");
+      putlog(LOG_MISC, "*", "* %s", USERF_OLDFMT);
    }
    if (s[1] > '3')
-      fatal("Don't understand userfile encoding!", 1);
+      fatal(USERF_INVALID, 1);
    gban_total = 0;
    while (!feof(f)) {
       fgets(s, 180, f);
@@ -1719,10 +1552,10 @@ int readuserfile PROTO2(char *, file, struct userrec **, ret)
 	       rmspace(s);
 	       firstxtra = 0;
 	       if ((!attr[0]) || (!pass[0]) || ((!host[0]) && convpw)) {
-		  putlog(LOG_MISC, "*", "* Corrupt user record '%s'!", code);
+		  putlog(LOG_MISC, "*", "* %s '%s'!", USERF_CORRUPT, code);
 		  lasthand[0] = 0;
 	       } else if (is_user2(bu, code)) {
-		  putlog(LOG_MISC, "*", "* Duplicate user record '%s'!", code);
+		  putlog(LOG_MISC, "*", "* %s '%s'!", USERF_DUPE, code);
 		  lasthand[0] = 0;
 	       } else {
 		  flags = str2flags(attr);
@@ -1737,7 +1570,7 @@ int readuserfile PROTO2(char *, file, struct userrec **, ret)
 		  if (strlen(code) > 9)
 		     code[9] = 0;
 		  if (strlen(pass) > 20) {
-		     putlog(LOG_MISC, "*", "* Corrupted password for %s; reset.",
+		     putlog(LOG_MISC, "*", "* %s '%s'", USERF_BROKEPASS,
 			    code);
 		     strcpy(pass, "-");
 		  }
@@ -1774,7 +1607,7 @@ int readuserfile PROTO2(char *, file, struct userrec **, ret)
    fclose(f);
    (*ret) = bu;
    if (ignored[0]) {
-      putlog(LOG_MISC, "*", "Ignored bans for channel(s): %s", ignored);
+      putlog(LOG_MISC, "*", "%s %s", USERF_IGNBANS, ignored);
    }
    return 1;
 }
@@ -1783,7 +1616,7 @@ int readuserfile PROTO2(char *, file, struct userrec **, ret)
 /* 1st time scan for +sh bots and link if none connected */
 /* 2nd time scan for +h bots */
 /* 3rd time scan for +a/+h bots */
-void autolink_cycle PROTO1(char *, start)
+void autolink_cycle (char * start)
 {
    struct userrec *u = userlist, *autc = NULL;
    static int cycle = 0;
@@ -1793,11 +1626,10 @@ void autolink_cycle PROTO1(char *, start)
    /* don't start a new cycle if some links are still pending */
    if (start == NULL) {
       for (i = 0; i < dcc_total; i++) {
-	 if (dcc[i].type == DCC_BOT_NEW)
+	 if (dcc[i].type == &DCC_BOT_NEW)
 	    return;
-	 if (dcc[i].type == DCC_FORK)
-	    if (dcc[i].u.fork->type == DCC_BOT)
-	       return;
+	 if (dcc[i].type == &DCC_FORK_BOT)
+	   return;
       }
    }
    debug1("autolink: begin at: %s", start == NULL ? "(null)" : start);
@@ -1811,13 +1643,12 @@ void autolink_cycle PROTO1(char *, start)
 	 linked = 0;
 	 for (i = 0; i < dcc_total; i++) {
 	    if (strcasecmp(dcc[i].nick, u->handle) == 0) {
-	       if (dcc[i].type == DCC_BOT)
+	       if (dcc[i].type == &DCC_BOT)
 		  linked = 1;
-	       if (dcc[i].type == DCC_BOT_NEW)
+	       if (dcc[i].type == &DCC_BOT_NEW)
 		  linked = 1;
-	       if (dcc[i].type == DCC_FORK)
-		  if (dcc[i].u.fork->type == DCC_BOT)
-		     linked = 1;
+	       if (dcc[i].type == &DCC_FORK_BOT)
+		 linked = 1;
 	    }
 	 }
 	 if (flags_eq(BOT_HUB | BOT_SHARE, u->flags)) {
@@ -1891,7 +1722,7 @@ void autolink_cycle PROTO1(char *, start)
 }
 
 /* returns 1 if Global Ban, 0 otherwise */
-int is_global_ban PROTO1(char *, ban)
+int is_global_ban (char * ban)
 {
    int i, j;
    struct userrec *u;

@@ -1,4 +1,4 @@
-%{+O}
-###  say <text>
-   dumps the text to your current console channel, as if the bot
-   "said" it.
+%{+o|o}
+###  say [channel] <text>
+   dumps the text to your current console channel (or other specified
+   channel), as if the bot "said" it.

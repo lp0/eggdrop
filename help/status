@@ -1,4 +1,4 @@
-%{+M}
+%{+m|m}
 /MSG %B STATUS
    This gives you a little three line display of my current
    status.  The status command in dcc chat is much better.

@@ -1,5 +1,7 @@
-###  bottree
-   shows a tree-format diagram of the bots currently in the botnet.
-   it's just a nice way to get a feel for how the bots are connected
-   physically.
-see also: bots, botinfo
+###  [v]bottree
+   Shows a tree-format diagram of the bots currently in the botnet.
+   It's just a nice way to get a feel for how the bots are connected
+   physically. if 2 bots a sharing, a + will be indicated, or a ?
+   if nothing is known.
+   Use vbottree if you want to see know bot versions.
+See also: bots, botinfo

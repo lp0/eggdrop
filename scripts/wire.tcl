@@ -1,13 +1,14 @@
 #
-#  wire v1.33
+#  wire v1.34
 #    secondary encrypted communications on a botnet
 #    based on wire 1.0 by Robey Pointer
 #    11 September 1996 by Gord-@saFyre
 #    updated 17 September 1996 by Gord-@saFyre
 #    updated 31 October 1996 by Gord-@saFyre
 #    updated 4 November 1996 by Gord-@saFyre
+#    updated 17 Feb 1996 by ButchBub for 1.1
 #
-# requires at least eggdrop v1.0i+
+# requires at least eggdrop v1.1 (get wire v1.33 for pre-1.1)
 #
 # to initiate a secure communications link, decide on
 # a common password between you and the people you want
@@ -17,8 +18,10 @@
 #
 # .wire <encrypt-key>   initiates a wire session
 #
-# .onwire    will return the handle@bot of all other
-#            users on the same wire
+# .onwire    		will return the handle@bot of all other users 
+#			on the same wire
+#
+# .wire off 		Leave the wire.
 #
 
 # initialize arrays
@@ -98,7 +101,7 @@ proc do_wire {hand idx arg} {
 
 proc filt_wire {idx text} {
   global wire nick
-  if {![info exists wire($idx)]} { return 0 }
+  if {![info exists wire($idx)]} { return $text }
   set wire_cmd "!wire[encrypt $wire($idx) "wire"]"
   set hand [idx2hand $idx]
   if {([string compare [string tolower [string range $text 1 2]] "me"] == 0) && ![isalphanum [string index $text 3]]} {
@@ -112,7 +115,7 @@ proc filt_wire {idx text} {
   set x [encrypt $wire($idx) [string range $text 1 end]]
   putwire $wire_cmd $idx $inhand $x
   putallbots "$wire_cmd $outhand $x"
-  return 1
+  return ""
 }
 
 # people vanishing who might still be on the wire
@@ -137,7 +140,7 @@ proc onwire {handle idx arg} {
   global wire wired nick version
   if {![info exists wire($idx)]} {
     putdcc $idx "You aren't on a wire."
-    return 0 
+    return  0
   }
   set wire_cmd "!wire[encrypt $wire($idx) "wire"]"
   set x [encrypt $wire($idx) $handle]
@@ -200,7 +203,7 @@ proc bot_wire {from cmd text} {
     if {$header == "!wirereq"} {
       set fidx [lindex $text 1]
       set fhand [lindex $text 2]
-      if {![info exists wired($cmd)]} {return 0}
+      if {![info exists wired($cmd)]} {return ""}
       set jlist "*"
       foreach j [dcclist] {
         append jlist " [lindex $j 0]"
@@ -248,17 +251,17 @@ proc bot_wire {from cmd text} {
           }
         }
       }
-      return 0
+      return ""
     }
     if {$header == "!wireresp"} {
       set fidx [lindex $text 1]
       set xhand [lindex $text 2]
       set xresp [lindex $text 3]
-      if {![info exists wired($cmd)]} {return 0}
-      if {[lsearch -exact $wired($cmd) $fidx] == -1} {return 0}
-      if {[idx2hand $fidx] != [decrypt $wire($fidx) $xhand]} {return 0}
+      if {![info exists wired($cmd)]} {return ""}
+      if {[lsearch -exact $wired($cmd) $fidx] == -1} {return ""}
+      if {[idx2hand $fidx] != [decrypt $wire($fidx) $xhand]} {return ""}
       putdcc $fidx [decrypt $wire($fidx) $xresp]
-      return 0
+      return "" 
     }
     set header "($header) "
   } {

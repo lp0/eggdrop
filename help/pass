@@ -1,7 +1,7 @@
 /MSG %B PASS <password>
    This sets a password, which lets you use other commands,
    like IDENT.
-%{+O}
+%{+o|o}
    Ops and masters: You need a password to use ANY op or
    master command.
 %{-}

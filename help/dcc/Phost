@@ -1,4 +1,4 @@
-%{+M}
+%{+m|m}
 ###  +host <nickname> <hostmask>
    Adds a hostmask to a user's record on the bot.  The hostmasks
    are where the bot will identify that user from.  Usually you

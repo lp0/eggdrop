@@ -41,7 +41,7 @@ extern int modesperline;
 /***********************************************************************/
 
 /* streamlined by answer */
-int tcl_chanlist STDVAR
+static int tcl_chanlist STDVAR
 {
    memberlist *m;
    int i = 0, j = 0, f = 0, fch = 0, atr = 0, chatr = 0;
@@ -114,7 +114,7 @@ int tcl_chanlist STDVAR
    return TCL_OK;
 }
 
-int tcl_botisop STDVAR
+static int tcl_botisop STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " channel");
@@ -130,7 +130,7 @@ int tcl_botisop STDVAR
    return TCL_OK;
 }
 
-int tcl_isop STDVAR
+static int tcl_isop STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " nick channel");
@@ -146,7 +146,7 @@ int tcl_isop STDVAR
    return TCL_OK;
 }
 
-int tcl_isvoice STDVAR
+static int tcl_isvoice STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " nick channel");
@@ -162,7 +162,7 @@ int tcl_isvoice STDVAR
    return TCL_OK;
 }
 
-int tcl_onchan STDVAR
+static int tcl_onchan STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " nickname channel");
@@ -178,7 +178,7 @@ int tcl_onchan STDVAR
    return TCL_OK;
 }
 
-int tcl_handonchan STDVAR
+static int tcl_handonchan STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " handle channel");
@@ -194,7 +194,7 @@ int tcl_handonchan STDVAR
    return TCL_OK;
 }
 
-int tcl_ischanban STDVAR
+static int tcl_ischanban STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " ban channel");
@@ -210,7 +210,7 @@ int tcl_ischanban STDVAR
    return TCL_OK;
 }
 
-int tcl_getchanhost STDVAR
+static int tcl_getchanhost STDVAR
 {
    struct chanset_t *chan;
    char s[UHOSTLEN];
@@ -225,7 +225,7 @@ int tcl_getchanhost STDVAR
    return TCL_OK;
 }
 
-int tcl_onchansplit STDVAR
+static int tcl_onchansplit STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " nickname channel");
@@ -241,14 +241,16 @@ int tcl_onchansplit STDVAR
    return TCL_OK;
 }
 
-int tcl_maskhost STDVAR
+static int tcl_maskhost STDVAR
 {
    char new[121];
     BADARGS(2, 2, " nick!user@host");
     maskhost(argv[1], new);
     Tcl_AppendResult(irp, new, NULL);
     return TCL_OK;
-} int tcl_killban STDVAR
+} 
+
+static int tcl_killban STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " ban");
@@ -264,7 +266,7 @@ int tcl_maskhost STDVAR
    return TCL_OK;
 }
 
-int tcl_killchanban STDVAR
+static int tcl_killchanban STDVAR
 {
    struct chanset_t *chan;
     BADARGS(3, 3, " channel ban");
@@ -282,7 +284,7 @@ int tcl_killchanban STDVAR
    return TCL_OK;
 }
 
-int tcl_isban STDVAR
+static int tcl_isban STDVAR
 {
    struct chanset_t *chan;
    int ok = 0;
@@ -305,7 +307,7 @@ int tcl_isban STDVAR
    return TCL_OK;
 }
 
-int tcl_ispermban STDVAR
+static int tcl_ispermban STDVAR
 {
    struct chanset_t *chan;
    int ok = 0;
@@ -328,7 +330,7 @@ int tcl_ispermban STDVAR
    return TCL_OK;
 }
 
-int tcl_matchban STDVAR
+static int tcl_matchban STDVAR
 {
    struct chanset_t *chan;
    int ok = 0;
@@ -351,7 +353,7 @@ int tcl_matchban STDVAR
    return TCL_OK;
 }
 
-int tcl_newchanban STDVAR
+static int tcl_newchanban STDVAR
 {
    time_t now = time(NULL), expire_time;
    struct chanset_t *chan;
@@ -400,7 +402,7 @@ int tcl_newchanban STDVAR
    return TCL_OK;
 }
 
-int tcl_newban STDVAR
+static int tcl_newban STDVAR
 {
    time_t now = time(NULL), expire_time;
    struct chanset_t *chan;
@@ -449,7 +451,7 @@ int tcl_newban STDVAR
    return TCL_OK;
 }
 
-int tcl_jump STDVAR
+static int tcl_jump STDVAR
 {
    BADARGS(1, 4, " ?server? ?port? ?pass?");
    if (argc >= 2) {
@@ -469,7 +471,7 @@ int tcl_jump STDVAR
    return TCL_OK;
 }
 
-int tcl_getchanidle STDVAR
+static int tcl_getchanidle STDVAR
 {
    memberlist *m;
    time_t now = time(NULL);
@@ -496,7 +498,7 @@ int tcl_getchanidle STDVAR
    return TCL_OK;
 }
 
-int tcl_chanbans STDVAR
+static int tcl_chanbans STDVAR
 {
    banlist *b;
    struct chanset_t *chan;
@@ -514,7 +516,7 @@ int tcl_chanbans STDVAR
    return TCL_OK;
 }
 
-int tcl_hand2nick STDVAR
+static int tcl_hand2nick STDVAR
 {
    memberlist *m;
    char s[161], h[21];
@@ -538,7 +540,7 @@ int tcl_hand2nick STDVAR
    return TCL_OK;		/* blank */
 }
 
-int tcl_nick2hand STDVAR
+static int tcl_nick2hand STDVAR
 {
    memberlist *m;
    char s[161], h[21];
@@ -558,7 +560,7 @@ int tcl_nick2hand STDVAR
    return TCL_OK;
 }
 
-int tcl_channel_info PROTO2(Tcl_Interp *, irp, struct chanset_t *, chan)
+static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan)
 {
    char s[121];
    get_mode_protect(chan, s);
@@ -625,9 +627,60 @@ int tcl_channel_info PROTO2(Tcl_Interp *, irp, struct chanset_t *, chan)
    return TCL_OK;
 }
 
+extern int chan_hack;
+static int tcl_channel STDVAR
+{
+   struct chanset_t *chan;
+    BADARGS(2, 999, " command ?options?");
+   if (strcmp(argv[1], "add") == 0) {
+      BADARGS(3, 999, " add channel-name ?options?");
+      if (argc == 3)
+	 return tcl_channel_add(irp, argv[2], "");
+      return tcl_channel_add(irp, argv[2], argv[3]);
+   }
+   if (strcmp(argv[1], "set") == 0) {
+      BADARGS(3, 999, " set channel-name ?options?");
+      chan = findchan(argv[2]);
+      if (chan == NULL) {
+	 if (chan_hack == 1)
+	   return TCL_OK; /* ignore channel settings for a static
+			   * channel which has been removed from the config*/
+	 Tcl_AppendResult(irp, "no such channel record", NULL);
+	 return TCL_ERROR;
+      }
+      return tcl_channel_modify(irp, chan, argc - 3, &argv[3]);
+   }
+   if (strcmp(argv[1], "info") == 0) {
+      BADARGS(3, 3, " info channel-name");
+      chan = findchan(argv[2]);
+      if (chan == NULL) {
+	 Tcl_AppendResult(irp, "no such channel record", NULL);
+	 return TCL_ERROR;
+      }
+      return tcl_channel_info(irp, chan);
+   }
+   if (strcmp(argv[1], "remove") == 0) {
+      BADARGS(3, 3, " remove channel-name");
+      chan = findchan(argv[2]);
+      if (chan == NULL) {
+	 Tcl_AppendResult(irp, "no such channel record", NULL);
+	 return TCL_ERROR;
+      }
+      if (serv >= 0)
+	 mprintf(serv, "PART %s\n", chan->name);
+      clear_channel(chan, 0);
+      freeuser(chan->bans);
+      killchanset(argv[2]);
+      return TCL_OK;
+   }
+   Tcl_AppendResult(irp, "unknown channel command: should be one of: ",
+		    "add, set, info, remove", NULL);
+   return TCL_ERROR;
+}
+
 /* parse options for a channel */
-int tcl_channel_modify PROTO4(Tcl_Interp *, irp, struct chanset_t *, chan,
-			      int, items, char **, item)
+int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
+			int items, char ** item)
 {
    int i;
    for (i = 0; i < items; i++) {
@@ -757,132 +810,7 @@ int tcl_channel_modify PROTO4(Tcl_Interp *, irp, struct chanset_t *, chan,
    return TCL_OK;
 }
 
-/* create new channel and parse commands */
-int tcl_channel_add PROTO3(Tcl_Interp *, irp, char *, newname, char *, options)
-{
-   int i;
-   struct chanset_t *chan;
-   int items;
-   char **item;
-   if ((newname[0] != '#') && (newname[0] != '&'))
-      return TCL_ERROR;
-   if (irp)
-      if (Tcl_SplitList(irp, options, &items, &item) != TCL_OK)
-	 return TCL_ERROR;
-   chan = newchanset();
-   chan->name[0] = 0;
-   chan->need_op[0] = 0;
-   chan->need_invite[0] = 0;
-   chan->need_key[0] = 0;
-   chan->need_limit[0] = 0;
-   chan->need_unban[0] = 0;
-   chan->mode_pls_prot = 0;
-   chan->mode_mns_prot = 0;
-   chan->limit_prot = (-1);
-   chan->key_prot[0] = 0;
-   chan->mode_cur = 0;
-   chan->stat = CHAN_DYNAMICBANS | CHAN_GREET | CHAN_PROTECTOPS | CHAN_LOGSTATUS |
-       CHAN_STOPNETHACK;
-   chan->pls[0] = 0;
-   chan->mns[0] = 0;
-   chan->key[0] = 0;
-   chan->rmkey[0] = 0;
-   chan->limit = (-1);
-   chan->idle_kick = 0;
-   for (i = 0; i < 6; i++) {
-      chan->cmode[i].op = NULL;
-      chan->cmode[i].type = 0;
-   }
-   chan->deopnick[0] = 0;
-   chan->deoptime = 0L;
-   chan->deops = 0;
-   chan->kicknick[0] = 0;
-   chan->kicktime = 0L;
-   chan->kicks = 0;
-   strncpy(chan->name, newname, 80);
-   chan->name[80] = 0;
-   if (findchan(newname) != NULL) {
-      /* could be from rehash: ignore re-definition of channel */
-      nfree(chan);
-      /* BUT go ahead and re-parse the settings */
-      chan = findchan(newname);
-      if (setstatic)
-	 chan->stat |= CHANSTATIC;
-      chan->stat &= ~CHANFLAGGED;	/* don't delete me! :) */
-      if (irp)
-	 if (tcl_channel_modify(irp, chan, items, item) != TCL_OK) {
-	    return TCL_ERROR;
-	 }
-      return TCL_OK;
-   }
-   /* okay, parse those commands */
-   if (irp)
-      if (tcl_channel_modify(irp, chan, items, item) != TCL_OK) {
-	 nfree(chan);
-	 return TCL_ERROR;
-      }
-   /* initialize chan->channel info */
-   init_channel(chan);
-   addchanset(chan);
-   chan->bans = NULL;
-   if (setstatic)
-      chan->stat |= CHANSTATIC;
-   /* channel name is stored in info field for sharebot stuff */
-   chan->bans = adduser(chan->bans, "null", "none", "-", 0);
-   set_handle_info(chan->bans, "null", chan->name);
-   if (serv >= 0)
-      mprintf(serv, "JOIN %s %s\n", chan->name, chan->key_prot);
-   return TCL_OK;
-}
-
-int tcl_channel STDVAR
-{
-   struct chanset_t *chan;
-    BADARGS(2, 999, " command ?options?");
-   if (strcmp(argv[1], "add") == 0) {
-      BADARGS(3, 999, " add channel-name ?options?");
-      if (argc == 3)
-	 return tcl_channel_add(irp, argv[2], "");
-      return tcl_channel_add(irp, argv[2], argv[3]);
-   }
-   if (strcmp(argv[1], "set") == 0) {
-      BADARGS(3, 999, " set channel-name ?options?");
-      chan = findchan(argv[2]);
-      if (chan == NULL) {
-	 Tcl_AppendResult(irp, "no such channel record", NULL);
-	 return TCL_ERROR;
-      }
-      return tcl_channel_modify(irp, chan, argc - 3, &argv[3]);
-   }
-   if (strcmp(argv[1], "info") == 0) {
-      BADARGS(3, 3, " info channel-name");
-      chan = findchan(argv[2]);
-      if (chan == NULL) {
-	 Tcl_AppendResult(irp, "no such channel record", NULL);
-	 return TCL_ERROR;
-      }
-      return tcl_channel_info(irp, chan);
-   }
-   if (strcmp(argv[1], "remove") == 0) {
-      BADARGS(3, 3, " remove channel-name");
-      chan = findchan(argv[2]);
-      if (chan == NULL) {
-	 Tcl_AppendResult(irp, "no such channel record", NULL);
-	 return TCL_ERROR;
-      }
-      if (serv >= 0)
-	 mprintf(serv, "PART %s\n", chan->name);
-      clear_channel(chan, 0);
-      freeuser(chan->bans);
-      killchanset(argv[2]);
-      return TCL_OK;
-   }
-   Tcl_AppendResult(irp, "unknown channel command: should be one of: ",
-		    "add, set, info, remove", NULL);
-   return TCL_ERROR;
-}
-
-int tcl_banlist STDVAR
+static int tcl_banlist STDVAR
 {
    struct chanset_t *chan;
    struct userrec *u;
@@ -956,7 +884,7 @@ int tcl_banlist STDVAR
    return TCL_OK;
 }
 
-int tcl_channels STDVAR
+static int tcl_channels STDVAR
 {
    struct chanset_t *chan;
     BADARGS(1, 1, "");
@@ -967,7 +895,7 @@ int tcl_channels STDVAR
    } return TCL_OK;
 }
 
-int tcl_getchanmode STDVAR
+static int tcl_getchanmode STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " channel");
@@ -980,7 +908,7 @@ int tcl_getchanmode STDVAR
    return TCL_OK;
 }
 
-int tcl_getchanjoin STDVAR
+static int tcl_getchanjoin STDVAR
 {
    struct chanset_t *chan;
    char s[21];
@@ -1002,7 +930,7 @@ int tcl_getchanjoin STDVAR
 }
 
 /* flushmode <chan> */
-int tcl_flushmode STDVAR
+static int tcl_flushmode STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " channel");
@@ -1015,7 +943,7 @@ int tcl_flushmode STDVAR
    return TCL_OK;
 }
 
-int tcl_pushmode STDVAR
+static int tcl_pushmode STDVAR
 {
    struct chanset_t *chan;
    char plus, mode;
@@ -1046,7 +974,7 @@ int tcl_pushmode STDVAR
    return TCL_OK;
 }
 
-int tcl_resetbans STDVAR
+static int tcl_resetbans STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " channel");
@@ -1059,7 +987,7 @@ int tcl_resetbans STDVAR
    return TCL_OK;
 }
 
-int tcl_resetchan STDVAR
+static int tcl_resetchan STDVAR
 {
    struct chanset_t *chan;
     context;
@@ -1073,7 +1001,7 @@ int tcl_resetchan STDVAR
    return TCL_OK;
 }
 
-int tcl_topic STDVAR
+static int tcl_topic STDVAR
 {
    struct chanset_t *chan;
     context;
@@ -1087,7 +1015,7 @@ int tcl_topic STDVAR
    return TCL_OK;
 }
 
-int tcl_savechannels STDVAR
+static int tcl_savechannels STDVAR
 {
    context;
    BADARGS(1, 1, "");
@@ -1099,7 +1027,7 @@ int tcl_savechannels STDVAR
    return TCL_OK;
 }
 
-int tcl_loadchannels STDVAR
+static int tcl_loadchannels STDVAR
 {
    context;
    BADARGS(1, 1, "");
@@ -1111,7 +1039,7 @@ int tcl_loadchannels STDVAR
    return TCL_OK;
 }
 
-int tcl_validchan STDVAR
+static int tcl_validchan STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " channel");
@@ -1123,7 +1051,7 @@ int tcl_validchan STDVAR
     return TCL_OK;
 }
 
-int tcl_isdynamic STDVAR
+static int tcl_isdynamic STDVAR
 {
    struct chanset_t *chan;
     BADARGS(2, 2, " channel");
@@ -1136,3 +1064,44 @@ int tcl_isdynamic STDVAR
    Tcl_AppendResult(irp, "0", NULL);
    return TCL_OK;
 }
+
+tcl_cmds tclchan_cmds [] = {
+   
+   { "chanlist", tcl_chanlist },
+   { "botisop", tcl_botisop },
+   { "isop", tcl_isop },
+   { "isvoice", tcl_isvoice },
+   { "onchan", tcl_onchan },
+   { "handonchan", tcl_handonchan },
+   { "ischan", tcl_ischanban },
+   { "getchanhost", tcl_getchanhost },
+   { "onchansplit", tcl_onchansplit },
+   { "maskhost", tcl_maskhost },
+   { "killban", tcl_killban },
+   { "killchanban", tcl_killchanban },
+   { "isban", tcl_isban },
+   { "ispermban", tcl_ispermban },
+   { "matchban", tcl_matchban },
+   { "newchanban", tcl_newchanban },
+   { "newban", tcl_newban },
+   { "jump", tcl_jump },
+   { "getchanidle", tcl_getchanidle },
+   { "chanbans", tcl_chanbans },
+   { "hand2nick", tcl_hand2nick },
+   { "nick2hand", tcl_nick2hand },
+   { "channel", tcl_channel },
+   { "banlist", tcl_banlist },
+   { "channels", tcl_channels },
+   { "getchanmode", tcl_getchanmode },
+   { "getchanjoin", tcl_getchanjoin },
+   { "flushmode", tcl_flushmode },
+   { "pushmode", tcl_pushmode },
+   { "resetbans", tcl_resetbans },
+   { "resetchan", tcl_resetchan },
+   { "topic", tcl_topic },
+   { "savechannels", tcl_savechannels },
+   { "loadchannels", tcl_loadchannels },
+   { "validchan", tcl_validchan },
+   { "isdynamic", tcl_isdynamic },
+   { 0, 0 }
+};

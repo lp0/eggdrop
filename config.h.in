@@ -111,7 +111,13 @@
 #undef MODULES_OK
 
 /* sunos 4.0 *sigh* */
-#undef DLOPEN_MUST_BE_1 
+#undef DLOPEN_1 
+
+/* some systems dont have bzero, so compile in if needed */
+#undef HAVE_BZERO
+
+/* use hpux dynamic linking ? */
+#undef HPUX_HACKS
 
 /* assume nothing */
 #define SIZEOF_INT 0

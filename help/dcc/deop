@@ -1,4 +1,4 @@
-%{+O}
+%{+o|o}
 ###  deop <nickname> [channel]
    will remove chanop from the person you specify, so long as the
    bot is opped on that channel, and the person you specify isn't

@@ -10,9 +10,11 @@ doofus:
 	
 clean:
 	@for x in *.mod; do cd $$x;make clean;cd ..;done
-	@rm -f *.so *~
+	@rm -f *.o *~ static.h
 	
 modules:
 	@for x in *.mod; do cd $$x;${GMAKE} modules;cd ..; done
-	@echo "Successful compiled modules"
-	@echo ""
+
+static:
+	@./buildstatic
+	@for x in *.mod; do cd $$x;${GMAKE} static;cd ..; done

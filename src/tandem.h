@@ -11,31 +11,33 @@
 
 /* keep track of tandem-bots in the chain */
 typedef struct {
-  char bot[10];
-  char via[10];
-  char next[10];
+   char bot[10];
+   char via[10];
+   char next[10];
+   int share;
+   int ver;
 } tand_t;
 
 /* keep track of channel associations */
 typedef struct travis {
-  char name[21];
-  unsigned int channel;
-  struct travis *next;
+   char name[21];
+   unsigned int channel;
+   struct travis *next;
 } assoc_t;
 
 /* keep track of party-line members */
 typedef struct {
-  char nick[10];
-  char bot[10];
-  int sock;
-  int chan;
-  char from[41];
-  char flag;
-  char status;
-  time_t timer;      /* track idle time */
-  char away[61];
+   char nick[10];
+   char bot[10];
+   int sock;
+   int chan;
+   char from[41];
+   char flag;
+   char status;
+   time_t timer;      /* track idle time */
+   char away[61];
 } party_t;
-
+   
 /* status: */
 #define PLSTAT_AWAY   0x01
 

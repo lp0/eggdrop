@@ -1,4 +1,4 @@
-%{+O}
+%{+j}
 ### filestats <user>
      reports on the users upload & download statistics. you need
      at least +j to use this command.

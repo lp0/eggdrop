@@ -3,7 +3,7 @@
  / _ \ / _` |/ _` |/ _` | '__|/ _ \| '_ \
 |  __/| (_| | (_| | (_| | |  | (_) | |_) |
  \___| \__, |\__, |\__,_|_|   \___/| .__/
-       |___/ |___/                 |_|     v1.1 ALPHA
+       |___/ |___/                 |_|     v1.2
 
 Please at least SKIM this document before asking questions.
 
@@ -89,7 +89,7 @@ Please at least SKIM this document before asking questions.
        to compile.
 
     2. Edit 'src/eggdrop.h' to your liking if you're the hacker type.
-       (THIS STEP IS OPTIONAL.)
+       (THIS STEP IS OPTIONAL, and nearly irellevant now)
 
     3. Type 'make' from the eggdrop directory.  If you want your bot to run
        from it's own directory (highly recommended), type 'putegg <dir>' to
@@ -118,22 +118,21 @@ Please at least SKIM this document before asking questions.
 
 (4) UPGRADING
 
-    There are many major changes between v0.9 and v1.0 and v1.1 so 
+    There are many major changes between v0.9, v1.0, v1.1 and v1.2 so 
                                PAY ATTENTION
-    to this part if you have a v0.9 or 1.0 bot already.  If you're 
+    to this part if you have a v0.9, 1.0 or 1.1 bot already.  If you're 
     just starting out, you can skip this section.
 
-    to 1.1alpha+
+    to 1.2:
     *  If you run sharebots, you will need to upgrade them all at the
        same time because of the new userfile format.  Older bots will
-       be able to link in, but will not get or send a userfile.
-
-    to 1.0g:
-    *  If you run sharebots, you will need to upgrade them all at the
-       same time because of the new userfile format.  Older bots will
-       be able to link in, but will not get or send a userfile.
-
-    from 0.9 to 1.0:
+       be able to link in, but will not get or send a userfile. 1.2's
+       will also tend to refuse to share with another pre1.2.
+       MAKE A NEW CONFIG FILE from the example, there are some radical
+       extras
+    *  the binding format has change slightly, be aware of this.
+    
+    from 0.9 to 1.2:
     *  You will have to make a new config file.  Because eggdrop is now
        multi-channel, whole sections of the config file have changed --
        particularly the part where you define the channels.  My advice is
@@ -266,7 +265,25 @@ Please at least SKIM this document before asking questions.
      
        Modules are a way of adding extra C code from the bot, much
        like tcl scripts, without requiring the bot recompiling, see
-       doc/MODULES for more info
+       doc/MODULES for more info.
+
+    9. CAN I COMPILE EGGDROP WITHOUT DYNAMIC MODULES?
+    
+       Yes, you can, if ./configure detects that your system CANT run
+       modules it will setup 'make' to link the modules in statically
+       for you, you can also choose this option if you can do dynamic
+       modules by typing 'make static'. you can also for a static-only
+       system to try and compile the dynamic modules by typing 
+       'make eggdrop'.
+       
+    10. WHERE CAN I GET A PRECOMPILED EGGDROP FOR MY COMPUTER?
+
+       It is HIGHLY recommended AGAINST using precompiled Eggdrops
+       from untrusted sources.  Eggdrop has been a regular target
+       for hacking and crashing.  Distribution of precompiled (binary)
+       versions of Eggdrop are the easiest way of hackers to provide
+       you with the easiest (and most dangerous) way of gaining access
+       to not only your bot, but to your computer account directly.
        
 (6) SETTING UP A CRONTAB
 

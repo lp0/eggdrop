@@ -8,7 +8,7 @@ HELP
 NOTES
 WHOIS
 PASS
-%{+o}
+%{+o|o}
 OP
 INVITE
 GO
@@ -18,7 +18,7 @@ JUMP
 MEMORY
 REHASH
 RESET
-%{+M}
+%{+m|m}
 STATUS
 %{end}
 For help on a command, /MSG %B HELP <command>

@@ -1,4 +1,4 @@
-### Module information
+### Module information (not finished yet, but getting there)
 
 What: modules are portions of code which are loaded seperately to the
       bot itself, which provided extra services. eg. filesys module
@@ -9,8 +9,7 @@ Why:  it allows the core eggdrop, that which is minimally required to be
       bot without recompiling the whole thing.
       
 How:  run ./configure as normal, then 'make eggmod' to make the eggdrop
-      with module support, then 'make modules' to make the actual
-      modules (eg filesys.so).
+      with module support, this will also compile the modules.
       
       next do one of two things to load the module:
       from the partyline (as an owner) type:
@@ -23,9 +22,6 @@ How:  run ./configure as normal, then 'make eggmod' to make the eggdrop
       
       to see your currently running modules type '.modules'
 
-Platforms: Currently TESTED & working on Linux, FreeBSD, BSDI3.0, sunos4
-      osf may work???
-      
 CURRENT MODULES:
 
 assoc       : assoc support happily load & unload at will
@@ -35,6 +31,8 @@ blowfish    : use it (or some other encryption module someone might
 	      use 'loadmodule blowfish.c' in your config file,
 	      it's relatively safe to load&unload once your running, but
 	      remember, whilst it's unloaded, no-one can login.
+transfer    : handles the transfer of files via botnet or dcc, this is
+              REQUIRED for file sharing.
 filesys     : the file system, this is relatively stable and you should be
               able to load & unload at will, with the following restriction.
 	      and users in the file are will currently just hang when you
@@ -44,205 +42,382 @@ filesys     : the file system, this is relatively stable and you should be
 	      
 This is VERY experimantal at this stage, so be wary :)
 
-PROGRAMMING THE SUCKERS:
+PROGRAMMING THE SUCKERS: (The step by step guide)
+note: this is for a simple module of 1 source file, if you're doing a multiple
+source file module, you shouldn't need to read this anyway ;)
 
-your module should have the following function as non-static :
+(a) create a src/mod/module.mod directory in your eggdrop distro
+    (where module is the module name) and cd to it.
+    
+(b) create a small file called Makefile with the following contents:
 
-char * module_start ()             - this is called when your module is loaded
-                                     return NULL on success or an error
-                                     message otherwise
-				     this MUST call module_register contain
-				     a valid list of callable functions 
-				     (at least 4 ) :
-				     
-   module_function function_table[0] = modules_start
-   module_function function_table[1] = modules_close
-   module_function function_table[2] = modules_expmem
-   module_function function_table[3] = modules_report
-	  
+FILENAME=module
+include ../Makefile.generic
 
-the other 3 functions are :
+(again with module as the module name), this ensures a 'make eggmod' will
+compile it.
 
-char * module_close ()             - this is called when your module is being
-                                     unloaded, return NULL if its successfull
-				     or an error message otherwise, which will
-				     case the module to *NOT* be removed
-				     
-int module_expmem ()               - if you allocate ANY memory (using
-                                     modmalloc/modfree) it's wise to provide
-				     this, eventually I'll have -DEBUG_MEM
-				     support and this will be needed
-				     
-void module_report (int sock)      - this is called by .status all/write_debug
-                                     and .modules, use it to provide a breif
-				     meaningfull report on the statu of the 
-				     module
+(c) next you want to create a file called module.c (again module is the
+module name), and here's where the work starts :)
 
-Functions you can call:
-all the normal eggdrop functions, although this may change later, since it's
-a bit iffy at the moment, see src/mod/module.h for currently avaliable
-functions.
+   (1) things you need to include in your source code.
+       (i) #define MODULE_NAME "module-name"
+           You MUST use this, it's required by several short cuts in the
+	   code, it's gotta be the name you will be using in .loadmodule
+       (ii) #include "../module.h"
+           this provides all the accessible functions in eggdrop,
+	   examile closely src/mod/module.h to find a list of functions
+	   avaliable (not, this is still in flux, and you will need to
+	   recompile a module when a new version comes out)
+       (iii) and other standard c include files you might need
+           (note stdio.h string.h stdlib.h & sys/types.h are already included)
+       (iv) Function * global; 
+           This variable provides access to all the eggdrop functions, without
+	   it you can't call any eggdrop functions (heck, the module wont
+	   even load)
+   (2) CORE functions every module needs.
+*SIDENOTE* I suggest in a single source file module you define all
+functions/variables (except global & module_start) as static, this will
+drastically reduce the size of modules on decent systems.
+       
+       in each of these cases MODULE = module name
+       
+       (i) char * MODULE_start(Function * func_table)
+           - this module is called when the module is first loaded,
+	   you MUST do serveral things in this function
+	   (a) global = func_table;  (so you can make eggdrop calls)
+	   (b) module_register(MODULE_NAME,MODULE_table,major,minor);
+	       this records details about the module for other modules
+	       & eggdrop itself to access, major is a major version number,
+	       minor is a minor version number, MODULE_table is a function 
+	       table (see below)
+	   (c) module_depend(MODULE_NAME,"another-module",major,minor);
+	       this lets eggdrop know that your module NEEDS "another-module"
+	       of major version 'major' and at least minor version 'minor'
+	       to run and hence should try to load it if it's not already here
+	       this will return 1 on success, or 0 if it cant be done
+	       (at which stage you should return an error)
+	   (d) any other initialization stuff you desire, see below for
+	       various things you can do.
+	   (e) a return value of some sort, returning NULL implies the module
+	       loaded successfully, and so the bot can continue.
+	       return a non-NULL STRING is an error message, the module 
+	       (and any other dependant modules) will stop loading
+	       and an error will be returned.
+	       
+       (ii) static Function * MODULE_table = {
+                MODULE_start,
+		MODULE_close,
+		MODULE_expmem,
+		MODULE_report,
+		any_other_functions,
+		you_want_to_export
+	    };
+	    ok, it's not a function, it's a list of functions, which any
+	    other module can call up, so you can provide services for other
+	    modules (eg transfer has raw_dcc_send in it's table to allow
+	    the filesys to send files to others)
+	    the first 4 functions are FIXED, you MUST have them, they
+	    provide important system info.
+	   
+       (iii) static char * MODULE_close ()
+            - this is called when the module is unloaded..
+	    apart from tidying any relevant data (I suggest you be thorough,
+	    we dont want any trailing garbage from modules) you MUST do the
+            following:
+	    (a) module_undepend(MODULE_NAME);
+	        this lets eggdrop know your module no-longer depends on 
+		any other modules.
+	    (b) return a value, NULL implies success, non-NULL STRING implies
+	        the module cannot be unloaded for some reason and hence
+		the bot should leave it in (see blowfish for an example)
+		
+       (iv) static int MODULE_expmem () 
+            this should tally all memory you allocate/deallocate within
+	    the module (using modmalloc & modfree), it's used by memory
+	    debugging to track memory faults, and by .status to total up
+	    memory usage.
+	    
+       (v) static void MODULE_report (int idx) 
+            this should provide a relatively short report of module status
+	    (for .modules/.status)
+	    
+   (c) AVALIABLE FUNCTIONS - this is what ppl want no? :)
+       (i) reliable ones, you can RELY on these functions being avaliable,
+           they may move in the tables for the moment (since it's a work
+	   in progress) but they will be there...
+	   
+void * modmalloc (int a);   - allocates a bytes
+void   modfree (void * a);  - frees a modmalloc'd block
+       modcontext;          - actually a #define, records the current
+                            - possition in execution, for debugging
+void   modprintf (int idx,char * format, ... ) - just like normal printf,
+                            outputs to a dcc/socket/server, 
+			    idx is a normal dcc idx OR if < 0 is a sock #
+			    OR one of: DP_LOG (send to log file)
+			    DP_STDOUT (send to stdout)
+			    DP_SERVER (send via mode queue to sever)
+			    DP_HELP   (send via help queue to sever)
 
-char * load_module (char * module_name) - load another module :)
+int    module_register ( char * module_name, 
+                         Function * function_table,
+			 int major, int minor )
+	      - see above for what/who/why/etc
+const module_entry * module_find ( char * module_name, int major, int minor);
+              - look for a module, (matching major, >= minor) and return
+	        info about it....members of module_entry...
+		   char * name; - module name (duh)
+		   int major;   - real major version
+		   int minor;   - real minor version
+		   Function * funcs; - function table (see above)
 
-char * unload_module (char * module_name) - unload another module
+int    module_depend ( char * module_name, char * needed_module,
+                       int major, int minor )
+	      - marks your module (module_name) as needing needed_module
+	        (matching major, >= minor) and tries to load said module
+		if it's not already loaded. returns 1 on success
+int    module_undpend ( char * module_name)
+              - marks your module as no longer needing any of it's
+                dependancies
 
-module_entry * find_module (char * name, int major, int minor)
-                                   - look for another module if it's loaded,
-				     with the given major version and at least
-				     the minor version
-				     
-int register_module (char * name, module_function * table, int major, int minor) 
-                                   - register info about your module, make
-				     sure name is the same as the filename
-				     (- the .so ;)
-				     
-int depend (char * yourmodule,char * another, int major, int minor) 
-                                   - let eggdrop know your modules depends
-				     on another module of the given version
-				     numbers, eg if we make a shareusers
-				     module, the you tell it
-				     depend("shareuser","filesys",1,0);
-				     and it wont let filesys be unloaded
-				     
-int undepend (char * yourmodule,char * another) 
-                                   - removes the dependancy
-				   
-void * modmalloc (int size);       - memory allocation/deallocation within
-void modfree (void * ptr);         - modules DONOT use nmalloc/nfree cause
-                                     that will mess up memory debugging
+void add_hook (int hook_num, Function * funcs)
+void del_hook (int hook_num, Function * funcs)
+void next_hook (int hook_num, Function * funcs)
 
-void add_hook (int hook_num, void * func) - add & remove various hooks into
-void del_hook (int hook_num, void * func) - the code.. these include..
+used for adding removing hooks into eggdrop code, on various events, these
+functions are called, depending on the hook
 
-int activity_hook(int idx,char * buf,int len)
-#define HOOK_ACTIVITY  - any unhandled activity on an unkown
-                         socket type, return 1 if you handle it
-			 0 to pass it on
+valid hooks:
 
-int eof_hook(int idx) 
-#define HOOK_EOF       - similar situation for unknown sockets that have
-                         an EOF situation, again return 1 if handled 0 if
-			 unhandled
-
-int timeout_hook(int ixd)
-#define HOOK_TIMEOUT   - you should check this idx for any timeout situation
-                         when this is called again 1 handled, 0 unhandled
-
-int do_connect_hook (int idx) 
-#define HOOK_CONNECT   - this occurs when un unknown DCC_FORK type succesfully
-                         connects to it's endpoint, again 1/handled,
-                         0/unhandled
-
-int do_got_dcc_hook (char *nick,char *from,char *code,char *msg) 
-#define HOOK_GOT_DCC   - this is called when a /dcc <something> of unknown
-                         type occurs, say you wanna support /dcc snarf, well
-			 this is the hook to use, guess the 1/0 return
-                         situation :)
-
-void minutely_hook();  - these 4 are called whenever a time event comes up
-#define HOOK_MINUTELY  - minutely every minute, hourly every hour (at the
-void hourly_hook();    - time the users are notified of notes), daily at 
-#define HOOK_HOURLY    - midnight every day, and userfile everytime the 
-void daily_hook();     - userfile is written, they are ALL called, whatever
-#define HOOK_DAILY     - they return
-void userfile_hook();
-#define HOOK_USERFILE
-
-The rest of these are situation specific hooks, which may be solved in another
-manner later, but for now they're hooks
-
-   these are all used by the assoc module, for events which may occur,
-   and are ignored in the normal bot, but with the assoc module added have
-   meaning, unless you want to do some new method of assoc'n dont bother :)
+HOOK_GOT_DCC : bot scans through the functions, calling them, until
+               ones returns 1 (handled), normaly return 0 if you dont handle
+	       it
+function format:  
+int got_dcc_hook ( char * nick, char * from, char * code, char * msg);
+   nick - nick of user /dcc'n the bot
+   from - user@host of user
+   code - code of dcc (eg CHAT/SEND/RESUME/FART/?)
+   msg  - rest of data
    
-      char * get_assoc_name(int)
-      #define HOOK_GET_ASSOC_NAME
-      int get_assoc(char *)
-      #define HOOK_GET_ASSOC
-      void dump_assoc_box(int idx)
-      #define HOOK_DUMP_ASSOC_BOT
-      void kill_all_assocs ()
-      #define HOOK_KILL_ASSOCS
-      void do_bot_assoc (int idx, char * par) 
-      #define HOOK_BOT_ASSOC    
+HOOK_MINUTELY, HOOK_DAILY, HOOK_HOURLY, HOOK_USERFILE:
+   called at their respective times, to indicate time has passed,
+   MINUTELY on the minute, DAILY at midnight, HOURLY at the same time
+   as notify-users-at, USERFILE when the userfile is saved.
    
-   this is called when another bot requests a file from your bot
+HOOK_GETSTRING:
+   used by the new language modules to support funky strings in yur bot.
+   char * getstring_hook (int idx) - for idx values, look into
+   src/lang/num.h & src/lang/english.h (english.so matches the
+   string names to STR_same_name)
+   if you return NULL the next registered function is called, etc
+   since it stores first registered hook last, you can make you module 
+   depend on english.so and then only overide some of the strings.
+   
+HOOK_GET_ASSOC_NAME, HOOK_GET_ASSOC, HOOK_KILL_ASSOCS, HOOK_BOT_ASSOC,
+HOOK_DUMP_BOT_ASSOC:
+   these are used by assoc.so to handle assocs's and hence unless you
+   intend to write a replacement assoc handled, you have no real reason
+   to bother.
+   
+HOOK_ENCRYPT_PASS, HOOK_ENCRYPT, HOOK_DECRYPT:
+   these 3 are used to provide excryption in the bot (with blowfish.so)
+   if you write a replacement encryption module you should replace
+   all of these *NOTE* if you do do this, your userfile passwords will
+   become meaningless (except your bot ones)
+   
+char * module_load ( char * module_name );  tries to load the given module,
+   returns 0 on success, or an error msg
 
-      void do_remote_req (int idx, char * par)    
-      #define HOOK_REMOTE_FILEREQ
+char * module_unload ( char * module_name );  tries to unload the given module,
+   returns as above.
 
-   and of course password encryption, if you write a new encryption module
-   you MUST hook this one
+void add_tcl_commands(tcl_cmds * tab);
+void rem_tcl_commands(tcl_cmds * tab);
+   provides a quick way to load & unload a list of tcl commands, the
+   table is in the form :
+      { char * func_name, Function * function_to_call }
+   these are normal tcl commands (as done in tcl*.c)
+   use { 0, 0 } to indicate the end of the list
+   
+void add_tcl_ints(tcl_ints *);
+void rem_tcl_ints(tcl_ints *);
+   provides a way to add/remove links from c variables to tcl variables
+   (add checks to see if the tcl already exists and copies it over the C one)
+   format of table is :
+      { char * variable_name, int * variable }
+   terminate with {0,0};
+   
+void add_tcl_strings(tcl_strings *);
+void rem_tcl_strings(tcl_strings *);
+   provides a way to add/remove links from c strings to tcl strings
+   (also copies exists tcl values)
+   format:
+      { char * variable_name, char * string, int length, int flags }
+   terminate with { 0, 0, 0, 0 }
+   length: set to 0 if you want a const string.
+   flags:  use STR_DIR if you want a / constantly appended,
+           use STR_PROTECT if you want the variable on set in the configfile,
+	   not during normal usage.
 
-      void encryt_pass(char * string, char * key) 
-      #define HOOK_ENCRYPT_PASS
+void putlog (int logmode, char * channel, char * format, ... )
+   logs a comment, see src/eggdrop.h for logmodes, channel makes
+   a channel or "*" for all.
+   
+void chanout2 (int chan, char * format, ...)
+   outputs something (from the bot) to a botnet channel, and other bots
+   if connected.
+   
+void tandout (char * format, ... )
+void tandout_but (int idx, char * format, ... )
+   outputs a string to all directly connected bots (or all but 1 for
+   tandout_but)
+
+void nsplit ( char * word, char * rest);
+   splits off the first word of the text (rest) 
+   *NOTE* word & rest must be valid char arrays (although word can be NULL,
+   to ignore the word)
+
+void add_builtins (p_tcl_hash_list table, cmd_t * cc);
+void rem_builtins (p_tcl_hash_list table, cmd_t * cc);
+   the method of adding/remove bindings for tcl hash tables.
+   table is a hash table you find with find_hash_table, cc format:
+   { char * command, char * flags, Function * function }
+   this is EXACTLY like a bind command in tcl, (heck, tcl_bind calls
+   the same function this does),
+   function is called with exactly the same args as a tcl binding is
+   (except for dcc which does include the handle in C) with type conversion
+   taken into account (e.g. idx's are ints)
+   return much the same as tcl bindings, use int 0/1 for those
+   which require 0/1 or char * for those which require a string (eg filt)
+   or nothing if no return is required.
+   
+
+int get_attr_handle(char * hand)
+int get_chanattr_handle(char * hand,char * chan)
+   these do the expected, for getting attributes for a given user globally
+   or on a specific channel.
+   
+int get_allattr_handle(char * hand, struct flag_record *)
+   this builds a flag_record based on a users flags, usefull for building a
+   binding which is global to the bot, but still recognises op/master/owner
+   anywhere (eg /msg cmds)
+   
+int pass_match_by_handle(char * name, char * pass)
+   returns 1 if the pass matches the password of name, THE way to check if
+   a password is valid
+   
+int check_tcl_bind(p_tcl_hash_list table,char * mask,
+                   struct flag_record * fr,char * args,int flags)
+   checks an event vs a particular hash table (table), using mask to match
+   vs the mask, fr vs the flags, args is the args passed to tcl & flags
+   are binding flags (explore src/tclhash.c for meaning)
+   return is also in src/tclhash.c
+   
+int new_dcc(struct dcc_table * table, int xtra_mem)
+   creates a new dcc object for the bot, table is a table of relevant
+   pointers for the type (see eggdrop.h for each entry), mem is number of 
+   bytes to allocate for dcc[idx].u.other (idx is returned)
+   
+char * add_cr(char * buf) 
+   converts \n to \n\r in the string (returns new string)
+
+void lostdcc (int idx);
+   indicates that dcc object idx has died, so cleanup is necissary
+void killsock (int sock);
+   indicates the said socket is well and truely defunct ;)
+   
+#define rmspace(a)          (global[MOD_RMSPACE])(a)
+#define movefile(a,b)       (global[MOD_MOVEFILE])(a,b)
+#define copyfile(a,b)       (global[MOD_COPYFILE])(a,b)
+#define chatout             (global[MOD_CHATOUT])
+#define check_tcl_filt(a,b) (((char *(*) PROTO((int,char *))) \
+(global[MOD_CHECKFILT]))(a,b))
+
+#define detect_dcc_flood(a,b,c) \
+((int(*) PROTO((time_t *,struct chat_info *,int))) \
+   (global[MOD_DETECTDCCFLUD]))(a,b,c)
+#define get_handle_by_host(a,b) (global[MOD_GETHANDHOST])(a,b)
+#define stats_add_upload(a,b)   (global[MOD_ADDUPLOAD])(a,b)
+#define stats_add_dnload(a,b)   (global[MOD_ADDDNLOAD])(a,b)
+#define cancel_user_xfer(a)     (global[MOD_CANCELUSER])(a)
+#define set_handle_dccdir(a,b,c)  (global[MOD_SETDCCDIR])(a,b,c)
+#define userlist             (*(struct userrec **)(global[MOD_USERLIST]))
+#define my_memcpy(a,b,c)            (global[MOD_MEMCPY])(a,b,c)
+#define dump_resync(a,b)    (global[MOD_DUMPRESYNC])(a,b)
+#define flush_tbuf(a)     (global[MOD_FLUSH_TBUF])(a)
+#define answer(a,b,c,d,e)   (global[MOD_ANSWER])(a,b,c,d,e)
+#define neterror(a)         (global[MOD_NETERROR])(a)
+
+#define wild_match_file(a,b) (global[MOD_WILDMATCHFILE])(a,b)
+#define flags2str(a,b)       (global[MOD_FLAGS2STR])(a,b)
+#define str2flags(a)         (global[MOD_STR2FLAGS])(a)
+
+#define get_string(a) \
+((char *(*) PROTO((int)))(global[MOD_GETSTRING]))(a)
+
+#define chanout       (global[MOD_CHANOUT])
+#define iptolong(a)   (global[MOD_IPTOLONG])(a)
+#define getmyip()    ((IP)(global[MOD_GETMYIP])())
+
+#define tputs(a,b,c)  (global[MOD_TPUTS])(a,b,c)
+
+#define set_files(a) (global[MOD_SETFILES])(a)
+#define set_handle_uploads(a,b,c,d) (global[MOD_SET_UPLOADS])(a,b,c,d)
+#define set_handle_dnloads(a,b,c,d) (global[MOD_SET_DNLOADS])(a,b,c,d)
+
+#define is_user(a) (global[MOD_ISUSER])(a)
+#define open_listen(a) (global[MOD_OPENLISTEN])(a)
+#define get_attr_host(a) (global[MOD_GET_ATTR_HOST])(a)
+#define my_atoul(a)      (global[MOD_MYATOUL])(a)
+
+#define get_handle_dccdir(a,b) (global[MOD_GETDCCDIR])(a,b)
+#define getsock(a)             (global[MOD_GETSOCK])(a)
+#define open_telnet_dcc(a,b,c) (global[MOD_OPENTELNETDCC])(a,b,c)
+#define do_boot(a,b,c)         (global[MOD_DOBOOT])(a,b,c)
 
 
-Theres also a whole pile of groovy functions for adding/removing tcl
-commands/variables/binding, 
+#define show_motd(a)          (global[MOD_SHOW_MOTD])(a)
+#define telltext(a,b,c) \
+((int(*)(int,char*,struct flag_record *))(global[MOD_TELLTEXT]))(a,b,c)
+#define tellhelp(a,b,c) \
+((int(*)(int,char*,struct flag_record *))(global[MOD_TELLHELP]))(a,b,c)
 
-NOTE the good module write puts add's in module_start and matching 
-rem's in module_close this prevents (a) memory leaks (b) SEGV's
-all these use tables of info, so 1 call to each should be sufficient
-see the filesys module for examples of all of them
-all tables should be terminated by a entry will all 0's
+#define splitc(a,b,c)           (global[MOD_SPLITC])(a,b,c)
+#define nextbot(a)            (global[MOD_NEXTBOT])(a)
+#define in_chain(a)           (global[MOD_IN_CHAIN])(a)
+#define findidx(a)            (global[MOD_FINDIDX])(a)
 
-these add/remove the normal builtin commands, type can be
-BUILTIN_DCC/BUILTIN_FILE/BUILTIN_MSG
-and table is exactly like the tables in hash.h
+#define interp                (*(Tcl_Interp **)(global[MOD_INTERP]))
+#define get_user_by_handle(a,b) (struct userrec *)(global[MOD_GETUSERBYHAND])(a,b)
+#define finish_share(a)       (global[MOD_FINISHSHARE])(a)
+#define cmd_note(a,b)         (global[MOD_CMD_NOTE])(a,b)
 
-   void add_builtins (int type,cmd_t * table)
-   void rem_builtins (int type,cmd_t * table)
+       #if defined(MODULES) && defined(MAKING_MODS)
+#endif
+#ifndef MODULES
 
-these add/removes are for normal tcl commands, the table is just a table of
-entries like { "commandname", tcl_command_function }
 
-   void add_tcl_commands (tcl_cmds * table)
-   void rem_tcl_commands (tcl_cmds * table)
+#define add_hash_table(a,b,c) \
+((p_tcl_hash_list (*) PROTO((char *, int,Function))) \
+(global[MOD_ADD_HASH_TABLE]))(a,b,c)
+#define del_hash_table(a) \
+((void (*) PROTO((p_tcl_hash_list)))(global[MOD_DEL_HASH_TABLE])) (a)
+#define find_hash_table(a) \
+((p_tcl_hash_list (*) PROTO((char *)))(global[MOD_FIND_HASH_TABLE])) (a)
+#define check_validity(a,b) \
+((int (*) PROTO((char *,Function)))(global[MOD_CHECK_VALIDITY]))
 
-these allow you to add traces to strings variables in tcl, it checks if a
-value exists before putting the trace on and copies it over hence you can
-leave settings in the config file, and they are read once the module is loaded
+#define open_telnet(a,b)      (global[MOD_OPEN_TELNET])(a,b)
+#define fix_colon(a)           (global[MOD_FIX_COLON])(a)
 
-STR_PROTECT in flags means the variable can only be set in the config file
-STR_DIR means the variable is a directory and should always have an / on the
-end
-a length of 0 makes the variable read-only
+avaliable integers:
 
-   typedef struct _tcl_strings {
-      char * name;
-      char * buf;
-      int length;
-      int flags;
-   } tcl_strings;
-   #define STR_PROTECT  2
-   #define STR_DIR      1
-   void add_tcl_strings (tcl_strings * table)
-   void rem_tcl_strings (tcl_strings * table)
+dcc_total     : total dcc connections 
+reserved_port : tcp port to use (fixed one)
+now           : current unixtime
 
-these allow you to place traces on integers, again the values a read before
-the trace is placed, preserving the valule.
+avaliable strings:
 
-   typedef struct _tcl_int {
-      char * name;
-      int * val;
-   } tcl_ints;
-   void add_tcl_ints PROTO((tcl_ints *));
-   void rem_tcl_ints PROTO((tcl_ints *));
-
-a couple more usefull functions:
-
-int new_dcc (int type)     - allocate a new dcc entry
-int new_fork (int type)    - allocate a new fork entry
-void losedcc (int idx)     - lose a dead socket
-void dprintf(int idx)      - output to any socket/idx/etc...
-                             to output to a normal idx, use the idx,
-			     to output to a socket use -socket#
-			     to output to a special use:
-			        DP_SERVER - normal server queue
-				DP_HELP   - server help queue
-				DP_LOG    - LOG_MISC,"*"
-				DP_STDOUT - output to stdout (if possible)
-				
-Beldin
+tempdir       : temp directory
+botnetnick    : current nick on the botnet
+botname       : current nick on IRC

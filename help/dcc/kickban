@@ -1,5 +1,5 @@
-%{+O}
-###  kickban <nickname> [comment]
+%{+o|o}
+###  kickban [channel] <nickname> [comment]
    kicks a user off the channel and bans her by a reasonable host-
    mask.  your nickname will be attached to the ban in the bot's
    internal ban list, and the ban will last for whatever is set in

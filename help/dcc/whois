@@ -1,4 +1,4 @@
-%{+O}
+%{+o|o}
 ###  whois <nickname>
    will show you the bot information about a user record.  there are
    five headings:

@@ -11,32 +11,47 @@
  */
 
 #include "modules.h"
-#ifndef HAVE_DLOPEN
-#include "you/need/dlopen/to/compile/with/dynamic/modules"
+#ifndef STATIC 
+#ifdef HPUX_HACKS
+#include <dl.h>
 #else
-#ifdef DLOPEN_MUST_BE_1
-#define RTLD_FLAGS 1
+#ifdef OSF1_HACKS
+#include <loader.h>
 #else
-#define RTLD_FLAGS 2
-#endif
-void *dlopen PROTO((const char *, int));
+#if DLOPEN_1
 char *dlerror();
-int dlclose PROTO((void *));
-extern struct dcc_t dcc[];
-#endif
+void *dlopen (const char *, int);
+int dlclose (void *);
+void * dlsym (void *,char *);
+#define DLFLAGS 1
+#else
+#include <dlfcn.h>
+#ifdef RTLD_GLOBAL
+#define DLFLAGS RTLD_NOW|RTLD_GLOBAL
+#else
+#define DLFLAGS RTLD_NOW
+#endif /* RTLD_GLOBAL */
+#endif /* DLOPEN_1 */
+#endif /* OSF1_HACKS */
+#endif /* HPUX_HACKS */
+
+#endif /* STATIC */
+extern struct dcc_t * dcc;
 #include "users.h"
 int cmd_note();
 
 /* from other areas */
 extern int egg_numver;
 extern Tcl_Interp *interp;
-extern Tcl_HashTable H_fil, H_rcvd, H_sent;
 extern struct userrec *userlist;
 extern int dcc_total;
 extern char tempdir[];
 extern char botnetnick[];
 extern int reserved_port;
 extern char botname[];
+extern time_t now;
+/* only used here, we'll cheat */
+int check_validity (char *, Function);
 
 /* the null functions */
 void null_func()
@@ -60,30 +75,40 @@ struct hook_entry {
    int (*func) ();
 } *hook_list[REAL_HOOKS];
 
+static void null_share (int idx, char * x) {
+   tprintf(dcc[idx].sock, "share uf-no Not sharing userfile.\n");
+}
+
 /* these are obscure ones that I hope to neaten eventually :/ */
 void (*kill_all_assoc) () = null_func;
-void (*dump_bot_assoc) PROTO((int)) = null_func;
-char *(*get_assoc_name) PROTO((int)) = charp_func;
-int (*get_assoc) PROTO((char *)) = minus_func;
-void (*do_bot_assoc) PROTO((int, char *)) = null_func;
-void (*encrypt_pass) PROTO((char *, char *)) = 0;
+void (*dump_bot_assoc) (int) = null_func;
+char *(*get_assoc_name) (int) = charp_func;
+int (*get_assoc) (char *) = minus_func;
+void (*do_bot_assoc) (int, char *) = null_func;
+void (*encrypt_pass) (char *, char *) = 0;
+void (*shareout)() = null_func;
+void (*sharein)(int,char *) = null_share;
 
 module_entry *module_list;
 dependancy * dependancy_list = NULL;
 
-void init_modules()
+void init_modules(int x)
 {
    int i;
 
    context;
-   module_list = nmalloc(sizeof(module_entry));
-   module_list->name = nmalloc(8);
-   strcpy(module_list->name, "eggdrop");
-   module_list->major = (egg_numver) / 10000;
-   module_list->minor = ((egg_numver) / 100) % 100;
-   module_list->hand = NULL;
-   module_list->next = NULL;
-   module_list->funcs = NULL;
+   if (x) {
+      module_list = nmalloc(sizeof(module_entry));
+      module_list->name = nmalloc(8);
+      strcpy(module_list->name, "eggdrop");
+      module_list->major = (egg_numver) / 10000;
+      module_list->minor = ((egg_numver) / 100) % 100;
+#ifndef STATIC
+      module_list->hand = NULL;
+#endif
+      module_list->next = NULL;
+      module_list->funcs = NULL;
+   }
    for (i = 0; i < REAL_HOOKS; i++)
       hook_list[i] = NULL;
 }
@@ -119,7 +144,7 @@ int expmem_modules(int y)
    return c;
 }
 
-void mod_context PROTO3(char *, module, char *, file, int, line)
+void mod_context (char * module, char * file, int line)
 {
    char x[100];
    sprintf(x, "%s:%s", module, file);
@@ -134,10 +159,23 @@ void mod_context PROTO3(char *, module, char *, file, int, line)
 #endif
 }
 
-int register_module PROTO4(char *, name, Function *, funcs,
-			   int, major, int, minor)
+int module_register (char * name, Function * funcs,
+		     int major, int minor)
 {
    module_entry *p = module_list;
+#ifdef STATIC 
+   p = nmalloc(sizeof(module_entry));
+   if (p == NULL)
+      return 0;
+   p->next = module_list;
+   module_list = p;
+   module_list->name = nmalloc(strlen(name) + 1);
+   strcpy(module_list->name, name);
+   module_list->major = 0;
+   module_list->minor = 0;
+   check_tcl_load(name);
+   putlog(LOG_MISC, "*", "%s %s", MOD_LOADED, name);
+#endif
    context;
    while (p) {
       if ((p->name != NULL) && (strcasecmp(name, p->name) == 0)) {
@@ -151,151 +189,70 @@ int register_module PROTO4(char *, name, Function *, funcs,
    return 0;
 }
 
-Function global_funcs[] =
+const char *module_load (char * name)
 {
-   (Function) dprintf,
-   (Function) mod_context,
-   (Function) mod_malloc,
-   (Function) mod_free,
-
-   (Function) register_module,
-   (Function) find_module,
-   (Function) depend,
-   (Function) undepend,
-
-   (Function) add_hook,
-   (Function) del_hook,
-   (Function) get_next_hook,
-   (Function) call_hook_i,
-
-   (Function) load_module,
-   (Function) unload_module,
-
-   (Function) add_tcl_commands,
-   (Function) rem_tcl_commands,
-   (Function) add_tcl_ints,
-   (Function) rem_tcl_ints,
-   (Function) add_tcl_strings,
-   (Function) rem_tcl_strings,
-
-   (Function) putlog,
-   (Function) chanout2,
-   (Function) tandout,
-   (Function) tandout_but,
-
-   (Function) dcc,
-   (Function) nsplit,
-   (Function) add_builtins,
-   (Function) rem_builtins,
-
-   (Function) get_attr_handle,
-   (Function) get_chanattr_handle,
-   (Function) get_allattr_handle,
-
-   (Function) pass_match_by_handle,
-
-   (Function) new_dcc,
-   (Function) new_fork,
-   (Function) lostdcc,
-   (Function) killsock,
-
-   (Function) check_tcl_bind,
-   (Function) & dcc_total,
-   (Function) tempdir,
-   (Function) botnetnick,
-
-   (Function) rmspace,
-   (Function) movefile,
-   (Function) copyfile,
-   (Function) check_tcl_filt,
-
-   (Function) detect_dcc_flood,
-   (Function) get_handle_by_host,
-   (Function) stats_add_upload,
-   (Function) stats_add_dnload,
-
-   (Function) cancel_user_xfer,
-   (Function) set_handle_dccdir,
-   (Function) & userlist,
-   (Function) my_memcpy,
-
-   (Function) dump_resync,
-   (Function) flush_tbuf,
-   (Function) answer,
-   (Function) neterror,
-
-   (Function) tputs,
-   (Function) wild_match_file,
-   (Function) flags2str,
-   (Function) str2flags,
-
-   (Function) flags_ok,
-   (Function) chatout,
-   (Function) iptolong,
-   (Function) getmyip,
-
-   (Function) & reserved_port,
-   (Function) set_files,
-   (Function) set_handle_uploads,
-   (Function) set_handle_dnloads,
-
-   (Function) is_user,
-   (Function) open_listen,
-   (Function) get_attr_host,
-   (Function) my_atoul,
-
-   (Function) get_handle_dccdir,
-   (Function) getsock,
-   (Function) open_telnet_dcc,
-   (Function) do_boot,
-
-   (Function) botname,
-   (Function) show_motd,
-   (Function) telltext,
-   (Function) tellhelp,
-
-   (Function) splitc,
-   (Function) nextbot,
-   (Function) in_chain,
-   (Function) findidx,
-
-   (Function) & interp,
-   (Function) get_user_by_handle,
-   (Function) finish_share,
-   (Function) cmd_note,
-
-   (Function) & H_fil,
-   (Function) & H_rcvd,
-   (Function) & H_sent,
-   (Function) open_telnet,
-
-   (Function) fixcolon,
-};
-
-char *load_module PROTO1(char *, name)
-{
+#ifndef STATIC
    module_entry *p;
    char workbuf[1024];
+#ifdef HPUX_HACKS
+   shl_t hand;
+#else
+#ifdef OSF1_HACKS
+   ldr_module_t hand;
+#else
    void *hand;
+#endif
+#endif
    char *e;
    Function f;
 
    context;
-   if (find_module(name, 0, 0) != NULL)
-      return "Already loaded.";
+   if (module_find(name, 0, 0) != NULL)
+      return MOD_ALREADYLOAD;
    if (getcwd(workbuf, 1024) == NULL)
-      return "can't determine current directory.";
-   sprintf(&(workbuf[strlen(workbuf)]), "/%s.so", name);
-   hand = dlopen(workbuf, RTLD_FLAGS);
-   if (hand == NULL)
-      return dlerror();
+      return MOD_BADCWD;
+   sprintf(&(workbuf[strlen(workbuf)]), "/modules/%s.so", name);
+#ifdef HPUX_HACKS
+   hand = shl_load(workbuf, BIND_IMMEDIATE, 0);
+   if (!hand)
+     return "Can't load module.";
+#else
+#ifdef OSF1_HACKS
+   hand = (Tcl_PackageInitProc *) load (workbuf, LDR_NOFLAGS);
+   if (hand == LDR_NULL_MODULE)
+     return "Can't load module.";
+#else
+   hand = dlopen(workbuf, DLFLAGS);
+   if (!hand)
+      return dlerror(); 
+#endif
+#endif
+     
    sprintf(workbuf, "%s_start", name);
+#ifdef HPUX_HACKS
+   if (!shl_findsym(hand, procname, (short) TYPE_PROCEDURE, (void *)f))
+     f = NULL;
+#else
+#ifdef OSF1_HACKS
+   f = ldr_lookup_package(hand, workbuf);
+#else
    f = dlsym(hand, workbuf);
+#endif
+#endif
    if (f == NULL) {		/* some OS's need the _ */
       sprintf(workbuf, "_%s_start", name);
+#ifdef HPUX_HACKS
+      if (!shl_findsym(hand, procname, (short) TYPE_PROCEDURE, (void *)f))
+	f = NULL;
+#else
+#ifdef OSF1_HACKS
+      f = ldr_lookup_package(hand, workbuf);
+#else
       f = dlsym(hand, workbuf);
+#endif
+#endif
       if (f == NULL) {
-	 return "No start function defined.";
+	 return MOD_NOSTARTDEF;
       }
    }
    p = nmalloc(sizeof(module_entry));
@@ -308,19 +265,23 @@ char *load_module PROTO1(char *, name)
    module_list->major = 0;
    module_list->minor = 0;
    module_list->hand = hand;
-   e = (char *) (f(global_funcs));
+   e =  (((char *(*)())f)(0));
    if (e != NULL)
       return e;
-   putlog(LOG_MISC, "*", "Module %s loaded", name);
+   check_tcl_load(name);
+   putlog(LOG_MISC, "*", "%s %s", MOD_LOADED, name);
    return NULL;
+#else
+   return "Can't load modules, statically linked.";
+#endif
 }
 
-char *unload_module PROTO2(char *, name,char *,user)
+char *module_unload (char * name,char * user)
 {
+#ifndef STATIC
    module_entry *p = module_list, *o = NULL;
    char *e;
    Function *f;
-
    context;
    while (p) {
       if ((p->name != NULL) && (strcmp(name, p->name) == 0)) {
@@ -328,18 +289,26 @@ char *unload_module PROTO2(char *, name,char *,user)
 	 
 	 while (d!=NULL) {
 	    if (d->needed == p) {
-	       return "Needed by another module";
+	       return MOD_NEEDED;
 	    }
 	    d=d->next;
 	 }
 	 f = p->funcs;
 	 if ((f != NULL) && (f[MODCALL_CLOSE] == NULL))
-	    return "No close function";
+	    return MOD_NOCLOSEDEF;
 	 if (f != NULL) {
-	    e = (char *) (f[MODCALL_CLOSE] (user));
+	    check_tcl_unld(name);
+	    e =  (((char *(*)())f[MODCALL_CLOSE]) (user));
 	    if (e != NULL)
 	       return e;
+#ifdef HPUX_HACKS
+	    shl_unload(hand);
+#else
+#ifdef OSF1_HACKS
+#else
 	    dlclose(p->hand);
+#endif
+#endif
 	 }
 	 nfree(p->name);
 	 if (o == NULL) {
@@ -348,16 +317,19 @@ char *unload_module PROTO2(char *, name,char *,user)
 	    o->next = p->next;
 	 }
 	 nfree(p);
-	 putlog(LOG_MISC, "*", "Module %s unloaded", name);
+	 putlog(LOG_MISC, "*", "%s %s", MOD_UNLOADED, name);
 	 return NULL;
       }
       o = p;
       p = p->next;
    }
-   return "No such module";
+   return MOD_NOSUCH;
+#else
+   return "Can't unload modules, statically linked.";
+#endif /* STATIC */
 }
 
-module_entry *find_module PROTO3(char *, name, int, major, int, minor)
+module_entry *module_find (char * name, int major, int minor)
 {
    module_entry *p = module_list;
    while (p) {
@@ -370,18 +342,20 @@ module_entry *find_module PROTO3(char *, name, int, major, int, minor)
    return NULL;
 }
 
-int depend PROTO4(char *, name1, char *, name2, int, major, int, minor)
+int module_depend (char * name1, char * name2, int major, int minor)
 {
-   module_entry *p = find_module(name2, major, minor);
-   module_entry *o = find_module(name1, 0, 0);
+   module_entry *p = module_find(name2, major, minor);
+   module_entry *o = module_find(name1, 0, 0);
    dependancy *d;
 
    context;
+#ifndef STATIC
    if (p == NULL) {
-      if (load_module(name2) != NULL)
-	 return 0;
-      p = find_module(name2, major, minor);
+      if (module_load(name2) != NULL)
+	return 0;
+      p = module_find(name2, major, minor);
    }
+#endif
    if ((p == NULL) || (o == NULL))
       return 0;
    d = nmalloc(sizeof(dependancy));
@@ -389,15 +363,18 @@ int depend PROTO4(char *, name1, char *, name2, int, major, int, minor)
    d->needed = p;
    d->needing = o;
    d->next = dependancy_list;
+   d->major = major;
+   d->minor = minor;
    dependancy_list = d;
    return 1;
 }
 
-int undepend PROTO1(char *, name1)
+int module_undepend (char * name1)
 {
-   module_entry *p = find_module(name1, 0, 0);
-   dependancy *d = dependancy_list, *o = NULL;
    int ok = 0;
+#ifndef STATIC
+   module_entry *p = module_find(name1, 0, 0);
+   dependancy *d = dependancy_list, *o = NULL;
 
    context;
    if (p == NULL)
@@ -420,10 +397,11 @@ int undepend PROTO1(char *, name1)
 	 d = d->next;
       }
    }
+#endif
    return ok;
 }
 
-void *mod_malloc PROTO4(int, size, char *, modname, char *, filename, int, line)
+void *mod_malloc (int size, char * modname, char * filename, int line)
 {
    char x[100];
    sprintf(x, "%s:%s", modname, filename);
@@ -431,7 +409,7 @@ void *mod_malloc PROTO4(int, size, char *, modname, char *, filename, int, line)
    return n_malloc(size, x, line);
 }
 
-void mod_free PROTO4(void *, ptr, char *, modname, char *, filename, int, line)
+void mod_free (void * ptr, char * modname, char * filename, int line)
 {
    char x[100];
    sprintf(x, "%s:%s", modname, filename);
@@ -439,22 +417,8 @@ void mod_free PROTO4(void *, ptr, char *, modname, char *, filename, int, line)
    n_free(ptr, x, line);
 }
 
-/* add/remove tcl commands */
-void add_tcl_commands PROTO1(tcl_cmds *, tab)
-{
-   int i;
-   for (i = 0; tab[i].name; i++)
-      Tcl_CreateCommand(interp, tab[i].name, tab[i].func, NULL, NULL);
-}
-
-void rem_tcl_commands PROTO1(tcl_cmds *, tab)
-{
-   int i;
-   for (i = 0; tab[i].name; i++)
-      Tcl_DeleteCommand(interp, tab[i].name);
-}
 /* hooks, various tables of functions to call on ceratin events */
-void add_hook PROTO2(int, hook_num, void *, func)
+void add_hook (int hook_num, void * func)
 {
    context;
    if (hook_num < REAL_HOOKS) {
@@ -482,10 +446,16 @@ void add_hook PROTO2(int, hook_num, void *, func)
       case HOOK_ENCRYPT_PASS:
 	 encrypt_pass = func;
 	 break;
+      case HOOK_SHAREOUT:
+         shareout = func;
+	 break;
+      case HOOK_SHAREIN:
+         sharein = func;
+	 break;	 
       }				/* ignore unsupported stuff a.t.m. :) */
 }
 
-void del_hook PROTO2(int, hook_num, void *, func)
+void del_hook (int hook_num, void * func)
 {
    context;
    if (hook_num < REAL_HOOKS) {
@@ -528,70 +498,24 @@ void del_hook PROTO2(int, hook_num, void *, func)
 	 if (encrypt_pass == func)
 	    encrypt_pass = null_func;
 	 break;
+      case HOOK_SHAREOUT:
+         if (shareout == func)
+	   shareout = null_func;
+	 break;
+      case HOOK_SHAREIN:
+         if (sharein == func)
+	   sharein = null_share;
+	 break;	 
       }				/* ignore unsupported stuff a.t.m. :) */
 }
 
-void *get_next_hook PROTO2(int, hook_num, void *, func)
+void *get_next_hook (int hook_num, void * func)
 {
    return NULL;
    /* we dont use this YET */
 }
 
-void cmd_modulestat PROTO2(int, idx, char *, par)
-{
-   context;
-   putlog(LOG_CMDS, "*", "#%s# modulestat", dcc[idx].nick);
-   if (par && par[0]) {
-      module_entry * m = find_module(par,0,0);
-      if (!m) {
-	 dprintf(idx,"No such module.\n");
-      } else if (!m->funcs || !m->funcs[MODCALL_REPORT]){
-	 dprintf(idx,"No info for module %s.",par);
-      } else {
-	 m->funcs[MODCALL_REPORT](idx);
-      }
-   }
-   do_module_report(idx);
-}
-
-void cmd_loadmodule PROTO2(int, idx, char *, par)
-{
-   char *p;
-
-   context;
-   if (!par[0]) {
-      dprintf(idx, "Usage: loadmodule <module>\n");
-   } else {
-      p = load_module(par);
-      if (p != NULL)
-	 dprintf(idx, "Error in loading module %s: %s\n", par, p);
-      else {
-	 putlog(LOG_CMDS, "*", "#%s# loadmodule %s", dcc[idx].nick, par);
-	 dprintf(idx, "Module %s loaded successfully\n", par);
-      }
-   }
-   context;
-}
-
-void cmd_unloadmodule PROTO2(int, idx, char *, par)
-{
-   char *p;
-
-   context;
-   if (!par[0]) {
-      dprintf(idx, "Usage: unloadmodule <module>\n");
-   } else {
-      p = unload_module(par,dcc[idx].nick);
-      if (p != NULL)
-	 dprintf(idx, "Error in removing module %s: %s\n", par, p);
-      else {
-	 putlog(LOG_CMDS, "*", "#%s# unloadmodule %s", dcc[idx].nick, par);
-	 dprintf(idx, "Module %s removed successfully\n", par);
-      }
-   }
-}
-
-int call_hook PROTO1(int, hooknum)
+int call_hook (int hooknum)
 {
    struct hook_entry *p;
 
@@ -606,40 +530,7 @@ int call_hook PROTO1(int, hooknum)
    return 0;
 }
 
-
-int call_hook_i PROTO2(int, hooknum, int, idx)
-{
-   struct hook_entry *p;
-   int f = 0;
-
-   if (hooknum >= REAL_HOOKS)
-      return 0;
-   p = hook_list[hooknum];
-   context;
-   while ((p != NULL) && !f) {
-      f = p->func(idx);
-      p = p->next;
-   }
-   return f;
-}
-
-int call_hook_ici PROTO4(int, hooknum, int, idx, char *, buf, int, len)
-{
-   struct hook_entry *p;
-   int f = 0;
-
-   if (hooknum >= REAL_HOOKS)
-      return 0;
-   p = hook_list[hooknum];
-   context;
-   while ((p != NULL) && !f) {
-      f = p->func(idx, buf, len);
-      p = p->next;
-   }
-   return f;
-}
-
-int call_hook_cccc PROTO5(int, hooknum, char *, a, char *, b, char *, c, char *, d)
+int call_hook_cccc (int hooknum, char * a, char * b, char * c, char * d)
 {
    struct hook_entry *p;
    int f = 0;
@@ -655,39 +546,23 @@ int call_hook_cccc PROTO5(int, hooknum, char *, a, char *, b, char *, c, char *,
    return f;
 }
 
-int tcl_loadmodule STDVAR
-{
-   char *p;
-
-    context;
-    BADARGS(2, 2, " module-name");
-    p = load_module(argv[1]);
-   if ((p != NULL) && strcmp(p, "Already loaded."))
-       putlog(LOG_MISC, "*", "Can't load modules %s: %s", argv[1], p);
-    Tcl_AppendResult(irp, p, NULL);
-    return TCL_OK;
-}
-
-int tcl_unloadmodule STDVAR
-{
-   context;
-   BADARGS(2, 2, " module-name");
-   Tcl_AppendResult(irp, unload_module(argv[1],botname), NULL);
-   return TCL_OK;
-}
-
-void do_module_report PROTO1(int, idx)
+void do_module_report (int idx)
 {
    module_entry *p = module_list;
    if (p != NULL)
-      dprintf(idx, "MODULES LOADED:\n");
+#ifdef STATIC
+     dprintf(idx, "MODULES STATICALLY LINKED:\n");
+#else
+     dprintf(idx, "MODULES LOADED:\n");
+#endif
    while (p) {
       dependancy *d = dependancy_list;
       dprintf(idx, "Module: %s, v %d.%d\n", p->name ? p->name : "CORE",
 	      p->major, p->minor);
       while (d != NULL) {
 	 if (d->needing == p) 
-	   dprintf(idx, "    requires: %s\n", d->needed->name);
+	   dprintf(idx, "    requires: %s, v %d.%d\n", d->needed->name,
+		   d->major, d->minor);
 	 d = d->next;
       }
       if (p->funcs != NULL) {

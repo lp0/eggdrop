@@ -12,22 +12,12 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "eggdrop.h"
-#include "tclegg.h"
+#include "main.h"
 #include "tandem.h"
-#include "cmdt.h"
-
 
 extern Tcl_Interp *interp;
 extern tcl_timer_t *timer, *utimer;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
 extern int copy_to_tmp;
 extern char tempdir[];
@@ -37,10 +27,16 @@ extern int noshare;
 extern party_t *party;
 extern int parties;
 extern int make_userfile;
+extern int do_restart;
+extern int tands;
+extern tand_t * tandbot;
+extern int remote_boots;
+extern int max_dcc;
+int enable_simul = 0;
 
 /***********************************************************************/
 
-int tcl_putdcc STDVAR
+static int tcl_putdcc STDVAR
 {
    int i, j;
     BADARGS(3, 3, " idx text");
@@ -54,7 +50,7 @@ int tcl_putdcc STDVAR
    return TCL_OK;
 }
 
-int tcl_putidx STDVAR
+static int tcl_putidx STDVAR
 {
    int i, j;
     BADARGS(3, 3, " idx text");
@@ -68,32 +64,32 @@ int tcl_putidx STDVAR
    return TCL_OK;
 }
 
-#ifdef ENABLE_TCL_DCCSIMUL
-int tcl_dccsimul STDVAR
+static int tcl_dccsimul STDVAR
 {
    int i, idx;
    char cmd[512];
     BADARGS(3, 3, " idx command");
-    i = atoi(argv[1]);
-    idx = findidx(i);
-   if (idx < 0) {
-      Tcl_AppendResult(irp, "invalid idx", NULL);
-      return TCL_ERROR;
+   if (enable_simul) {
+      i = atoi(argv[1]);
+      idx = findidx(i);
+      if (idx < 0) {
+	 Tcl_AppendResult(irp, "invalid idx", NULL);
+	 return TCL_ERROR;
+      }
+      if ((dcc[idx].type != &DCC_CHAT) && (dcc[idx].type != &DCC_FILES) &&
+	  (dcc[idx].type != &DCC_SCRIPT)) {
+	 Tcl_AppendResult(irp, "invalid idx", NULL);
+	 return TCL_ERROR;
+      }
+      if (strlen(argv[2]) > 510)
+	argv[2][510] = 0;		/* restrict length of cmd */
+      strcpy(cmd, argv[2]);
+      dcc_activity(dcc[idx].sock, cmd, strlen(cmd));
    }
-   if ((dcc[idx].type != DCC_CHAT) && (dcc[idx].type != DCC_FILES) &&
-        (dcc[idx].type != DCC_SCRIPT)) {
-      Tcl_AppendResult(irp, "invalid idx", NULL);
-      return TCL_ERROR;
-   }
-   if (strlen(argv[2]) > 510)
-      argv[2][510] = 0;		/* restrict length of cmd */
-   strcpy(cmd, argv[2]);
-   dcc_activity(dcc[idx].sock, cmd, strlen(cmd));
    return TCL_OK;
 }
-#endif
 
-int tcl_dccbroadcast STDVAR
+static int tcl_dccbroadcast STDVAR
 {
    char msg[401];
     BADARGS(2, 2, " message");
@@ -102,16 +98,18 @@ int tcl_dccbroadcast STDVAR
     chatout("*** %s\n", msg);
     tandout("chat %s %s\n", botnetnick, msg);
     return TCL_OK;
-} int tcl_hand2idx STDVAR
+} 
+
+static int tcl_hand2idx STDVAR
 {
    int i;
    char s[10];
     BADARGS(2, 2, " nickname");
    for (i = 0; i < dcc_total; i++)
       if ((strcasecmp(argv[1], dcc[i].nick) == 0) &&
-	   ((dcc[i].type == DCC_CHAT) || (dcc[i].type == DCC_FILES) ||
-	     (dcc[i].type == DCC_SCRIPT))) {
-	 sprintf(s, "%d", dcc[i].sock);
+	   ((dcc[i].type == &DCC_CHAT) || (dcc[i].type == &DCC_FILES) ||
+	     (dcc[i].type == &DCC_SCRIPT))) {
+	 sprintf(s, "%ld", dcc[i].sock);
 	 Tcl_AppendResult(irp, s, NULL);
 	 return TCL_OK;
       }
@@ -119,7 +117,7 @@ int tcl_dccbroadcast STDVAR
    return TCL_OK;
 }
 
-int tcl_getchan STDVAR
+static int tcl_getchan STDVAR
 {
    char s[10];
    int idx, i;
@@ -130,11 +128,11 @@ int tcl_getchan STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if ((dcc[idx].type != DCC_CHAT) && (dcc[idx].type != DCC_SCRIPT)) {
+   if ((dcc[idx].type != &DCC_CHAT) && (dcc[idx].type != &DCC_SCRIPT)) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type == DCC_SCRIPT)
+   if (dcc[idx].type == &DCC_SCRIPT)
       sprintf(s, "%d", dcc[idx].u.script->u.chat->channel);
    else
       sprintf(s, "%d", dcc[idx].u.chat->channel);
@@ -142,7 +140,7 @@ int tcl_getchan STDVAR
    return TCL_OK;
 }
 
-int tcl_setchan STDVAR
+static int tcl_setchan STDVAR
 {
    int idx, i, chan;
     BADARGS(3, 3, " idx channel");
@@ -152,7 +150,7 @@ int tcl_setchan STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if ((dcc[idx].type != DCC_CHAT) && (dcc[idx].type != DCC_SCRIPT)) {
+   if ((dcc[idx].type != &DCC_CHAT) && (dcc[idx].type != &DCC_SCRIPT)) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -172,7 +170,7 @@ int tcl_setchan STDVAR
       Tcl_AppendResult(irp, "channel out of range; must be -1 thru 199999", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type == DCC_SCRIPT)
+   if (dcc[idx].type == &DCC_SCRIPT)
       dcc[idx].u.script->u.chat->channel = chan;
    else {
       if (chan < 100000)
@@ -187,7 +185,7 @@ int tcl_setchan STDVAR
    return TCL_OK;
 }
 
-int tcl_dccputchan STDVAR
+static int tcl_dccputchan STDVAR
 {
    int chan;
    char msg[401];
@@ -203,7 +201,7 @@ int tcl_dccputchan STDVAR
    return TCL_OK;
 }
 
-int tcl_console STDVAR
+static int tcl_console STDVAR
 {
    int i, j, pls, arg;
     BADARGS(2, 4, " idx ?channel? ?console-modes?");
@@ -213,7 +211,7 @@ int tcl_console STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[i].type != DCC_CHAT) {
+   if (dcc[i].type != &DCC_CHAT) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -251,7 +249,7 @@ int tcl_console STDVAR
    return TCL_OK;
 }
 
-int tcl_strip STDVAR
+static int tcl_strip STDVAR
 {
    int i, j, pls, arg;
     BADARGS(2, 4, " idx ?strip-flags?");
@@ -261,7 +259,7 @@ int tcl_strip STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[i].type != DCC_CHAT) {
+   if (dcc[i].type != &DCC_CHAT) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -289,7 +287,7 @@ int tcl_strip STDVAR
    return TCL_OK;
 }
 
-int tcl_echo STDVAR
+static int tcl_echo STDVAR
 {
    int i, j;
     BADARGS(2, 3, " idx ?status?");
@@ -299,7 +297,7 @@ int tcl_echo STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[i].type != DCC_CHAT) {
+   if (dcc[i].type != &DCC_CHAT) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -316,7 +314,7 @@ int tcl_echo STDVAR
    return TCL_OK;
 }
 
-int tcl_page STDVAR
+static int tcl_page STDVAR
 {
    int i, j;
    char x[20];
@@ -327,7 +325,7 @@ int tcl_page STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[i].type != DCC_CHAT) {
+   if (dcc[i].type != &DCC_CHAT) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -348,9 +346,10 @@ int tcl_page STDVAR
    return TCL_OK;
 }
 
-int tcl_control STDVAR
+static int tcl_control STDVAR
 {
    int idx, i;
+   void *hold;
     BADARGS(3, 3, " idx command");
     i = atoi(argv[1]);
     idx = findidx(i);
@@ -358,15 +357,20 @@ int tcl_control STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if ((dcc[idx].type == DCC_CHAT) && (dcc[idx].u.chat->channel >= 0))
+   if ((dcc[idx].type == &DCC_CHAT) && (dcc[idx].u.chat->channel >= 0))
        chanout2_but(idx, dcc[idx].u.chat->channel, "%s has gone.\n", dcc[idx].nick);
-   set_script(idx);
+
+   hold = dcc[idx].u.other;
+   dcc[idx].u.script = get_data_ptr(sizeof(struct script_info));
+   dcc[idx].u.script->u.other = hold;
+   dcc[idx].u.script->type = dcc[idx].type;
+   dcc[idx].type = &DCC_SCRIPT;
    strncpy(dcc[idx].u.script->command, argv[2], 120);
    dcc[idx].u.script->command[119] = 0;
    return TCL_OK;
 }
 
-int tcl_valididx STDVAR
+static int tcl_valididx STDVAR
 {
    int idx, i;
     BADARGS(2, 2, " idx");
@@ -376,8 +380,8 @@ int tcl_valididx STDVAR
       Tcl_AppendResult(irp, "0", NULL);
       return TCL_OK;
    }
-   if ((dcc[idx].type != DCC_CHAT) && (dcc[idx].type != DCC_FILES) &&
-        (dcc[idx].type != DCC_SCRIPT) && (dcc[idx].type != DCC_SOCKET)) {
+   if ((dcc[idx].type != &DCC_CHAT) && (dcc[idx].type != &DCC_FILES) &&
+        (dcc[idx].type != &DCC_SCRIPT) && (dcc[idx].type != &DCC_SOCKET)) {
       Tcl_AppendResult(irp, "0", NULL);
       return TCL_OK;
    }
@@ -385,7 +389,7 @@ int tcl_valididx STDVAR
    return TCL_OK;
 }
 
-int tcl_killdcc STDVAR
+static int tcl_killdcc STDVAR
 {
    int idx, i;
     BADARGS(2, 2, " idx");
@@ -395,8 +399,8 @@ int tcl_killdcc STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if ((dcc[idx].type != DCC_CHAT) && (dcc[idx].type != DCC_FILES) &&
-        (dcc[idx].type != DCC_SCRIPT) && (dcc[idx].type != DCC_SOCKET)) {
+   if ((dcc[idx].type != &DCC_CHAT) && (dcc[idx].type != &DCC_FILES) &&
+        (dcc[idx].type != &DCC_SCRIPT) && (dcc[idx].type != &DCC_SOCKET)) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -404,7 +408,7 @@ int tcl_killdcc STDVAR
    if ((dcc[idx].sock == STDOUT) && !backgrd)
       return TCL_OK;
    /* make sure 'whom' info is updated for other bots */
-   if (dcc[idx].type == DCC_CHAT) {
+   if (dcc[idx].type == &DCC_CHAT) {
       tandout("part %s %s %d\n", botnetnick, dcc[idx].nick, dcc[idx].sock);
       check_tcl_chpt(botnetnick, dcc[idx].nick, dcc[idx].sock);
       /* no notice is sent to the party line -- that's the scripts' job */
@@ -414,7 +418,7 @@ int tcl_killdcc STDVAR
    return TCL_OK;
 }
 
-int tcl_putbot STDVAR
+static int tcl_putbot STDVAR
 {
    int i;
    char msg[401];
@@ -430,7 +434,7 @@ int tcl_putbot STDVAR
    return TCL_OK;
 }
 
-int tcl_putallbots STDVAR
+static int tcl_putallbots STDVAR
 {
    char msg[401];
     BADARGS(2, 2, " message");
@@ -440,7 +444,7 @@ int tcl_putallbots STDVAR
     return TCL_OK;
 }
 
-int tcl_idx2hand STDVAR
+static int tcl_idx2hand STDVAR
 {
    int i, idx;
     BADARGS(2, 2, " idx");
@@ -454,18 +458,18 @@ int tcl_idx2hand STDVAR
    return TCL_OK;
 }
 
-int tcl_bots STDVAR
+static int tcl_bots STDVAR
 {
    int i;
     BADARGS(1, 1, "");
-   for (i = 0; i < get_tands(); i++)
-       Tcl_AppendElement(irp, get_tandbot(i));
+   for (i = 0; i < tands; i++)
+       Tcl_AppendElement(irp, tandbot[i].bot);
     return TCL_OK;
 }
 
 /* list of { idx nick host type } */
 /* type: "chat", "files", "script" */
-int tcl_dcclist STDVAR
+static int tcl_dcclist STDVAR
 {
    int i, ok;
    char typ[20], idxstr[10];
@@ -473,28 +477,27 @@ int tcl_dcclist STDVAR
     BADARGS(1, 1, "");
    for (i = 0; i < dcc_total; i++) {
       ok = 0;
-      switch (dcc[i].type) {
-      case DCC_CHAT:
+      if (dcc[i].type == &DCC_CHAT) {
 	 strcpy(typ, "chat");
 	 ok = 1;
-	 break;
-	 case DCC_FILES:strcpy(typ, "files");
+      } else if (dcc[i].type == &DCC_FILES) {
+	 strcpy(typ, "files");
 	 ok = 1;
-	 break;
-	 case DCC_SCRIPT:strcpy(typ, "script");
+      } else if (dcc[i].type == &DCC_SCRIPT) {
+	 strcpy(typ, "script");
 	 ok = 1;
-	 break;
-	 case DCC_SOCKET:strcpy(typ, "socket");
+      } else if (dcc[i].type == &DCC_SOCKET) {
+	 strcpy(typ, "socket");
 	 ok = 1;
-	 break;
+      }
 /* dont return these....they cause problems with putdcc 
    case DCC_BOT: strcpy(typ,"bot"); ok=1; break;
    case DCC_SEND: strcpy(typ,"receiving_file"); ok=1; break;
    case DCC_GET: strcpy(typ,"sending_file"); ok=1; break;
    case DCC_GET_PENDING: strcpy(typ,"send_file_pending"); ok=1; break;
  */ 
-      } if (ok) {
-	 sprintf(idxstr, "%d", dcc[i].sock);
+      if (ok) {
+	 sprintf(idxstr, "%ld", dcc[i].sock);
 	 list[0] = idxstr;
 	 list[1] = dcc[i].nick;
 	 list[2] = dcc[i].host;
@@ -508,7 +511,7 @@ int tcl_dcclist STDVAR
 }
 
 /* list of { nick bot host flag idletime awaymsg } */
-int tcl_whom STDVAR
+static int tcl_whom STDVAR
 {
    char c[2], idle[10], away[121], work[20], *list[7], *p;
    int chan, i;
@@ -531,11 +534,11 @@ int tcl_whom STDVAR
       }
    }
    for (i = 0; i < dcc_total; i++)
-      if (dcc[i].type == DCC_CHAT) {
+      if (dcc[i].type == &DCC_CHAT) {
 	 if ((dcc[i].u.chat->channel == chan) || (chan == -1)) {
 	    c[0] = geticon(i);
 	    c[1] = 0;
-	    sprintf(idle, "%lu", (now - dcc[i].u.chat->timer) / 60);
+	    sprintf(idle, "%lu", (now - dcc[i].timeval) / 60);
 	    if (dcc[i].u.chat->away != NULL)
 	       strcpy(away, dcc[i].u.chat->away);
 	    else
@@ -585,7 +588,7 @@ int tcl_whom STDVAR
    return TCL_OK;
 }
 
-int tcl_dccused STDVAR
+static int tcl_dccused STDVAR
 {
    char s[20];
     BADARGS(1, 1, "");
@@ -594,7 +597,7 @@ int tcl_dccused STDVAR
     return TCL_OK;
 }
 
-int tcl_getdccidle STDVAR
+static int tcl_getdccidle STDVAR
 {
    int i, x, idx;
    char s[21];
@@ -602,33 +605,17 @@ int tcl_getdccidle STDVAR
     BADARGS(2, 2, " idx");
     i = atoi(argv[1]);
     idx = findidx(i);
-   if (idx < 0) {
+   if ((idx < 0) || (dcc[idx].type == &DCC_SCRIPT)) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   switch (dcc[idx].type) {
-   case DCC_CHAT:
-      x = (now - (dcc[idx].u.chat->timer));
-      break;
-   case DCC_FILES:
-      x = (now - (dcc[idx].u.file->chat->timer));
-      break;
-   case DCC_SCRIPT:
-      if (dcc[idx].u.script->type == DCC_CHAT)
-	 x = (now - (dcc[idx].u.script->u.chat->timer));
-      else
-	 x = (now - (dcc[idx].u.script->u.file->chat->timer));
-      break;
-   default:
-      Tcl_AppendResult(irp, "invalid idx", NULL);
-      return TCL_ERROR;
-   }
+   x = (now - (dcc[idx].timeval));
    sprintf(s, "%d", x);
    Tcl_AppendElement(irp, s);
    return TCL_OK;
 }
 
-int tcl_getdccaway STDVAR
+static int tcl_getdccaway STDVAR
 {
    int i, idx;
     BADARGS(2, 2, " idx");
@@ -638,7 +625,7 @@ int tcl_getdccaway STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type != DCC_CHAT) {
+   if (dcc[idx].type != &DCC_CHAT) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -648,7 +635,7 @@ int tcl_getdccaway STDVAR
    return TCL_OK;
 }
 
-int tcl_setdccaway STDVAR
+static int tcl_setdccaway STDVAR
 {
    int i, idx;
     BADARGS(3, 3, " idx message");
@@ -658,7 +645,7 @@ int tcl_setdccaway STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type != DCC_CHAT) {
+   if (dcc[idx].type != &DCC_CHAT) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -673,7 +660,7 @@ int tcl_setdccaway STDVAR
    return TCL_OK;
 }
 
-int tcl_link STDVAR
+static int tcl_link STDVAR
 {
    int x, i;
    char bot[10], bot2[10];
@@ -696,7 +683,7 @@ int tcl_link STDVAR
    return TCL_OK;
 }
 
-int tcl_unlink STDVAR
+static int tcl_unlink STDVAR
 {
    int i, x;
    char bot[10];
@@ -717,12 +704,12 @@ int tcl_unlink STDVAR
    return TCL_OK;
 }
 
-int tcl_connect STDVAR
+static int tcl_connect STDVAR
 {
    int i, z, sock;
    char s[81];
     BADARGS(3, 3, " hostname port");
-   if (dcc_total == MAXDCC) {
+   if (dcc_total == max_dcc) {
       Tcl_AppendResult(irp, "out of dcc table space", NULL);
       return TCL_ERROR;
    }
@@ -744,7 +731,7 @@ int tcl_connect STDVAR
    strcpy(dcc[i].nick, "*");
    strncpy(dcc[i].host, argv[1], UHOSTLEN);
    dcc[i].host[UHOSTLEN] = 0;
-   dcc[i].type = DCC_SOCKET;
+   dcc[i].type = &DCC_SOCKET;
    dcc[i].u.other = NULL;
    dcc_total++;
    sprintf(s, "%d", sock);
@@ -756,14 +743,14 @@ int tcl_connect STDVAR
 /* listen <port> bots/all/users [mask]
    listen <port> script <proc>
    listen <port> off */
-int tcl_listen STDVAR
+static int tcl_listen STDVAR
 {
    int i, j, idx = (-1), port;
    char s[10];
     BADARGS(3, 4, " port type ?mask/proc?");
     port = atoi(argv[1]);
    for (i = 0; i < dcc_total; i++)
-      if ((dcc[i].type == DCC_TELNET) && (dcc[i].port == port))
+      if ((dcc[i].type == &DCC_TELNET) && (dcc[i].port == port))
 	  idx = i;
    if (strcasecmp(argv[2], "off") == 0) {
       /* remove */
@@ -777,14 +764,14 @@ int tcl_listen STDVAR
    }
    if (idx < 0) {
       /* make new one */
-      if (dcc_total >= MAXDCC) {
+      if (dcc_total >= max_dcc) {
 	 Tcl_AppendResult(irp, "no more DCC slots available", NULL);
 	 return TCL_ERROR;
       }
       idx = dcc_total;
       dcc_total++;
       dcc[idx].addr = iptolong(getmyip());
-      dcc[idx].type = DCC_TELNET;
+      dcc[idx].type = &DCC_TELNET;
       dcc[idx].u.other = NULL;
       /* try to grab port */
       j = port + 20;
@@ -843,7 +830,7 @@ int tcl_listen STDVAR
    return TCL_OK;
 }
 
-int tcl_boot STDVAR
+static int tcl_boot STDVAR
 {
    char who[512];
    int i, ok = 0;
@@ -855,72 +842,95 @@ int tcl_boot STDVAR
        whonick[161] = 0;
       if (strcasecmp(who, botnetnick) == 0)
 	  strcpy(who, whonick);
-      else {
-#ifdef REMOTE_BOOTS
+      else if (remote_boots > 1) {
 	 i = nextbot(who);
 	 if (i < 0)
 	    return TCL_OK;
 	 tprintf(dcc[i].sock, "reject %s %s@%s %s\n",
 		 botnetnick, whonick, who, argv[2] ? argv[2] : "");
-#else
+      } else {
 	 return TCL_OK;
-#endif
       }
    }
    for (i = 0; i < dcc_total; i++)
       if ((strcasecmp(dcc[i].nick, who) == 0) && (!ok) &&
-	  ((dcc[i].type == DCC_CHAT) || (dcc[i].type == DCC_FILES))) {
+	  ((dcc[i].type == &DCC_CHAT) || (dcc[i].type == &DCC_FILES))) {
 	 do_boot(i, botnetnick, argv[2] ? argv[2] : "");
 	 ok = 1;
       }
    return TCL_OK;
 }
 
-int tcl_rehash STDVAR
+static int tcl_rehash STDVAR
 {
    BADARGS(1, 1, " ");
    if (make_userfile) {
-      putlog(LOG_MISC, "*", "Uh, guess you don't need to create a new userfile.");
+      putlog(LOG_MISC, "*", USERF_NONEEDNEW);
       make_userfile = 0;
    }
    write_userfile();
-   putlog(LOG_MISC, "*", "Rehashing ...");
+   putlog(LOG_MISC, "*", USERF_REHASHING);
    rehash();
    return TCL_OK;
 }
 
-int tcl_restart STDVAR
+static int tcl_restart STDVAR
 {
    BADARGS(1, 1, " ");
+#ifdef STATIC
+   Tcl_AppendResult(interp, "You can't restart a static linked bot", NULL);
+   return TCL_ERROR;
+#else
    if (!backgrd) {
       Tcl_AppendResult(interp, "You can't restart a -n bot", NULL);
       return TCL_ERROR;
    }
    if (make_userfile) {
-      putlog(LOG_MISC, "*", "Uh, guess you don't need to create a new userfile.");
+      putlog(LOG_MISC, "*", USERF_NONEEDNEW);
       make_userfile = 0;
    }
    write_userfile();
-   putlog(LOG_MISC, "*", "Restarting ...");
+   putlog(LOG_MISC, "*", MISC_RESTARTING);
    wipe_timers(interp, &utimer);
    wipe_timers(interp, &timer);
-   /*  Tcl_DeleteInterp(interp);
-   init_tcl(); */
-   rehash();
+   do_restart = 1;
    return TCL_OK;
-}
-
-#ifndef MODULES
-int tcl_nomodules STDVAR
-{
-   Tcl_AppendResult(irp,"Modules not supported.", NULL);
-   return TCL_OK;
-}
-
-int tcl_loadmodule STDVAR
-{
-   Tcl_AppendResult(irp,"Modules not supported.", NULL);
-   putlog(LOG_MISC,"*","Module load attempted on non-module eggdrop.");
-   return TCL_OK;
-}
 #endif
+}
+
+tcl_cmds tcldcc_cmds [] = {   
+   { "putdcc", tcl_putdcc },
+   { "putidx", tcl_putidx },
+   { "dccsimul", tcl_dccsimul },
+   { "dccbroadcast", tcl_dccbroadcast },
+   { "hand2idx", tcl_hand2idx },
+   { "getchan", tcl_getchan },
+   { "setchan", tcl_setchan },
+   { "dccputchan", tcl_dccputchan },
+   { "console", tcl_console },
+   { "strip", tcl_strip },
+   { "echo", tcl_echo },
+   { "page", tcl_page },
+   { "control", tcl_control },
+   { "valididx", tcl_valididx },
+   { "killdcc", tcl_killdcc },
+   { "putbot", tcl_putbot },
+   { "putallbots", tcl_putallbots },
+   { "idx2hand", tcl_idx2hand },
+   { "bots", tcl_bots },
+   { "dcclist", tcl_dcclist },
+   { "whom", tcl_whom },
+   { "dccused", tcl_dccused },
+   { "getdccidle", tcl_getdccidle },
+   { "getdccaway", tcl_getdccaway },
+   { "setdccaway", tcl_setdccaway },
+   { "link", tcl_link },
+   { "unlink", tcl_unlink },
+   { "connect", tcl_connect },
+   { "listen", tcl_listen },
+   { "boot", tcl_boot },
+   { "rehash", tcl_rehash },
+   { "restart", tcl_restart },
+   { 0, 0 }
+};
+	

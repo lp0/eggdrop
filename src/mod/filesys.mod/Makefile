@@ -9,18 +9,23 @@ doofus:
 clean:
 	@rm -f *.o *.so *~
 
-modules: filesys.so
+modules: ../../../filesys.so
 
-FILESYS=dccfiles.o filedb.o filesys.o files.o tclfiles.o
+../../../transfer.so:
+	cd ../transfer.mod;make modules
+	
+FILESYS=filedb.o filesys.o files.o tclfiles.o
        
-filesys.so: ${FILESYS}
-	${LD} -o filesys.so ${FILESYS}
-	${STRIP} filesys.so
-	@mv filesys.so ..
-	
-dccfiles.o: dccfiles.c
-	${CC} ${CFLAGS} -DMAKING_MODS dccfiles.c
-	
+../../../filesys.so: ${FILESYS} ../../../transfer.so
+	@mkdir modules
+	@ln -s ../../../../transfer.so modules/
+	${LD} -o ../../../filesys.so ${FILESYS} modules/transfer.so
+	${STRIP} ../../../filesys.so
+	@rm -rf modules
+
+static: ${FILESYS}
+	@for x in ${FILESYS}; do rm -f ../$$x;ln -s filesys.mod/$$x ..; done 
+
 filedb.o: filedb.c
 	${CC} ${CFLAGS} -DMAKING_MODS filedb.c
 	
@@ -33,13 +38,26 @@ filesys.o: filesys.c
 tclfiles.o: tclfiles.c
 	${CC} ${CFLAGS} -DMAKING_MODS tclfiles.c
 	
-dccfiles.o: \
-   filesys.h
 filedb.o: \
+   ../module.h \
+   files.h \
    filesys.h
 files.o: \
+   files.h \
    filesys.h
 filesys.o: \
-   filesys.h
+   ../module.h \
+   filesys.h \
+   ../../tandem.h \
+   files.h \
+   ../../users.h \
+   ../../cmdt.h
+filesys.h: \
+   ../../lang/english.h \
+   ../transfer.mod/transfer.h
+	@touch filesys.h
 tclfiles.o: \
-   filesys.h
+   ../module.h \
+   files.h \
+   filesys.h \
+   ../../users.h

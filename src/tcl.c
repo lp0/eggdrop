@@ -14,16 +14,7 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "eggdrop.h"
-#include "tclegg.h"
-#include "cmdt.h"
+#include "main.h"
 
 /* used for read/write to internal strings */
 typedef struct {
@@ -59,7 +50,8 @@ Tcl_Interp *interp;
 extern int curserv, serv, backgrd;
 extern int shtime, learn_users, share_users, share_greet, use_info,
  passive, strict_host, require_p, keep_all_logs, copy_to_tmp, use_stderr,
- upload_to_cd, never_give_up, allow_new_telnets, keepnick;
+ upload_to_cd, never_give_up, allow_new_telnets, keepnick,
+ strict_servernames, check_stoned, quiet_reject, serverror_quit;
 extern int botserverport, min_servs, default_flags, conmask, newserverport,
  save_users_at, switch_logfiles_at, server_timeout, connect_timeout,
  firewallport, reserved_port, notify_users_at;
@@ -72,21 +64,27 @@ extern char botname[], origbotname[], botuser[], botrealname[], botserver[],
  owner[], newserverpass[], newbotname[], network[], botnetnick[], chanfile[];
 extern char flag[], chanflag[];
 extern int online, maxnotes, modesperline, maxqmsg, wait_split, wait_info,
- wait_dcc_xfer, note_life, default_port;
+ wait_dcc_xfer, note_life, default_port,die_on_sighup,die_on_sigterm,
+ trigger_on_ignore,answer_ctcp, lowercase_ctcp, max_logs, enable_simul;
 extern struct eggqueue *serverlist;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char egg_version[];
+extern int egg_numver;
 extern tcl_timer_t *timer, *utimer;
 extern time_t online_since;
-extern log_t logs[];
-#ifndef NO_FILE_SYSTEM
-extern char filedb_path[], dccdir[], dccin[];
-extern int dcc_block, dcc_limit, dcc_maxsize, dcc_users;
-#endif
-#ifdef HAVE_NAT
+extern log_t * logs;
+extern int tands;
 extern char natip[];
-#endif
+int dcc_flood_thr = 3;
+int debug_tcl = 0;
+int raw_binds = 0;
+int use_silence = 0;
+int remote_boots = 1;
+int bounce_bans = 0;
+int use_console_r = 0;
+/* needs at least 4 or 5 just to get started */
+int max_dcc = 5;
 
 /* prototypes for tcl */
 Tcl_Interp *Tcl_CreateInterp();
@@ -96,7 +94,7 @@ int expmem_tcl()
 {
    int i, tot = 0;
    context;
-   for (i = 0; i < MAXLOGS; i++)
+   for (i = 0; i < max_logs; i++)
       if (logs[i].filename != NULL) {
 	 tot += strlen(logs[i].filename) + 1;
 	 tot += strlen(logs[i].chname) + 1;
@@ -107,14 +105,14 @@ int expmem_tcl()
 /***********************************************************************/
 
 /* logfile [<modes> <channel> <filename>] */
-int tcl_logfile STDVAR
+static int tcl_logfile STDVAR
 {
    int i;
    char s[151];
     BADARGS(1, 4, " ?logModes channel logFile?");
    if (argc == 1) {
       /* they just want a list of the logfiles and modes */
-      for (i = 0; i < MAXLOGS; i++)
+      for (i = 0; i < max_logs; i++)
 	 if (logs[i].filename != NULL) {
 	    strcpy(s, masktype(logs[i].mask));
 	    strcat(s, " ");
@@ -126,7 +124,7 @@ int tcl_logfile STDVAR
       return TCL_OK;
    }
    BADARGS(4, 4, " ?logModes channel logFile?");
-   for (i = 0; i < MAXLOGS; i++)
+   for (i = 0; i < max_logs; i++)
       if ((logs[i].filename != NULL) && (strcmp(logs[i].filename, argv[3]) == 0)) {
 	 logs[i].mask = logmodes(argv[1]);
 	 nfree(logs[i].chname);
@@ -146,7 +144,7 @@ int tcl_logfile STDVAR
 	 Tcl_AppendResult(interp, argv[3], NULL);
 	 return TCL_OK;
       }
-   for (i = 0; i < MAXLOGS; i++)
+   for (i = 0; i < max_logs; i++)
       if (logs[i].filename == NULL) {
 	 logs[i].mask = logmodes(argv[1]);
 	 logs[i].filename = (char *) nmalloc(strlen(argv[3]) + 1);
@@ -160,18 +158,18 @@ int tcl_logfile STDVAR
    return TCL_ERROR;
 }
 
-int findidx PROTO1(int, z)
+int findidx (int z)
 {
    int j;
    for (j = 0; j < dcc_total; j++)
       if (dcc[j].sock == z)
-	 if ((dcc[j].type == DCC_CHAT) || (dcc[j].type == DCC_FILES) ||
-	     (dcc[j].type == DCC_SCRIPT) || (dcc[j].type == DCC_SOCKET))
+	 if ((dcc[j].type == &DCC_CHAT) || (dcc[j].type == &DCC_FILES) ||
+	     (dcc[j].type == &DCC_SCRIPT) || (dcc[j].type == &DCC_SOCKET))
 	    return j;
    return -1;
 }
 
-void nick_change PROTO1(char *, new)
+static void nick_change (char * new)
 {
 #ifndef NO_IRC
    if (strcasecmp(origbotname, new) != 0) {
@@ -187,11 +185,11 @@ void nick_change PROTO1(char *, new)
 #endif
 }
 
-void botnet_change PROTO1(char *, new)
+static void botnet_change (char * new)
 {
    if (strcasecmp(botnetnick, new) != 0) {
       /* trying to change bot's nickname */
-      if (get_tands() > 0) {
+      if (tands > 0) {
 	 putlog(LOG_MISC, "*", "* Tried to change my botnet nick, but I'm still linked to a botnet.");
 	 putlog(LOG_MISC, "*", "* (Unlink and try again.)");
 	 return;
@@ -207,8 +205,8 @@ void botnet_change PROTO1(char *, new)
 
 /* called when some script tries to change flag1..flag0 */
 /* (possible that the new value will be invalid, so we ignore the change) */
-char *tcl_eggflag PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
-			 char *, name2, int, flags)
+static char *tcl_eggflag (ClientData cdata, Tcl_Interp * irp, char * name1,
+		   char * name2, int flags)
 {
    char s1[2], *s;
    flaginfo *fi = (flaginfo *) cdata;
@@ -235,8 +233,8 @@ char *tcl_eggflag PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 }
 
 /* read/write normal integer */
-char *tcl_eggint PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
-			char *, name2, int, flags)
+static char *tcl_eggint (ClientData cdata, Tcl_Interp * irp, char * name1,
+			 char * name2, int flags)
 {
    char *s, s1[40];
    long l;
@@ -264,6 +262,9 @@ char *tcl_eggint PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 	    default_flags = str2flags(s);
 	 else if ((time_t *) cdata == &online_since)
 	    return "read-only variable";
+	 else if (protect_readonly && 
+		  ((int *)cdata == &enable_simul))
+	   return "read-only variable";
 	 else {
 	    if (Tcl_ExprLong(interp, s, &l) == TCL_ERROR)
 	       return interp->result;
@@ -273,7 +274,19 @@ char *tcl_eggint PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 	       if (l > 6)
 		  l = 6;
 	    }
-	    *(int *) cdata = (int) l;
+	    if ((int *) cdata == &max_dcc) {
+	       if (l < max_dcc)
+		 return "you can't DECREASE max-dcc";
+	       max_dcc = l;
+	       init_dcc_max();
+	    } else if ((int *) cdata == &max_logs) {
+	       if (l < max_logs)
+		 return "you can't DECREASE max-logs";
+	       max_logs = l;
+	       init_misc();
+	  
+	    } else 
+	      *(int *) cdata = (int) l;
 	 }
       }
       return NULL;
@@ -281,8 +294,8 @@ char *tcl_eggint PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 }
 
 /* read/write normal string variable */
-char *tcl_eggstr PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
-			char *, name2, int, flags)
+static char *tcl_eggstr (ClientData cdata, Tcl_Interp * irp, char * name1,
+			 char * name2, int flags)
 {
    char *s;
    strinfo *st = (strinfo *) cdata;
@@ -339,7 +352,7 @@ char *tcl_eggstr PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 }
 
 /* trace a flag */
-void tcl_traceflag PROTO3(char *, name, char *, ptr, char, def)
+static void tcl_traceflag (char * name, char * ptr, char def)
 {
    flaginfo *fi;
    fi = (flaginfo *) nmalloc(sizeof(flaginfo));
@@ -350,7 +363,7 @@ void tcl_traceflag PROTO3(char *, name, char *, ptr, char, def)
 		tcl_eggflag, (ClientData) fi);
 }
 
-void tcl_untraceflag PROTO1(char *, name)
+static void tcl_untraceflag (char * name)
 {
    flaginfo *fi;
    fi = (flaginfo *) Tcl_VarTraceInfo(interp, name,
@@ -370,7 +383,7 @@ void tcl_untraceflag PROTO1(char *, name)
 
 /* set up a string variable to be traced (takes a little more effort than */
 /* the others, cos the max length has to be stored too) */
-void tcl_tracestr2 PROTO4(char *, name, char *, ptr, int, len, int, dir)
+static void tcl_tracestr2 (char * name, char * ptr, int len, int dir)
 {
    strinfo *st;
    st = (strinfo *) nmalloc(sizeof(strinfo));
@@ -389,8 +402,8 @@ void tcl_tracestr2 PROTO4(char *, name, char *, ptr, int, len, int, dir)
 /* oddballs */
 
 /* read/write the server list */
-char *tcl_eggserver PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
-			   char *, name2, int, flags)
+static char *tcl_eggserver (ClientData cdata, Tcl_Interp * irp, char * name1,
+			    char * name2, int flags)
 {
    Tcl_DString ds;
    char *slist, **list;
@@ -409,7 +422,10 @@ char *tcl_eggserver PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
       Tcl_DStringFree(&ds);
       return NULL;
    } else {			/* writes */
-      wipe_serverlist();	/* ouch. */
+      if (serverlist) {
+	 clearq(serverlist);
+	 serverlist = NULL;
+      }
       slist = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
       if (slist != NULL) {
 	 code = Tcl_SplitList(interp, slist, &lc, &list);
@@ -429,8 +445,8 @@ char *tcl_eggserver PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 }
 
 /* read/write integer couplets (int1:int2) */
-char *tcl_eggcouplet PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
-			    char *, name2, int, flags)
+static char *tcl_eggcouplet (ClientData cdata, Tcl_Interp * irp, char * name1,
+			    char * name2, int flags)
 {
    char *s, s1[41];
    coupletinfo *cp = (coupletinfo *) cdata;
@@ -465,7 +481,7 @@ char *tcl_eggcouplet PROTO5(ClientData, cdata, Tcl_Interp *, irp, char *, name1,
 
 
 /* allocate couplet space for tracing couplets */
-void tcl_tracecouplet PROTO3(char *, name, int *, lptr, int *, rptr)
+static void tcl_tracecouplet (char * name, int * lptr, int * rptr)
 {
    coupletinfo *cp;
    cp = (coupletinfo *) nmalloc(sizeof(coupletinfo));
@@ -476,7 +492,7 @@ void tcl_tracecouplet PROTO3(char *, name, int *, lptr, int *, rptr)
 		tcl_eggcouplet, (ClientData) cp);
 }
 
-void tcl_untracecouplet PROTO1(char *, name)
+static void tcl_untracecouplet (char * name)
 {
    coupletinfo *cp;
    cp = (coupletinfo *) Tcl_VarTraceInfo(interp, name,
@@ -490,32 +506,22 @@ void tcl_untracecouplet PROTO1(char *, name)
 }
 /**********************************************************************/
 
-#ifdef EBUG
-int check_cmd PROTO2(int, idx, char *, msg)
+/* add/remove tcl commands */
+void add_tcl_commands (tcl_cmds * tab)
 {
-   char s[512];
-   context;
-   stridx(s, msg, 1);
-   if (strcasecmp(s, "chpass") == 0) {
-      stridx(s, msg, 3);
-      if (s[0])
-	 return 1;
-   }
-   return 0;
-}
-#endif
-
-void protect_tcl()
-{
-   protect_readonly = 1;
+   int i;
+   for (i = 0; tab[i].name; i++)
+      Tcl_CreateCommand(interp, tab[i].name, tab[i].func, NULL, NULL);
 }
 
-void unprotect_tcl()
+void rem_tcl_commands (tcl_cmds * tab)
 {
-   protect_readonly = 0;
+   int i;
+   for (i = 0; tab[i].name; i++)
+      Tcl_DeleteCommand(interp, tab[i].name);
 }
 
-tcl_strings def_tcl_strings[] =
+static tcl_strings def_tcl_strings[] =
 {
    {"nick", origbotname, NICKLEN, 0},
    {"botnet-nick", botnetnick, NICKLEN, 0},
@@ -528,13 +534,6 @@ tcl_strings def_tcl_strings[] =
    {"admin", admin, 120, 0},
    {"init-server", initserver, 120, 0},
    {"notefile", notefile, 120, 0},
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   {"files-path", dccdir, 120, STR_DIR | STR_PROTECT},
-   {"incoming-path", dccin, 120, STR_DIR | STR_PROTECT},
-   {"filedb-path", filedb_path, 120, STR_DIR | STR_PROTECT},
-#endif
-#endif
    {"help-path", helpdir, 120, STR_DIR},
    {"temp-path", tempdir, 120, STR_DIR},
    {"text-path", textdir, 120, STR_DIR},
@@ -548,9 +547,7 @@ tcl_strings def_tcl_strings[] =
    {"network", network, 40, 0},
    {"whois-fields", whois_fields, 120, 0},
    {"timezone", time_zone, 40, 0},
-#ifdef HAVE_NAT
    {"nat-ip", natip, 120, 0},
-#endif
   /* always very read-only */
    {"version", egg_version, 0, 0},
    {"botnick", botname, 0, 0},
@@ -560,22 +557,12 @@ tcl_strings def_tcl_strings[] =
 
   /* ints */
 
-tcl_ints def_tcl_ints[] =
+static tcl_ints def_tcl_ints[] =
 {
    {"servlimit", &min_servs},
    {"ban-time", &ban_time},
    {"ignore-time", &ignore_time},
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   {"max-dloads", &dcc_limit},
-   {"dcc-block", &dcc_block},
-   {"max-filesize", &dcc_maxsize},
-   {"max-file-users", &dcc_users},
-   {"upload-to-pwd", &upload_to_cd},
-   {"copy-to-tmp", &copy_to_tmp},
-   {"xfer-timeout", &wait_dcc_xfer},
-#endif
-#endif
+   {"dcc-flood-thr", &dcc_flood_thr},
    {"save-users-at", &save_users_at},
    {"notify-users-at", &notify_users_at},
    {"switch-logfiles-at", &switch_logfiles_at},
@@ -587,9 +574,6 @@ tcl_ints def_tcl_ints[] =
    {"learn-users", &learn_users},
    {"require-p", &require_p},
    {"use-info", &use_info},
-   {"share-users", &share_users},
-   {"share-greet", &share_greet},
-   {"passive", &passive},
    {"strict-host", &strict_host},
    {"keep-all-logs", &keep_all_logs},
    {"never-give-up", &never_give_up},
@@ -598,6 +582,10 @@ tcl_ints def_tcl_ints[] =
    {"uptime", (int *) &online_since},
    {"console", &conmask},
    {"default-flags", &default_flags},
+   {"strict-servernames", &strict_servernames},
+   {"check-stoned", &check_stoned},
+   {"serverror-quit", &serverror_quit},
+   {"quiet-reject", &quiet_reject},
   /* moved from eggdrop.h */
    {"modes-per-line", &modesperline},
    {"max-queue-msg", &maxqmsg},
@@ -606,12 +594,28 @@ tcl_ints def_tcl_ints[] =
    {"default-port", &default_port},
    {"note-life", &note_life},
    {"max-notes", &maxnotes},
+   {"numversion", &egg_numver},
+   {"debug-tcl", &debug_tcl },
+   {"die-on-sighup", &die_on_sighup },
+   {"die-on-sigterm", &die_on_sigterm },
+   {"trigger-on-ignore", &trigger_on_ignore },
+   {"answer-ctcp", &answer_ctcp },
+   {"lowercase-ctcp", &lowercase_ctcp },
+   {"raw-binds", &raw_binds },
+   {"share-greet", &share_greet},
+   {"use-silence", &use_silence},
+   {"remote-boots", &remote_boots},
+   {"bounce-bans", &bounce_bans},
+   {"use-console-r", &use_console_r},
+   {"max-dcc", &max_dcc},
+   {"max-logs", &max_logs},
+   {"enable-simul", &enable_simul},
    {0, 0}
 };
 
 /* set up Tcl variables that will hook into eggdrop internal vars via */
 /* trace callbacks */
-void init_traces()
+static void init_traces()
 {
    int i;
    char x[15];
@@ -633,10 +637,6 @@ void init_traces()
    tcl_tracecouplet("flood-ctcp", &flood_ctcp_thr, &flood_ctcp_time);
 }
 
-extern cmd_t C_dcc[], C_msg[], C_file[];
-
-void kill_hash();
-
 void kill_tcl()
 {
    int i;
@@ -652,22 +652,16 @@ void kill_tcl()
       tcl_untraceflag(x);
    }
    tcl_untraceserver("servers", NULL);
+
    tcl_untracecouplet("flood-msg");
    tcl_untracecouplet("flood-chan");
    tcl_untracecouplet("flood-join");
    tcl_untracecouplet("flood-ctcp");
-   rem_builtins(BUILTIN_DCC, C_dcc);
-#ifndef NO_IRC
-   rem_builtins(BUILTIN_MSG, C_msg);
-#endif
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   rem_builtins(BUILTIN_FILES, C_file);
-#endif
-#endif
    kill_hash();
    Tcl_DeleteInterp(interp);
 }
+
+extern tcl_cmds tcluser_cmds [],tcldcc_cmds[],tclmisc_cmds[],tclchan_cmds[];
 
 /* not going through Tcl's crazy main() system (what on earth was he
    smoking?!) so we gotta initialize the Tcl interpreter */
@@ -677,196 +671,16 @@ void init_tcl()
    interp = Tcl_CreateInterp();
    Tcl_Init(interp);
    init_hash();
-   init_builtins();
    init_traces();
-/* see note (1) at the bottom of this file */
-/*  Tcl_DeleteCommand(interp,"exec"); */
    /* add new commands */
-   Tcl_CreateCommand(interp, "bind", tcl_bind, (ClientData) 0, NULL);
-   Tcl_CreateCommand(interp, "unbind", tcl_bind, (ClientData) 1, NULL);
+   /* isnt this much neater :) */
+   add_tcl_commands(tcluser_cmds);
+   add_tcl_commands(tcldcc_cmds);
+   add_tcl_commands(tclmisc_cmds);
+   add_tcl_commands(tclchan_cmds);
+   
 #define Q(A,B) Tcl_CreateCommand(interp,A,B,NULL,NULL)
    Q("logfile", tcl_logfile);
-   Q("putserv", tcl_putserv);
-   Q("puthelp", tcl_puthelp);
-   Q("putdcc", tcl_putdcc);
-   Q("putlog", tcl_putlog);
-   Q("putcmdlog", tcl_putcmdlog);
-   Q("putidx", tcl_putidx);
-   Q("putxferlog", tcl_putxferlog);
-   Q("putloglev", tcl_putloglev);
-   Q("countusers", tcl_countusers);
-   Q("validuser", tcl_validuser);
-   Q("finduser", tcl_finduser);
-   Q("passwdok", tcl_passwdOk);
-   Q("chattr", tcl_chattr);
-   Q("matchattr", tcl_matchattr);
-   Q("botisop", tcl_botisop);
-   Q("isop", tcl_isop);
-   Q("isvoice", tcl_isvoice);
-   Q("onchan", tcl_onchan);
-   Q("handonchan", tcl_handonchan);
-   Q("ischanban", tcl_ischanban);
-   Q("getchanhost", tcl_getchanhost);
-   Q("onchansplit", tcl_onchansplit);
-   Q("chanlist", tcl_chanlist);
-   Q("adduser", tcl_adduser);
-   Q("addbot", tcl_addbot);
-   Q("deluser", tcl_deluser);
-   Q("boot", tcl_boot);
-   Q("rehash", tcl_rehash);
-   Q("restart", tcl_restart);
-#ifdef ENABLE_TCL_DCCSIMUL
-   Q("dccsimul", tcl_dccsimul);
-#endif
-   Q("addhost", tcl_addhost);
-   Q("delhost", tcl_delhost);
-   Q("getaddr", tcl_getaddr);
-   Q("timer", tcl_timer);
-   Q("killtimer", tcl_killtimer);
-   Q("utimer", tcl_utimer);
-   Q("killutimer", tcl_killutimer);
-   Q("unixtime", tcl_unixtime);
-   Q("time", tcl_time);
-   Q("date", tcl_date);
-   Q("jump", tcl_jump);
-   Q("getinfo", tcl_getinfo);
-   Q("maskhost", tcl_maskhost);
-   Q("getdccdir", tcl_getdccdir);
-   Q("getcomment", tcl_getcomment);
-   Q("getemail", tcl_getemail);
-   Q("getxtra", tcl_getxtra);
-   Q("setinfo", tcl_setinfo);
-   Q("setdccdir", tcl_setdccdir);
-   Q("setcomment", tcl_setcomment);
-   Q("setemail", tcl_setemail);
-   Q("setxtra", tcl_setxtra);	/* setaddr? */
-   Q("isban", tcl_isban);
-   Q("ispermban", tcl_ispermban);
-   Q("matchban", tcl_matchban);
-   Q("ctime", tcl_ctime);
-   Q("myip", tcl_myip);
-   Q("getlaston", tcl_getlaston);
-   Q("setlaston", tcl_setlaston);
-   Q("timers", tcl_timers);
-   Q("utimers", tcl_utimers);
-   Q("rand", tcl_rand);
-   Q("hand2idx", tcl_hand2idx);
-   Q("idx2hand", tcl_idx2hand);
-   Q("getchan", tcl_getchan);
-   Q("setchan", tcl_setchan);
-   Q("dccbroadcast", tcl_dccbroadcast);
-   Q("dccputchan", tcl_dccputchan);
-   Q("console", tcl_console);
-   Q("echo", tcl_echo);
-   Q("control", tcl_control);
-   Q("putbot", tcl_putbot);
-   Q("putallbots", tcl_putallbots);
-   Q("getchanidle", tcl_getchanidle);
-   Q("killdcc", tcl_killdcc);
-   Q("userlist", tcl_userlist);
-   Q("sendnote", tcl_sendnote);
-   Q("save", tcl_save);
-   Q("reload", tcl_reload);
-   Q("bots", tcl_bots);
-   Q("chanbans", tcl_chanbans);
-   Q("gethosts", tcl_gethosts);
-   Q("nick2hand", tcl_nick2hand);
-   Q("hand2nick", tcl_hand2nick);
-   Q("getdccidle", tcl_getdccidle);
-   Q("dcclist", tcl_dcclist);
-   Q("dccused", tcl_dccused);
-   Q("chpass", tcl_chpass);
-   Q("chnick", tcl_chnick);
-   Q("link", tcl_link);
-   Q("unlink", tcl_unlink);
-   Q("banlist", tcl_banlist);
-   Q("channel", tcl_channel);
-   Q("channels", tcl_channels);
-   Q("resetchan", tcl_resetchan);
-   Q("validchan", tcl_validchan);
-   Q("getting-users", tcl_getting_users);
-   Q("strip", tcl_strip);
-   Q("page", tcl_page);
-   Q("savechannels", tcl_savechannels);
-   Q("loadchannels", tcl_loadchannels);
-   Q("isdynamic", tcl_isdynamic);
-#ifndef MODULES
-#ifndef NO_FILE_SYSTEM
-   Q("dccsend", tcl_dccsend);
-   Q("getfileq", tcl_getfileq);
-   Q("getdesc", tcl_getdesc);
-   Q("getowner", tcl_getowner);
-   Q("setdesc", tcl_setdesc);
-   Q("setowner", tcl_setowner);
-   Q("getgots", tcl_getgots);
-   Q("getpwd", tcl_getpwd);
-   Q("setpwd", tcl_setpwd);
-   Q("getlink", tcl_getlink);
-   Q("setlink", tcl_setlink);
-   Q("getfiles", tcl_getfiles);
-   Q("getdirs", tcl_getdirs);
-   Q("hide", tcl_hide);
-   Q("unhide", tcl_unhide);
-   Q("share", tcl_share);
-   Q("unshare", tcl_unshare);
-   Q("filesend", tcl_filesend);
-   Q("getuploads", tcl_getuploads);
-   Q("setuploads", tcl_setuploads);
-   Q("getdnloads", tcl_getdnloads);
-   Q("setdnloads", tcl_setdnloads);
-   Q("mkdir", tcl_mkdir);
-   Q("rmdir", tcl_rmdir);
-   Q("cp", tcl_cp);
-   Q("mv", tcl_mv);
-   Q("getflags", tcl_getflags);
-   Q("setflags", tcl_setflags);
-#endif
-   Q("assoc", tcl_assoc);
-   Q("killassoc", tcl_killassoc);
-#endif
-   Q("getchanmode", tcl_getchanmode);
-   Q("pushmode", tcl_pushmode);
-   Q("flushmode", tcl_flushmode);
-   Q("isignore", tcl_isignore);
-#ifndef MODULES
-   Q("encrypt", tcl_encrypt);
-   Q("decrypt", tcl_decrypt);
-#endif
-   Q("connect", tcl_connect);
-   Q("getdccaway", tcl_getdccaway);
-   Q("setdccaway", tcl_setdccaway);
-   Q("newchanban", tcl_newchanban);
-   Q("newban", tcl_newban);
-   Q("killchanban", tcl_killchanban);
-   Q("killban", tcl_killban);
-   Q("newignore", tcl_newignore);
-   Q("killignore", tcl_killignore);
-   Q("ignorelist", tcl_ignorelist);
-   Q("whom", tcl_whom);
-   Q("dumpfile", tcl_dumpfile);
-   Q("dccdumpfile", tcl_dccdumpfile);
-   Q("valididx", tcl_valididx);
-   Q("backup", tcl_backup);
-   Q("listen", tcl_listen);
-   Q("resetbans", tcl_resetbans);
-   Q("topic", tcl_topic);
-   Q("die", tcl_die);
-   Q("matchchanattr", tcl_matchchanattr);
-   Q("getchanjoin", tcl_getchanjoin);
-   Q("getchaninfo", tcl_getchaninfo);
-   Q("setchaninfo", tcl_setchaninfo);
-   Q("addchanrec", tcl_addchanrec);
-   Q("delchanrec", tcl_delchanrec);
-   Q("getchanlaston", tcl_getchanlaston);
-   Q("strftime", tcl_strftime);
-   Q("notes", tcl_notes);
-   Q("loadmodule", tcl_loadmodule);
-#ifdef MODULES
-   Q("unloadmodule", tcl_unloadmodule);
-#else
-   Q("unloadmodule", tcl_nomodules);
-   Q("modules", tcl_nomodules); /*  yes I know, I'll write it sometime */
-#endif
 }
 
 /* set Tcl variables to match eggdrop internal variables */
@@ -884,115 +698,24 @@ void set_tcl_vars()
 
 /**********************************************************************/
 
-/* show user-defined whois fields */
-void tcl_tell_whois PROTO2(int, idx, char *, xtra)
-{
-   int code, lc, xc, qc, i, j;
-   char **list, **xlist, **qlist;
-   context;
-   code = Tcl_SplitList(interp, whois_fields, &lc, &list);
-   if (code == TCL_ERROR)
-      return;
-   context;
-   code = Tcl_SplitList(interp, xtra, &xc, &xlist);
-   if (code == TCL_ERROR) {
-      n_free(list, "", 0);
-      return;
-   }
-   /* scan thru xtra field, searching for matches */
-   context;
-   for (i = 0; i < xc; i++) {
-      code = Tcl_SplitList(interp, xlist[i], &qc, &qlist);
-      context;
-      if ((code == TCL_OK) && (qc == 2)) {
-	 /* ok, it's a valid xtra field entry */
-	 context;
-	 for (j = 0; j < lc; j++)
-	    if (strcasecmp(list[j], qlist[0]) == 0) {
-	       dprintf(idx, "  %s: %s\n", qlist[0], qlist[1]);
-	    }
-	 n_free(qlist, "", 0);
-      }
-   }
-   n_free(list, "", 0);
-   n_free(xlist, "", 0);
-   context;
-}
 
-/* evaluate a Tcl command, send output to a dcc user */
-void cmd_tcl PROTO2(int, idx, char *, msg)
+void do_tcl (char * whatzit, char * script)
 {
    int code;
-#ifdef EBUG
-   int i = 0;
-   char s[512];
-   context;
-   if (msg[0])
-      i = check_cmd(idx, msg);
-   if (i) {
-      stridx(s, msg, 2);
-      if (s[0])
-	 debug1("tcl: evaluate (.tcl): chpass %s [something]", s);
-      else
-	 debug1("tcl: evaluate (.tcl): %s", msg);
-   } else
-      debug1("tcl: evaluate (.tcl): %s", msg);
-#endif
-   context;
-   set_tcl_vars();
-   context;
-   code = Tcl_GlobalEval(interp, msg);
-   context;
-   if (code == TCL_OK)
-      dumplots(idx, "Tcl: ", interp->result);
-   else
-      dumplots(idx, "TCL error: ", interp->result);
-   context;
-   /* refresh internal vars */
-}
-
-/* perform a 'set' command */
-void cmd_set PROTO2(int, idx, char *, msg)
-{
-   int code;
-   char s[512];
-   putlog(LOG_CMDS, "*", "#%s# set %s", dcc[idx].nick, msg);
-   set_tcl_vars();
-   strcpy(s, "set ");
-   strcat(s, msg);
-   if (!msg[0]) {
-      strcpy(s, "info globals");
-      Tcl_Eval(interp, s);
-      dumplots(idx, "global vars: ", interp->result);
-      return;
+   FILE * f = 0;
+   
+   if (debug_tcl) {
+      f = fopen("DEBUG.TCL", "a");
+      if (f != NULL)
+	fprintf(f, "eval: %s\n", script);
    }
-   code = Tcl_Eval(interp, s);
-   if (code == TCL_OK) {
-      if (strchr(msg, ' ') == NULL)
-	 dumplots(idx, "currently: ", interp->result);
-      else
-	 dprintf(idx, "Ok, set.\n");
-   } else
-      dprintf(idx, "Error: %s\n", interp->result);
-}
-
-void do_tcl PROTO2(char *, whatzit, char *, script)
-{
-   int code;
-#ifdef EBUG_TCL
-   FILE *f = fopen("DEBUG.TCL", "a");
-   if (f != NULL)
-      fprintf(f, "eval: %s\n", script);
-#endif
    set_tcl_vars();
    context;
    code = Tcl_Eval(interp, script);
-#ifdef EBUG_TCL
-   if (f != NULL) {
+   if (debug_tcl &&(f != NULL)) {
       fprintf(f, "done eval, result=%d\n", code);
       fclose(f);
    }
-#endif
    if (code != TCL_OK) {
       putlog(LOG_MISC, "*", "Tcl error in script for '%s':", whatzit);
       putlog(LOG_MISC, "*", "%s", interp->result);
@@ -1001,7 +724,7 @@ void do_tcl PROTO2(char *, whatzit, char *, script)
 
 /* read and interpret the configfile given */
 /* return 1 if everything was okay */
-int readtclprog PROTO1(char *, fname)
+int readtclprog (char * fname)
 {
    int code;
    FILE *f;
@@ -1010,13 +733,13 @@ int readtclprog PROTO1(char *, fname)
    if (f == NULL)
       return 0;
    fclose(f);
-#ifdef EBUG_TCL
-   f = fopen("DEBUG.TCL", "a");
-   if (f != NULL) {
-      fprintf(f, "Sourcing file %s ...\n", fname);
-      fclose(f);
+   if (debug_tcl) {
+      f = fopen("DEBUG.TCL", "a");
+      if (f != NULL) {
+	 fprintf(f, "Sourcing file %s ...\n", fname);
+	 fclose(f);
+      }
    }
-#endif
    code = Tcl_EvalFile(interp, fname);
    if (code != TCL_OK) {
       if (use_stderr) {
@@ -1032,18 +755,7 @@ int readtclprog PROTO1(char *, fname)
    return 1;
 }
 
-/*
-   note (1):
-   the tcl 'exec' command is no longer removed, since it is assumed
-   that the tcl command will be left at its default flag requirement,
-   ie: only owners can do tcl commands directly.  also, removing the
-   'exec' command doesn't block up all holes -- tcl allows you to open
-   a "pipe" which really just executes a shell command and redirects
-   output.  so you were never truly safe anyway.  gee.
- */
-
-
-void add_tcl_strings PROTO1(tcl_strings *, list)
+void add_tcl_strings (tcl_strings * list)
 {
    int i;
    for (i = 0; list[i].name; i++) {
@@ -1069,7 +781,7 @@ void add_tcl_strings PROTO1(tcl_strings *, list)
    }
 }
 
-void rem_tcl_strings PROTO1(tcl_strings *, list)
+void rem_tcl_strings (tcl_strings * list)
 {
    int i;
    strinfo *st;
@@ -1088,7 +800,7 @@ void rem_tcl_strings PROTO1(tcl_strings *, list)
    }
 }
 
-void add_tcl_ints PROTO1(tcl_ints *, list)
+void add_tcl_ints (tcl_ints * list)
 {
    int i;
    for (i = 0; list[i].name; i++) {
@@ -1101,7 +813,7 @@ void add_tcl_ints PROTO1(tcl_ints *, list)
    }
 }
 
-void rem_tcl_ints PROTO1(tcl_ints *, list)
+void rem_tcl_ints (tcl_ints * list)
 {
    int i;
    for (i = 0; list[i].name; i++) {

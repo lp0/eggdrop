@@ -8,11 +8,12 @@
 #                      usually detects this anyway now)
 #   -DEBUG_MEM       to be able to debug memory allocation (.debug)
 #   -DEBUG_OUTPUT    to send everything sent to the server to +d console people
-#   -DEBUG_TCL       writes a DEBUG.TCL file which grows really fast and
-#                      logs EVERY command sent to Tcl
 #   -DEBUG           logs random debugging comments to +d level (annoying
 #                      and useless to most people)
 #   -DREDHATSUX      if you get dprintf already defined errors in redhat
+#
+# *note* -DEBUG_TCL made so little code addition, I moved it into tcl
+#    try set debug-tcl 1
 #
 # ok, Im a linux weenie, these settings with work for linux
 #
@@ -22,15 +23,14 @@ CFLGS = -g
 # to compile .. if you do...let the devel-team know the working settings
 # btw to turn STRIP of, do STRIP=touch not STRIP=
 
-#normal make
 CC=@CC@
 LD=@CC@
-STRIP= @STRIP@
 
 #making eggmod
 MOD_CC = @BEL_MOD_CC@
 MOD_LD = @BEL_MOD_LD@
 MOD_STRIP = @BEL_MOD_STRIP@
+DLFLAGS= @DLFLAGS@
 
 #makind modules
 SHLIB_CC = @SHLIB_CC@
@@ -50,16 +50,11 @@ TCLLIB = @TCLLIB@
 CFLAGS = -c @CFLAGS@ -I.. @DEFS@ ${CFLGS}
 @SET_MAKE@
 
-all: 
-	@echo You must type \"make eggdrop\" for the non-module version, or
-	@echo type "make eggmod" for the module version.
+all:    @DEFAULT_MAKE@
 
 help:
-	@echo Makefile for Eggdrop.
-	@echo "To make eggdrop without modules:"
-	@echo "   % make eggdrop"
-	@echo "To make eggdrop WITH modules (bot only):"
-	@echo "   % make eggmod"
+	@echo "To make eggdrop :"
+	@echo "   % make "
 
 clean: cleanmods
 	@rm -f eggdrop egg core *.o *.a *.so *~ *.stamp
@@ -74,21 +69,9 @@ dist: clean
 	@echo "all:" >Makefile
 	@echo "	@./configure; make" >>Makefile
 
-eggdrop: eggtest always
-	@cd src ; ${GMAKE} eggdrop
-	@mv src/@EGGEXEC@ .
-	@echo ""
-	@./eggdrop -v
-	@ls -la eggdrop
-	@echo ""
-	@echo "To copy the help files and executables into your bot's"
-	@echo "directory, type:"
-	@echo "   putegg <my-bot's-directory>"
-	@echo ""
+eggdrop: always modegg modules
 
-debug: eggtest always
-	@cd src ; ${GMAKE} debug
-	@mv src/@EGGEXEC@ .
+debug: always debugmod moddebug
 
 always: 
 
@@ -100,80 +83,67 @@ src/libtcle.a: ${TCLLIB}/lib@TCLLIBFN@
 	ar d src/libtcle.a tclMain.o
 	@RANLIB@ src/libtcle.a
 
-GMAKE = ${MAKE} 'CC=${CC}' 'LD=${LD}' 'OBJS=${OBJS}' 'TCLLIBFN=@TCLLIBFN@'\
-	'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' 'XLIBS=@TCL_LIBS@ @LIBS@'\
-	'TCLLIB=${TCLLIB}' 'RANLIB=@RANLIB@' 'STRIP=${STRIP}'
-
 eggdrop.h:
 	@echo You do not have the eggdrop source!
 	@exit 1
 
-OBJS = botcmd.o botnet.o chan.o chanprog.o chanset.o cmds.o\
-	dcc.o dccutil.o gotdcc.o hash.o main.o\
-	match.o mem.o misc.o mode.o msgcmds.o msgnotice.o net.o notes.o\
+OBJS = botcmd.o botnet.o chan.o chanprog.o chanset.o cmds.o cmdsirc.o \
+	dcc.o dccutil.o gotdcc.o main.o mem.o misc.o mode.o modules.o \
+	msgcmds.o msgnotice.o net.o notes.o \
 	tcl.o tclchan.o tcldcc.o tclhash.o tclmisc.o tcluser.o userrec.o\
 	users.o
 
-GMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
-'STRIP=${SHLIB_STRIP}' 'CFLAGS=${CFLAGS} -DMODULES' 'XLIBS=@TCL_LIBS@ @LIBS@'
+GMAKE_STATIC = ${MAKE} 'CC=${CC}' 'LD=${LD}' 'OBJS=${OBJS}'\
+'STRIP=${MOD_STRIP}' 'CFLAGS=${CFLAGS} -DSTATIC' 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS} modules.o'\
-'CFLAGS=${CFLAGS} -DMODULES' 'XREQ=${XREQ}' \
+GMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
+'STRIP=${SHLIB_STRIP}' 'CFLAGS=${CFLAGS}' 'XLIBS=@TCL_LIBS@ @LIBS@'
+
+GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS}'\
+'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=${MOD_STRIP}' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
 DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
-'STRIP=touch' 'CFLAGS=${CFLAGS} -DMODULES' 'XLIBS=@TCL_LIBS@ @LIBS@'
+'STRIP=touch' 'CFLAGS=${CFLAGS}' 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-DMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS} modules.o'\
-'CFLAGS=${CFLAGS} -DMODULES' 'XREQ=${XREQ}' \
+DMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD} -g' 'OBJS=${OBJS}'\
+'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-eggmod: modtest always modules
+static:
+	@echo ""
+	@echo "Making module objects for static linking..."
+	@echo ""
+	@cd src/mod;${GMAKE_STATIC} static
+	@echo ""
+	@echo "Making core eggdrop for static linking..."
+	@echo ""
+	@cd src;${GMAKE_STATIC} static
+
+modegg:
 	@cd src;${GMAKE_MOD} eggdrop
-	@mv src/@EGGEXEC@ .
 	@echo
 	@./eggdrop -v
 	@ls -la eggdrop
 	
-modules: modtest always
+modules:
 	@cd src/mod;${GMAKE_SHLIB} modules
-	@mv src/mod/*.so .
 	@echo
 	@echo "modules made:"
 	@ls -la *.so
   
-debugmod: modtest always
+debugmod:
 	@cd src;${DMAKE_MOD} eggdrop
-	@mv src/@EGGEXEC@ .
 	@echo
 	@./eggdrop -v
 	@ls -la eggdrop
   	
-moddebug: modtest always
+moddebug:
 	@cd src/mod;${DMAKE_SHLIB} modules
-	@mv src/mod/*.so .
 	@echo
 	@echo "modules made:"
 	@ls -la *.so
-
-eggtest: always
-	@if [ -f EGGMOD.stamp ]; then \
-		echo You previous made \"eggmod.\"  You must first type;\
-		echo \"make clean\" before you can compile the non-module;\
-		echo version.;\
-		exit 1;\
-	fi
-	@date >EGGDROP.stamp
-
-modtest: always
-	@if [ -f EGGDROP.stamp ]; then \
-		echo You previous made \"eggdrop.\"  You must first type;\
-		echo \"make clean\" before you can compile the module;\
-		echo version.;\
-		exit 1;\
-	fi
-	@date >EGGMOD.stamp
 	
 #safety hash

@@ -14,26 +14,15 @@
  */
 
 #include "../module.h"
-#ifdef MODULES
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "../../files.h"
+#include "files.h"
 #include "filesys.h"
-#else
-extern char tempdir[];
-#endif
 #include "../../users.h"
 
-#ifndef NO_FILE_SYSTEM
 extern char dccdir[];
-#ifndef MODULES
-extern struct userrec *userlist;
 
-#else
-
-static
-#endif
-int tcl_getdesc STDVAR
+static int tcl_getdesc STDVAR
 {
    char s[301];
     BADARGS(3, 3, " dir file");
@@ -42,20 +31,14 @@ int tcl_getdesc STDVAR
     return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setdesc STDVAR
+static int tcl_setdesc STDVAR
 {
    BADARGS(4, 4, " dir file desc");
    filedb_setdesc(argv[1], argv[2], argv[3]);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getowner STDVAR
+static int tcl_getowner STDVAR
 {
    char s[121];
     BADARGS(3, 3, " dir file");
@@ -64,20 +47,14 @@ int tcl_getowner STDVAR
     return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setowner STDVAR
+static int tcl_setowner STDVAR
 {
    BADARGS(4, 4, " dir file owner");
    filedb_setowner(argv[1], argv[2], argv[3]);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getgots STDVAR
+static int tcl_getgots STDVAR
 {
    int i;
    char s[10];
@@ -88,20 +65,14 @@ int tcl_getgots STDVAR
     return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setlink STDVAR
+static int tcl_setlink STDVAR
 {
    BADARGS(4, 4, " dir file link");
    filedb_setlink(argv[1], argv[2], argv[3]);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getlink STDVAR
+static int tcl_getlink STDVAR
 {
    char s[121];
     BADARGS(3, 3, " dir file");
@@ -110,10 +81,7 @@ int tcl_getlink STDVAR
     return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setpwd STDVAR
+static int tcl_setpwd STDVAR
 {
    int i, idx;
 
@@ -124,7 +92,7 @@ int tcl_setpwd STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type != DCC_FILES) {
+   if (dcc[idx].type != &DCC_FILES) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -132,10 +100,7 @@ int tcl_setpwd STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getpwd STDVAR
+static int tcl_getpwd STDVAR
 {
    int i, idx;
 
@@ -146,7 +111,7 @@ int tcl_getpwd STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type != DCC_FILES) {
+   if (dcc[idx].type != &DCC_FILES) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -154,70 +119,49 @@ int tcl_getpwd STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getfiles STDVAR
+static int tcl_getfiles STDVAR
 {
    BADARGS(2, 2, " dir");
    filedb_getfiles(irp, argv[1]);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getdirs STDVAR
+static int tcl_getdirs STDVAR
 {
    BADARGS(2, 2, " dir");
    filedb_getdirs(irp, argv[1]);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_hide STDVAR
+static int tcl_hide STDVAR
 {
    BADARGS(3, 3, " dir file");
    filedb_change(argv[1], argv[2], FILEDB_HIDE);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_unhide STDVAR
+static int tcl_unhide STDVAR
 {
    BADARGS(3, 3, " dir file");
    filedb_change(argv[1], argv[2], FILEDB_UNHIDE);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_share STDVAR
+static int tcl_share STDVAR
 {
    BADARGS(3, 3, " dir file");
    filedb_change(argv[1], argv[2], FILEDB_SHARE);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_unshare STDVAR
+static int tcl_unshare STDVAR
 {
    BADARGS(3, 3, " dir file");
    filedb_change(argv[1], argv[2], FILEDB_UNSHARE);
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setflags STDVAR
+static int tcl_setflags STDVAR
 {
    FILE *f;
    filedb *fdb;
@@ -255,10 +199,7 @@ int tcl_setflags STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getflags STDVAR
+static int tcl_getflags STDVAR
 {
    FILE *f;
    filedb *fdb;
@@ -293,10 +234,7 @@ int tcl_getflags STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_mkdir STDVAR
+static int tcl_mkdir STDVAR
 {
    char s[512], t[512], *d, *p;
    FILE *f;
@@ -368,10 +306,7 @@ int tcl_mkdir STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_rmdir STDVAR
+static int tcl_rmdir STDVAR
 {
    FILE *f;
    filedb *fdb;
@@ -423,10 +358,7 @@ int tcl_rmdir STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_mv_cp PROTO4(Tcl_Interp *, irp, int, argc, char **, argv, int, copy)
+static int tcl_mv_cp (Tcl_Interp * irp, int argc, char ** argv, int copy)
 {
    char *p, fn[161], oldpath[161], s[161], s1[161], newfn[161], newpath[161];
    int ok, only_first, skip_this;
@@ -580,26 +512,17 @@ int tcl_mv_cp PROTO4(Tcl_Interp *, irp, int, argc, char **, argv, int, copy)
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_mv STDVAR
+static int tcl_mv STDVAR
 {
    return tcl_mv_cp(irp, argc, argv, 0);
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_cp STDVAR
+static int tcl_cp STDVAR
 {
    return tcl_mv_cp(irp, argc, argv, 1);
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_filesend STDVAR
+static int tcl_filesend STDVAR
 {
    int i, idx;
    char s[10];
@@ -611,7 +534,7 @@ int tcl_filesend STDVAR
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
-   if (dcc[idx].type != DCC_FILES) {
+   if (dcc[idx].type != &DCC_FILES) {
       Tcl_AppendResult(irp, "invalid idx", NULL);
       return TCL_ERROR;
    }
@@ -624,10 +547,7 @@ int tcl_filesend STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getuploads STDVAR
+static int tcl_getuploads STDVAR
 {
    struct userrec *u;
    char s[81];
@@ -640,10 +560,7 @@ int tcl_getuploads STDVAR
     return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_getdnloads STDVAR
+static int tcl_getdnloads STDVAR
 {
    struct userrec *u;
    char s[81];
@@ -656,27 +573,20 @@ int tcl_getdnloads STDVAR
     return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setuploads STDVAR
+static int tcl_setuploads STDVAR
 {
    BADARGS(4, 4, " handle files k");
    set_handle_uploads(userlist, argv[1], atoi(argv[2]), atoi(argv[3]));
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_setdnloads STDVAR
+static int tcl_setdnloads STDVAR
 {
    BADARGS(4, 4, " handle files k");
    set_handle_dnloads(userlist, argv[1], atoi(argv[2]), atoi(argv[3]));
    return TCL_OK;
 }
 
-#ifdef MODULES
 tcl_cmds mytcls[] =
 {
    {"getdesc", tcl_getdesc},
@@ -707,5 +617,3 @@ tcl_cmds mytcls[] =
    {"setflags", tcl_setflags},
    {0, 0}
 };
-#endif
-#endif

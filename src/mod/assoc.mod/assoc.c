@@ -16,20 +16,11 @@
 #include <stdlib.h>
 
 /* channel name-number associations */
-#ifdef MODULES
-Function *global;
 
-static
-#endif
-assoc_t *assoc = NULL;
+static assoc_t *assoc = NULL;
 
-#ifdef MODULES
 static int assoc_expmem()
 {
-#else
-int expmem_assoc()
-{
-#endif
    assoc_t *a = assoc;
    int size = 0;
 
@@ -41,10 +32,7 @@ int expmem_assoc()
    return size;
 }
 
-#ifdef MODULES
-static
-#endif
-void dump_bot_assoc(int idx)
+static void dump_bot_assoc(int idx)
 {
    assoc_t *a = assoc;
 
@@ -56,10 +44,7 @@ void dump_bot_assoc(int idx)
    }
 }
 
-#ifdef MODULES
-static
-#endif
-void kill_assoc PROTO1(int, chan)
+static void kill_assoc (int chan)
 {
    assoc_t *a = assoc, *last = NULL;
 
@@ -79,10 +64,7 @@ void kill_assoc PROTO1(int, chan)
    }
 }
 
-#ifdef MODULES
-static
-#endif
-void kill_all_assoc()
+static void kill_all_assoc()
 {
    assoc_t *a = assoc, *x;
 
@@ -95,10 +77,7 @@ void kill_all_assoc()
    assoc = NULL;
 }
 
-#ifdef MODULES
-static
-#endif
-void add_assoc PROTO2(char *, name, int, chan)
+static void add_assoc (char * name, int chan)
 {
    assoc_t *a = assoc, *b, *old = NULL;
 
@@ -146,10 +125,7 @@ void add_assoc PROTO2(char *, name, int, chan)
       old->next = b;
 }
 
-#ifdef MODULES
-static
-#endif
-int get_assoc PROTO1(char *, name)
+static int get_assoc (char * name)
 {
    assoc_t *a = assoc;
 
@@ -162,10 +138,7 @@ int get_assoc PROTO1(char *, name)
    return -1;
 }
 
-#ifdef MODULES
-static
-#endif
-char *get_assoc_name PROTO1(int, chan)
+static char *get_assoc_name (int chan)
 {
    assoc_t *a = assoc;
 
@@ -178,10 +151,7 @@ char *get_assoc_name PROTO1(int, chan)
    return NULL;
 }
 
-#ifdef MODULES
-static
-#endif
-void dump_assoc PROTO1(int, idx)
+static void dump_assoc (int idx)
 {
    assoc_t *a = assoc;
 
@@ -201,10 +171,7 @@ void dump_assoc PROTO1(int, idx)
 }
 
 
-#ifdef MODULES
-static
-#endif
-int cmd_assoc PROTO2(int, idx, char *, par)
+static int cmd_assoc (int idx, char * par)
 {
    char num[512];
    int chan;
@@ -270,10 +237,7 @@ int cmd_assoc PROTO2(int, idx, char *, par)
    return 0;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_killassoc STDVAR
+static int tcl_killassoc STDVAR
 {
    int chan;
 
@@ -289,10 +253,7 @@ int tcl_killassoc STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static
-#endif
-int tcl_assoc STDVAR
+static int tcl_assoc STDVAR
 {
    int chan;
    char name[21], *p;
@@ -328,11 +289,7 @@ int tcl_assoc STDVAR
    return TCL_OK;
 }
 
-#ifdef MODULES
-static void do_bot_assoc PROTO2(int, idx, char *, par)
-#else
-void bot_assoc PROTO2(int, idx, char *, par)
-#endif
+static void do_bot_assoc (int idx, char * par)
 {
    char s[1024], *s1;
    int linking = 0;
@@ -375,9 +332,8 @@ void bot_assoc PROTO2(int, idx, char *, par)
    }
 }
 
-#ifdef MODULES
 /* a report on the module status */
-static void assoc_report PROTO1(int, idx)
+static void assoc_report (int idx)
 {
    assoc_t *a = assoc;
    int size = 0, count = 0;;
@@ -394,7 +350,7 @@ static void assoc_report PROTO1(int, idx)
 
 static cmd_t mydcc[] =
 {
-   {"assoc", '-', cmd_assoc},
+   {"assoc", "", cmd_assoc, NULL},
    {0, 0, 0}
 };
 
@@ -407,8 +363,11 @@ static tcl_cmds mytcl[] =
 
 static char *assoc_close()
 {
+   p_tcl_hash_list H_dcc;
+   
    modcontext;
-   rem_builtins(BUILTIN_DCC, mydcc);
+   H_dcc = find_hash_table("dcc");
+   rem_builtins(H_dcc, mydcc);
    module_undepend(MODULE_NAME);
    rem_tcl_commands(mytcl);
    del_hook(HOOK_GET_ASSOC_NAME, get_assoc_name);
@@ -419,7 +378,7 @@ static char *assoc_close()
    return NULL;
 }
 
-char *assoc_start PROTO((Function *));
+char *assoc_start ();
 
 static Function assoc_table[] =
 {
@@ -429,19 +388,21 @@ static Function assoc_table[] =
    (Function) assoc_report,
 };
 
-char *assoc_start PROTO1(Function *, egg_func_table)
+char *assoc_start ()
 {
-   global = egg_func_table;
+   p_tcl_hash_list H_dcc;
+   
    modcontext;
    module_register(MODULE_NAME, assoc_table, 1, 0);
-   module_depend(MODULE_NAME, "eggdrop", 101, 4);
+   module_depend(MODULE_NAME, "eggdrop", 102, 0);
    add_hook(HOOK_GET_ASSOC_NAME, get_assoc_name);
    add_hook(HOOK_GET_ASSOC, get_assoc);
    add_hook(HOOK_DUMP_ASSOC_BOT, dump_bot_assoc);
    add_hook(HOOK_KILL_ASSOCS, kill_all_assoc);
    add_hook(HOOK_BOT_ASSOC, do_bot_assoc);
-   add_builtins(BUILTIN_DCC, mydcc);
+   H_dcc = find_hash_table("dcc");
+   add_builtins(H_dcc, mydcc);
    add_tcl_commands(mytcl);
    return NULL;
 }
-#endif
+

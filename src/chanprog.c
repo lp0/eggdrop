@@ -19,22 +19,12 @@
 
 /* config file format changed 27jan94 (Tcl outdates that) */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include "main.h"
 #include <pwd.h>
-#include <sys/types.h>		/* for mips */
-#include "eggdrop.h"
 #include "users.h"
 #include "chan.h"
-#include "tclegg.h"
-#ifdef MODULES
 #include "modules.h"
 extern module_entry *module_list;
-#endif
 
 extern int serv;
 extern int shtime;
@@ -63,12 +53,6 @@ extern char textdir[];
 extern char owner[];
 extern char firewall[];
 extern char altnick[];
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-extern char dccdir[];
-extern char dccin[];
-#endif
-#endif
 extern int botserverport;
 extern int dcc_total;
 extern int use_stderr;
@@ -81,11 +65,8 @@ extern int flood_join_thr;
 extern int flood_join_time;
 extern int flood_ctcp_thr;
 extern int flood_ctcp_time;
-extern int share_users;
 extern int use_info;
 extern int passive;
-extern int strict_host;
-extern int noshare;
 extern int require_p;
 extern int conmask;
 extern int default_flags;
@@ -102,12 +83,15 @@ extern int dcc_block;
 extern int dcc_maxsize;
 extern int dcc_users;
 extern int firewallport;
-extern struct dcc_t dcc[];
-extern log_t logs[];
+extern struct dcc_t * dcc;
+extern log_t * logs;
 extern struct userrec *userlist;
 extern struct chanset_t *chanset;
 extern Tcl_Interp *interp;
 extern char network[];
+extern int protect_readonly;
+extern int use_console_r;
+extern int max_logs;
 
 /* used when rehash-ing */
 char oldnick[NICKLEN + 1] = "";
@@ -128,7 +112,7 @@ int default_port = 6667;
 
 /* remove space characters from beginning and end of string */
 /* (more efficent by Fred1) */
-void rmspace PROTO1(char *, s)
+void rmspace (char * s)
 {
 #define whitespace(c) ( ((c)==32) || ((c)==9) || ((c)==13) || ((c)==10) )
    char *p;
@@ -170,10 +154,11 @@ int expmem_chanprog()
 }
 
 /* add someone to a queue */
-struct eggqueue *addq PROTO2(char *, ss, struct eggqueue *, q)
+/* new server to the list */
+void add_server (char * ss)
 {
    char s[512];
-   struct eggqueue *x, *z;
+   struct eggqueue *x, *z, *q = serverlist;
    char s1[121], *p;
    strcpy(s, ss);
    do {
@@ -201,41 +186,11 @@ struct eggqueue *addq PROTO2(char *, ss, struct eggqueue *, q)
       s[0] = 0;
       strcpy(s, s1);
    } while (s[0]);
-   return q;
-}
-
-/* remove someone from a queue */
-struct eggqueue *delq PROTO3(char *, s, struct eggqueue *, q, int *, ok)
-{
-   struct eggqueue *x, *ret, *old;
-   x = q;
-   ret = q;
-   old = q;
-   *ok = 0;
-   while (x != NULL) {
-      if (strcasecmp(x->item, s) == 0) {
-	 if (x == ret) {
-	    ret = (x->next);
-	    nfree(x->item);
-	    nfree(x);
-	    x = ret;
-	 } else {
-	    old->next = x->next;
-	    nfree(x->item);
-	    nfree(x);
-	    x = old->next;
-	 }
-	 *ok = 1;
-      } else {
-	 old = x;
-	 x = x->next;
-      }
-   }
-   return ret;
+   serverlist = q;
 }
 
 /* clear out a list */
-void clearq PROTO1(struct eggqueue *, xx)
+void clearq (struct eggqueue * xx)
 {
    struct eggqueue *x, *x1;
    x = xx;
@@ -247,15 +202,9 @@ void clearq PROTO1(struct eggqueue *, xx)
    }
 }
 
-/* new server to the list */
-void add_server PROTO1(char *, s)
-{
-   serverlist = addq(s, serverlist);
-}
-
 /* set botserver to the next available server */
 /* -> if (*ptr == -1) then jump to that particular server */
-void next_server PROTO4(int *, ptr, char *, serv, int *, port, char *, pass)
+void next_server (int * ptr, char * serv, int * port, char * pass)
 {
    struct eggqueue *x = serverlist;
    int ok = 1, i;
@@ -328,66 +277,8 @@ void next_server PROTO4(int *, ptr, char *, serv, int *, port, char *, pass)
    return;
 }
 
-#ifndef NO_IRC
-/* 001: welcome to IRC (use it to fix the server name) */
-void got001 PROTO2(char *, from, char *, msg)
-{
-   struct eggqueue *x;
-   int i;
-   char s[121], s1[121], srv[121];
-   struct chanset_t *chan;
-   /* ok...param #1 of 001 = what server thinks my nick is */
-   fixcolon(msg);
-   strncpy(botname,msg,NICKLEN);
-   botname[NICKLEN]=0;
-   /* init-server */
-   if (initserver[0])
-      do_tcl("init-server", initserver);
-   x = serverlist;
-   if (x == NULL)
-      return;			/* uh, no server list */
-   /* below makes a mess of DEBUG_OUTPUT can we do something else? */
-   mprintf(serv, "JOIN ");
-   chan = chanset;
-   while (chan != NULL) {
-      mprintf(serv, "%s,", chan->name);
-      chan->stat &= ~(CHANACTIVE | CHANPEND);
-      chan->mode_cur = 0;
-      chan = chan->next;
-   }
-   chan = chanset;
-   while (chan != NULL) {
-      mprintf(serv, " %s", chan->key_prot);
-      chan = chan->next;
-   }
-   mprintf(serv, "\n");
-   if (strcasecmp(from, botserver) != 0) {
-      putlog(LOG_MISC, "*", "(%s is really %s; updating server list)",
-	     botserver, from);
-      for (i = curserv; i > 0 && x != NULL; i--)
-	 x = x->next;
-      if (x == NULL) {
-	 putlog(LOG_MISC, "*", "Invalid server list!");
-	 return;
-      }
-      strcpy(s, x->item);
-      splitc(srv, s, ':');
-      if (!srv[0]) {
-	 strcpy(srv, s);
-	 sprintf(s, "%d", default_port);
-      }
-      sprintf(s1, "%s:%s", from, s);
-      nfree(x->item);
-      x->item = (char *) nmalloc(strlen(s1) + 1);
-      strcpy(x->item, s1);
-      strcpy(botserver, from);
-   }
-}
-
-#endif
-
 /* show server list, and point out which one the bot is on */
-void tell_servers PROTO1(int, idx)
+void tell_servers (int idx)
 {
    struct eggqueue *x = serverlist;
    int i, sp;
@@ -415,17 +306,9 @@ void tell_servers PROTO1(int, idx)
    }
 }
 
-void wipe_serverlist()
-{
-   if (serverlist == NULL)
-      return;
-   clearq(serverlist);
-   serverlist = NULL;
-}
-
 /* revenge tactic: person did something bad, if they are oplisted,
    remove them from the op list otherwise, deop them */
-void take_revenge PROTO3(struct chanset_t *, chan, char *, who, char *, reason)
+void take_revenge (struct chanset_t * chan, char * who, char * reason)
 {
    char nick[NICKLEN], s[UHOSTLEN], s1[UHOSTLEN], ct[81], hand[10];
    int i, chatr, atr;
@@ -496,17 +379,7 @@ void take_revenge PROTO3(struct chanset_t *, chan, char *, who, char *, reason)
    recheck_channels();
 }
 
-/* clear out the programming */
-void clearprog()
-{
-   clear_userlist(userlist);
-   userlist = NULL;
-   clearq(serverlist);
-   serverlist = NULL;
-   strcpy(oldnick, botname);
-}
-
-int logmodes PROTO1(char *, s)
+int logmodes (char * s)
 {
    int i;
    int res = 0;
@@ -540,12 +413,10 @@ int logmodes PROTO1(char *, s)
       case 'B':
 	 res |= LOG_BOTS;
 	 break;
-#ifdef USE_CONSOLE_R
       case 'r':
       case 'R':
-	 res |= LOG_RAW;
+	 res |= use_console_r ? LOG_RAW : 0; 
 	 break;
-#endif
       case 'w':
       case 'W':
 	 res |= LOG_WALL;
@@ -593,7 +464,7 @@ int logmodes PROTO1(char *, s)
    return res;
 }
 
-char *masktype PROTO1(int, x)
+char *masktype (int x)
 {
    static char s[20];
    char *p = s;
@@ -611,10 +482,8 @@ char *masktype PROTO1(int, x)
       *p++ = 'o';
    if (x & LOG_BOTS)
       *p++ = 'b';
-#ifdef USE_CONSOLE_R
-   if (x & LOG_RAW)
+   if ((x & LOG_RAW) && use_console_r)
       *p++ = 'r';
-#endif
    if (x & LOG_FILES)
       *p++ = 'x';
    if (x & LOG_SERV)
@@ -643,7 +512,7 @@ char *masktype PROTO1(int, x)
    return s;
 }
 
-char *maskname PROTO1(int, x)
+char *maskname (int x)
 {
    static char s[161];
    s[0] = 0;
@@ -659,12 +528,10 @@ char *maskname PROTO1(int, x)
       strcat(s, "cmds, ");
    if (x & LOG_MISC)
       strcat(s, "misc, ");
-   if (x & LOG_BOTS)
+   if ((x & LOG_BOTS) && use_console_r)
       strcat(s, "bots, ");
-#ifdef USE_CONSOLE_R
    if (x & LOG_RAW)
       strcat(s, "raw, ");
-#endif
    if (x & LOG_FILES)
       strcat(s, "files, ");
    if (x & LOG_SERV)
@@ -696,7 +563,7 @@ char *maskname PROTO1(int, x)
 }
 
 /* show all internal state variables */
-void tell_settings PROTO1(int, idx)
+void tell_settings (int idx)
 {
    char s[256];
    int i;
@@ -767,26 +634,6 @@ void tell_settings PROTO1(int, idx)
       dprintf(idx, "Notes can be stored, in: %s\n", notefile);
    else
       dprintf(idx, "Notes can not be stored.\n");
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   if (dccdir[0]) {
-      dprintf(idx, "DCC file path: %s", dccdir);
-      if (upload_to_cd)
-	 dprintf(idx, "\n     incoming: (go to the current dir)\n");
-      else if (dccin[0])
-	 dprintf(idx, "\n     incoming: %s\n", dccin);
-      else
-	 dprintf(idx, " (no uploads)\n");
-      dprintf(idx, "DCC block is %d%s, max concurrent d/ls is %d\n", dcc_block,
-	      (dcc_block == 0) ? " (turbo dcc)" : "", dcc_limit);
-      if (dcc_users)
-	 dprintf(idx, "    max users is %d\n", dcc_users);
-      if ((upload_to_cd) || (dccin[0]))
-	 dprintf(idx, "DCC max file size: %dk\n", dcc_maxsize);
-   } else
-      dprintf(idx, "(No active file transfer path defined.)\n");
-#endif
-#endif
 #ifndef NO_IRC
    if (min_servs)
       dprintf(idx, "Requiring a net of at least %d server(s)\n", min_servs);
@@ -802,23 +649,18 @@ void tell_settings PROTO1(int, idx)
 	   textdir);
    flags2str(default_flags, s);
    dprintf(idx, "New users get flags [%s], notify: %s\n", s, notify_new);
-#ifdef OWNER
    if (owner[0])
       dprintf(idx, "Permanent owner(s): %s\n", owner);
-#endif
-   for (i = 0; i < MAXLOGS; i++)
+   for (i = 0; i < max_logs; i++)
       if (logs[i].filename != NULL) {
 	 dprintf(idx, "Logfile #%d: %s on %s (%s: %s)\n", i + 1, logs[i].filename,
 	 logs[i].chname, masktype(logs[i].mask), maskname(logs[i].mask));
       }
-#ifdef MODULES
    do_module_report(idx);
-#endif
 }
 
 void reaffirm_owners()
 {
-#ifdef OWNER
    char *p, s[121];
    /* make sure default owners are +n */
    if (owner[0]) {
@@ -827,15 +669,14 @@ void reaffirm_owners()
       while (p != NULL) {
 	 *p = 0;
 	 rmspace(s);
-	 set_attr_handle(s, get_attr_handle(s) | USER_OWNER);
+	 set_attr_handle(s, sanity_check(get_attr_handle(s) | USER_OWNER));
 	 strcpy(s, p + 1);
 	 p = strchr(s, ',');
       }
       rmspace(s);
       if (s[0])
-	 set_attr_handle(s, get_attr_handle(s) | USER_OWNER);
+	 set_attr_handle(s, sanity_check(get_attr_handle(s) | USER_OWNER));
    }
-#endif
 }
 
 void chanprog()
@@ -848,13 +689,7 @@ void chanprog()
    textdir[0] = 0;
    notefile[0] = 0;
    tempdir[0] = 0;
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   dccdir[0] = 0;
-   dccin[0] = 0;
-#endif
-#endif
-   for (i = 0; i < MAXLOGS; i++) {
+   for (i = 0; i < max_logs; i++) {
       if (logs[i].filename != NULL) {
 	 nfree(logs[i].filename);
 	 logs[i].filename = NULL;
@@ -871,7 +706,7 @@ void chanprog()
    }
    conmask = 0;
    /* turn off read-only variables (make them write-able) for rehash */
-   unprotect_tcl();
+   protect_readonly = 0;
    /* let's make sure when adding channels to not shareout a null user */
    nulluser = 1;
    /* set static flag for channels added from config file NOT chanfile */
@@ -884,7 +719,7 @@ void chanprog()
    setstatic = 0;
    nulluser = 0;
    context;
-   protect_tcl();
+   protect_readonly = 1;
    strncpy(botname, origbotname, NICKLEN);
    botname[NICKLEN] = 0;
 #ifndef NO_IRC
@@ -927,16 +762,6 @@ void chanprog()
    if (serverlist == NULL)
       fatal("NO SERVER.", 0);
 #endif
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-   if (dccdir[0])
-      if (dccdir[strlen(dccdir) - 1] != '/')
-	 strcat(dccdir, "/");
-   if (dccin[0])
-      if (dccin[strlen(dccin) - 1] != '/')
-	 strcat(dccin, "/");
-#endif
-#endif
    if (helpdir[0])
       if (helpdir[strlen(helpdir) - 1] != '/')
 	 strcat(helpdir, "/");
@@ -967,6 +792,7 @@ void chanprog()
       fclose(f);
       unlink(s);
    }
+   context;
    reaffirm_owners();
 }
 
@@ -974,7 +800,6 @@ void chanprog()
 void reload()
 {
    FILE *f;
-   int i;
    f = fopen(userfile, "r");
    if (f == NULL) {
       putlog(LOG_MISC, "*", "Can't reload user file!");
@@ -987,17 +812,7 @@ void reload()
       fatal("USER FILE IS MISSING!", 0);
    context;
    reaffirm_owners();
-   /* send userfile to passive bots */
-   if ((share_users) && (!noshare) && (!passive)) {
-      for (i = 0; i < dcc_total; i++)
-	 if ((dcc[i].type == DCC_BOT) && (dcc[i].u.bot->status & STAT_SHARE)) {
-	    /* cancel any existing transfers */
-	    if (dcc[i].u.bot->status & STAT_SENDING)
-	       cancel_user_xfer(-i);
-	    tprintf(dcc[i].sock, "userfile?\n");
-	    dcc[i].u.bot->status |= STAT_OFFERED;
-	 }
-   }
+   call_hook(HOOK_READ_USERFILE);
 }
 
 void rehash()
@@ -1015,7 +830,12 @@ void rehash()
       chan = chan->next;
    }
 #endif
-   clearprog();
+   /* clear out the programming */
+   clear_userlist(userlist);
+   userlist = NULL;
+   clearq(serverlist);
+   serverlist = NULL;
+   strcpy(oldnick, botname);
    chanprog();
 #ifndef NO_IRC
    if ((strcasecmp(oldnick, botname) != 0) && (strcasecmp(oldnick, altnick) != 0)
@@ -1052,17 +872,11 @@ void rehash()
 #endif
 }
 
-void get_first_server()
-{
-   curserv = 999;
-   /* silly, no? */
-}
-
 /* brief venture into timers */
 
 /* add a timer */
-unsigned long add_timer PROTO4(tcl_timer_t **, stack, int, elapse, char *, cmd,
-			       unsigned long, prev_id)
+unsigned long add_timer (tcl_timer_t ** stack, int elapse, char * cmd,
+			 unsigned long prev_id)
 {
    tcl_timer_t *old = (*stack);
    *stack = (tcl_timer_t *) nmalloc(sizeof(tcl_timer_t));
@@ -1080,7 +894,7 @@ unsigned long add_timer PROTO4(tcl_timer_t **, stack, int, elapse, char *, cmd,
 }
 
 /* remove a timer, by id */
-int remove_timer PROTO2(tcl_timer_t **, stack, unsigned long, id)
+int remove_timer (tcl_timer_t ** stack, unsigned long id)
 {
    tcl_timer_t *mark = *stack, *old;
    int ok = 0;
@@ -1099,7 +913,7 @@ int remove_timer PROTO2(tcl_timer_t **, stack, unsigned long, id)
 }
 
 /* check timers, execute the ones that have expired */
-void do_check_timers PROTO1(tcl_timer_t **, stack)
+static void do_check_timers (tcl_timer_t ** stack)
 {
    tcl_timer_t *mark = *stack, *old;
    Tcl_DString ds;
@@ -1152,7 +966,7 @@ void check_utimers()
 }
 
 /* wipe all timers */
-void wipe_timers PROTO2(Tcl_Interp *, irp, tcl_timer_t **, stack)
+void wipe_timers (Tcl_Interp * irp, tcl_timer_t ** stack)
 {
    tcl_timer_t *mark = *stack, *old;
    while (mark != NULL) {
@@ -1164,7 +978,7 @@ void wipe_timers PROTO2(Tcl_Interp *, irp, tcl_timer_t **, stack)
 }
 
 /* return list of timers */
-void list_timers PROTO2(Tcl_Interp *, irp, tcl_timer_t *, stack)
+void list_timers (Tcl_Interp * irp, tcl_timer_t * stack)
 {
    tcl_timer_t *mark = stack;
    char mins[10], id[20], *argv[3], *x;

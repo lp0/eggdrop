@@ -12,25 +12,15 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "eggdrop.h"
+#include "main.h"
 #include "users.h"
-#include "proto.h"
-#include "cmdt.h"
-#include "tclegg.h"
 #include "chan.h"
 
 /* eggdrop always uses the same interpreter */
 extern Tcl_Interp *interp;
 extern struct userrec *userlist;
 extern int default_flags;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char origbotname[];
 extern char botnetnick[];
@@ -40,7 +30,7 @@ extern int noshare;
 
 /***********************************************************************/
 
-int tcl_countusers STDVAR
+static int tcl_countusers STDVAR
 {
    char s[40];
     BADARGS(1, 1, "");
@@ -49,7 +39,7 @@ int tcl_countusers STDVAR
     return TCL_OK;
 }
 
-int tcl_validuser STDVAR
+static int tcl_validuser STDVAR
 {
    BADARGS(2, 2, " handle");
    if (is_user(argv[1]))
@@ -59,7 +49,7 @@ int tcl_validuser STDVAR
    return TCL_OK;
 }
 
-int tcl_finduser STDVAR
+static int tcl_finduser STDVAR
 {
    char s[20];
     BADARGS(2, 2, " nick!user@host");
@@ -68,7 +58,7 @@ int tcl_finduser STDVAR
     return TCL_OK;
 }
 
-int tcl_passwdOk STDVAR
+static int tcl_passwdOk STDVAR
 {
    BADARGS(3, 3, " handle passwd");
    if (pass_match_by_handle(argv[2], argv[1]))
@@ -78,7 +68,7 @@ int tcl_passwdOk STDVAR
    return TCL_OK;
 }
 
-int tcl_chattr STDVAR
+static int tcl_chattr STDVAR
 {
    int atr, oatr, f, i, pos = 1, recheck = 0;
    char s[20];
@@ -139,7 +129,7 @@ int tcl_chattr STDVAR
    return TCL_OK;
 }
 
-int tcl_matchattr STDVAR
+static int tcl_matchattr STDVAR
 {
    int i, f, ok = 1;
    char s[2];
@@ -157,13 +147,13 @@ int tcl_matchattr STDVAR
    return TCL_OK;
 }
 
-int tcl_matchchanattr STDVAR
+static int tcl_matchchanattr STDVAR
 {
    int i, f, ok = 1;
    char s[2];
     BADARGS(4, 4, " handle flags channel");
    if (!defined_channel(argv[3])) {
-      Tcl_AppendResult(irp, "no such channel defined", NULL);
+      Tcl_AppendResult(irp, CHAN_NOSUCH, NULL);
       return TCL_ERROR;
    }
    for (i = 0; i < strlen(argv[2]); i++) {
@@ -180,7 +170,7 @@ int tcl_matchchanattr STDVAR
    return TCL_OK;
 }
 
-int tcl_adduser STDVAR
+static int tcl_adduser STDVAR
 {
    BADARGS(3, 3, " handle hostmask");
    if (strlen(argv[1]) > 9)
@@ -198,7 +188,7 @@ int tcl_adduser STDVAR
    return TCL_OK;
 }
 
-int tcl_addbot STDVAR
+static int tcl_addbot STDVAR
 {
    BADARGS(3, 3, " handle address");
    if (is_user(argv[1])) {
@@ -215,7 +205,7 @@ int tcl_addbot STDVAR
    return TCL_OK;
 }
 
-int tcl_deluser STDVAR
+static int tcl_deluser STDVAR
 {
    char s[10];
     BADARGS(2, 2, " handle");
@@ -228,7 +218,7 @@ int tcl_deluser STDVAR
    return TCL_OK;
 }
 
-int tcl_addhost STDVAR
+static int tcl_addhost STDVAR
 {
    BADARGS(3, 3, " handle hostmask");
    if ((!is_user(argv[1])) || (argv[1][0] == '*')) {
@@ -239,7 +229,7 @@ int tcl_addhost STDVAR
    return TCL_OK;
 }
 
-int tcl_delhost STDVAR
+static int tcl_delhost STDVAR
 {
    BADARGS(3, 3, " handle hostmask");
    if ((!is_user(argv[1])) || (argv[1][0] == '*')) {
@@ -254,7 +244,7 @@ int tcl_delhost STDVAR
    return TCL_OK;
 }
 
-int tcl_getinfo STDVAR
+static int tcl_getinfo STDVAR
 {
    char s[161];
     BADARGS(2, 2, " handle");
@@ -266,7 +256,7 @@ int tcl_getinfo STDVAR
     return TCL_OK;
 } 
 
-int tcl_getchaninfo STDVAR
+static int tcl_getchaninfo STDVAR
 {
    char s[161];
     BADARGS(3, 3, " handle channel");
@@ -277,7 +267,7 @@ int tcl_getchaninfo STDVAR
     return TCL_OK;
 }
 
-int tcl_getaddr STDVAR
+static int tcl_getaddr STDVAR
 {
    char s[161];
     BADARGS(2, 2, " handle");
@@ -288,7 +278,7 @@ int tcl_getaddr STDVAR
     return TCL_OK;
 }
 
-int tcl_getdccdir STDVAR
+static int tcl_getdccdir STDVAR
 {
    char s[161];
     BADARGS(2, 2, " handle");
@@ -297,7 +287,7 @@ int tcl_getdccdir STDVAR
     return TCL_OK;
 }
 
-int tcl_getcomment STDVAR
+static int tcl_getcomment STDVAR
 {
    char s[161];
     BADARGS(2, 2, " handle");
@@ -306,7 +296,7 @@ int tcl_getcomment STDVAR
     return TCL_OK;
 }
 
-int tcl_getemail STDVAR
+static int tcl_getemail STDVAR
 {
    char s[161];
     BADARGS(2, 2, " handle");
@@ -315,56 +305,56 @@ int tcl_getemail STDVAR
     return TCL_OK;
 }
 
-int tcl_getxtra STDVAR
+static int tcl_getxtra STDVAR
 {
    BADARGS(2, 2, " handle");
    Tcl_AppendResult(irp, get_handle_xtra(argv[1]), NULL);
    return TCL_OK;
 }
 
-int tcl_setinfo STDVAR
+static int tcl_setinfo STDVAR
 {
    BADARGS(3, 3, " handle info");
    set_handle_info(userlist, argv[1], argv[2]);
    return TCL_OK;
 }
 
-int tcl_setchaninfo STDVAR
+static int tcl_setchaninfo STDVAR
 {
    BADARGS(4, 4, " handle channel info");
    set_handle_chaninfo(userlist, argv[1], argv[2], argv[3]);
    return TCL_OK;
 }
 
-int tcl_setdccdir STDVAR
+static int tcl_setdccdir STDVAR
 {
    BADARGS(3, 3, " handle dccdir");
    set_handle_dccdir(userlist, argv[1], argv[2]);
    return TCL_OK;
 }
 
-int tcl_setcomment STDVAR
+static int tcl_setcomment STDVAR
 {
    BADARGS(3, 3, " handle comment");
    set_handle_comment(userlist, argv[1], argv[2]);
    return TCL_OK;
 }
 
-int tcl_setemail STDVAR
+static int tcl_setemail STDVAR
 {
    BADARGS(3, 3, " handle email");
    set_handle_email(userlist, argv[1], argv[2]);
    return TCL_OK;
 }
 
-int tcl_setxtra STDVAR
+static int tcl_setxtra STDVAR
 {
    BADARGS(3, 3, " handle xtra");
    set_handle_xtra(userlist, argv[1], argv[2]);
    return TCL_OK;
 }
 
-int tcl_getlaston STDVAR
+static int tcl_getlaston STDVAR
 {
    char s[21];
    time_t t;
@@ -378,7 +368,7 @@ int tcl_getlaston STDVAR
     return TCL_OK;
 }
 
-int tcl_getchanlaston STDVAR
+static int tcl_getchanlaston STDVAR
 {
    char ch[161];
     BADARGS(2, 2, " handle");
@@ -387,7 +377,7 @@ int tcl_getchanlaston STDVAR
     return TCL_OK;
 }
 
-int tcl_setlaston STDVAR
+static int tcl_setlaston STDVAR
 {
    time_t t = time(NULL);
     BADARGS(2, 4, " handle ?channel? ?timestamp?");
@@ -402,7 +392,7 @@ int tcl_setlaston STDVAR
     return TCL_OK;
 }
 
-int tcl_userlist STDVAR
+static int tcl_userlist STDVAR
 {
    struct userrec *u = userlist;
    int f = 0;
@@ -420,19 +410,19 @@ int tcl_userlist STDVAR
    return TCL_OK;
 }
 
-int tcl_save STDVAR
+static int tcl_save STDVAR
 {
    write_userfile();
    return TCL_OK;
 }
 
-int tcl_reload STDVAR
+static int tcl_reload STDVAR
 {
    reload();
    return TCL_OK;
 }
 
-int tcl_gethosts STDVAR
+static int tcl_gethosts STDVAR
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -447,9 +437,9 @@ int tcl_gethosts STDVAR
    } return TCL_OK;
 }
 
-int tcl_chpass STDVAR
+static int tcl_chpass STDVAR
 {
-   char par[10], pass[10];
+   char par[16], pass[16];
     BADARGS(2, 3, " handle ?password?");
    if (argc == 3 && argv[2][0]) {
       strncpy(par, argv[2], 15);
@@ -461,7 +451,7 @@ int tcl_chpass STDVAR
    return TCL_OK;
 }
 
-int tcl_chnick STDVAR
+static int tcl_chnick STDVAR
 {
    char hand[10];
    int x = 1, i;
@@ -486,11 +476,12 @@ int tcl_chnick STDVAR
       if (x) {
 	 notes_change(-1, argv[1], hand);
 	 for (i = 0; i < dcc_total; i++) {
-	    if ((strcasecmp(dcc[i].nick, argv[1]) == 0) && (dcc[i].type != DCC_BOT)) {
+	    if ((strcasecmp(dcc[i].nick, argv[1]) == 0) 
+		&& (dcc[i].type != &DCC_BOT)) {
 	       char s[10];
 	        strcpy(s, dcc[i].nick);
 	        strcpy(dcc[i].nick, hand);
-	       if ((dcc[i].type == DCC_CHAT) && (dcc[i].u.chat->channel >= 0)) {
+	       if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->channel >= 0)) {
 		  chanout2(dcc[i].u.chat->channel, "Nick change: %s -> %s\n", s, hand);
 		  if (dcc[i].u.chat->channel < 100000) {
 		     tandout("part %s %s %d\n", botnetnick, s, dcc[i].sock);
@@ -508,12 +499,12 @@ int tcl_chnick STDVAR
    return TCL_OK;
 }
 
-int tcl_getting_users STDVAR
+static int tcl_getting_users STDVAR
 {
    int i;
     BADARGS(1, 1, "");
    for (i = 0; i < dcc_total; i++) {
-      if ((dcc[i].type == DCC_BOT) && (dcc[i].u.bot->status & STAT_GETTING)) {
+      if ((dcc[i].type == &DCC_BOT) && (dcc[i].u.bot->status & STAT_GETTING)) {
 	 Tcl_AppendResult(irp, "1", NULL);
 	 return TCL_OK;
       }
@@ -521,7 +512,7 @@ int tcl_getting_users STDVAR
    return TCL_OK;
 }
 
-int tcl_isignore STDVAR
+static int tcl_isignore STDVAR
 {
    int x;
     BADARGS(2, 2, " nick!user@host");
@@ -533,7 +524,7 @@ int tcl_isignore STDVAR
     return TCL_OK;
 }
 
-int tcl_newignore STDVAR
+static int tcl_newignore STDVAR
 {
    time_t now = time(NULL), expire_time;
    char ign[UHOSTLEN], cmt[66], from[10];
@@ -555,7 +546,7 @@ int tcl_newignore STDVAR
    return TCL_OK;
 }
 
-int tcl_killignore STDVAR
+static int tcl_killignore STDVAR
 {
    int x;
     BADARGS(2, 2, " hostmask");
@@ -568,7 +559,7 @@ int tcl_killignore STDVAR
 }
 
 /* { hostmask note expire-time create-time creator } */
-int tcl_ignorelist STDVAR
+static int tcl_ignorelist STDVAR
 {
    struct userrec *u;
    struct eggqueue *q;
@@ -628,7 +619,7 @@ int tcl_ignorelist STDVAR
    return TCL_OK;
 }
 
-int tcl_addchanrec STDVAR
+static int tcl_addchanrec STDVAR
 {
    struct userrec *u;
     context;
@@ -651,7 +642,7 @@ int tcl_addchanrec STDVAR
    return TCL_OK;
 }
 
-int tcl_delchanrec STDVAR
+static int tcl_delchanrec STDVAR
 {
    struct userrec *u;
     context;
@@ -674,7 +665,7 @@ int tcl_delchanrec STDVAR
    return TCL_OK;
 }
 
-int tcl_notes STDVAR
+static int tcl_notes STDVAR
 {
    FILE *f;
    char s[601], to[34], from[34], dt[34];
@@ -729,3 +720,49 @@ int tcl_notes STDVAR
    fclose(f);
    return TCL_OK;
 }
+
+tcl_cmds tcluser_cmds [] = {
+   { "countusers", tcl_countusers },
+   { "validuser", tcl_validuser },
+   { "finduser", tcl_finduser },
+   { "passwdok", tcl_passwdOk },
+   { "chattr", tcl_chattr },
+   { "matchattr", tcl_matchattr },
+   { "matchchanattr", tcl_matchchanattr },
+   { "adduser", tcl_adduser },
+   { "addbot", tcl_addbot },
+   { "deluser", tcl_deluser },
+   { "addhost", tcl_addhost },
+   { "delhost", tcl_delhost },
+   { "getinfo", tcl_getinfo },
+   { "getchaninfo", tcl_getchaninfo },
+   { "getaddr", tcl_getaddr },
+   { "getdccdir", tcl_getdccdir },
+   { "getcomment", tcl_getcomment },
+   { "getemail", tcl_getemail },
+   { "getxtra", tcl_getxtra },
+   { "setinfo", tcl_setinfo },
+   { "setchaninfo", tcl_setchaninfo },
+   { "setdccdir", tcl_setdccdir },
+   { "setcomment", tcl_setcomment },
+   { "setemail", tcl_setemail },
+   { "setxtra", tcl_setxtra },
+   { "getlaston", tcl_getlaston },
+   { "getchanlaston", tcl_getchanlaston },
+   { "setlaston", tcl_setlaston },
+   { "userlist", tcl_userlist },
+   { "save", tcl_save },
+   { "reload", tcl_reload },
+   { "gethosts", tcl_gethosts },
+   { "chpass", tcl_chpass },
+   { "chnick", tcl_chnick },
+   { "getting-users", tcl_getting_users },
+   { "isignore", tcl_isignore },
+   { "newignore", tcl_newignore },
+   { "killignore", tcl_killignore },
+   { "ignorelist", tcl_ignorelist },
+   { "addchanrec", tcl_addchanrec },
+   { "delchanrec", tcl_delchanrec },
+   { "notes", tcl_notes },
+   { 0, 0 }
+};

@@ -123,6 +123,12 @@ struct chanset_t {
 memberlist *ismember();
 memberlist *newmember();
 struct chanset_t *findchan();
-struct chanset_t *newchanset();
+
+/* is this channel +s/+p? */
+#define channel_hidden(chan) (chan->channel.mode & (CHANPRIV | CHANSEC))
+/* is this channel +t? */
+#define channel_optopic(chan) (chan->channel.mode & CHANTOPIC)
+#define channel_active(chan)  (chan->stat & CHANACTIVER)
+#define newly_chanop(chan) recheck_channel(chan)
 
 #endif

@@ -75,12 +75,6 @@
 
 /* extra commands are stored in Tcl hash tables (one hash table for each type
    of command: msg, dcc, etc) */
-typedef struct tct {
-  int flags_needed;
-  char *func_name;
-  struct tct *next;
-} tcl_cmd_t;
-
 typedef struct timer_str {
   unsigned int mins;   /* time to elapse */
   char *cmd;           /* command linked to */
@@ -101,74 +95,13 @@ typedef struct timer_str {
 #define X(A) int A()
 #define X5(A,B,C,D,E) X(A);X(B);X(C);X(D);X(E)
 
-#ifndef MAKING_MODS
-/***** prototypes! *****/
-
-X(tcl_builtin);
-
-/* tclchan.c */
-X5(tcl_chanlist, tcl_botisop, tcl_isop, tcl_isvoice, tcl_onchan);
-X5(tcl_handonchan, tcl_ischanban, tcl_getchanhost, tcl_onchansplit, tcl_isban);
-X5(tcl_maskhost,tcl_isban, tcl_ispermban, tcl_matchban,tcl_jump);
-X5(tcl_hand2nick, tcl_nick2hand, tcl_channel_info, tcl_channel_modify,
-   tcl_channel_add);
-X5(tcl_getchanidle, tcl_chanbans, tcl_resetbans, tcl_getchanjoin, tcl_resetchan);
-X5(tcl_channel, tcl_banlist, tcl_channels, tcl_getchanmode, tcl_flushmode);
-X5(tcl_pushmode, tcl_newchanban, tcl_newban, tcl_killchanban, tcl_killban);
-X5(tcl_topic, tcl_savechannels, tcl_loadchannels, tcl_validchan, tcl_isdynamic);
-
-/* tcluser.c */
-X5(tcl_countusers, tcl_validuser, tcl_finduser, tcl_passwdOk, tcl_chattr);
-X5(tcl_matchattr, tcl_adduser, tcl_addbot, tcl_deluser, tcl_addhost);
-X5(tcl_delhost, tcl_getinfo, tcl_getdccdir, tcl_getcomment, tcl_getemail);
-X5(tcl_getxtra, tcl_setinfo, tcl_setdccdir, tcl_setcomment, tcl_setemail);
-X5(tcl_setxtra, tcl_getlaston, tcl_setlaston, tcl_userlist, tcl_save);
-X5(tcl_reload, tcl_gethosts, tcl_chpass, tcl_chnick, tcl_getting_users);
-X5(tcl_getaddr, tcl_isignore, tcl_newignore, tcl_killignore, tcl_ignorelist);
-X5(tcl_getdnloads, tcl_setdnloads, tcl_getuploads, tcl_setuploads,
-   tcl_matchchanattr);
-X5(tcl_getchaninfo, tcl_setchaninfo, tcl_addchanrec, tcl_delchanrec, 
-   tcl_getchanlaston);
-X(tcl_notes);
-
-/* tcldcc.c */
-X5(tcl_putdcc, tcl_strip, tcl_dccsend, tcl_dccbroadcast, tcl_hand2idx);
-X5(tcl_getchan, tcl_setchan, tcl_dccputchan, tcl_console, tcl_echo);
-X5(tcl_control, tcl_killdcc, tcl_putbot, tcl_putallbots, tcl_idx2hand);
-X5(tcl_bots, tcl_dcclist, tcl_dccused, tcl_link, tcl_unlink);
-X5(tcl_filesend, tcl_assoc, tcl_killassoc, tcl_getdccidle, tcl_getdccaway);
-X5(tcl_setdccaway, tcl_connect, tcl_whom, tcl_valididx, tcl_listen);
-X5(tcl_putidx, tcl_page, tcl_boot, tcl_rehash, tcl_restart);
-#ifdef MODULES
-X(tcl_unloadmodule);
-X(tcl_modules);
-#else
-X(tcl_nomodules);
-#endif
-X(tcl_loadmodule);
-#ifdef ENABLE_TCL_DCCSIMUL
-X(tcl_dccsimul);
-#endif
-
-/* tclmisc.c */
-X5(tcl_putserv, tcl_puthelp, tcl_putlog, tcl_putcmdlog, tcl_putxferlog);
-X5(tcl_putloglev, tcl_bind, tcl_timer, tcl_utimer, tcl_killtimer);
-X5(tcl_killutimer, tcl_unixtime, tcl_time, tcl_date, tcl_timers);
-X5(tcl_utimers, tcl_ctime, tcl_myip, tcl_rand, tcl_sendnote);
-X5(tcl_getfileq, tcl_getdesc, tcl_setdesc, tcl_getowner, tcl_setowner);
-X5(tcl_getgots, tcl_setlink, tcl_getlink, tcl_setpwd, tcl_getpwd);
-X5(tcl_getfiles, tcl_getdirs, tcl_hide, tcl_unhide, tcl_share);
-X5(tcl_unshare, tcl_encrypt, tcl_decrypt, tcl_dumpfile, tcl_dccdumpfile);
-X5(tcl_backup, tcl_die, tcl_strftime, tcl_mkdir, tcl_rmdir);
-X(tcl_getflags); X(tcl_setflags); X(tcl_mv); X(tcl_cp);
-#endif
-
+X(tcl_channel_add); X(tcl_channel_modify);
 /* functions definitions moved here from proto.h */
 
-unsigned long add_timer PROTO((tcl_timer_t **,int, char *,unsigned long));
-int remove_timer PROTO((tcl_timer_t **,unsigned long));
-void list_timers PROTO((Tcl_Interp *, tcl_timer_t *));
-void wipe_timers PROTO((Tcl_Interp *, tcl_timer_t **));
+unsigned long add_timer (tcl_timer_t **,int, char *,unsigned long);
+int remove_timer (tcl_timer_t **,unsigned long);
+void list_timers (Tcl_Interp *, tcl_timer_t *);
+void wipe_timers (Tcl_Interp *, tcl_timer_t **);
 
 typedef struct _tcl_strings {
    char * name;
@@ -187,10 +120,10 @@ typedef struct _tcl_cmds {
    void * func;
 } tcl_cmds;
 
-void add_tcl_commands PROTO((tcl_cmds *));
-void rem_tcl_commands PROTO((tcl_cmds *));
-void add_tcl_strings PROTO((tcl_strings *));
-void rem_tcl_strings PROTO((tcl_strings *));
-void add_tcl_ints PROTO((tcl_ints *));
-void rem_tcl_ints PROTO((tcl_ints *));
+void add_tcl_commands (tcl_cmds *);
+void rem_tcl_commands (tcl_cmds *);
+void add_tcl_strings (tcl_strings *);
+void rem_tcl_strings (tcl_strings *);
+void add_tcl_ints (tcl_ints *);
+void rem_tcl_ints (tcl_ints *);
 #endif

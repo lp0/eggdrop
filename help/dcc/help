@@ -7,20 +7,20 @@ DCC COMMANDS for %B, %V:
   bottree      deop         invite       console      chat
   notes        topic        nick         email        info
   echo         botinfo      stick        unstick      strip
-  trace        fixcodes     filestats    page         su
-%{+M}
+  trace        fixcodes     page         su
+%{+m|m}
 For channel masters:
   adduser      +host        chattr       save         reload
-  deluser      -host        status       boot         chaninfo
+  deluser      -host        status       chaninfo
 %{end}
-%{+N}
+%{+n|n}
 For channel owners:
   chanset      chansave     chanload
 %{end}
 %{+B}
 For botnet masters:
-  +bot         chbotattr    chnick       chpass       +bothost
-  -bot         link         chaddr       relay        -bothost
+  +bot         chattr       chnick       chpass       +host
+  -bot         link         chaddr       relay        -host
    unlink      assoc        boot
 %{end}
 %{+m}

@@ -1,3 +1,0 @@
-%{+B}
-###  -bothost <nickname> <hostmask>
-   Removes a hostmask from a bot's record on the bot.

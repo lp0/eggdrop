@@ -12,17 +12,8 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
-#include "eggdrop.h"
-#include "users.h"
+#include "main.h"
 #include "chan.h"
-#include "proto.h"
 
 /* let unknown users greet us and become known */
 int learn_users = 0;
@@ -38,6 +29,7 @@ int use_info = 1;
 char notify_new[121] = "";
 /* default user flags for people who say 'hello' */
 int default_flags = 0;
+extern int quiet_reject;
 
 /* non-irc?  need none of this file then */
 #ifndef NO_IRC
@@ -51,39 +43,96 @@ extern char helpdir[];
 extern int make_userfile;
 extern char notefile[];
 extern int dcc_total;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern struct userrec *userlist;
 extern struct chanset_t *chanset;
 extern int default_port;
 
+/* msg to xx everyone on the channel's info */
+static void show_all_info (char * chname, char * who)
+{
+   memberlist *m;
+   char s[UHOSTLEN], nick[NICKLEN], also[512], info[120];
+   int atr;
+   struct chanset_t *chan;
+   also[0] = 0;
+   chan = findchan(chname);
+   if (chan == NULL) {
+      hprintf(serv, "NOTICE %s :I'm not on channel %s\n", who, chname);
+      return;
+   }
+   m = chan->channel.member;
+   while (m->nick[0]) {
+      sprintf(s, "%s!%s", m->nick, m->userhost);
+      get_handle_by_host(nick, s);
+      get_handle_info(nick, info);
+      atr = get_attr_handle(nick);
+      if (atr & USER_BOT)
+	 info[0] = 0;
+      if (info[0] == '@')
+	 strcpy(info, &info[1]);
+      else {
+	 get_handle_chaninfo(nick, chname, s);
+	 if (s[0] == '@')
+	    strcpy(s, &s[1]);
+	 if (s[0])
+	    strcpy(info, s);
+      }
+      if (info[0])
+	 hprintf(serv, "NOTICE %s :[%9s] %s\n", who, m->nick, info);
+      else {
+	 if (strcasecmp(m->nick, botname) == 0)
+	    hprintf(serv, "NOTICE %s :[%9s] <-- I'm the bot, of course.\n",
+		    who, m->nick);
+	 else if (atr & USER_BOT) {
+	    if (atr & BOT_SHARE)
+	       hprintf(serv, "NOTICE %s :[%9s] <-- a twin of me\n", who, m->nick);
+	    else
+	       hprintf(serv, "NOTICE %s :[%9s] <-- another bot\n", who, m->nick);
+	 } else {
+	    strcat(also, m->nick);
+	    strcat(also, ", ");
+	 }
+      }
+      m = m->next;
+   }
+   if (also[0]) {
+      also[strlen(also) - 2] = 0;
+      hprintf(serv, "NOTICE %s :No info: %s\n", who, also);
+   }
+}
 
-int msg_hello PROTO4(char *, n, char *, nick, char *, h, char *, p)
+static int msg_hello (char * nick, char * h, char * n, char * p)
 {
    char host[161], s[161], s1[161];
    char *p1;
-   int common = 0, atr;
+   int common = 0;
+   int atr;
+   struct chanset_t * chan;
+   
    if ((!learn_users) && (!make_userfile))
       return 0;
    if (strcasecmp(nick, botname) == 0)
       return 1;
    atr = get_attr_handle(n);
    if ((n[0] != '*') && !(atr & USER_COMMON)) {
-      mprintf(serv, "NOTICE %s :Hi, %s.\n", nick, n);
+      mprintf(serv, "NOTICE %s :%s, %s.\n", IRC_HI, nick, n);
       return 1;
    }
    if (is_user(nick)) {
-      showtext(nick, "badhost", atr);
+      struct flag_record fr = { 0, 0, 0 };
+      fr.global = atr;
+      showtext(nick, "badhost", &fr);
       return 1;
    }
-   sprintf(s, "%s!%s", nick, h);
+   sprintf (s, "%s!%s", nick, h);
    if (match_ban(s)) {
-      hprintf(serv, "NOTICE %s :You're banned, goober.\n", nick);
+      hprintf(serv, "NOTICE %s :%s.\n", nick, IRC_BANNED2);
       return 1;
    }
    if (strlen(nick) > 9) {
       /* crazy dalnet */
-      hprintf(serv, "NOTICE %s :Your nick is too long to add right now.\n",
-	      nick);
+      hprintf(serv, "NOTICE %s :%s.\n", nick, IRC_NICKTOOLONG);
       return 1;
    }
    if (atr & USER_COMMON) {
@@ -91,7 +140,8 @@ int msg_hello PROTO4(char *, n, char *, nick, char *, h, char *, p)
       strcpy(s, host);
       sprintf(host, "%s!%s", nick, &s[2]);
       userlist = adduser(userlist, nick, host, "-", default_flags);
-      putlog(LOG_MISC, "*", "Introduced to %s (%s) -- common site", nick, host);
+      putlog(LOG_MISC, "*", "%s %s (%s) -- %s", 
+			IRC_INTRODUCED, nick, host, IRC_COMMONSITE);
       common = 1;
    } else {
       maskhost(s, host);
@@ -100,36 +150,33 @@ int msg_hello PROTO4(char *, n, char *, nick, char *, h, char *, p)
 			    USER_OWNER);
       else
 	 userlist = adduser(userlist, nick, host, "-", default_flags);
-      putlog(LOG_MISC, "*", "Introduced to %s (%s)", nick, host);
+      putlog(LOG_MISC, "*", "%s %s (%s)", IRC_INTRODUCED, nick, host);
    }
-   hprintf(serv, "NOTICE %s :Hi %s!  I'm %s, an eggdrop bot.\n", nick,
-	   nick, botname);
-   hprintf(serv, "NOTICE %s :I'll recognize you by hostmask '%s'%s\n",
-	   nick, host, " from now on.");
+   for (chan = chanset; chan; chan=chan->next) {
+      if (ismember(chan,nick))
+	add_chanrec_by_handle(userlist,nick,chan->name,0,0);
+   }
+   hprintf(serv, IRC_SALUT1, IRC_SALUT1_ARGS);
+   hprintf(serv, IRC_SALUT2, IRC_SALUT2_ARGS);
    if (common) {
-      hprintf(serv, "NOTICE %s :Since you come from a common irc site, %s",
-	      nick, "this means you should\n");
-      hprintf(serv, "NOTICE %s :  always use this nickname when talking %s",
-	      nick, "to me.\n");
+      hprintf(serv, "NOTICE %s :%s", nick, IRC_SALUT2A);
+      hprintf(serv, "NOTICE %s :%s", nick, IRC_SALUT2B);
    }
    if (make_userfile) {
-#ifdef OWNER
-      hprintf(serv, "NOTICE %s :YOU ARE THE MASTER/OWNER ON THIS BOT NOW\n",
-	      nick);
-#else
-      hprintf(serv, "NOTICE %s :YOU ARE THE MASTER ON THIS BOT NOW\n",
-	      nick);
-#endif
-      showtext(nick, "newbot", default_flags | USER_MASTER | USER_OWNER);
-      putlog(LOG_MISC, "*", "Bot installation complete, first master is %s",
-	     nick);
+      struct flag_record fr = { default_flags | USER_MASTER | USER_OWNER, 0, 0 };
+
+      hprintf(serv, "NOTICE %s :%s\n", nick, IRC_INITOWNER1);
+      showtext(nick, "newbot", &fr);
+      putlog(LOG_MISC, "*", IRC_INIT1, IRC_INIT1_ARGS);
       make_userfile = 0;
       write_userfile();
-      add_note(nick, origbotname, "Welcome to eggdrop! :)", -1, 0);
-   } else
-      showtext(nick, "intro", default_flags);
+      add_note(nick, origbotname, IRC_INITNOTE, -1, 0);
+   } else {
+      struct flag_record fr = { default_flags, 0, 0 };
+      showtext(nick, "intro", &fr);
+   }
    if (notify_new[0]) {
-      sprintf(s, "Introduced to %s from %s", nick, host);
+      sprintf(s, IRC_INITINTRO, nick, host);
       strcpy(s1, notify_new);
       while (s1[0]) {
 	 p1 = strchr(s1, ',');
@@ -149,7 +196,7 @@ int msg_hello PROTO4(char *, n, char *, nick, char *, h, char *, p)
    return 1;
 }
 
-int msg_pass PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_pass (char * nick, char * host, char * hand, char * par)
 {
    char old[512], new[512];
    if (strcasecmp(nick, botname) == 0)
@@ -160,13 +207,13 @@ int msg_pass PROTO4(char *, hand, char *, nick, char *, host, char *, par)
       return 1;
    split(old, par);
    if (!par[0]) {
-      mprintf(serv, "NOTICE %s :You %s a password set.\n", nick,
-	      pass_match_by_handle("-", hand) ? "don't have" : "have");
+      mprintf(serv, "NOTICE %s :%s\n", nick,
+	      pass_match_by_handle("-", hand) ? IRC_NOPASS : IRC_PASS);
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! PASS?", nick, host, hand);
       return 1;
    }
    if ((!pass_match_by_handle("-", hand)) && (!old[0])) {
-      mprintf(serv, "NOTICE %s :You already have a password set.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_EXISTPASS);
       return 1;
    }
    if (!old[0]) {
@@ -175,15 +222,15 @@ int msg_pass PROTO4(char *, hand, char *, nick, char *, host, char *, par)
       if (strlen(new) > 15)
 	 new[15] = 0;
       if (strlen(new) < 4) {
-	 mprintf(serv, "NOTICE %s :Please use at least 4 characters.\n", nick);
+	 mprintf(serv, "NOTICE %s :%s.\n", nick, IRC_PASSFORMAT);
 	 return 0;
       }
       change_pass_by_handle(hand, new);
-      mprintf(serv, "NOTICE %s :Password set to '%s'\n", nick, new);
+      mprintf(serv, "NOTICE %s :%s '%s'\n", nick, IRC_SETPASS, new);
       return 1;
    }
    if (!pass_match_by_handle(old, hand)) {
-      mprintf(serv, "NOTICE %s :Incorrect password.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick);
       return 1;
    }
    nsplit(new, par);
@@ -191,15 +238,15 @@ int msg_pass PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (strlen(new) > 15)
       new[15] = 0;
    if (strlen(new) < 4) {
-      mprintf(serv, "NOTICE %s :Please use at least 4 characters.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_PASSFORMAT);
       return 0;
    }
    change_pass_by_handle(hand, new);
-   mprintf(serv, "NOTICE %s :Password changed to '%s'.\n", nick, new);
+   mprintf(serv, "NOTICE %s :%s '%s'.\n", nick, IRC_CHANGEPASS, new);
    return 1;
 }
 
-int msg_ident PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_ident (char * nick, char * host, char * hand, char * par)
 {
    char s[121], s1[121], pass[512], who[NICKLEN];
    if (strcasecmp(nick, botname) == 0)
@@ -207,14 +254,13 @@ int msg_ident PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (get_attr_handle(hand) & USER_BOT)
       return 1;
    if (get_attr_handle(hand) & USER_COMMON) {
-      mprintf(serv, "NOTICE %s :You're at a common site; you can't ident.\n",
-	      nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_FAILCOMMON);
       return 1;
    }
    nsplit(pass, par);
    if (!is_user(nick)) {
       if (strcmp(hand, "*") != 0) {
-	 mprintf(serv, "NOTICE %s :You're not %s, you're %s.\n", nick, nick, hand);
+	 mprintf(serv, IRC_MISIDENT, IRC_MISIDENT_ARGS);
 	 return 1;
       }
       if ((!par[0]) || (!is_user(par)))
@@ -228,31 +274,31 @@ int msg_ident PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (strcasecmp(who, origbotname) == 0)
       return 1;
    if (pass_match_by_handle("-", who)) {
-      mprintf(serv, "NOTICE %s :You have no password set.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_NOPASS);
       return 1;
    }
    if (!pass_match_by_handle(pass, who)) {
-      mprintf(serv, "NOTICE %s :Access denied.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_DENYACCESS);
       return 1;
    }
    if (strcasecmp(hand, who) == 0) {
-      mprintf(serv, "NOTICE %s :I recognize you there.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_RECOGNIZED);
       return 1;
    }
    if (strcmp(hand, "*") != 0) {
-      mprintf(serv, "NOTICE %s :You're not %s, you're %s.\n", nick, who, hand);
+      mprintf(serv, IRC_MISIDENT, IRC_MISIDENT_ARGS2);
       return 1;
    }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! IDENT %s", nick, host, hand, who);
    sprintf(s, "%s!%s", nick, host);
    maskhost(s, s1);
-   hprintf(serv, "NOTICE %s :Added hostmask: %s\n", nick, s1);
+   hprintf(serv, "NOTICE %s :%s: %s\n", nick, IRC_ADDHOSTMASK, s1);
    addhost_by_handle(who, s1);
    recheck_ops(nick, who);
    return 1;
 }
 
-int msg_email PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_email (char * nick, char * host, char * hand, char * par)
 {
    char s[161];
    if (strcasecmp(nick, botname) == 0)
@@ -267,25 +313,26 @@ int msg_email PROTO4(char *, hand, char *, nick, char *, host, char *, par)
 	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! EMAIL NONE", nick, host, hand);
 	 par[0] = 0;
 	 set_handle_email(userlist, hand, par);
-	 mprintf(serv, "NOTICE %s :Removed your email address.\n", nick);
+	 mprintf(serv, "NOTICE %s :%s\n", nick, IRC_DELMAILADDR);
       } else {
 	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! EMAIL...", nick, host, hand);
 	 set_handle_email(userlist, hand, par);
-	 mprintf(serv, "NOTICE %s :Now: %s\n", nick, par);
+	 mprintf(serv, "NOTICE %s :%s %s\n", nick, IRC_FIELDCHANGED, par);
       }
       return 1;
    }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! EMAIL?", nick, host, hand);
    get_handle_email(hand, s);
    if (s[0]) {
-      mprintf(serv, "NOTICE %s :Currently: %s\n", nick, s);
-      mprintf(serv, "NOTICE %s :To remove it: /msg %s email none\n", nick, botname);
+      mprintf(serv, "NOTICE %s :%s %s\n", nick, IRC_FIELDCURRENT, s);
+      mprintf(serv, "NOTICE %s :%s /msg %s email none\n", 
+				nick, IRC_FIELDTOREMOVE, botname);
    } else
-      mprintf(serv, "NOTICE %s :You have no email address set.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_NOEMAIL);
    return 1;
 }
 
-int msg_info PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_info (char * nick, char * host, char * hand, char * par)
 {
    char s[121], pass[512], chname[512];
    int locked = 0;
@@ -318,27 +365,26 @@ int msg_info PROTO4(char *, hand, char *, nick, char *, host, char *, par)
 	    locked = 1;
       }
       if (locked) {
-	 mprintf(serv, "NOTICE %s :Your info line is locked.\n", nick);
+	 mprintf(serv, "NOTICE %s :%s\n", nick, IRC_INFOLOCKED);
 	 return 1;
       }
       if (strcasecmp(par, "none") == 0) {
 	 par[0] = 0;
 	 if (chname[0]) {
 	    set_handle_chaninfo(userlist, hand, chname, par);
-	    mprintf(serv, "NOTICE %s :Removed your info line on %s.\n", nick,
-		    chname);
+	    mprintf(serv, "NOTICE %s :%s %s.\n", nick, IRC_REMINFOON, chname);
 	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO %s NONE", nick, host, hand,
 		   chname);
 	 } else {
 	    set_handle_info(userlist, hand, par);
-	    mprintf(serv, "NOTICE %s :Removed your info line.\n", nick);
+	    mprintf(serv, "NOTICE %s :%s\n", nick, IRC_REMINFO);
 	    putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO NONE", nick, host, hand);
 	 }
 	 return 1;
       }
       if (par[0] == '@')
 	 strcpy(par, &par[1]);
-      mprintf(serv, "NOTICE %s :Now: %s\n", nick, par);
+      mprintf(serv, "NOTICE %s :%s %s\n", nick, IRC_FIELDCHANGED, par);
       if (chname[0]) {
 	 set_handle_chaninfo(userlist, hand, chname, par);
 	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO %s ...", nick, host, hand, chname);
@@ -356,19 +402,19 @@ int msg_info PROTO4(char *, hand, char *, nick, char *, host, char *, par)
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! INFO?", nick, host, hand);
    }
    if (s[0]) {
-      mprintf(serv, "NOTICE %s :Currently: %s\n", nick, s);
-      mprintf(serv, "NOTICE %s :To remove it: /msg %s info <pass>%s%s none\n",
-	      nick, botname, chname[0] ? " " : "", chname);
+      mprintf(serv, "NOTICE %s :%s %s\n", nick, IRC_FIELDCURRENT, s);
+      mprintf(serv, "NOTICE %s :%s /msg %s info <pass>%s%s none\n",
+	      nick, IRC_FIELDTOREMOVE, botname, chname[0] ? " " : "", chname);
    } else {
       if (chname[0])
-	 mprintf(serv, "NOTICE %s :You have no info set on %s.\n", nick, chname);
+	 mprintf(serv, "NOTICE %s :%s %s.\n", nick, IRC_NOINFOON, chname);
       else
-	 mprintf(serv, "NOTICE %s :You have no info set.\n", nick);
+	 mprintf(serv, "NOTICE %s :%s\n", nick, IRC_NOINFO);
    }
    return 1;
 }
 
-int msg_who PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_who (char * nick, char * host, char * hand, char * par)
 {
    struct chanset_t *chan;
    if (strcasecmp(nick, botname) == 0)
@@ -378,20 +424,20 @@ int msg_who PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (!use_info)
       return 1;
    if (!par[0]) {
-      mprintf(serv, "NOTICE %s :Usage: /msg %s who <channel>\n", nick,
-	      botname);
+      mprintf(serv, "NOTICE %s :%s: /msg %s who <channel>\n", nick,
+	      			USAGE, botname);
       return 0;
    }
    chan = findchan(par);
    if (chan == NULL) {
-      mprintf(serv, "NOTICE %s :I don't monitor that channel.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_NOMONITOR);
       return 0;
    }
    if ((channel_hidden(chan)) &&
        (!hand_on_chan(chan, hand)) &&
        !(get_attr_handle(hand) & USER_MASTER) &&
        !(get_chanattr_handle(hand, chan->name) & (CHANUSER_OP | CHANUSER_FRIEND))) {
-      mprintf(serv, "NOTICE %s :Channel is currently hidden.\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, IRC_CHANHIDDEN);
       return 1;
    }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! WHO", nick, host, hand);
@@ -399,10 +445,10 @@ int msg_who PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_whois PROTO4(char *, hand, char *, nick, char *, host, char *, opar)
+static int msg_whois (char * nick, char * host, char * hand, char * opar)
 {
    time_t tt, tt1 = 0;
-   char s[161], s1[81], par[NICKLEN];
+   char s[161], s1[81], par[NICKLEN+1];
    int atr, ok;
    struct chanset_t *chan;
    if (strcasecmp(nick, botname) == 0)
@@ -410,7 +456,7 @@ int msg_whois PROTO4(char *, hand, char *, nick, char *, host, char *, opar)
    if (strcasecmp(hand, "*") == 0)
       return 0;
    strncpy(par, opar, NICKLEN);
-   par[NICKLEN - 1] = 0;
+   par[NICKLEN] = 0;
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! WHOIS %s", nick, host, hand, par);
    if (!is_user(par)) {
       /* no such handle -- maybe it's a nickname of someone on a chan? */
@@ -425,12 +471,12 @@ int msg_whois PROTO4(char *, hand, char *, nick, char *, host, char *, opar)
 	    if (par[0] == '*')
 	       ok = 0;
 	    else
-	       hprintf(serv, "NOTICE %s :[%s] aka '%s':\n", nick, opar, par);
+	       hprintf(serv, "NOTICE %s :[%s] AKA '%s':\n", nick, opar, par);
 	 }
 	 chan = chan->next;
       }
       if (!ok) {
-	 hprintf(serv, "NOTICE %s :[%s] No user record.\n", nick, opar);
+	 hprintf(serv, "NOTICE %s :[%s] %s\n", nick, opar, USERF_NOUSERREC);
 	 return 1;
       }
    }
@@ -447,7 +493,8 @@ int msg_whois PROTO4(char *, hand, char *, nick, char *, host, char *, opar)
    chan = chanset;
    while (chan != NULL) {
       if (hand_on_chan(chan, par)) {
-	 sprintf(s1, "NOTICE %s :[%s] On %s now.", nick, par, chan->name);
+	 sprintf(s1, "NOTICE %s :[%s] %s %s.", nick, par, 
+				IRC_ONCHANNOW, chan->name);
 	 ok = 1;
       } else {
 	 get_handle_laston(chan->name, par, &tt);
@@ -461,26 +508,25 @@ int msg_whois PROTO4(char *, hand, char *, nick, char *, host, char *, opar)
 	    strcpy(s, &s[4]);
 	    s[12] = 0;
 	    ok = 1;
-	    sprintf(s1, "NOTICE %s :[%s] Last seen at %s on %s", nick, par,
-		    s, chan->name);
+	    sprintf(s1, "NOTICE %s :[%s] %s %s on %s", nick, par,
+		    		IRC_LASTSEENAT, s, chan->name);
 	 }
       }
       chan = chan->next;
    }
    if (!ok)
-      sprintf(s1, "NOTICE %s :[%s] Never joined one of my channels.",
-	      nick, par);
+      sprintf(s1, "NOTICE %s :[%s] %s", nick, par, IRC_NEVERJOINED);
    if (atr & USER_GLOBAL)
-      strcat(s1, "  (is a global op)");
+      strcat(s1, USER_ISGLOBALOP);
    if (atr & USER_BOT)
-      strcat(s1, "  (is a bot)");
+      strcat(s1, USER_ISBOT);
    if (atr & USER_MASTER)
-      strcat(s1, "  (is a master)");
+      strcat(s1, USER_ISMASTER);
    hprintf(serv, "%s\n", s1);
    return 1;
 }
 
-int msg_help PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_help (char * nick, char * host, char * hand, char * par)
 {
    int atr;
    char s[121], *p;
@@ -489,29 +535,31 @@ int msg_help PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    sprintf(s, "%s!%s", nick, host);
    atr = get_attr_host(s);
    if (strcasecmp(hand, "*") == 0) {
-#ifndef QUIET_REJECTION
-      hprintf(serv, "NOTICE %s :I don't know you; please introduce yourself first.\n",
-	      nick);
+     if (quiet_reject != 0) {
+      hprintf(serv, 
+           "NOTICE %s :%s\n", nick, IRC_DONTKNOWYOU);
       hprintf(serv, "NOTICE %s :/MSG %s hello\n", nick, botname);
-#endif
-      return 0;
+     }
+     return 0;
    }
    if (helpdir[0]) {
+      struct flag_record fr = { atr, 0, 0 };
+
       if (!par[0])
-	 showhelp(nick, "help", atr);
+	 showhelp(nick, "help", &fr);
       else {
 	 for (p = par; *p != 0; p++)
 	    if ((*p >= 'A') && (*p <= 'Z'))
 	       *p += ('a' - 'A');
-	 showhelp(nick, par, atr);
+	 showhelp(nick, par, &fr);
       }
    } else
-      hprintf(serv, "NOTICE %s :No help.\n", nick);
+      hprintf(serv, "NOTICE %s :%s\n", nick, IRC_NOHELP);
    return 1;
 }
 
 /* i guess just op them on every channel they're on */
-int msg_op PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_op (char * nick, char * host, char * hand, char * par)
 {
    struct chanset_t *chan;
    char pass[512], pass2[512];
@@ -521,11 +569,10 @@ int msg_op PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (pass_match_by_handle(pass, hand)) {
       int chatr;
       get_pass_by_handle(hand, pass2);
+/* Prevent people from gaining ops when no password set */
       if (strcmp(pass2, "-") == 0) {
 	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed OP", nick, host, hand);
 	 return 1;
-	 /* Ah, hello!  This is what stops people from doing /msg op with no
-	    password set to get ops.  Why did we uncomment it?  */
       }
       if (par[0]) {
 	 if (!active_channel(par)) {
@@ -562,7 +609,7 @@ int msg_op PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_invite PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_invite (char * nick, char * host, char * hand, char * par)
 {
    char pass[512];
    if (strcasecmp(nick, botname) == 0)
@@ -572,12 +619,12 @@ int msg_invite PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    nsplit(pass, par);
    if (pass_match_by_handle(pass, hand)) {
       if (findchan(par) == NULL) {
-	 mprintf(serv, "NOTICE %s :Usage: /MSG %s invite <pass> <channel>\n",
-		 nick, botname);
+	 mprintf(serv, "NOTICE %s :%s: /MSG %s invite <pass> <channel>\n",
+		 nick, USAGE, botname);
 	 return 1;
       }
       if (!active_channel(par)) {
-	 mprintf(serv, "NOTICE %s :I'm not on %s right now.\n", nick, par);
+	 mprintf(serv, "NOTICE %s :%s: %s\n", nick, par, IRC_NOTONCHAN);
 	 return 1;
       }
       mprintf(serv, "INVITE %s %s\n", nick, par);
@@ -588,7 +635,7 @@ int msg_invite PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_status PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_status (char * nick, char * host, char * hand, char * par)
 {
    if (strcasecmp(nick, botname) == 0)
       return 1;
@@ -597,7 +644,7 @@ int msg_status PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_memory PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_memory (char * nick, char * host, char * hand, char * par)
 {
    if (strcasecmp(nick, botname) == 0)
       return 1;
@@ -606,14 +653,14 @@ int msg_memory PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_die PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_die (char * nick, char * host, char * hand, char * par)
 {
    char s[121];
    if (strcasecmp(nick, botname) == 0)
       return 1;
    if (pass_match_by_handle(par, hand)) {
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! DIE", nick, host, hand);
-      tprintf(serv, "NOTICE %s :Daisy, Daisssyyy, give meee yourr ansssweerrrrrr dooooooooo....\n", nick);
+      tprintf(serv, "NOTICE %s :%s\n", nick, BOT_MSGDIE);
       chatout("*** BOT SHUTDOWN (authorized by %s)\n", hand);
       tandout("chat %s BOT SHUTDOWN (authorized by %s)\n", botnetnick, hand);
       tandout("bye\n");
@@ -627,13 +674,13 @@ int msg_die PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_rehash PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_rehash (char * nick, char * host, char * hand, char * par)
 {
    if (strcasecmp(nick, botname) == 0)
       return 1;
    if (pass_match_by_handle(par, hand)) {
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! REHASH", nick, host, hand);
-      mprintf(serv, "NOTICE %s :Rehashing...\n", nick);
+      mprintf(serv, "NOTICE %s :%s\n", nick, USERF_REHASHING);
       rehash();
       return 1;
    }
@@ -641,7 +688,7 @@ int msg_rehash PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_reset PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_reset (char * nick, char * host, char * hand, char * par)
 {
    struct chanset_t *chan;
    if (strcasecmp(nick, botname) == 0)
@@ -649,17 +696,16 @@ int msg_reset PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (par[0]) {
       chan = findchan(par);
       if (chan == NULL) {
-	 mprintf(serv, "NOTICE %s :I don't monitor channel %s\n", nick, par);
+	 mprintf(serv, "NOTICE %s :%s: %s\n", nick, par, IRC_NOMONITOR);
 	 return 0;
       }
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! RESET %s", nick, host, hand, par);
-      mprintf(serv, "NOTICE %s :Resetting channel info on %s...\n", nick, par);
+      mprintf(serv, "NOTICE %s :%s: %s\n", nick, par, IRC_RESETCHAN);
       reset_chan_info(chan);
       return 1;
    }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! RESET ALL", nick, host, hand);
-   mprintf(serv, "NOTICE %s :Resetting channel info for all channels...\n",
-	   nick);
+   mprintf(serv, "NOTICE %s :%s\n", nick, IRC_RESETCHAN);
    chan = chanset;
    while (chan != NULL) {
       reset_chan_info(chan);
@@ -668,7 +714,7 @@ int msg_reset PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_go PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_go (char * nick, char * host, char * hand, char * par)
 {
    struct chanset_t *chan;
    int ok = 0;
@@ -717,7 +763,7 @@ int msg_go PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    return 1;
 }
 
-int msg_jump PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_jump (char * nick, char * host, char * hand, char * par)
 {
    char s[512], port[512];
    if (strcasecmp(nick, botname) == 0)
@@ -736,7 +782,7 @@ int msg_jump PROTO4(char *, hand, char *, nick, char *, host, char *, par)
 	 strcpy(newserverpass, par);
       } else
 	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! JUMP", nick, host, hand);
-      tprintf(serv, "NOTICE %s :Jumping servers...\n", nick);
+      tprintf(serv, "NOTICE %s :%s\n", nick, IRC_JUMP);
       tprintf(serv, "QUIT :changing servers\n");
       killsock(serv);
       serv = (-1);
@@ -746,7 +792,7 @@ int msg_jump PROTO4(char *, hand, char *, nick, char *, host, char *, par)
 }
 
 /* notes <pass> <func> */
-int msg_notes PROTO4(char *, hand, char *, nick, char *, host, char *, par)
+static int msg_notes (char * nick, char * host, char * hand, char * par)
 {
    char pwd[512], fcn[512];
    if (strcasecmp(nick, botname) == 0)
@@ -754,7 +800,7 @@ int msg_notes PROTO4(char *, hand, char *, nick, char *, host, char *, par)
    if (hand[0] == '*')
       return 0;
    if (!par[0]) {
-      hprintf(serv, "NOTICE %s :Usage: NOTES [pass] INDEX\n", nick);
+      hprintf(serv, "NOTICE %s :%s: NOTES [pass] INDEX\n", nick, USAGE);
       hprintf(serv, "NOTICE %s :       NOTES [pass] TO <nick> <msg>\n", nick);
       hprintf(serv, "NOTICE %s :       NOTES [pass] READ <# or ALL>\n", nick);
       hprintf(serv, "NOTICE %s :       NOTES [pass] ERASE <# or ALL>\n", nick);
@@ -785,54 +831,80 @@ int msg_notes PROTO4(char *, hand, char *, nick, char *, host, char *, par)
       FILE *f;
       nsplit(to, par);
       if (!par[0]) {
-	 hprintf(serv, "NOTICE %s :Usage: NOTES [pass] TO <nick> <message>\n",
-		 nick);
+	 hprintf(serv, "NOTICE %s :%s: NOTES [pass] TO <nick> <message>\n",
+		 nick, USAGE);
 	 return 0;
       }
       if (!is_user(to)) {
-	 hprintf(serv, "NOTICE %s :I don't know anyone by that name.\n", nick);
+	 hprintf(serv, "NOTICE %s :USERF_UNKNOWN\n", nick, USERF_UNKNOWN);
 	 return 1;
       }
       for (i = 0; i < dcc_total; i++) {
-	 if ((strcasecmp(dcc[i].nick, to) == 0) && ((dcc[i].type == DCC_CHAT) ||
-					   (dcc[i].type == DCC_FILES))) {
+	 if ((strcasecmp(dcc[i].nick, to) == 0) && ((dcc[i].type == &DCC_CHAT) ||
+					   (dcc[i].type == &DCC_FILES))) {
 	    int aok = 1;
-	    if (dcc[i].type == DCC_CHAT)
+	    if (dcc[i].type == &DCC_CHAT)
 	       if (dcc[i].u.chat->away != NULL)
 		  aok = 0;
-	    if (dcc[i].type == DCC_FILES)
+	    if (dcc[i].type == &DCC_FILES)
 	       if (dcc[i].u.file->chat->away != NULL)
 		  aok = 0;
 	    if (aok) {
-	       dprintf(i, "\007Outside note [%s]: %s\n", hand, par);
-	       hprintf(serv, "NOTICE %s :Note delivered.\n", nick);
+	       dprintf(i, "\007%s [%s]: %s\n", hand, BOT_NOTEOUTSIDE, par);
+	       hprintf(serv, "NOTICE %s :%s\n", nick, BOT_NOTEDELIV);
 	       return 1;
 	    }
 	 }
       }
       if (notefile[0] == 0) {
-	 hprintf(serv, "NOTICE %s :Notes are not supported on this bot.\n",
-		 nick);
+	 hprintf(serv, "NOTICE %s :%s\n", nick, BOT_NOTEUNSUPP);
 	 return 1;
       }
       f = fopen(notefile, "a");
       if (f == NULL)
 	 f = fopen(notefile, "w");
       if (f == NULL) {
-	 hprintf(serv, "NOTICE %s :Can't create notefile.  Sorry.\n", nick);
-	 putlog(LOG_MISC, "*", "* Notefile unreachable!");
+	 hprintf(serv, "NOTICE %s :%s", nick, BOT_NOTESERROR1);
+	 putlog(LOG_MISC, "*", "* %s", BOT_NOTESERROR2);
 	 return 1;
       }
       fprintf(f, "%s %s %lu %s\n", to, hand, time(NULL), par);
       fclose(f);
-      hprintf(serv, "NOTICE %s :Note delivered.\n", nick);
+      hprintf(serv, "NOTICE %s :%s\n", nick, BOT_NOTEDELIV);
       return 1;
    } else
-      hprintf(serv, "NOTICE %s :NOTES function must be one of INDEX, %s\n",
-	      nick, "READ, ERASE, TO");
+      hprintf(serv, "NOTICE %s :%s INDEX, READ, ERASE, TO\n",
+			nick, BOT_NOTEUSAGE);
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! NOTES %s %s", nick, host, hand, fcn,
 	  par[0] ? "..." : "");
    return 1;
 }
+
+/* MSG COMMANDS */
+/* function call should be:
+   int msg_cmd("handle","nick","user@host","params");
+   function is responsible for any logging
+   (return 1 if successful, 0 if not) */
+cmd_t C_msg[]={
+  { "die", "n", (Function)msg_die, NULL },
+  { "email", "", (Function)msg_email, NULL },
+  { "go", "", (Function)msg_go, NULL },
+  { "hello", "", (Function)msg_hello, NULL },
+  { "help", "", (Function)msg_help, NULL },
+  { "ident", "", (Function)msg_ident, NULL },
+  { "info", "", (Function)msg_info, NULL },
+  { "invite", "", (Function)msg_invite, NULL },
+  { "jump", "m",(Function) msg_jump, NULL },
+  { "memory", "m", (Function)msg_memory, NULL },
+  { "notes", "", (Function)msg_notes, NULL },
+  { "op", "", (Function)msg_op, NULL },
+  { "pass", "", (Function)msg_pass, NULL },
+  { "rehash", "m", (Function)msg_rehash, NULL },
+  { "reset", "m", (Function)msg_reset, NULL },
+  { "status", "m|m", (Function)msg_status, NULL },
+  { "who", "", (Function)msg_who, NULL },
+  { "whois", "", (Function)msg_whois, NULL },
+  { 0, 0, 0, 0 }
+};
 
 #endif				/* !NO_IRC */

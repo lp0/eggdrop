@@ -1,0 +1,213 @@
+#
+# userinfo.tcl v1.00 for Eggdrop 1.1.6 and higher 
+#			Scott G. Taylor -- ButchBub!staylor@mrynet.com
+#
+# V1.00	     ButchBub	  14 July      1997  Original release.  Based on
+#						whois.tcl "URL" commands.
+#
+# TO USE:  o	Set the desired userinfo field keywords to the 
+#		`userinfo-fields' line below where indicated.
+#	   o	Load this script on a 1.1.6 or later Eggdrop bot.
+#	   o	Begin having users save the desired information.  If you
+#		chose to add the default "IRL" field, they just use
+#		the IRC command: /MSG <botnick> irl Joe Blow.
+#	   o	See the new information now appear with the whois command.
+#
+# This script enhances the `whois' output utilising the `whois-fields'
+# option of eggdrop 1.1-grant and later versions.  It adds the functionality
+# of whois.tcl used in pre-1.1-grant versions.
+#
+# The fields desired to be maintained in the userfile `xtra' information
+# should be put in `userinfo-fields'.  This is different than the Eggdrop
+# configuration variable `whois-fields' in that this script will add the
+# commands to change these fields.   It will also add these desired fields
+# to the `whois-fields' itself, so do not define them there as well.  The
+# fields added in `userinfo-fields' will be converted to upper case for
+# aesthetics in the `whois' command output.
+#
+# The commands that will be added to the running eggdrop are:
+#  (<info> will be the respective userfile field added in `userinfo-fields')
+#
+#	TYPE	COMMAND		USAGE
+#	======	==============	========================================
+#	msg	<info>		To change your <info> via /MSG.
+#	dcc	.<info>		To change your <info> via DCC.
+#	dcc	.ch<info>	To change someone else's <info> via DCC.
+#
+# Currently supported fields and commands:
+#
+#	FIELD	USAGE
+#	=====	=====================
+#	URL	WWW page URL
+#	IRL	In Real Life name
+#	BF	Boyfriend
+#	GF	Girlfriend
+#		
+
+# This script is NOT for pre-1.1.6 versions.
+
+if {![info exists numversion] || $numversion < 1020000} {
+  putlog "*** Can't load $userinfover -- At least Eggdrop v1.2.0 required"
+  return 0
+}
+
+################################
+# Set your desired fields here #
+################################
+
+set userinfo-fields "URL BF GF IRL"
+
+# This script's identification
+
+set userinfover "Userinfo v1.00"
+
+# Make sure we don't bail because whois-fields isn't set
+
+if {![info exists whois-fields]} {
+  set whois-fields ""
+}
+
+# Add only the user-xtra fields not already in the whois-fields list
+
+foreach f1 [split ${userinfo-fields}] {
+  set ffound 0
+  foreach f2 [split ${whois-fields}] {
+    if {$f1 == $f2} { 
+      set ffound 1
+      break
+    }
+  }
+  if {$ffound == 0} {
+    append whois-fields " " $f1
+  }
+}
+
+# Run through the list of user info fields and bind their commands
+
+foreach field [split ${userinfo-fields}] {
+  bind msg - $field msg_setuserinfo
+  bind dcc - $field dcc_setuserinfo
+  bind dcc m ch$field dcc_chuserinfo
+}
+
+# This is the `/msg <info>' procedure
+
+proc msg_setuserinfo {nick uhost hand arg} {
+  global lastbind
+
+  set userinfo [string toupper $lastbind]
+
+  set arg [cleanarg $arg]
+  set ignore 1
+  foreach channel [channels] {
+    if {[onchan $nick $channel]} {
+      set ignore 0
+    }
+  }
+  if {$ignore} {
+    return 0
+  }   
+   if {$hand != "*"} {
+      if {$arg != ""} {
+         if {[string tolower $arg] == "none"} {
+            putserv "NOTICE $nick :Removed your $userinfo line."
+            user-set $hand $userinfo ""
+         } {
+            putserv "NOTICE $nick :Now: $arg"
+            user-set $hand $userinfo "$arg"
+         }
+      } {
+         if {[user-get $hand $userinfo] == ""} {
+            putserv "NOTICE $nick :You have no $userinfo set."
+         } {
+            putserv "NOTICE $nick :Now: [user-get $hand $userinfo]"
+         }
+      }
+   } else {
+      if (quiet-reject != 1) {
+        putserv 
+          "NOTICE $nick :You must be a registered user to use this feature."
+      }
+   }
+   return 1
+}
+
+# This is the dcc '.<info>' procedure.
+
+proc dcc_setuserinfo {hand idx arg} {
+global lastbind
+  set userinfo [string toupper $lastbind]
+  set arg [cleanarg $arg]
+  if {$arg != ""} {
+    if {[string tolower $arg] == "none"} {
+      putdcc $idx "Removed your $userinfo line."
+      user-set $hand $userinfo ""
+    } {
+      putdcc $idx "Now: $arg"
+      user-set $hand $userinfo "$arg"
+    }
+  } {
+    if {[user-get $hand $userinfo] == ""} {
+      putdcc $idx "You have no $userinfo set."
+    } {
+      putdcc $idx "Currently: [user-get $hand $userinfo]"
+    }
+  }
+  return 1
+}
+
+# This is the DCC `.ch<info>' procedure
+
+proc dcc_chuserinfo {hand idx arg} {
+global lastbind
+  set userinfo [string toupper [string range $lastbind 2 end]]
+  set arg [cleanarg $arg]
+  if {[llength $arg] == 0} {
+    putdcc $idx "syntax: .ch[string tolower $userinfo] <who> \[<[string tolower $userinfo]>|NONE\]"
+    return 0
+  }
+  set who [lindex $arg 0]
+  if {![validuser $who]} {
+    putdcc $idx "$who is not a valid user."
+    return 0
+  }
+  if {[llength $arg] == 1} {
+    set info ""
+  } {
+    set info [lindex $arg 1]
+  }
+  if {$info != ""} {
+    if {[string tolower $info] == "none"} {
+      putdcc $idx "Removed $who's $userinfo line."
+      user-set $who $userinfo ""
+      putcmdlog "$userinfo for $who removed by $hand"
+    } {
+      putdcc $idx "Now: $info"
+      user-set $who $userinfo "$info"
+      putcmdlog "$userinfo for $who set to \"$info\" by $hand"
+    }
+  } {
+    if {[user-get $who $userinfo] == ""} {
+      putdcc $idx "$who has no $userinfo set."
+    } {
+      putdcc $idx "Currently: [user-get $who $userinfo]"
+    }
+  }
+  return 0
+}
+
+proc cleanarg {arg} {
+  set response ""
+  for {set i 0} {$i < [string length $arg]} {incr i} {
+    set char [string index $arg $i]
+    if {($char != "\12") && ($char != "\15")} {
+      append response $char
+    }
+  }
+  return $response
+}
+
+# Announce that we've loaded the script.
+
+putlog "$userinfover by ButchBub loaded for: ${userinfo-fields}."
+

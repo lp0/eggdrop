@@ -1,4 +1,4 @@
-%{+O}
+%{+o|o}
 ###  match <attr> [channel] [[start] limit]
    shows you user records with the attributes requested: <attr> must
    start with a '+' or '-'.  records will be shown which have ALL of

@@ -14,31 +14,21 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include "main.h"
 #include <sys/stat.h>
-#include "eggdrop.h"
-#include "proto.h"
-#include "cmdt.h"
-#include "tclegg.h"
-#include "files.h"
+#include "modules.h"
 
 /* eggdrop always uses the same interpreter */
 extern Tcl_Interp *interp;
 extern int serv;
 extern tcl_timer_t *timer, *utimer;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
-extern char dccdir[];
+extern char botname[];
 
 /***********************************************************************/
 
-int tcl_putserv STDVAR
+static int tcl_putserv STDVAR
 {
    char s[512], *p;
     BADARGS(2, 2, " text");
@@ -54,7 +44,7 @@ int tcl_putserv STDVAR
     return TCL_OK;
 }
 
-int tcl_puthelp STDVAR
+static int tcl_puthelp STDVAR
 {
    char s[512], *p;
     BADARGS(2, 2, " text");
@@ -70,7 +60,7 @@ int tcl_puthelp STDVAR
     return TCL_OK;
 }
 
-int tcl_putlog STDVAR
+static int tcl_putlog STDVAR
 {
    char logtext[501];
     BADARGS(2, 2, " text");
@@ -80,7 +70,7 @@ int tcl_putlog STDVAR
     return TCL_OK;
 }
 
-int tcl_putcmdlog STDVAR
+static int tcl_putcmdlog STDVAR
 {
    char logtext[501];
     BADARGS(2, 2, " text");
@@ -90,7 +80,7 @@ int tcl_putcmdlog STDVAR
     return TCL_OK;
 }
 
-int tcl_putxferlog STDVAR
+static int tcl_putxferlog STDVAR
 {
    char logtext[501];
     BADARGS(2, 2, " text");
@@ -100,14 +90,14 @@ int tcl_putxferlog STDVAR
     return TCL_OK;
 }
 
-int tcl_putloglev STDVAR
+static int tcl_putloglev STDVAR
 {
    int lev = 0;
    char logtext[501];
     BADARGS(4, 4, " level channel text");
     lev = logmodes(argv[1]);
    if (lev == 0) {
-      Tcl_AppendResult(irp, "no valid log-level given", NULL);
+      Tcl_AppendResult(irp, "No valid log-level given", NULL);
       return TCL_ERROR;
    }
    strncpy(logtext, argv[3], 500);
@@ -116,44 +106,7 @@ int tcl_putloglev STDVAR
    return TCL_OK;
 }
 
-int tcl_bind STDVAR
-{
-   int fl, tp;
-   if ((long int) cd == 1) {
-      BADARGS(5, 5, " type flags cmd/mask procname")
-   } else {
-      BADARGS(4, 5, " type flags cmd/mask ?procname?")
-   }
-   fl = str2flags(argv[2]);
-   tp = get_bind_type(argv[1]);
-   if (tp < 0) {
-      Tcl_AppendResult(irp, "bad type, should be one of: dcc, msg, fil, pub, ",
-		"msgm, pubm, join, part, sign, kick, topc, mode, ctcp, ",
-		   "ctcr, nick, raw, bot, chon, chof, sent, rcvd, chat, "
-		  "link, disc, splt, rejn, filt, flud, note, act, notc, "
-		       "wall, chjn, chpt, bcst, time",
-		       NULL);
-      return TCL_ERROR;
-   }
-   if ((long int) cd == 1) {
-      if (!cmd_unbind(tp, fl, argv[3], argv[4])) {
-	 /* don't error if trying to re-unbind a builtin */
-	 if ((strcmp(argv[3], &argv[4][5]) != 0) || (argv[4][0] != '*') ||
-	 (strncmp(argv[1], &argv[4][1], 3) != 0) || (argv[4][4] != ':')) {
-	    Tcl_AppendResult(irp, "no such binding", NULL);
-	    return TCL_ERROR;
-	 }
-      }
-   } else {
-      if (argc == 4)
-	 return tcl_getbinds(tp, argv[3]);
-      cmd_bind(tp, fl, argv[3], argv[4]);
-   }
-   Tcl_AppendResult(irp, argv[3], NULL);
-   return TCL_OK;
-}
-
-int tcl_timer STDVAR
+static int tcl_timer STDVAR
 {
    unsigned long x;
    char s[41];
@@ -170,7 +123,7 @@ int tcl_timer STDVAR
    return TCL_OK;
 }
 
-int tcl_utimer STDVAR
+static int tcl_utimer STDVAR
 {
    unsigned long x;
    char s[41];
@@ -187,7 +140,7 @@ int tcl_utimer STDVAR
    return TCL_OK;
 }
 
-int tcl_killtimer STDVAR
+static int tcl_killtimer STDVAR
 {
    BADARGS(2, 2, " timerID");
    if (strncmp(argv[1], "timer", 5) != 0) {
@@ -200,7 +153,7 @@ int tcl_killtimer STDVAR
    return TCL_ERROR;
 }
 
-int tcl_killutimer STDVAR
+static int tcl_killutimer STDVAR
 {
    BADARGS(2, 2, " timerID");
    if (strncmp(argv[1], "timer", 5) != 0) {
@@ -213,7 +166,7 @@ int tcl_killutimer STDVAR
    return TCL_ERROR;
 }
 
-int tcl_unixtime STDVAR
+static int tcl_unixtime STDVAR
 {
    char s[20];
    time_t t;
@@ -224,7 +177,7 @@ int tcl_unixtime STDVAR
     return TCL_OK;
 }
 
-int tcl_time STDVAR
+static int tcl_time STDVAR
 {
    char s[81];
    time_t t;
@@ -237,7 +190,7 @@ int tcl_time STDVAR
     return TCL_OK;
 }
 
-int tcl_date STDVAR
+static int tcl_date STDVAR
 {
    char s[81];
    time_t t;
@@ -252,21 +205,21 @@ int tcl_date STDVAR
     return TCL_OK;
 }
 
-int tcl_timers STDVAR
+static int tcl_timers STDVAR
 {
    BADARGS(1, 1, "");
    list_timers(irp, timer);
    return TCL_OK;
 }
 
-int tcl_utimers STDVAR
+static int tcl_utimers STDVAR
 {
    BADARGS(1, 1, "");
    list_timers(irp, utimer);
    return TCL_OK;
 }
 
-int tcl_ctime STDVAR
+static int tcl_ctime STDVAR
 {
    time_t tt;
    char s[81];
@@ -278,7 +231,7 @@ int tcl_ctime STDVAR
     return TCL_OK;
 }
 
-int tcl_myip STDVAR
+static int tcl_myip STDVAR
 {
    char s[21];
     BADARGS(1, 1, "");
@@ -287,7 +240,7 @@ int tcl_myip STDVAR
     return TCL_OK;
 }
 
-int tcl_rand STDVAR
+static int tcl_rand STDVAR
 {
    unsigned long x;
    char s[41];
@@ -302,7 +255,7 @@ int tcl_rand STDVAR
    return TCL_OK;
 }
 
-int tcl_sendnote STDVAR
+static int tcl_sendnote STDVAR
 {
    char s[5], from[21], to[21], msg[451];
     BADARGS(4, 4, " from to message");
@@ -317,7 +270,7 @@ int tcl_sendnote STDVAR
     return TCL_OK;
 }
 
-int tcl_dumpfile STDVAR
+static int tcl_dumpfile STDVAR
 {
    char nick[NICKLEN], fn[81];
     BADARGS(3, 3, " nickname filename");
@@ -329,32 +282,33 @@ int tcl_dumpfile STDVAR
     return TCL_OK;
 }
 
-int tcl_dccdumpfile STDVAR
+static int tcl_dccdumpfile STDVAR
 {
    char fn[81];
-   int idx, i, atr;
-    BADARGS(3, 3, " idx filename");
-    strncpy(fn, argv[2], 80);
-    fn[80] = 0;
-    i = atoi(argv[1]);
-    idx = findidx(i);
+   int idx, i;
+   struct flag_record fr = { 0, 0, 0 };
+   BADARGS(3, 3, " idx filename");
+   strncpy(fn, argv[2], 80);
+   fn[80] = 0;
+   i = atoi(argv[1]);
+   idx = findidx(i);
    if (idx < 0) {
       Tcl_AppendResult(irp, "illegal idx", NULL);
       return TCL_ERROR;
    }
-   atr = get_attr_handle(dcc[idx].nick);
-   telltext(idx, fn, atr);
+   fr.global = get_attr_handle(dcc[idx].nick);
+   telltext(idx, fn, &fr);
    return TCL_OK;
 }
 
-int tcl_backup STDVAR
+static int tcl_backup STDVAR
 {
    BADARGS(1, 1, "");
    backup_userfile();
    return TCL_OK;
 }
 
-int tcl_die STDVAR
+static int tcl_die STDVAR
 {
    BADARGS(1, 2, " ?reason?");
    if (argc == 2)
@@ -365,7 +319,7 @@ int tcl_die STDVAR
    return TCL_OK;
 }
 
-int tcl_strftime STDVAR
+static int tcl_strftime STDVAR
 {
    char buf[512];
    struct tm *tm1;
@@ -384,8 +338,53 @@ int tcl_strftime STDVAR
    return TCL_ERROR;
 }
 
-#ifndef NO_FILE_SYSTEM
-#ifndef MODULES
-#include "mod/filesys.mod/tclfiles.c"
-#endif
-#endif
+static int tcl_loadmodule STDVAR
+{
+   const char *p;
+
+   context;
+   BADARGS(2, 2, " module-name");
+   p = module_load(argv[1]);
+   if ((p != NULL) && strcmp(p, MOD_ALREADYLOAD))
+     putlog(LOG_MISC, "*", "%s %s: %s", MOD_CANTLOADMOD, argv[1], p);
+   Tcl_AppendResult(irp, p, NULL);
+   return TCL_OK;
+}
+
+static int tcl_unloadmodule STDVAR
+{
+   context;
+   BADARGS(2, 2, " module-name");
+   Tcl_AppendResult(irp, module_unload(argv[1],botname), NULL);
+   return TCL_OK;
+}
+
+tcl_cmds tclmisc_cmds [] = {
+   { "putserv", tcl_putserv },
+   { "puthelp", tcl_puthelp },
+   { "putlog", tcl_putlog },
+   { "putcmdlog", tcl_putcmdlog },
+   { "putxferlog", tcl_putxferlog },
+   { "putloglev", tcl_putloglev },
+   { "timer", tcl_timer },
+   { "utimer", tcl_utimer },
+   { "killtimer", tcl_killtimer },
+   { "killutimer", tcl_killutimer },
+   { "unixtime", tcl_unixtime },
+   { "time", tcl_time },
+   { "date", tcl_date },
+   { "timers", tcl_timers },
+   { "utimers", tcl_utimers },
+   { "ctime", tcl_ctime },
+   { "myip", tcl_myip },
+   { "rand", tcl_rand },
+   { "sendnote", tcl_sendnote },
+   { "dumpfile", tcl_dumpfile },
+   { "dccdumpfile", tcl_dccdumpfile },
+   { "backup", tcl_backup },
+   { "die", tcl_die },
+   { "strftime", tcl_strftime },
+   { "unloadmodule", tcl_unloadmodule },
+   { "loadmodule", tcl_loadmodule },
+   { 0, 0 }
+};

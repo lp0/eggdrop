@@ -6,15 +6,10 @@
    Robey Pointer, robey@netcom.com
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
+#include "main.h"
 #include <limits.h>
 #include <string.h>
 #include <netdb.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #if HAVE_SYS_SELECT_H
 #include <sys/select.h>
@@ -30,14 +25,12 @@
 #include <unistd.h>
 #endif
 #include <fcntl.h>
-#include "eggdrop.h"
-#include "proto.h"
 
 #if !HAVE_GETDTABLESIZE
 #ifdef FD_SETSIZE
 #define getdtablesize() FD_SETSIZE
 #else
-#define getdtablesize() MAXDCC+10
+#define getdtablesize() 200
 #endif
 #endif
 
@@ -66,18 +59,8 @@ char firewall[121] = "";
 /* socks server port */
 int firewallport = 178;
 
-/* this is used by the net module to keep track of sockets and what's
-   queued on them */
-typedef struct {
-   int sock;
-   char flags;
-   char *inbuf;
-   char *outbuf;
-   unsigned long outbuflen;	/* outbuf could be binary data */
-} sock_list;
-
-#define MAXSOCKS MAXDCC+10
-sock_list socklist[MAXSOCKS];	/* enough to be safe */
+sock_list * socklist = 0;	/* enough to be safe */
+int MAXSOCKS = 0;
 
 /* types of proxy */
 #define PROXY_SOCKS   1
@@ -85,7 +68,7 @@ sock_list socklist[MAXSOCKS];	/* enough to be safe */
 
 
 /* i need an UNSIGNED long for dcc type stuff */
-IP my_atoul PROTO1(char *, s)
+IP my_atoul (char * s)
 {
    IP ret = 0;
    while ((*s >= '0') && (*s <= '9')) {
@@ -96,42 +79,28 @@ IP my_atoul PROTO1(char *, s)
    return ret;
 }
 
-/* my own byte swappers */
-#ifdef WORDS_BIGENDIAN
-#define swap_short(sh) (sh)
-#define swap_long(ln) (ln)
-#else
-#define swap_short(sh) ((((sh) & 0xff00) >> 8) | (((sh) & 0x00ff) << 8))
-#define swap_long(ln) (swap_short(((ln)&0xffff0000)>>16) | \
-                       (swap_short((ln)&0x0000ffff)<<16))
-#endif
-
 #define my_ntohs(sh) swap_short(sh)
 #define my_htons(sh) swap_short(sh)
 #define my_ntohl(ln) swap_long(ln)
 #define my_htonl(ln) swap_long(ln)
 
-/* my own net-to-host order swapper */
-unsigned long iptolong PROTO1(IP, ip)
-{
-   return my_ntohl((unsigned long) ip);
-}
-
 /* i read somewhere that memcpy() is broken on some machines */
 /* it's easy to replace, so i'm not gonna take any chances, because it's */
 /* pretty important that it work correctly here */
-void my_memcpy PROTO3(char *, dest, char *, src, int, len)
+void my_memcpy (char * dest, char * src, int len)
 {
    while (len--)
       *dest++ = *src++;
 }
 
+#ifndef HAVE_BZERO
 /* bzero() is bsd-only, so here's one for non-bsd systems */
-void my_bzero PROTO2(char *, dest, int, len)
+void bzero (char * dest, int len)
 {
    while (len--)
       *dest++ = 0;
 }
+#endif
 
 /* initialize the socklist */
 void init_net()
@@ -155,37 +124,6 @@ int expmem_net()
       }
    }
    return tot;
-}
-
-/* puts full hostname in s */
-void getmyhostname PROTO1(char *, s)
-{
-   struct hostent *hp;
-   char *p;
-   if (hostname[0]) {
-      strcpy(s, hostname);
-      return;
-   }
-   p = getenv("HOSTNAME");
-   if (p != NULL) {
-      strcpy(s, p);
-      if (strchr(s, '.') != NULL)
-	 return;
-   }
-   gethostname(s, 80);
-   if (strchr(s, '.') != NULL)
-      return;
-   hp = gethostbyname(s);
-   if (hp == NULL)
-      fatal("Hostname self-lookup failed.", 0);
-   strcpy(s, hp->h_name);
-   if (strchr(s, '.') != NULL)
-      return;
-   if (hp->h_aliases[0] == NULL)
-      fatal("Can't determine your hostname!", 0);
-   strcpy(s, hp->h_aliases[0]);
-   if (strchr(s, '.') == NULL)
-      fatal("Can't determine your hostname!", 0);
 }
 
 /* get my ip number */
@@ -214,7 +152,7 @@ IP getmyip()
    return ip;
 }
 
-void neterror PROTO1(char *, s)
+void neterror (char * s)
 {
    switch (errno) {
    case EADDRINUSE:
@@ -288,7 +226,7 @@ void neterror PROTO1(char *, s)
 }
 
 /* request a normal socket for i/o */
-void setsock PROTO2(int, sock, int, options)
+void setsock (int sock, int options)
 {
    int i;
    int parm;
@@ -320,7 +258,7 @@ void setsock PROTO2(int, sock, int, options)
    fatal("Socket table is full!", 0);
 }
 
-int getsock PROTO1(int, options)
+int getsock (int options)
 {
    int sock = socket(AF_INET, SOCK_STREAM, 0);
    if (sock < 0)
@@ -330,7 +268,7 @@ int getsock PROTO1(int, options)
 }
 
 /* done with a socket */
-void killsock PROTO1(int, sock)
+void killsock (int sock)
 {
    int i;
    for (i = 0; i < MAXSOCKS; i++) {
@@ -348,7 +286,7 @@ void killsock PROTO1(int, sock)
 }
 
 /* send connection request to proxy */
-int proxy_connect PROTO4(int, sock, char *, host, int, port, int, proxy)
+static int proxy_connect (int sock, char * host, int port, int proxy)
 {
    unsigned char x[10];
    struct hostent *hp;
@@ -387,7 +325,7 @@ int proxy_connect PROTO4(int, sock, char *, host, int, port, int, proxy)
 /* returns <0 if connection refused: */
 /*   -1  neterror() type error */
 /*   -2  can't resolve hostname */
-int open_telnet_raw PROTO3(int, sock, char *, server, int, sport)
+int open_telnet_raw (int sock, char * server, int sport)
 {
    struct sockaddr_in name;
    struct hostent *hp;
@@ -408,14 +346,14 @@ int open_telnet_raw PROTO3(int, sock, char *, server, int, sport)
       port = sport;
    }
    /* patch by tris for multi-hosted machines: */
-   my_bzero((char *) &name, sizeof(struct sockaddr_in));
+   bzero((char *) &name, sizeof(struct sockaddr_in));
    name.sin_family = AF_INET;
    name.sin_addr.s_addr = (*myip ? getmyip() : INADDR_ANY);
    if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0) {
       killsock(sock);
       return -1;
    }
-   my_bzero((char *) &name, sizeof(struct sockaddr_in));
+   bzero((char *) &name, sizeof(struct sockaddr_in));
    name.sin_family = AF_INET;
    name.sin_port = my_htons(port);
    /* numeric IP? */
@@ -455,14 +393,14 @@ int open_telnet_raw PROTO3(int, sock, char *, server, int, sport)
 }
 
 /* ordinary non-binary connection attempt */
-int open_telnet PROTO2(char *, server, int, port)
+int open_telnet (char * server, int port)
 {
    return open_telnet_raw(getsock(0), server, port);
 }
 
 /* returns a socket number for a listening socket that will accept any */
 /* connection -- port # is returned in port */
-int open_listen PROTO1(int *, port)
+int open_listen (int * port)
 {
    int sock, addrlen;
    struct sockaddr_in name;
@@ -471,7 +409,7 @@ int open_listen PROTO1(int *, port)
       return -1;
    }
    sock = getsock(SOCK_LISTEN);
-   my_bzero((char *) &name, sizeof(struct sockaddr_in));
+   bzero((char *) &name, sizeof(struct sockaddr_in));
    name.sin_family = AF_INET;
    name.sin_port = my_htons(*port);	/* 0 = just assign us a port */
    name.sin_addr.s_addr = (*myip ? getmyip() : INADDR_ANY);
@@ -495,7 +433,7 @@ int open_listen PROTO1(int *, port)
 
 /* given network-style IP address, return hostname */
 /* hostname will be "##.##.##.##" format if there was an error */
-char *hostnamefromip PROTO1(unsigned long, ip)
+char *hostnamefromip (unsigned long ip)
 {
    struct hostent *hp;
    unsigned long addr = ip;
@@ -516,8 +454,8 @@ char *hostnamefromip PROTO1(unsigned long, ip)
 /* short routine to answer a connect received on a socket made previously */
 /* by open_listen ... returns hostname of the caller & the new socket */
 /* does NOT dispose of old "public" socket! */
-int answer PROTO5(int, sock, char *, caller, unsigned long *, ip,
-		  unsigned short *, port, int, binary)
+int answer (int sock, char * caller, unsigned long * ip,
+	    unsigned short * port, int binary)
 {
    int new_sock, addrlen;
    struct sockaddr_in from;
@@ -538,7 +476,7 @@ int answer PROTO5(int, sock, char *, caller, unsigned long *, ip,
 }
 
 /* like open_telnet, but uses server & port specifications of dcc */
-int open_telnet_dcc PROTO3(int, sock, char *, server, char *, port)
+int open_telnet_dcc (int sock, char * server, char * port)
 {
    int p;
    unsigned long addr;
@@ -571,7 +509,7 @@ int open_telnet_dcc PROTO3(int, sock, char *, server, char *, port)
 /* on EOF, returns -1, with socket in len */
 /* on socket error, returns -2 */
 /* if nothing is ready, returns -3 */
-int sockread PROTO2(char *, s, int *, len)
+static int sockread (char * s, int * len)
 {
    fd_set fd;
    int fds, i, x;
@@ -686,7 +624,7 @@ int sockread PROTO2(char *, s, int *, len)
    * the maximum length of the string returned is 512 (including null)
  */
 
-int sockgets PROTO2(char *, s, int *, len)
+int sockgets (char * s, int * len)
 {
    char xx[514], *p, *px;
    int ret, i, data = 0;
@@ -715,7 +653,7 @@ int sockgets PROTO2(char *, s, int *, len)
 	    /* strip CR if this was CR/LF combo */
 	    if (s[strlen(s) - 1] == '\r')
 	       s[strlen(s) - 1] = 0;
-	    *len = strlen(s);	/* <-- oh that looks so cute robey! :) */
+	    *len = strlen(s);	
 	    return socklist[i].sock;
 	 }
       }
@@ -819,7 +757,7 @@ int sockgets PROTO2(char *, s, int *, len)
 
 /* dump something to a socket */
 /* DO NOT PUT CONTEXTS IN HERE IF YOU WANT DEBUG TO BE MEANINGFULL!!! */
-void tputs PROTO3(int, z, char *, s, unsigned int, len)
+void tputs (int z, char * s, unsigned int len)
 {
    int i, x;
    char *p;
@@ -870,7 +808,8 @@ void dequeue_sockets()
    int i;
    char *p;
    for (i = 0; i < MAXSOCKS; i++) {
-      if (!(socklist[i].flags & SOCK_UNUSED) && (socklist[i].outbuf != NULL)) {
+      if (!(socklist[i].flags & SOCK_UNUSED) 
+	  && (socklist[i].outbuf != NULL)) {
 	 /* trick tputs into doing the work */
 	 p = socklist[i].outbuf;
 	 socklist[i].outbuf = NULL;
@@ -908,7 +847,7 @@ va_dcl
 
 /* DEBUGGING STUFF */
 
-void tell_netdebug PROTO1(int, idx)
+void tell_netdebug (int idx)
 {
    int i;
    char s[80];

@@ -15,17 +15,11 @@
  */
 
 #include "../module.h"
-#ifdef MODULES
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "../../files.h"
+#include "files.h"
 #include "filesys.h"
-#else
-extern int copy_to_tmp;
-#endif
-
-#ifndef NO_FILE_SYSTEM
 
 #if HAVE_DIRENT_H
 #include <dirent.h>
@@ -51,7 +45,7 @@ extern char dccdir[];
 char filedb_path[121] = "";
 
 /* lock the file, using fcntl */
-static void lockfile PROTO1(FILE *, f)
+static void lockfile (FILE * f)
 {
    struct flock fl;
    fl.l_type = F_WRLCK;
@@ -63,7 +57,7 @@ static void lockfile PROTO1(FILE *, f)
 }
 
 /* unlock the file */
-static void unlockfile PROTO1(FILE *, f)
+static void unlockfile (FILE * f)
 {
    struct flock fl;
    fl.l_type = F_UNLCK;
@@ -74,7 +68,7 @@ static void unlockfile PROTO1(FILE *, f)
 }
 
 /* use a where of 0 to start out, then increment 1 space for each next */
-filedb *findmatch PROTO3(FILE *, f, char *, lookfor, long *, where)
+filedb *findmatch (FILE * f, char * lookfor, long * where)
 {
    static filedb fdb;
    char match[256];
@@ -95,7 +89,7 @@ filedb *findmatch PROTO3(FILE *, f, char *, lookfor, long *, where)
    return NULL;
 }
 
-filedb *findfile PROTO3(FILE *, f, char *, name, long *, where)
+filedb *findfile (FILE * f, char * name, long * where)
 {
    filedb *fdb;
    long w = 0L;			/* force a rewind */
@@ -106,7 +100,7 @@ filedb *findfile PROTO3(FILE *, f, char *, name, long *, where)
 }
 
 /* alternate version so the buffers don't get overwritten */
-filedb *findmatch2 PROTO3(FILE *, f, char *, lookfor, long *, where)
+filedb *findmatch2 (FILE * f, char * lookfor, long * where)
 {
    static filedb fdb;
    char match[256];
@@ -126,7 +120,7 @@ filedb *findmatch2 PROTO3(FILE *, f, char *, lookfor, long *, where)
    return NULL;
 }
 
-filedb *findfile2 PROTO3(FILE *, f, char *, name, long *, where)
+filedb *findfile2 (FILE * f, char * name, long * where)
 {
    filedb *fdb;
    long w = 0L;			/* force a rewind */
@@ -136,7 +130,7 @@ filedb *findfile2 PROTO3(FILE *, f, char *, name, long *, where)
    return fdb;
 }
 
-long findempty PROTO1(FILE *, f)
+long findempty (FILE * f)
 {
    long where = 0L;
    filedb fdb;
@@ -154,7 +148,7 @@ long findempty PROTO1(FILE *, f)
    return where;
 }
 
-void filedb_timestamp PROTO1(FILE *, f)
+void filedb_timestamp (FILE * f)
 {
    filedb fdb;
    int x;
@@ -172,7 +166,7 @@ void filedb_timestamp PROTO1(FILE *, f)
 }
 
 /* return 1 if i find a '.files' and convert it */
-int convert_old_db PROTO2(char *, path, char *, newfiledb)
+int convert_old_db (char * path, char * newfiledb)
 {
    FILE *f, *g;
    char s[256], fn[61], nick[20], tm[20];
@@ -260,18 +254,18 @@ int convert_old_db PROTO2(char *, path, char *, newfiledb)
    return 1;
 }
 
-void filedb_update PROTO2(char *, path, FILE *, f)
+void filedb_update (char * path, FILE * f)
 {
    struct dirent *dd;
    DIR *dir;
    filedb *fdb, fdb1;
    char name[61];
-   long where;
+   long where;   
    struct stat st;
-   char s[512];
+   char s[512];   
    /* FIRST: make sure every real file is in the database */
    dir = opendir(path);
-   if (dir == NULL) {
+   if (dir == NULL) {  
       putlog(LOG_MISC, "*", FILES_NOUPDATE);
       return;
    }
@@ -280,7 +274,152 @@ void filedb_update PROTO2(char *, path, FILE *, f)
       strncpy(name, dd->d_name, 60);
       name[60] = 0;
       if (NAMLEN(dd) <= 60)
-	 name[NAMLEN(dd)] = 0;
+         name[NAMLEN(dd)] = 0;
+      else {
+         /* truncate name on disk */
+         char s1[512], s2[256];
+         strcpy(s1, path);
+         strcat(s1, "/");
+         strncat(s1, dd->d_name, NAMLEN(dd));
+         s1[strlen(path) + NAMLEN(dd) + 1] = 0;
+         sprintf(s2, "%s/%s", path, name);
+         movefile(s1, s2);
+      }
+      if (name[0] != '.') {
+         sprintf(s, "%s/%s", path, name);
+         stat(s, &st); 
+         fdb = findfile(f, name, &where);
+         if (fdb == NULL) {
+            /* new file! */
+            where = findempty(f);
+            fseek(f, where, SEEK_SET);
+            fdb1.version = FILEVERSION;
+            fdb1.stat = 0;      /* by default, visible regular file */
+            strcpy(fdb1.filename, name);
+            fdb1.desc[0] = 0;
+            strcpy(fdb1.uploader, botnetnick);
+            fdb1.gots = 0;
+            fdb1.flags_req[0] = 0;
+            fdb1.uploaded = time(NULL);
+            fdb1.size = st.st_size;
+            fdb1.sharelink[0] = 0;
+            if (S_ISDIR(st.st_mode))
+               fdb1.stat |= FILE_DIR;
+            fwrite(&fdb1, sizeof(filedb), 1, f);
+         } else {
+            /* update size if needed */
+            fdb->size = st.st_size;
+            fseek(f, where, SEEK_SET);
+            fwrite(fdb, sizeof(filedb), 1, f);
+         }
+      }
+      dd = readdir(dir);
+   }
+   closedir(dir);
+   /* SECOND: make sure every db file is real */
+   rewind(f);
+   while (!feof(f)) {
+      where = ftell(f);
+      fread(&fdb1, sizeof(filedb), 1, f);
+      if ((!feof(f)) && !(fdb1.stat & FILE_UNUSED) && !(fdb1.sharelink[0])) {
+         sprintf(s, "%s/%s", path, fdb1.filename);
+         if (stat(s, &st) != 0) {
+            /* gone file */
+            fseek(f, where, SEEK_SET);
+            fdb1.stat |= FILE_UNUSED; 
+            fwrite(&fdb1, sizeof(filedb), 1, f);
+            /* sunos and others will puke bloody chunks if you write the */
+            /* last record in a file and then attempt to read to EOF: */
+            fseek(f, where, SEEK_SET);
+         }
+      }
+   }
+   /* write new timestamp */
+   filedb_timestamp(f);
+}
+
+void filedb_sort (char * path, FILE * f)
+{
+   struct dirent *dd;
+   DIR *dir;
+   filedb *fdb, fdb1;
+   char name[61];
+   long where;
+   struct stat st;
+   char s[512];
+   int counter = 0;
+   int noentries = 0;
+   int flag = 1;
+   int nothing = 0;
+   char tmparr[256][256];
+   char tmpchar1[256];
+   char tmpchar2[256];
+   /* FIRST: make sure every real file is in the database */
+   dir = opendir(path);
+   if (dir == NULL) {
+      putlog(LOG_MISC, "*", FILES_NOUPDATE);
+      return;
+   }
+
+   dd = readdir(dir);
+   counter = 0;
+   while ( dd != NULL) {
+      strcpy (tmparr[counter], dd->d_name);
+      dd = readdir(dir);
+      counter++;
+   }
+
+   noentries = counter - 1;
+
+   if ( noentries < 4 ) {
+      rewinddir(dir);
+      closedir(dir);
+      return;
+   }
+
+   while ( flag != 0 ) {
+
+      flag = 0;
+      counter = 0;
+      while ( counter <= noentries) {
+	 if (nothing == 1) { break; }
+	 strcpy (tmpchar1, tmparr[counter]);
+	 strcpy (tmpchar2, tmparr[counter+1]);
+	 if (strcmp (tmpchar1, tmpchar2) > 0) {
+	    strcpy (tmparr[counter], tmpchar2);
+	    strcpy (tmparr[counter+1], tmpchar1);
+	    flag = 1;
+	 } else {
+	    strcpy (tmparr[counter], tmpchar1);
+	    strcpy (tmparr[counter+1], tmpchar2);
+	 }
+	 counter++;
+      }
+   }
+   
+   counter = 0;
+   
+   while ( counter <= noentries ) {
+      if (nothing == 1) { break; }
+      strcpy (tmparr[counter], tmparr[counter+1]);
+      counter++;
+   }
+   
+   counter = 0;
+   
+   while ( counter <= noentries ) {
+      if (nothing == 1) { break; }
+      rewinddir(dir);
+      dd = readdir(dir);
+      while (dd != NULL) {
+	 if (strcmp (tmparr[counter], dd->d_name) == 0) { break; }
+	 dd = readdir(dir);
+      }
+      
+      strncpy(name, dd->d_name, 60);
+      name[60] = 0;
+      if (NAMLEN(dd) <= 60)
+	name[NAMLEN(dd)] = 0;
       else {
 	 /* truncate name on disk */
 	 char s1[512], s2[256];
@@ -310,7 +449,7 @@ void filedb_update PROTO2(char *, path, FILE *, f)
 	    fdb1.size = st.st_size;
 	    fdb1.sharelink[0] = 0;
 	    if (S_ISDIR(st.st_mode))
-	       fdb1.stat |= FILE_DIR;
+	      fdb1.stat |= FILE_DIR;
 	    fwrite(&fdb1, sizeof(filedb), 1, f);
 	 } else {
 	    /* update size if needed */
@@ -319,7 +458,7 @@ void filedb_update PROTO2(char *, path, FILE *, f)
 	    fwrite(fdb, sizeof(filedb), 1, f);
 	 }
       }
-      dd = readdir(dir);
+      counter++;
    }
    closedir(dir);
    /* SECOND: make sure every db file is real */
@@ -346,7 +485,7 @@ void filedb_update PROTO2(char *, path, FILE *, f)
 
 int count = 0;
 
-FILE *filedb_open PROTO1(char *, path)
+FILE *filedb_open (char * path)
 {
    char s[DIRLEN], npath[DIRLEN];
    FILE *f;
@@ -410,7 +549,7 @@ FILE *filedb_open PROTO1(char *, path)
    return f;
 }
 
-void filedb_close PROTO1(FILE *, f)
+void filedb_close (FILE * f)
 {
    filedb_timestamp(f);
    fseek(f, 0L, SEEK_END);
@@ -419,7 +558,74 @@ void filedb_close PROTO1(FILE *, f)
    fclose(f);
 }
 
-void filedb_add PROTO3(FILE *, f, char *, filename, char *, nick)
+FILE *filedb_sortopen (char * path)
+{
+   char s[DIRLEN], npath[DIRLEN];
+   FILE *f;
+   filedb fdb;
+   struct stat st;
+   if (count >= 2) {
+      putlog(LOG_MISC, "*", "(@) warning: %d open filedb's", count);
+   }
+   sprintf(npath, "%s%s", dccdir, path);
+   /* use alternate filename if requested */
+   if (filedb_path[0]) {
+      char s2[DIRLEN], *p;
+      strcpy(s2, path);
+      p = s2;
+      while (*p++)
+	if (*p == '/')
+	  *p = '.';
+      sprintf(s, "%sfiledb.%s", filedb_path, s2);
+      if (s[strlen(s) - 1] == '.')
+	s[strlen(s) - 1] = 0;
+   } else
+     sprintf(s, "%s/.filedb", npath);
+   
+   unlink(s);
+   
+   f = fopen(s, "r+b");
+   if (f == NULL) {
+      /* attempt to convert */
+      if (convert_old_db(npath, s)) {   
+	 f = fopen(s, "r+b");
+         if (f == NULL) {
+            putlog(LOG_MISC, FILES_NOCONVERT, npath);
+            return NULL;
+         }   
+         lockfile(f);
+         filedb_sort(npath, f);       /* make it correct */
+         count++;
+         return f;
+      }
+      /* create new database and fix it up */
+      f = fopen(s, "w+b");
+      if (f == NULL)
+	return NULL;  
+      lockfile(f); 
+      filedb_sort(npath, f);
+      count++;
+      return f;
+   }
+   /* lock it from other bots: */
+   lockfile(f);
+   /* check the timestamp... */
+   fread(&fdb, sizeof(filedb), 1, f);
+   stat(npath, &st);
+   /* update filedb if: */
+   /*  + it's been 6 hours since it was last updated */
+   /*  + the directory has been visibly modified since then */
+   /* (6 hours may be a bit often) */
+   if (((time(NULL) - fdb.timestamp) > (6 * 3600)) || (fdb.timestamp < st.st_mtime) ||
+       (fdb.timestamp < st.st_ctime)) {
+      /* file database isn't up-to-date! */
+      filedb_sort(npath, f);
+   }
+   count++;   
+   return f;   
+}   
+
+void filedb_add (FILE * f, char * filename, char * nick)
 {
    unsigned long where;
    filedb *fdb;
@@ -434,7 +640,7 @@ void filedb_add PROTO3(FILE *, f, char *, filename, char *, nick)
 }
 
 /* fills fdb if can find a match and returns 1, else returns 0 */
-int filedb_match PROTO4(FILE *, f, char *, match, filedb *, fdb, int, first)
+int filedb_match (FILE * f, char * match, filedb * fdb, int first)
 {
    if (first)
       rewind(f);
@@ -448,7 +654,7 @@ int filedb_match PROTO4(FILE *, f, char *, match, filedb *, fdb, int, first)
    return 0;
 }
 
-void filedb_ls PROTO5(FILE *, f, int, idx, int, atr, char *, mask, int, showall)
+void filedb_ls (FILE * f, int idx, int atr, char * mask, int showall)
 {
    filedb fdb;
    int ok = 0, cnt = 0, is = 0;
@@ -549,7 +755,7 @@ void filedb_ls PROTO5(FILE *, f, int, idx, int, atr, char *, mask, int, showall)
       modprintf(idx, "--- %d file%s.\n", cnt, cnt > 1 ? "s" : "");
 }
 
-void remote_filereq PROTO3(int, idx, char *, from, char *, file)
+void remote_filereq (int idx, char * from, char * file)
 {
    char *p, what[256], dir[256], s[256], s1[256];
    FILE *f;
@@ -608,7 +814,7 @@ void remote_filereq PROTO3(int, idx, char *, from, char *, file)
 
 /*** for tcl: ***/
 
-void filedb_getdesc PROTO3(char *, dir, char *, fn, char *, desc)
+void filedb_getdesc (char * dir, char * fn, char * desc)
 {
    FILE *f;
    filedb *fdb;
@@ -627,7 +833,7 @@ void filedb_getdesc PROTO3(char *, dir, char *, fn, char *, desc)
    return;
 }
 
-void filedb_getowner PROTO3(char *, dir, char *, fn, char *, owner)
+void filedb_getowner (char * dir, char * fn, char * owner)
 {
    FILE *f;
    filedb *fdb;
@@ -646,7 +852,7 @@ void filedb_getowner PROTO3(char *, dir, char *, fn, char *, owner)
    return;
 }
 
-int filedb_getgots PROTO2(char *, dir, char *, fn)
+int filedb_getgots (char * dir, char * fn)
 {
    FILE *f;
    filedb *fdb;
@@ -660,7 +866,7 @@ int filedb_getgots PROTO2(char *, dir, char *, fn)
    return fdb->gots;
 }
 
-void filedb_setdesc PROTO3(char *, dir, char *, fn, char *, desc)
+void filedb_setdesc (char * dir, char * fn, char * desc)
 {
    FILE *f;
    filedb *fdb;
@@ -681,7 +887,7 @@ void filedb_setdesc PROTO3(char *, dir, char *, fn, char *, desc)
    return;
 }
 
-void filedb_setowner PROTO3(char *, dir, char *, fn, char *, owner)
+void filedb_setowner (char * dir, char * fn, char * owner)
 {
    FILE *f;
    filedb *fdb;
@@ -702,7 +908,7 @@ void filedb_setowner PROTO3(char *, dir, char *, fn, char *, owner)
    return;
 }
 
-void filedb_setlink PROTO3(char *, dir, char *, fn, char *, link)
+void filedb_setlink (char * dir, char * fn, char * link)
 {
    FILE *f;
    filedb fdb, *x;
@@ -745,7 +951,7 @@ void filedb_setlink PROTO3(char *, dir, char *, fn, char *, link)
    filedb_close(f);
 }
 
-void filedb_getlink PROTO3(char *, dir, char *, fn, char *, link)
+void filedb_getlink (char * dir, char * fn, char * link)
 {
    FILE *f;
    filedb *fdb;
@@ -767,7 +973,7 @@ void filedb_getlink PROTO3(char *, dir, char *, fn, char *, link)
    return;
 }
 
-void filedb_getfiles PROTO2(Tcl_Interp *, irp, char *, dir)
+void filedb_getfiles (Tcl_Interp * irp, char * dir)
 {
    FILE *f;
    filedb fdb;
@@ -785,7 +991,7 @@ void filedb_getfiles PROTO2(Tcl_Interp *, irp, char *, dir)
    filedb_close(f);
 }
 
-void filedb_getdirs PROTO2(Tcl_Interp *, irp, char *, dir)
+void filedb_getdirs (Tcl_Interp * irp, char * dir)
 {
    FILE *f;
    filedb fdb;
@@ -803,7 +1009,7 @@ void filedb_getdirs PROTO2(Tcl_Interp *, irp, char *, dir)
    filedb_close(f);
 }
 
-void filedb_change PROTO3(char *, dir, char *, fn, int, what)
+void filedb_change (char * dir, char * fn, int what)
 {
    FILE *f;
    filedb *fdb;
@@ -839,5 +1045,3 @@ void filedb_change PROTO3(char *, dir, char *, fn, int, what)
    filedb_close(f);
    return;
 }
-
-#endif				/* !NO_FILE_SYSTEM */

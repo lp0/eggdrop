@@ -1,42 +1,42 @@
-%{+O}
+%{+o|o}
 ###  bans [[channel] wildcard]
 ###  bans all
-   shows you a list of the global bans active on the current channel,
+   Shows you a list of the global bans active on the current channel,
    and the list of channel-specific bans, as well as any bans that
    are on the channel but weren't placed by the bot.
 
-   here's a sample entry;
+   Here's a sample entry;
       [ 5] *!*habib@*frys.com (perm)
            paulie: revolving check policy
            Created 15:10
-   the number (5) can be used to reference the ban if you wish
-   to remove it (see '.-ban').  next is the actual hostmask being
-   banned.  the "(perm)" means that the ban is "permanent": that
-   is, it doesn't automatically expire.  if there is an elapsed time
+   The number (5) can be used to reference the ban if you wish
+   to remove it (see '.-ban').  Next is the actual hostmask being
+   banned.  The "(perm)" means that the ban is "permanent": that
+   is, it doesn't automatically expire.  If there is an elapsed time
    showing instead, the time displayed is how long the ban has been
-   active.  those kind of bans expire after one hour.  the second line
+   active.  Those kind of bans expire after one hour.  The second line
    of the ban entry is the comment ("revolving check policy" -- it
    would seem that paulie had to stand in line for a while) and who put
-   the ban there (paulie).  the last line shows when the ban was added,
+   the ban there (paulie).  The last line shows when the ban was added,
    and possibly the last time the ban was activated on the channel (if
    it's different from the creation time).
 
-   sometimes there will be a "!" or "*" right before the number.  a "!"
+   Sometimes there will be a "!" or "*" right before the number.  a "!"
    means the ban is in the bot's permban list, but is not currently on
    the channel.  a "*" marks a ban which is NOT in the permban list but
    IS on the channel.
 
-   if you use 'bans' it will show you only the bans which are
-   currently in action on the channel.  if you use 'bans all' it
-   will show you every ban in memory.  (with 'perm-bans' on, these
-   are identical.)
+   Af you use 'bans' it will show you only the bans which are
+   currently in action on the channel.  If you use 'bans all' it
+   will show you every ban in memory (with 'perm-bans' on, these
+   are identical).
 
-   if you use 'bans <wildcard>' it will list all the bans (active
-   or not) that match against your wildcard.  consider it a 'bans
+   If you use 'bans <wildcard>' it will list all the bans (active
+   or not) that match against your wildcard.  Consider it a 'bans
    all' list matched against your wildcard.
 
-   the ban list may change according to which channel you're
-   currently viewing in the console.  different bans may be active
-   on different channels.  if you specify a channel name, that
+   The ban list may change according to which channel you're
+   currently viewing in the console.  Different bans may be active
+   on different channels.  If you specify a channel name, that
    channel will be used instead of your current console channel.
-see also: -ban, +ban, kickban, console, set ban-time, stick, unstick
+See also: -ban, +ban, kickban, console, set ban-time, stick, unstick

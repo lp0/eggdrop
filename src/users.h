@@ -41,19 +41,16 @@ struct userrec {
   char *xtra;             /* for use in Tcl scripts */
   struct chanuserrec *chanrec;
   time_t laston;
-  char lastonchan[81];
+  char * lastonchan;
 };
 
 /* flags are in eggdrop.h */
 
-#ifndef MAKING_MODS
 struct userrec *adduser();
 struct userrec *get_user_by_handle();
 struct userrec *get_user_by_host();
 struct userrec *check_chanlist();
 struct userrec *check_chanlist_hand();
-struct userrec *dup_userlist();
 struct chanuserrec *get_chanrec();
-#endif
 
 #endif

@@ -24,11 +24,6 @@
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
-#ifdef STDC_HEADERS
-#define PROTO2(a1,b1,a2,b2) (a1 b1, a2 b2)
-#else
-#define PROTO2(a1,b1,a2,b2) (b1, b2) a1 b1; a2 b2;
-#endif
 
 /* Remove the next line to use this in IrcII */
 #define EGGDROP
@@ -53,7 +48,6 @@
 
 /* The "matches AT LEAST ONE SPACE" wildcard (undef me to disable!)    */
 #define WILDT '~'
-
 
 /* This makes sure WILDT doesn't get used in in the IrcII version of
  * this code.  If ya wanna live dangerously, you can remove these 3
@@ -127,7 +121,7 @@ static unsigned char tolowertab[] =
  * Best use:  Generic string matching, such as in IrcII-esque bindings    *
  *========================================================================*/
 #ifdef EGGDROP
-int wild_match_per PROTO2(register unsigned char *, m, register unsigned char *, n)
+static int wild_match_per(register unsigned char * m, register unsigned char * n)
 #else
 int wild_match(register unsigned char *m, register unsigned char *n)
 #endif
@@ -239,9 +233,6 @@ int wild_match(register unsigned char *m, register unsigned char *n)
    return (*m) ? NOMATCH : MATCH;	/* End of both = match   */
 }
 
-
-
-
 #ifndef EGGDROP
 
 /* For IrcII compatibility */
@@ -289,7 +280,7 @@ register unsigned char *ma, *na;
  *=======================================================================*/
 
 
-int wild_match PROTO2(register unsigned char *, m, register unsigned char *, n)
+int wild_match (register unsigned char * m, register unsigned char * n)
 {
    unsigned char *ma = m, *na = n, *lsm = 0, *lsn = 0;
    int match = 1;
@@ -353,77 +344,5 @@ int wild_match PROTO2(register unsigned char *, m, register unsigned char *, n)
    For this matcher, no "saved" is used to track "%" and no special quoting
    ability is needed, so we just have (match+sofar) as the result.
  */
-
-#undef MATCH
-#define MATCH (match+sofar)
-
-/*========================================================================*
- * EGGDROP:   wild_match_file(char *ma, char *na)                         *
- * IrcII:     NOT USED                                                    *
- *                                                                        *
- * Features:  Forward, case-sensitive, ?, *                               *
- * Best use:  File mask matching, as it is case-sensitive                 *
- *========================================================================*/
-int wild_match_file PROTO2(register unsigned char *, m, register unsigned char *, n)
-{
-   unsigned char *ma = m, *lsm = 0, *lsn = 0;
-   int match = 1;
-   register unsigned int sofar = 0;
-
-   /* take care of null strings (should never match) */
-   if ((m == 0) || (n == 0) || (!*n))
-      return NOMATCH;
-   /* (!*m) test used to be here, too, but I got rid of it.  After all,
-      If (!*n) was false, there must be a character in the name (the
-      second string), so if the mask is empty it is a non-match.  Since
-      the algorithm handles this correctly without testing for it here
-      and this shouldn't be called with null masks anyway, it should be
-      a bit faster this way */
-
-   while (*n) {
-      /* Used to test for (!*m) here, but this scheme seems to work better */
-      switch (*m) {
-      case 0:
-	 do
-	    m--;		/* Search backwards      */
-	 while ((m > ma) && (*m == '?'));	/* For first non-? char  */
-	 if ((m > ma) ? ((*m == '*') && (m[-1] != QUOTE)) : (*m == '*'))
-	    return MATCH;	/* nonquoted * = match   */
-	 break;
-      case WILDS:
-	 do
-	    m++;
-	 while (*m == WILDS);	/* Zap redundant wilds   */
-	 lsm = m;
-	 lsn = n;		/* Save * fallback spot  */
-	 match += sofar;
-	 sofar = 0;
-	 continue;		/* Save tally count      */
-      case WILDQ:
-	 m++;
-	 n++;
-	 continue;		/* Match one char        */
-      case QUOTE:
-	 m++;			/* Handle quoting        */
-      }
-      if (*m == *n) {		/* If matching           */
-	 m++;
-	 n++;
-	 sofar++;
-	 continue;		/* Tally the match       */
-      }
-      if (lsm) {		/* Try to fallback on *  */
-	 n = ++lsn;
-	 m = lsm;		/* Restore position      */
-	 /* Used to test for (!*n) here but it wasn't necessary so it's gone */
-	 sofar = 0;
-	 continue;		/* Next char, please     */
-      }
-      return NOMATCH;		/* No fallbacks=No match */
-   }
-   while (*m == WILDS)
-      m++;			/* Zap leftover *s       */
-   return (*m) ? NOMATCH : MATCH;	/* End of both = match   */
-}
 
 #endif

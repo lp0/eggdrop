@@ -10,8 +10,13 @@ echo ""
 
 AC_PROG_CC
 
+dnl crazy machines
+AC_AIX
+AC_ISC_POSIX
+AC_MINIX
 dnl no cross-compiling!
-dnl AC_C_CROSS  <- was merged into AC_PROG_CC
+AC_C_CROSS  
+dnl <- was merged into AC_PROG_CC - not on my auto-conf :/
 
 if test ! x${cross_compiling} = xno; then
   echo ""
@@ -47,6 +52,7 @@ IRIX=no
 NT=no
 EGGEXEC=eggdrop
 LINUX=no
+DEFAULT_MAKE=eggdrop
 BEL_MOD_CC="${CC}"
 BEL_MOD_LD="${CC}"
 BEL_MOD_STRIP="${STRIP}"
@@ -55,19 +61,23 @@ SHLIB_LD="${CC}"
 SHLIB_STRIP="${STRIP}"
 AC_MSG_CHECKING(your OS)
 system=`$UNAME`
+DLOPEN_1=1
 case $system in
   Linux)
     CFLAGS="${CFLAGS} -Wall"
-    AC_MSG_RESULT(Linux! rock the house!)
+    AC_MSG_RESULT(Linux! lets get down an boogey)
     SHLIB_LD="${CC} -shared"
+    BEL_MOD_LD="${CC} -rdynamic"
     AC_DEFINE(MODULES_OK)
     LINUX=yes
+    DLOPEN_1=
     ;;
   FreeBSD)
-    AC_MSG_RESULT(FreeBSD! enjoy!)
+    AC_MSG_RESULT(FreeBSD r0x th3 h0u53 -- You're l33t! enjoy!)
     SHLIB_CC="$CC -fpic"
     SHLIB_LD="ld -Bshareable -x"
     AC_DEFINE(MODULES_OK)
+    DLOPEN_1=
     ;;
   BSD/OS)
     if test x`uname -r | cut -d . -f 1` = "x3"; then
@@ -78,9 +88,9 @@ case $system in
       SHLIB_LD="shlicc -r"
       SHLIB_STRIP="touch"
       AC_DEFINE(MODULES_OK)
-      AC_DEFINE(DLOPEN_MUST_BE_1)
     else
-      AC_MSG_RESULT(BSD/OS 2! no modules for you)
+      AC_MSG_RESULT(BSD/OS 2! statically linked modules are you only choice)
+      DEFAULT_MAKE=static
     fi
     ;;
   SunOS)
@@ -91,7 +101,6 @@ case $system in
       AC_MSG_RESULT(SunOS 4 :/)
       SHLIB_LD="ld"
       SHLIB_STRIP="touch"
-      AC_DEFINE(DLOPEN_MUST_BE_1)
     fi
     AC_DEFINE(MODULES_OK)
     SHLIB_CC="${CC} -fPIC"
@@ -109,34 +118,46 @@ case $system in
       1.0|1.1|1.2)
         AC_MSG_RESULT(pre 1.3)
 	SHLIB_LD='ld -R -export $@:'
+	AC_DEFINE(OSF1_HACKS)
         AC_DEFINE(MODULES_OK)
         ;;
       1.*)
         AC_MSG_RESULT(1.3+)
         SHLIB_CFL="$CC -fpic"
 	SHLIB_LD='ld -shared'
+	AC_DEFINE(OSF1_HACKS)
         AC_DEFINE(MODULES_OK)
         ;;
       *)
         AC_MSG_RESULT(Some other weird OSF! No modules for you..)
+	DEFAULT_MAKE=static
 	;;
     esac
     AC_DEFINE(STOP_UAC)
+    ;;
+  HP-UX)
+    AC_MSG_RESULT(HP-UX, just shoot yourself now)
+    AC_CHECK_LIB(dld,shl_load)
+    AC_DEFINE(MODULES_OK)
+    AC_DEFINE(HPUX_HACKS)
     ;;
   IRIX)
     AC_MSG_RESULT(you are cursed with IRIX)
     IRIX=yes
     STRIP=
+    DEFAULT_MAKE=static
     ;;
   CYGWIN32/NT)
     AC_MSG_RESULT(Windows NT -- enjoy the ride! Don't come asking us for help.)
     NT=yes
     STRIP=
     EGGEXEC=eggdrop.exe
+    DEFAULT_MAKE=static
     ;;
   *)
     AC_MSG_RESULT(Something unknown!!)
-    AC_MSG_RESULT(If you get modules to work, be sure to let the devel team know HOW :)
+    AC_MSG_RESULT(If you get dynamic modules to work, be sure to let the devel team know HOW :)
+    DEFAULT_MAKE=static
     ;;
 esac
 
@@ -159,11 +180,6 @@ else
   fi
 fi
 
-dnl crazy machines
-AC_AIX
-AC_ISC_POSIX
-AC_MINIX
-
 AC_C_BIGENDIAN
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(int)
@@ -180,7 +196,7 @@ AC_HEADER_TIME
 dnl Checks for library functions.
 AC_CHECK_FUNCS(rename getrusage getdtablesize srandom random sigaction)
 AC_CHECK_FUNCS(sigemptyset vsprintf strcasecmp setpgid clock dlopen)
-AC_CHECK_FUNCS(dprintf)
+AC_CHECK_FUNCS(dprintf bzero)
 
 if test "${ac_cv_func_vsprintf}" = "no"; then
   echo ""
@@ -196,9 +212,9 @@ AC_MSG_CHECKING(space left in file database struct)
 cat >abacab.c <<'EOF'
 #include <stdio.h>
 #include <sys/time.h>
-#include "src/files.h"
+#include "src/mod/filesys.mod/files.h"
 main() {
-  printf("%d\n",512-sizeof(struct filler));
+  fprintf(stderr,"%d",512-sizeof(struct filler));
 }
 EOF
 ${CC} -o abacab abacab.c
@@ -211,12 +227,12 @@ dnl where is tcl?  is it here?
 
 # ---------- begin robey's tcl thingies
 
-libnames="tcl.so tcl.so.1 tcl80.so.1.0 tcl76.so.1.0 tcl75.so.1.0 \
-         tcl80.so.1 tcl76.so.1 tcl75.so.1 tcl74.so.1 \
-         tcl8.0.so tcl7.6.so tcl7.5.so tcl7.4.so \
-         tcl8.0.so.1 tcl7.6.so.1 tcl7.5.so.1 tcl7.4.so.1 \
-         tcl.a tcl80.a tcl76.a tcl75.a tcl74.a \
-         tcl8.0.a tcl7.6.a tcl7.5.a tcl7.4.a"
+libnames="tcl.so tcl.so.1 tcl76.so.1.0 tcl75.so.1.0 tcl80.so.1.0\
+         tcl76.so.1 tcl75.so.1 tcl74.so.1 tcl80.so.1\
+         tcl7.6.so tcl7.5.so tcl7.4.so tcl 8.0.so\
+         tcl7.6.so.1 tcl7.5.so.1 tcl7.4.so.1 tcl8.0.so.1\
+         tcl.a tcl76.a tcl75.a tcl74.a tcl80.a\
+         tcl7.6.a tcl7.5.a tcl7.4.a tcl8.0.a"
 
 # look for libtcl.a: if TCLLIB is set, check there first
 if test "$TCLLIB" != ""; then
@@ -300,6 +316,7 @@ fi
 if test "$TCLLIB" = ""; then
   echo ""
   echo "I can't find Tcl on this system."
+  echo "*** Note: tcl8.0 thru b2 is --NOT-- useable...  Eggdrop WILL crash."
   echo ""
   echo "Eggdrop now requires Tcl to compile.  If you already have Tcl"
   echo "installed on this system, and I just wasn't looking in the right"
@@ -312,6 +329,7 @@ if test "$TCLLIB" = ""; then
   echo ""
   exit 1
 else
+  echo Checking $TCLINC directory for tcl version
   AC_MSG_CHECKING(for Tcl version)
   tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.4" | wc -l`
   if test $tclver = 0; then
@@ -321,7 +339,7 @@ else
       if test $tclver = 0; then
         tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
         if test $tclver = 1; then
-          AC_MSG_RESULT(8.0 found!)
+	  AC_MSG_RESULT(8.0 found -- USE AT YOUR OWN RISK ********)
           need_dl=1
         else
           AC_MSG_RESULT(hmm... unknown version)
@@ -342,35 +360,45 @@ else
 
   if test $need_dl = 1 -a "${ac_cv_func_dlopen}" = "no"; then
     got_dl=0
-    dnl some weird weird OS's put it here :/
+    dnl some weirdweird OS's put it here :/
     if test -r /usr/bin/libdl.so.1; then
       CFLAGS="$CFLAGS -L/usr/bin"
     fi
     AC_CHECK_LIB(dl,dlopen,got_dl=1)
     if test $got_dl = 0; then
-      echo ""
-      echo "In order to use versions of Tcl from 7.5 on, you must have"
-      echo "the DL libraries somewhere on your system (-ldl)."
-      echo ""
       if test "$LINUX" = "yes"; then
         echo "Since you are on a Linux system, this has a know problem,"
-	if test -r /lib/libdl.so.1; then
-	   echo "and you seem to have it, get your sys admin to make a"
-	   echo "symbolic link from libdl.so to libdl.so.1 in lib"
-	   echo ""	
-	   exit 1
-	fi
-	echo "which you DONT seem to have... doh!"
-	echo ""
+        if test -r /lib/libdl.so.1; then
+           echo "and you seem to have it, I know a kludge for it,"
+           echo "so we'll do that..."
+           echo ""
+           AC_DEFINE(HAVE_DLOPEN)
+           LIBS="/lib/libdl.so.1 $LIBS"
+	   got_dl=1
+        else 
+           echo "which you DONT seem to have... doh!"
+           echo "perhaps you may still have the stuff lying around somewhere"
+           echo "if you work out where it is, add it to your XLIBS= lines"
+           echo "and #define HAVE_DLOPEN in config.h"
+           echo ""
+           echo "we'll proceed on anyways, but you probably won't be able"
+           echo "to 'make eggdrop' but you might be able to make the"
+           echo "static bot (I'll default your make to this version)."
+	   DEFAULT_MAKE=static
+        fi
+      else 
+        echo "You don't seem to have libdl anywhere I can find it, this will"
+	echo "prevent you from doing dynamic modules, I'll set your default"
+	echo "make to static linking."
+	DEFAULT_MAKE=static
       fi
-      echo "We'll keep going anyway, you may get away with it..."
-      echo "I *doubt* it tho.."
-      echo ""
     else
       AC_DEFINE(HAVE_DLOPEN)
-    fi
-    LIBS="-ldl $LIBS"
+      LIBS="-ldl $LIBS"
+      got_dl=1
+    fi 
   fi
+
   TCLLIBFNS=`basename $TCLLIBFN .a`
   TCLLIBFNS=`basename $TCLLIBFNS .so.1.0`
   TCLLIBFNS=`basename $TCLLIBFNS .so.1`
@@ -394,13 +422,15 @@ AC_SUBST(TCL_LIBS)
 # ---------- end of robey's tcl thingies
 
 AC_SUBST(EGGEXEC)
-
+AC_SUBST(CC)
 AC_SUBST(SHLIB_LD)
 AC_SUBST(SHLIB_CC)
 AC_SUBST(SHLIB_STRIP)
 AC_SUBST(BEL_MOD_LD)
 AC_SUBST(BEL_MOD_CC)
 AC_SUBST(BEL_MOD_STRIP)
+AC_SUBST(DLFLAGS)
+AC_SUBST(DEFAULT_MAKE)
 
 AC_OUTPUT(Makefile lush.h)
 
@@ -409,6 +439,5 @@ make clean
 
 echo ""
 echo "Configure is done."
-echo "Type 'make eggdrop' to create the non-module bot, and"
-echo " 'make eggmod' for the module bot."
+echo "Type 'make' to create the bot"
 echo ""

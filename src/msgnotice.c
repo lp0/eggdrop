@@ -13,32 +13,10 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include "main.h"
 #include <varargs.h>
-#include "eggdrop.h"
+#include <ctype.h>
 #include "chan.h"
-#include "proto.h"
-
-/* SED and UTC are a big lie, but they'll never know */
-#define CLIENTINFO "SED VERSION CLIENTINFO USERINFO ERRMSG FINGER TIME ACTION DCC UTC PING ECHO  :Use CLIENTINFO <COMMAND> to get more specific information"
-#define CLIENTINFO_SED "SED contains simple_encrypted_data"
-#define CLIENTINFO_VERSION "VERSION shows client type, version and environment"
-#define CLIENTINFO_CLIENTINFO "CLIENTINFO gives information about available CTCP commands"
-#define CLIENTINFO_USERINFO "USERINFO returns user settable information"
-#define CLIENTINFO_ERRMSG "ERRMSG returns error messages"
-#define CLIENTINFO_FINGER "FINGER shows real name, login name and idle time of user"
-#define CLIENTINFO_TIME "TIME tells you the time on the user's host"
-#define CLIENTINFO_ACTION "ACTION contains action descriptions for atmosphere"
-#define CLIENTINFO_DCC "DCC requests a direct_client_connection"
-#define CLIENTINFO_UTC "UTC substitutes the local timezone"
-#define CLIENTINFO_PING "PING returns the arguments it receives"
-#define CLIENTINFO_ECHO "ECHO returns the arguments it receives"
 
 extern int serv;
 extern int backgrd;
@@ -46,38 +24,33 @@ extern int con_chan;
 extern int term_z;
 extern char botname[];
 extern char version[];
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char admin[];
 extern int require_p;
 extern char origbotname[];
 extern int ignore_time;
 extern int flood_ctcp_thr;
-#ifdef HAVE_NAT
 extern char natip[];
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#endif
 
 char ctcp_version[256];
 char ctcp_finger[256];
 char ctcp_userinfo[256];
+int trigger_on_ignore = 0;
+int answer_ctcp = 1;
+int lowercase_ctcp = 0;
 
 /* no point if there's no irc */
 #ifndef NO_IRC
 
-#ifdef ALLOW_LOWERCASE_CTCP
-#define ctcpcmp strcasecmp
-#else
-#define ctcpcmp strcmp
-#endif
-
 static char ctcp_reply[512] = "";
 
 /* ctcp embedded in a privmsg */
-void gotctcp PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
+static void gotctcp (char * ffrom, char * to, char * msg, int ignoring)
 {
-   char from[UHOSTLEN], nick[NICKLEN], hand[10], code[512], *p;
+   char from[UHOSTLEN], nick[NICKLEN], hand[10], code[512], xcode[12], *p;
    strcpy(from, ffrom);
    if (msg[0] == ' ')
       return;
@@ -95,26 +68,34 @@ void gotctcp PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
       return;			/* don't interpret */
    }
    get_handle_by_host(hand, ffrom);
-#ifndef TRIGGER_BINDS_ON_IGNORE
-   if (!ignoring)
-#endif
+   if (!ignoring || trigger_on_ignore)
       if (check_tcl_ctcp(nick, from, hand, to, code, msg))
 	 return;
    if (ignoring)
       return;
-   if ((ctcpcmp(code, "FINGER") == 0) && (ctcp_finger[0]))
+   if (lowercase_ctcp) {
+      int x = 0;
+      for (;code[x] && x < 11;x++) {
+	 xcode[x] = toupper(code[x]);
+      }
+      xcode[x] = 0;
+   } else { 
+      strncpy(xcode,code,11);
+      xcode[11] = 0;
+   }
+   if ((strcmp(xcode, "FINGER") == 0) && (ctcp_finger[0]))
       sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001FINGER %s\001", ctcp_finger);
-   else if ((ctcpcmp(code, "PING") == 0) || (ctcpcmp(code, "ECHO") == 0) ||
-	    (ctcpcmp(code, "ERRMSG") == 0)) {
+   else if ((strcmp(xcode, "PING") == 0) || (strcmp(xcode, "ECHO") == 0) ||
+	    (strcmp(xcode, "ERRMSG") == 0)) {
       if (strlen(msg) <= 80)
 	 sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001%s %s\001", code, msg);
       /* ignore gratuitously long ctcp echo requests */
-   } else if ((ctcpcmp(code, "VERSION") == 0) && (ctcp_version[0]))
+   } else if ((strcmp(xcode, "VERSION") == 0) && (ctcp_version[0]))
       sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001VERSION %s\001", ctcp_version);
-   else if ((ctcpcmp(code, "USERINFO") == 0) && (ctcp_userinfo[0]))
+   else if ((strcmp(xcode, "USERINFO") == 0) && (ctcp_userinfo[0]))
       sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001USERINFO %s\001",
 	      ctcp_userinfo);
-   else if (ctcpcmp(code, "CLIENTINFO") == 0) {
+   else if (strcmp(xcode, "CLIENTINFO") == 0) {
       p = NULL;
       if (!msg[0])
 	 p = CLIENTINFO;
@@ -147,32 +128,30 @@ void gotctcp PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
 		 msg);
       } else
 	 sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001CLIENTINFO %s\001", p);
-   } else if (ctcpcmp(code, "DCC") == 0)
+   } else if (strcmp(xcode, "DCC") == 0)
       gotdcc(nick, from, msg);
-   else if (ctcpcmp(code, "TIME") == 0) {
+   else if (strcmp(xcode, "TIME") == 0) {
       time_t tm = time(NULL);
       char tms[81];
       strcpy(tms, ctime(&tm));
       tms[strlen(tms) - 1] = 0;
       sprintf(&ctcp_reply[strlen(ctcp_reply)], "\001TIME %s\001", tms);
-   } else if (ctcpcmp(code, "CHAT") == 0) {
+   } else if (strcmp(xcode, "CHAT") == 0) {
       int atr = get_attr_host(ffrom), i, ix = (-1);
       if ((atr & (USER_MASTER | USER_PARTY | USER_XFER)) ||
 	  ((atr & USER_GLOBAL) && !require_p)) {
 	 for (i = 0; i < dcc_total; i++) {
-	    if ((dcc[i].type == DCC_TELNET) &&
+	    if ((dcc[i].type == &DCC_TELNET) &&
 		((strcmp(dcc[i].nick, "(telnet)") == 0) ||
 		 (strcmp(dcc[i].nick, "(users)") == 0))) {
 	       ix = i;
-	       /* do me a favour and don't change this back to a CTCP reply,
-	          CTCP replies are NOTICE's this has to be a PRIVMSG -poptix 5/1/97 */
-#ifdef HAVE_NAT
+	/* do me a favour and don't change this back to a CTCP reply, */
+	/* CTCP replies are NOTICE's this has to be a PRIVMSG */
+	/* -poptix 5/1/97 */
 	       mprintf(serv, "PRIVMSG %s :\001DCC CHAT chat %lu %u\001\n",
-		    nick, iptolong((IP) inet_addr(natip)), dcc[ix].port);
-#else
-	       mprintf(serv, "PRIVMSG %s :\001DCC CHAT chat %lu %u\001\n",
-		       nick, iptolong(getmyip()), dcc[ix].port);
-#endif
+			nick, 
+		       iptolong(natip[0]?(IP) inet_addr(natip):getmyip()),
+			dcc[ix].port);
 	    }
 	 }
 	 if (ix < 0)
@@ -180,9 +159,9 @@ void gotctcp PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
       }
    }
    /* don't log DCC */
-   if (ctcpcmp(code, "DCC") != 0) {
+   if (strcmp(xcode, "DCC") != 0) {
       if ((to[0] == '#') || (to[0] == '&') || (to[0] == '+')) {
-	 if (ctcpcmp(code, "ACTION") == 0) {
+	 if (strcmp(code, "ACTION") == 0) {
 	    putlog(LOG_PUBLIC, to, "Action: %s %s", nick, msg);
 	 } else {
 	    putlog(LOG_PUBLIC, to, "CTCP %s: %s from %s (%s) to %s", code, msg, nick,
@@ -190,7 +169,7 @@ void gotctcp PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
 	 }
 	 update_idle(to, nick);
       } else {
-	 if (ctcpcmp(code, "ACTION") == 0) {
+	 if (strcmp(code, "ACTION") == 0) {
 	    putlog(LOG_MSGS, "*", "Action to %s: %s %s", to, nick, msg);
 	 } else {
 	    putlog(LOG_MSGS, "*", "CTCP %s: %s from %s (%s)", code, msg, nick, from);
@@ -200,7 +179,7 @@ void gotctcp PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
 }
 
 /* ctcp embedded in a notice */
-void gotctcpreply PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
+static void gotctcpreply (char * ffrom, char * to, char * msg, int ignoring)
 {
    char from[UHOSTLEN], nick[NICKLEN], hand[10], code[512];
    strcpy(from, ffrom);
@@ -219,9 +198,7 @@ void gotctcpreply PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
       /* don't even interpret into tcl */
    }
    get_handle_by_host(hand, ffrom);
-#ifndef TRIGGER_BINDS_ON_IGNORE
-   if (!ignoring)
-#endif
+   if (!ignoring || trigger_on_ignore)
       if (check_tcl_ctcr(nick, from, hand, to, code, msg))
 	 return;
    if (ignoring)
@@ -238,7 +215,7 @@ void gotctcpreply PROTO4(char *, ffrom, char *, to, char *, msg, int, ignoring)
 }
 
 /* public msg on channel */
-void gotpublic PROTO4(char *, from, char *, to, char *, msg, int, ignoring)
+static void gotpublic (char * from, char * to, char * msg, int ignoring)
 {
    char nick[NICKLEN];
    struct chanset_t *chan;
@@ -248,11 +225,7 @@ void gotpublic PROTO4(char *, from, char *, to, char *, msg, int, ignoring)
    if (!ignoring)
       detect_flood(from, chan, FLOOD_PRIVMSG, 1);
    splitnick(nick, from);
-#ifndef TRIGGER_BINDS_ON_IGNORE
-   if (!ignoring) {
-#else
-   {
-#endif
+   if (!ignoring || trigger_on_ignore) {
       if (check_tcl_pub(nick, from, to, msg))
 	 return;
       check_tcl_pubm(nick, from, to, msg);
@@ -263,7 +236,7 @@ void gotpublic PROTO4(char *, from, char *, to, char *, msg, int, ignoring)
 }
 
 /* public notice on channel */
-void gotpublicnotice PROTO4(char *, from, char *, to, char *, msg, int, ignoring)
+static void gotpublicnotice (char * from, char * to, char * msg, int ignoring)
 {
    char nick[NICKLEN];
    struct chanset_t *chan;
@@ -283,7 +256,7 @@ void gotpublicnotice PROTO4(char *, from, char *, to, char *, msg, int, ignoring
    beep flood
    CTCP avalanche
  */
-int detect_avalanche PROTO1(char *, msg)
+static int detect_avalanche (char * msg)
 {
    int count = 0;
    unsigned char *p;
@@ -296,8 +269,28 @@ int detect_avalanche PROTO1(char *, msg)
       return 0;
 }
 
+   /* new hashing function */
+static void gotcmd (char * nick, char * from, char * msg, int ignoring)
+{
+   char code[512], hand[41], s[121], total[512];
+   sprintf(s, "%s!%s", nick, from);
+   strcpy(total, msg);
+   rmspace(msg);
+   nsplit(code, msg);
+   get_handle_by_host(hand, s);
+   rmspace(msg);
+   if (!ignoring || trigger_on_ignore)
+      check_tcl_msgm(code, nick, from, hand, msg);
+   if (!ignoring)
+      if (check_tcl_msg(code, nick, from, hand, msg))
+	 return;
+   if (ignoring)
+      return;
+   putlog(LOG_MSGS, "*", "[%s!%s] %s", nick, from, total);
+}
+
 /* private message */
-void gotmsg PROTO3(char *, from, char *, msg, int, ignoring)
+void gotmsg (char * from, char * msg, int ignoring)
 {
    char to[UHOSTLEN], uhost[UHOSTLEN], nick[NICKLEN], ctcp[512];
    char *p, *p1;
@@ -346,15 +339,9 @@ void gotmsg PROTO3(char *, from, char *, msg, int, ignoring)
 	    detect_flood(from, chan, FLOOD_PRIVMSG, 1);
 	 else
 	    detect_flood(from, chan, FLOOD_CTCP, 1);
-#ifdef ANSWER_STACKED_CTCP
 	 /* respond to the first 3 */
-	 if (ctcp_count < 3)
+	 if (ctcp_count < answer_ctcp)
 	    gotctcp(from, to, ctcp, ignoring);
-#else
-	 /* for paranoia reasons, only respond to the first one */
-	 if (!ctcp_count)
-	    gotctcp(from, to, ctcp, ignoring);
-#endif
 	 ctcp_count++;
 	 p = strchr(msg, 1);
       }
@@ -380,7 +367,7 @@ void gotmsg PROTO3(char *, from, char *, msg, int, ignoring)
 }
 
 /* private notice */
-void gotnotice PROTO3(char *, from, char *, msg, int, ignoring)
+void gotnotice (char * from, char * msg, int ignoring)
 {
    char to[UHOSTLEN], hand[10], nick[NICKLEN], ctcp[512];
    char *p, *p1;
@@ -390,8 +377,7 @@ void gotnotice PROTO3(char *, from, char *, msg, int, ignoring)
       splitnick(nick, from);
       /* discard -- kick user if it was to the channel */
       if ((to[0] == '&') || (to[0] == '#')) {
-	 mprintf(serv, "KICK %s %s :that was fun, let's do it again!\n",
-		 to, nick);
+	 mprintf(serv, "KICK %s %s :%s\n", to, nick, IRC_FUNKICK);
       }
       if (!ignoring)
 	 putlog(LOG_MODES, "*", "Avalanche from %s!%s", nick, from);
@@ -430,7 +416,7 @@ void gotnotice PROTO3(char *, from, char *, msg, int, ignoring)
       splitnick(nick, from);
       /* server notice? */
       if ((from[0] == 0) || (nick[0] == 0)) {
-	 /* bugger off you fucking 250 numeric in hiding!! */
+	 /* hidden `250' connection count message from server */
 	 if (strncmp(msg, "Highest connection count:", 25) != 0)
 	    putlog(LOG_SERV, "*", "-NOTICE- %s", msg);
       } else if (!ignoring) {
@@ -438,15 +424,6 @@ void gotnotice PROTO3(char *, from, char *, msg, int, ignoring)
 	 putlog(LOG_MSGS, "*", "-%s (%s)- %s", nick, from, msg);
       }
    }
-}
-
-/* error notice */
-void goterror PROTO2(char *, from, char *, msg)
-{
-   fixcolon(msg);
-   putlog(LOG_SERV | LOG_MSGS, "*", "-ERROR- %s", msg);
-   killsock(serv);
-   serv = (-1);			/* they're gonna disconnect anyway :) */
 }
 
 #endif				/* !NO_IRC */

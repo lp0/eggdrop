@@ -1,7 +1,7 @@
-%{+N}
+%{+n|n}
 ### chanset <channel> <settings>
-     allows you to change the channel settings for a channel.
-     (see '.help chaninfo' for the settings)
-     these are used until the next rehash/chanload/restart,
+     Allows you to change the channel settings for a channel.
+     (See '.help chaninfo' for the settings)
+     These are used until the next rehash/chanload/restart,
      and are saved whenever the channel settings are saved.
-see also: %{+n}+chan, -chan%{+N} chanload, chanset, chaninfo
+See also: %{+n}+chan, -chan%{+N} chanload, chanset, chaninfo

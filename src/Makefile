@@ -15,27 +15,39 @@ libtcle.a: ${TCLLIB}/lib${TCLLIBFN}
 	ar d ./libtcle.a tclMain.o
 	${RANLIB} ./libtcle.a
 
-eggdrop: making ${OBJS} ${XREQ}
-	${LD} -o eggdrop ${OBJS} ${XLIBS}
-	${STRIP} eggdrop
+../eggdrop:  ${OBJS} ${XREQ} eggdrop.h
+	@echo ""
+	@echo "Linking eggdrop..."
+	@echo ""
+	${LD} -o ../eggdrop ${OBJS} ${XLIBS}
+	${STRIP} ../eggdrop
+	@echo "Successful compile: eggdrop"
+	@echo ""
+	
+eggdrop: ../eggdrop
+
+static: ${OBJS} ${XREQ}
+	@echo ""
+	@echo "Linking eggdrop...(statically)"
+	@echo ""
+	${LD} -o ../eggdrop ${OBJS} ${XLIBS} mod/*.o
+	${STRIP} ../eggdrop
 	@echo "Successful compile: eggdrop"
 	@echo ""
 
-debug: making ${OBJS} ${XREQ}
-	${LD} -g -o eggdrop ${OBJS} ${XLIBS}
+debug: ${OBJS} ${XREQ}
+	@echo ""
+	@echo "Linking eggdrop (debug version)..."
+	@echo ""
+	${LD} -g -o ../eggdrop ${OBJS} ${XLIBS}
 	@echo "Successful compile: eggdrop (debug version)"
-	@echo ""
-
-making: eggdrop.h
-	@echo ""
-	@echo "Making eggdrop..."
-	@echo "(This will take a while.  Pour yourself an ice cold coke and chill.)"
 	@echo ""
 
 blowfish.o: blowfish.c
 	${CC} ${CFLAGS} blowfish.c
 	
 botcmd.o: botcmd.c
+	@echo "(This will take a while.  Pour yourself an ice cold coke and chill.)"
 	${CC} ${CFLAGS} botcmd.c
 	
 botnet.o: botnet.c
@@ -52,7 +64,10 @@ chanset.o: chanset.c
 	
 cmds.o: cmds.c
 	${CC} ${CFLAGS} cmds.c
-	
+
+cmdsirc.o: cmdsirc.c
+	${CC} ${CFLAGS} cmdsirc.c
+
 dcc.o: dcc.c
 	${CC} ${CFLAGS} dcc.c
 	
@@ -65,12 +80,9 @@ gotdcc.o: gotdcc.c
 hash.o: hash.c
 	${CC} ${CFLAGS} hash.c
 	
-main.o: main.c
+main.o: main.c patch.h
 	${CC} ${CFLAGS} main.c
 	
-match.o: match.c
-	${CC} ${CFLAGS} match.c
-
 mem.o: mem.c
 	${CC} ${CFLAGS} mem.c
 	
@@ -83,7 +95,7 @@ mode.o: mode.c
 
 modules.o: modules.c
 	${CC} ${CFLAGS} modules.c
-	
+
 msgcmds.o: msgcmds.c
 	${CC} ${CFLAGS} msgcmds.c
 	
@@ -122,104 +134,77 @@ users.o: users.c
 
 # I orginially had this in another file, but some lame make's can't cope :/ 
 botcmd.o: \
-   eggdrop.h \
+   main.h \
    tandem.h \
    users.h \
    chan.h \
-   tclegg.h \
    modules.h
 botnet.o: \
-   eggdrop.h \
-   tandem.h \
-   proto.h \
-   mod/assoc.mod/assoc.c
+   main.h \
+   tandem.h
 chan.o: \
-   eggdrop.h \
+   main.h \
    users.h \
-   chan.h \
-   proto.h
+   chan.h
 chanprog.o: \
-   eggdrop.h \
+   main.h \
    users.h \
    chan.h \
-   tclegg.h \
    modules.h
 chanset.o: \
-   eggdrop.h \
-   users.h \
+   main.h \
    chan.h \
-   proto.h
+   users.h
 cmds.o: \
-   eggdrop.h \
-   users.h \
-   chan.h \
-   tclegg.h \
-   mod/filesys.mod/filesys.c
-dcc.o: \
-   eggdrop.h \
-   chan.h \
-   proto.h \
+   main.h \
    modules.h \
-   mod/filesys.mod/dccfiles.c
-dccutil.o: \
-   eggdrop.h \
+   chan.h
+cmdsirc.o: \
+   main.h \
    chan.h \
-   proto.h \
+   users.h \
+   modules.h
+dcc.o: \
+   main.h \
+   chan.h \
+   modules.h
+dccutil.o: \
+   main.h \
+   chan.h \
    modules.h
 gotdcc.o: \
-   eggdrop.h \
+   main.h \
    chan.h \
-   proto.h \
    modules.h
-hash.o: \
-   eggdrop.h \
-   proto.h \
-   cmdt.h \
-   hash.h \
-   tclegg.h
 main.o: \
-   eggdrop.h \
+   main.h \
    chan.h \
-   tclegg.h \
    modules.h \
-   ../lush.h \
-   files.h \
-   mod/transfer.mod/transfer.c \
-   mod/filesys.mod/filedb.c \
-   mod/filesys.mod/files.c
+   patch.h
 mem.o: \
    mod/modvals.h
 misc.o: \
-   eggdrop.h \
-   proto.h \
-   mod/blowfish.mod/blowfish.c
+   main.h \
+   chan.h
 mode.o: \
-   eggdrop.h \
+   main.h \
    users.h \
-   chan.h \
-   proto.h
+   chan.h
 modules.o: \
    modules.h \
    users.h
 msgcmds.o: \
-   eggdrop.h \
-   users.h \
-   chan.h \
-   proto.h
+   main.h \
+   chan.h
 msgnotice.o: \
-   eggdrop.h \
-   chan.h \
-   proto.h
+   main.h \
+   chan.h
 net.o: \
-   eggdrop.h \
-   proto.h
+   main.h
 notes.o: \
-   eggdrop.h \
-   proto.h
+   main.h
 tcl.o: \
-   eggdrop.h \
-   tclegg.h \
-   cmdt.h
+   main.h
 tclchan.o: \
    eggdrop.h \
    tclegg.h \
@@ -227,39 +212,28 @@ tclchan.o: \
    chan.h \
    cmdt.h
 tcldcc.o: \
-   eggdrop.h \
-   tclegg.h \
-   tandem.h \
-   cmdt.h
+   main.h \
+   tandem.h
 tclhash.o: \
-   eggdrop.h \
-   proto.h \
-   cmdt.h \
-   tclegg.h
-tclmisc.o: \
-   eggdrop.h \
-   proto.h \
-   cmdt.h \
-   tclegg.h \
-   files.h \
-   mod/filesys.mod/tclfiles.c
-tcluser.o: \
-   eggdrop.h \
+   main.h \
+   chan.h \
    users.h \
-   proto.h \
-   cmdt.h \
-   tclegg.h \
+   match.c
+tclmisc.o: \
+   main.h \
+   modules.h
+tcluser.o: \
+   main.h \
+   users.h \
    chan.h
 userrec.o: \
-   eggdrop.h \
+   main.h \
    users.h \
    chan.h \
-   proto.h \
    modules.h
 users.o: \
-   eggdrop.h \
+   main.h \
    users.h \
    chan.h \
-   proto.h \
    modules.h
 #safety hash

@@ -1,4 +1,4 @@
-%{+M}
+%{+m|m}
 ###  deluser <nickname>
    deletes a user record for a user on the channel, using their
    current hostname.  Channel masters can remove users so long as

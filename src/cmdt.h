@@ -12,10 +12,13 @@
 #define CMD_LEAVE    (Function)(-1)
 typedef struct {
   char *name;
-  char flag;
+  char *flags;
   Function func;
+  char *funcname;
 } cmd_t;
 
-int add_builtins PROTO((int,cmd_t * ));
-int rem_builtins PROTO((int,cmd_t * ));
+typedef struct {
+  char *name;
+  Function func;
+} botcmd_t;
 #endif

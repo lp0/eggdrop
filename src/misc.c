@@ -18,26 +18,16 @@
    COPYING that was distributed with this code.
  */
 
-#if HAVE_CONFIG_H
-#include <config.h>
-#endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include "main.h"
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <varargs.h>
-#include "eggdrop.h"
-#include "proto.h"
-#ifndef MODULES
-#include "mod/blowfish.mod/blowfish.c"
-#endif
+#include "chan.h"
 
 extern int serv;
 extern char notefile[];
 extern int dcc_total;
-extern struct dcc_t dcc[];
+extern struct dcc_t * dcc;
 extern char helpdir[];
 extern char version[];
 extern char botname[];
@@ -53,11 +43,15 @@ extern char textdir[];
 extern int strict_host;
 extern int keep_all_logs;
 extern char botnetnick[];
+extern struct chanset_t *chanset;
+extern time_t now;
 
 /* whether or not to display the time with console output */
 int shtime = 1;
 /* logfiles */
-log_t logs[MAXLOGS];
+log_t * logs = 0;
+/* current maximum log files */
+int max_logs = 5;
 /* console mask */
 int conmask = LOG_MODES | LOG_CMDS | LOG_MISC;
 /* total messages queued on main queue */
@@ -73,17 +67,10 @@ struct msgq {
    struct msgq *next;
 } *mq = NULL, *hq = NULL;
 
-/* store info for sharebots */
-struct tandbuf {
-   char bot[10];
-   time_t timer;
-   struct msgq *q;
-} tbuf[5];
-
 /* expected memory usage */
 int expmem_misc()
 {
-   int tot = 0;
+   int tot = max_logs * sizeof(log_t);
    struct msgq *m = mq, *h = hq;
    context;
    while (m != NULL) {
@@ -101,22 +88,24 @@ int expmem_misc()
 
 void init_misc()
 {
-   int i;
-   for (i = 0; i < 5; i++) {
-      tbuf[i].q = NULL;
-      tbuf[i].bot[0] = 0;
-   }
-   for (i = 0; i < MAXLOGS; i++) {
-      logs[i].filename = logs[i].chname = NULL;
-      logs[i].mask = 0;
-      logs[i].f = NULL;
+   static int last = 0;
+   if (max_logs < 1)
+     max_logs = 1;
+   if (logs)
+     logs = nrealloc(logs,max_logs * sizeof(log_t));
+   else
+     logs = nmalloc(max_logs * sizeof(log_t));
+   for (; last < max_logs; last++) {
+      logs[last].filename = logs[last].chname = NULL;
+      logs[last].mask = 0;
+      logs[last].f = NULL;
    }
 }
 
 /***** MISC FUNCTIONS *****/
 
 /* low-level stuff for other modules */
-int is_file PROTO1(char *, s)
+static int is_file (char * s)
 {
    struct stat ss;
    int i = stat(s, &ss);
@@ -132,7 +121,7 @@ int is_file PROTO1(char *, s)
 /* determine if littles is contained in bigs (ignoring case) */
 /* if so: return pointer to the littles in bigs */
 /* if not: return NULL */
-char *stristr PROTO2(char *, bigs, char *, littles)
+char *stristr (char * bigs, char * littles)
 {
    char *st = bigs, *p, *q;
    while (1) {
@@ -154,7 +143,7 @@ char *stristr PROTO2(char *, bigs, char *, littles)
 
 #if !HAVE_STRCASECMP
 /* unixware has no strcasecmp() without linking in a hefty library */
-int strcasecmp PROTO2(char *, s1, char *, s2)
+int strcasecmp (char * s1, char * s2)
 {
    while ((*s1) && (*s2) && (upcase(*s1) == upcase(*s2))) {
       s1++;
@@ -165,7 +154,7 @@ int strcasecmp PROTO2(char *, s1, char *, s2)
 #endif
 
 /* split first word off of rest and put it in first */
-void splitc PROTO3(char *, first, char *, rest, char, divider)
+void splitc (char * first, char * rest, char divider)
 {
    char *p;
    p = strchr(rest, divider);
@@ -181,18 +170,9 @@ void splitc PROTO3(char *, first, char *, rest, char, divider)
       strcpy(rest, p + 1);
 }
 
-void split PROTO2(char *, first, char *, rest)
-{
-   splitc(first, rest, ' ');
-}
-void splitnick PROTO2(char *, first, char *, rest)
-{
-   splitc(first, rest, '!');
-}
-
 #ifdef EBUG
 /* return the index'd word without changing 'rest' */
-void stridx PROTO3(char *, first, char *, rest, int, index)
+void stridx (char * first, char * rest, int index)
 {
    char s[510];
    int i;
@@ -205,7 +185,7 @@ void stridx PROTO3(char *, first, char *, rest, int, index)
 }
 #endif
 
-void nsplit PROTO2(char *, first, char *, rest)
+void nsplit (char * first, char * rest)
 {
    split(first, rest);
    if (first != NULL)
@@ -217,7 +197,7 @@ void nsplit PROTO2(char *, first, char *, rest)
 
 /* convert "abc!user@a.b.host" into "*!user@*.b.host"
    or "abc!user@1.2.3.4" into "*!user@1.2.3.*"  */
-void maskhost PROTO2(char *, s, char *, nw)
+void maskhost (char * s, char * nw)
 {
    char *p, *q, xx[150];
    strcpy(xx, s);
@@ -279,7 +259,7 @@ void maskhost PROTO2(char *, s, char *, nw)
 /* copy a file from one place to another (possibly erasing old copy) */
 /* returns 0 if OK, 1 if can't open original file, 2 if can't open new */
 /* file, 3 if original file isn't normal, 4 if ran out of disk space */
-int copyfile PROTO2(char *, oldpath, char *, newpath)
+int copyfile (char * oldpath, char * newpath)
 {
    int fi, fo, x;
    char buf[512];
@@ -311,7 +291,7 @@ int copyfile PROTO2(char *, oldpath, char *, newpath)
    return 0;
 }
 
-int movefile PROTO2(char *, oldpath, char *, newpath)
+int movefile (char * oldpath, char * newpath)
 {
    int x = copyfile(oldpath, newpath);
    if (x == 0)
@@ -321,7 +301,7 @@ int movefile PROTO2(char *, oldpath, char *, newpath)
 
 /* make nick!~user@host into nick!user@host if necessary */
 /* also the new form: nick!+user@host or nick!-user@host */
-void fixfrom PROTO1(char *, s)
+void fixfrom (char * s)
 {
    char nick[NICKLEN], from[UHOSTLEN];
    if (strict_host)
@@ -340,7 +320,7 @@ void fixfrom PROTO1(char *, s)
 
 /* dump a potentially super-long string of text */
 /* assume prefix 20 chars or less */
-void dumplots PROTO3(int, idx, char *, prefix, char *, data)
+void dumplots (int idx, char * prefix, char * data)
 {
    char *p = data, *q, *n, c;
    if (!(*data)) {
@@ -386,7 +366,7 @@ void dumplots PROTO3(int, idx, char *, prefix, char *, data)
 
 /* convert an interval (in seconds) to one of: */
 /* "19 days ago", "1 day ago", "18:12" */
-void daysago PROTO3(time_t, now, time_t, then, char *, out)
+void daysago (time_t now, time_t then, char * out)
 {
    char s[81];
    if (now - then > 86400) {
@@ -401,7 +381,7 @@ void daysago PROTO3(time_t, now, time_t, then, char *, out)
 
 /* convert an interval (in seconds) to one of: */
 /* "in 19 days", "in 1 day", "at 18:12" */
-void days PROTO3(time_t, now, time_t, then, char *, out)
+void days (time_t now, time_t then, char * out)
 {
    char s[81];
    if (now - then > 86400) {
@@ -417,7 +397,7 @@ void days PROTO3(time_t, now, time_t, then, char *, out)
 
 /* convert an interval (in seconds) to one of: */
 /* "for 19 days", "for 1 day", "for 09:10" */
-void daysdur PROTO3(time_t, now, time_t, then, char *, out)
+void daysdur (time_t now, time_t then, char * out)
 {
    char s[81];
    int hrs, mins;
@@ -453,7 +433,7 @@ va_dcl
    /* format log entry at offset 8, then i can prepend the timestamp */
    out = &s[8];
    vsprintf(out, format, va);
-   tt = time(NULL);
+   tt = now;
    if (keep_all_logs) {
       strcpy(ct, ctime(&tt));
       ct[10] = 0;
@@ -477,7 +457,7 @@ va_dcl
    }
    strcat(out, "\n");
    if (!use_stderr) {
-      for (i = 0; i < MAXLOGS; i++) {
+      for (i = 0; i < max_logs; i++) {
 	 if ((logs[i].filename != NULL) && (logs[i].mask & type) &&
 	     ((chname[0] == '*') || (logs[i].chname[0] == '*') ||
 	      (strcasecmp(chname, logs[i].chname) == 0))) {
@@ -497,7 +477,7 @@ va_dcl
    if ((!backgrd) && (!con_chan) && (!term_z))
       printf("%s", out);
    for (i = 0; i < dcc_total; i++)
-      if ((dcc[i].type == DCC_CHAT) && (dcc[i].u.chat->con_flags & type)) {
+      if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->con_flags & type)) {
 	 if ((chname[0] == '*') || (dcc[i].u.chat->con_chan[0] == '*') ||
 	     (strcasecmp(chname, dcc[i].u.chat->con_chan) == 0))
 	    dprintf(i, "%s", out);
@@ -513,15 +493,17 @@ va_dcl
 void flushlogs()
 {
    int i;
-   for (i = 0; i < MAXLOGS; i++)
+   context;
+   for (i = 0; i < max_logs; i++)
       if (logs[i].f != NULL)
 	 fflush(logs[i].f);
+   context;
 }
 
 /***** BOT AND HELPBOT SERVER QUEUES *****/
 
 /* queue a msg on one of the msg queues */
-struct msgq *q_msg PROTO3(struct msgq *, qq, int, sock, char *, s)
+static struct msgq *q_msg (struct msgq * qq, int sock, char * s)
 {
    struct msgq *q;
    int cnt;
@@ -615,16 +597,16 @@ va_dcl
 }
 
 /* called periodically to shove out another queued item */
+/* mode queue gets priority now */
 void deq_msg()
 {
-   static which = 0;		/* to alternate which queue is pushed */
-   struct msgq *q;
-   which = (which + 1) % 2;
-   q = (which ? hq : mq);
+   struct msgq *q = mq;
+   
    if (q == NULL)
-      q = (which ? mq : hq);	/* chosen one is empty? switch off */
+     q = hq;
    if (q == NULL)
-      return;			/* both queues empty */
+     return;
+   
    tputs(q->sock, q->msg, strlen(q->msg));
    if (q == mq) {
       mq = mq->next;
@@ -659,144 +641,6 @@ void empty_msgq()
    mq = hq = NULL;
 }
 
-/***** RESYNC BUFFERS *****/
-
-/* create a tandem buffer for 'bot' */
-void new_tbuf PROTO1(char *, bot)
-{
-   int i;
-   for (i = 0; i < 5; i++)
-      if (tbuf[i].bot[0] == 0) {
-	 /* this one is empty */
-	 strcpy(tbuf[i].bot, bot);
-	 tbuf[i].q = NULL;
-	 tbuf[i].timer = time(NULL);
-	 putlog(LOG_MISC, "*", "Creating resync buffer for %s", bot);
-	 return;
-      }
-}
-
-/* flush a certain bot's tbuf */
-int flush_tbuf PROTO1(char *, bot)
-{
-   int i;
-   struct msgq *q;
-   for (i = 0; i < 5; i++)
-      if (strcasecmp(tbuf[i].bot, bot) == 0) {
-	 while (tbuf[i].q != NULL) {
-	    q = tbuf[i].q;
-	    tbuf[i].q = tbuf[i].q->next;
-	    nfree(q->msg);
-	    nfree(q);
-	 }
-	 tbuf[i].bot[0] = 0;
-	 return 1;
-      }
-   return 0;
-}
-
-/* flush all tbufs older than 15 minutes */
-void check_expired_tbufs()
-{
-   int i;
-   time_t now = time(NULL);
-   struct msgq *q;
-   for (i = 0; i < 5; i++)
-      if (tbuf[i].bot[0]) {
-	 if (now - tbuf[i].timer > 900) {
-	    /* EXPIRED */
-	    while (tbuf[i].q != NULL) {
-	       q = tbuf[i].q;
-	       tbuf[i].q = tbuf[i].q->next;
-	       nfree(q->msg);
-	       nfree(q);
-	    }
-	    putlog(LOG_MISC, "*", "Flushing resync buffer for clonebot %s.",
-		   tbuf[i].bot);
-	    tbuf[i].bot[0] = 0;
-	 }
-      }
-}
-
-/* add stuff to a specific bot's tbuf */
-void q_tbuf PROTO2(char *, bot, char *, s)
-{
-   int i;
-   struct msgq *q;
-   for (i = 0; i < 5; i++)
-      if (strcasecmp(tbuf[i].bot, bot) == 0) {
-	 q = q_msg(tbuf[i].q, 0, s);
-	 if (q != NULL)
-	    tbuf[i].q = q;
-      }
-}
-
-/* add stuff to the resync buffers */
-void q_resync PROTO1(char *, s)
-{
-   int i;
-   struct msgq *q;
-   for (i = 0; i < 5; i++)
-      if (tbuf[i].bot[0]) {
-	 q = q_msg(tbuf[i].q, 0, s);
-	 if (q != NULL)
-	    tbuf[i].q = q;
-      }
-}
-
-/* is bot in resync list? */
-int can_resync PROTO1(char *, bot)
-{
-   int i;
-   for (i = 0; i < 5; i++)
-      if (strcasecmp(bot, tbuf[i].bot) == 0)
-	 return 1;
-   return 0;
-}
-
-/* dump the resync buffer for a bot */
-void dump_resync PROTO2(int, z, char *, bot)
-{
-   int i;
-   struct msgq *q;
-   for (i = 0; i < 5; i++)
-      if (strcasecmp(bot, tbuf[i].bot) == 0) {
-	 while (tbuf[i].q != NULL) {
-	    q = tbuf[i].q;
-	    tbuf[i].q = tbuf[i].q->next;
-	    tprintf(z, "%s", q->msg);
-	    nfree(q->msg);
-	    nfree(q);
-	 }
-	 tbuf[i].bot[0] = 0;
-	 return;
-      }
-}
-
-/* give status report on tbufs */
-void status_tbufs PROTO1(int, idx)
-{
-   int i, count;
-   struct msgq *q;
-   char s[121];
-   s[0] = 0;
-   for (i = 0; i < 5; i++)
-      if (tbuf[i].bot[0]) {
-	 strcat(s, tbuf[i].bot);
-	 count = 0;
-	 q = tbuf[i].q;
-	 while (q != NULL) {
-	    count++;
-	    q = q->next;
-	 }
-	 sprintf(&s[strlen(s)], " (%d), ", count);
-      }
-   if (s[0]) {
-      s[strlen(s) - 2] = 0;
-      dprintf(idx, "Pending sharebot buffers: %s\n", s);
-   }
-}
-
 /********** STRING SUBSTITUTION **********/
 
 static int cols = 0;
@@ -806,7 +650,7 @@ static int subwidth = 70;
 static char *colstr = NULL;
 
 /* add string to colstr */
-void subst_addcol PROTO2(char *, s, char *, newcol)
+static void subst_addcol (char * s, char * newcol)
 {
    char *p, *q;
    int i, colwidth;
@@ -851,7 +695,8 @@ void subst_addcol PROTO2(char *, s, char *, newcol)
 /* %{center}  center this line */
 /* %{cols=N}  start of columnated section (indented) */
 /* %{end}     end of section */
-void help_subst PROTO4(char *, s, char *, nick, int, flags, int, isdcc)
+void help_subst (char * s, char * nick, struct flag_record * flags,
+		 int isdcc)
 {
    char xx[512], sub[161], *p, *q, c;
    int i, j, center = 0;
@@ -884,7 +729,18 @@ void help_subst PROTO4(char *, s, char *, nick, int, flags, int, isdcc)
 	 strcpy(sub, ver);
 	 break;
       case 'C':
-	 getchanlist(sub, 160);
+	   {
+	      struct chanset_t *chan = chanset;
+	      sub[0] = 0;
+	      while (chan != NULL) {
+		 if (strlen(s) + strlen(chan->name) + 1 > 160)
+		   break;
+		 if (s[0])
+		   strcat(s, " ");
+		 strcat(s, chan->name);
+		 chan = chan->next;
+	      }
+	   }
 	 break;
       case 'E':
 	 strcpy(sub, version);
@@ -893,14 +749,21 @@ void help_subst PROTO4(char *, s, char *, nick, int, flags, int, isdcc)
 	 strcpy(sub, admin);
 	 break;
       case 'T':
-	 tt = time(NULL);
+	 tt = now;
 	 strcpy(sub, ctime(&tt));
 	 strcpy(sub, &sub[11]);
 	 sub[5] = 0;
 	 break;
       case 'N':
-	 strcpy(sub, nick);
-	 break;
+           {
+              char * p = strchr(nick,':');
+              if (p)
+                p++;
+              else
+                p = nick;
+              strcpy(sub, p);
+           }
+         break;
       case '{':
 	 q = p;
 	 p++;
@@ -912,8 +775,24 @@ void help_subst PROTO4(char *, s, char *, nick, int, flags, int, isdcc)
 	    q += 2;
 	    /* now q is the string and p is where the rest of the fcn expects */
 	    if (q[0] == '+') {
-	       int reqflags = str2flags(q);
-	       if (!flags_ok(reqflags, flags))
+	       char *r;
+	       struct flag_record fr = {0,0,FR_OR};
+	       c = 0;
+	       if ((r = strchr(q,'|'))) {
+		  c = '|';
+	       } else if ((r = strchr(q,'&'))) {
+		  fr.match = FR_AND;
+		  c = '&';
+	       }
+	       if (r) {
+		  *r = 0;
+		  fr.chan = str2chflags(r+1);
+	       }
+	       fr.global = str2flags(q+1);
+	       if (r) {
+		  *r = c;
+	       }
+	       if (!flagrec_ok(&fr, flags))
 		  blind = 1;
 	       else
 		  blind = 0;
@@ -984,7 +863,7 @@ void help_subst PROTO4(char *, s, char *, nick, int, flags, int, isdcc)
    }
 }
 
-void showhelp PROTO3(char *, who, char *, file, int, flags)
+void showhelp (char * who, char * file, struct flag_record * flags)
 {
    FILE *f;
    char s[1024], *p;
@@ -1003,13 +882,13 @@ void showhelp PROTO3(char *, who, char *, file, int, flags)
       strcat(s, "/");
       strcat(s, file);
       if (!is_file(s)) {
-	 hprintf(serv, "NOTICE %s :No help available on that.\n", who);
+	 hprintf(serv, "NOTICE %s :%s\n", who, IRC_NOHELP2);
 	 return;
       }
    }
    f = fopen(s, "r");
    if (f == NULL) {
-      hprintf(serv, "NOTICE %s :No help available on that.\n", who);
+      hprintf(serv, "NOTICE %s :%s\n", who, IRC_NOHELP2);
       return;
    }
    help_subst(NULL, NULL, 0, 0);	/* clear flags */
@@ -1029,10 +908,10 @@ void showhelp PROTO3(char *, who, char *, file, int, flags)
    }
    fclose(f);
    if (!lines)
-      hprintf(serv, "NOTICE %s :No help available on that.\n", who);
+      hprintf(serv, "NOTICE %s :%s\n", who, IRC_NOHELP2);
 }
 
-void showtext PROTO3(char *, who, char *, file, int, flags)
+void showtext (char * who, char * file, struct flag_record * flags)
 {
    FILE *f;
    char s[1024], *p;
@@ -1046,7 +925,7 @@ void showtext PROTO3(char *, who, char *, file, int, flags)
       return;
    if (!is_file(s)) {
       fclose(f);
-      hprintf(serv, "NOTICE %s :'%s' is not a normal file!\n", who, s);
+      hprintf(serv, "NOTICE %s :'%s' %s\n", who, s, IRC_NOTNORMFILE);
       return;
    }
    help_subst(NULL, NULL, 0, 0);
@@ -1065,12 +944,11 @@ void showtext PROTO3(char *, who, char *, file, int, flags)
    fclose(f);
 }
 
-void tellhelp PROTO3(int, idx, char *, file, int, flags)
+void tellhelp (int idx, char * file, struct flag_record * flags)
 {
    FILE *f;
    char s[1024], *p;
    int lines = 0;
-   printf("In tell help, idx = %d, file = %s, flags = %d\n", idx, file, flags);
    for (p = file; *p != 0; p++) {
       if ((*p == ' ') || (*p == '.'))
 	 *p = '/';
@@ -1085,13 +963,13 @@ void tellhelp PROTO3(int, idx, char *, file, int, flags)
       strcat(s, "/");
       strcat(s, file);
       if (!is_file(s)) {
-	 dprintf(idx, "No help available on that.\n");
+	 dprintf(idx, "%s\n", IRC_NOHELP2);
 	 return;
       }
    }
    f = fopen(s, "r");
    if (f == NULL) {
-      dprintf(idx, "No help available on that.\n");
+      dprintf(idx, "%s\n", IRC_NOHELP2);
       return;
    }
    help_subst(NULL, NULL, 0, 1);
@@ -1110,11 +988,11 @@ void tellhelp PROTO3(int, idx, char *, file, int, flags)
       }
    }
    if (!lines)
-      dprintf(idx, "No help available on that.\n");
+      dprintf(idx, "%s\n", IRC_NOHELP2);
    fclose(f);
 }
 
-void telltext PROTO3(int, idx, char *, file, int, flags)
+void telltext (int idx, char * file, struct flag_record * flags)
 {
    FILE *f;
    char s[1024], *p;
@@ -1128,7 +1006,7 @@ void telltext PROTO3(int, idx, char *, file, int, flags)
       return;
    if (!is_file(s)) {
       fclose(f);
-      dprintf(idx, "### '%s' is not a normal file!\n", s);
+      dprintf(idx, "### '%s' %s\n", s, IRC_NOTNORMFILE);
       return;
    }
    help_subst(NULL, NULL, 0, 1);
@@ -1148,17 +1026,20 @@ void telltext PROTO3(int, idx, char *, file, int, flags)
 }
 
 /* show motd to dcc chatter */
-void show_motd PROTO1(int, idx)
+void show_motd (int idx)
 {
    FILE *vv;
    char s[1024];
-   int atr;
-   atr = get_attr_handle(dcc[idx].nick);
+   struct flag_record fr = {0,0,0};
+   
+   
+   fr.global = get_attr_handle(dcc[idx].nick);
+   fr.chan = get_chanattr_handle(dcc[idx].nick,dcc[idx].u.chat->con_chan);
    vv = fopen(motdfile, "r");
    if (vv != NULL) {
       if (!is_file(motdfile)) {
 	 fclose(vv);
-	 dprintf(idx, "### MOTD is not a normal file!\n");
+	 dprintf(idx, "### MOTD %s\n", IRC_NOTNORMFILE);
 	 return;
       }
       dprintf(idx, "\n");
@@ -1170,7 +1051,7 @@ void show_motd PROTO1(int, idx)
 	       s[strlen(s) - 1] = 0;
 	    if (!s[0])
 	       strcpy(s, " ");
-	    help_subst(s, dcc[idx].nick, atr, 1);
+	    help_subst(s, dcc[idx].nick, &fr, 1);
 	    if (s[0])
 	       dprintf(idx, "%s\n", s);
 	 }

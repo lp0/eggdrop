@@ -27,11 +27,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef MODULES
 typedef int (*Function) ();
 #include "mod/modvals.h"
 extern module_entry *module_list;
-#endif
 
 extern int serv;
 
@@ -46,32 +44,6 @@ struct {
    short line;
 } memtbl[MEMTBLSIZE];
 
-#endif
-
-#ifdef STDC_HEADERS
-#define PROTO(x) x
-#define PROTO1(a,b) (a b)
-#define PROTO2(a1,b1,a2,b2) (a1 b1, a2 b2)
-#define PROTO3(a1,b1,a2,b2,a3,b3) (a1 b1, a2 b2, a3 b3)
-#define PROTO4(a1,b1,a2,b2,a3,b3,a4,b4) \
-              (a1 b1, a2 b2, a3 b3, a4 b4)
-#define PROTO5(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5) \
-              (a1 b1, a2 b2, a3 b3, a4 b4, a5 b5)
-#define PROTO6(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5,a6,b6) \
-              (a1 b1, a2 b2, a3 b3, a4 b4, a5 b5, a6 b6)
-#else
-#define PROTO(x) ()
-#define PROTO1(a,b) (b) a b;
-#define PROTO2(a1,b1,a2,b2) (b1, b2) a1 b1; a2 b2;
-#define PROTO3(a1,b1,a2,b2,a3,b3) (b1, b2, b3) a1 b1; a2 b2; a3 b3;
-#define PROTO4(a1,b1,a2,b2,a3,b3,a4,b4) (b1, b2, b3, b4) \
-              a1 b1; a2 b2; a3 b3; a4 b4;
-#define PROTO5(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5) \
-              (b1, b2, b3, b4, b5) \
-              a1 b1; a2 b2; a3 b3; a4 b4; a5 b5;
-#define PROTO6(a1,b1,a2,b2,a3,b3,a4,b4,a5,b5,a6,b6) \
-              (b1, b2, b3, b4, b5, b6) \
-              a1 b1; a2 b2; a3 b3; a4 b4; a5 b5; a6 b6;
 #endif
 
 #ifdef HAVE_DPRINTF
@@ -112,7 +84,7 @@ void init_mem()
 }
 
 /* tell someone the gory memory details */
-void tell_mem_status PROTO1(char *, nick)
+void tell_mem_status (char * nick)
 {
 #ifdef DEBUG
    float per;
@@ -124,7 +96,7 @@ void tell_mem_status PROTO1(char *, nick)
 	   (int) (expected_memory() / 1024));
 }
 
-void tell_mem_status_dcc PROTO1(int, idx)
+void tell_mem_status_dcc (int idx)
 {
 #ifdef DEBUG
    int exp;
@@ -141,21 +113,15 @@ void tell_mem_status_dcc PROTO1(int, idx)
 #endif
 }
 
-void debug_mem_to_dcc PROTO1(int, idx)
+void debug_mem_to_dcc (int idx)
 {
 #ifdef DEBUG
-#ifdef MODULES
 #define MAX_MEM 10
-#else
-#define MAX_MEM 12
-#endif
    unsigned long exp[MAX_MEM], use[MAX_MEM], l;
    int i, j;
    char fn[20], sofar[81];
-#ifdef MODULES
    module_entry *me;
    char *p;
-#endif
    exp[0] = expmem_chan();
    exp[1] = expmem_chanprog();
    exp[2] = expmem_misc();
@@ -165,15 +131,9 @@ void debug_mem_to_dcc PROTO1(int, idx)
    exp[6] = expmem_botnet();
    exp[7] = expmem_tcl();
    exp[8] = expmem_tclhash();
-#ifndef MODULES
-   exp[9] = expmem_fileq();
-   exp[10] = expmem_blowfish();
-   exp[11] = expmem_assoc();
-#else
    exp[9] = expmem_modules(1);
    for (me = module_list; me; me = me->next)
       me->mem_work = 0;
-#endif
    for (i = 0; i < MAX_MEM; i++)
       use[i] = 0;
    for (i = 0; i < lastused; i++) {
@@ -197,14 +157,6 @@ void debug_mem_to_dcc PROTO1(int, idx)
 	 use[7] += l;
       else if (strcasecmp(fn, "tclhash.c") == 0)
 	 use[8] += l;
-#ifndef MODULES
-      else if (strcasecmp(fn, "fileq.c") == 0)
-	 use[9] += l;
-      else if (strcasecmp(fn, "blowfish.c") == 0)
-	 use[10] += l;
-      else if (strcasecmp(fn, "assoc.c") == 0)
-	 use[11] += l;
-#else
       else if (strcasecmp(fn, "modules.c") == 0)
 	 use[9] += l;
       else if ((p = strchr(fn, ':')) != NULL) {
@@ -214,7 +166,6 @@ void debug_mem_to_dcc PROTO1(int, idx)
 	       me->mem_work += l;
 	 *p = ':';
       }
-#endif
       else {
 	 if (idx < 0)
 	    tprintf(-idx, "Not logging file %s!\n", fn);
@@ -251,21 +202,9 @@ void debug_mem_to_dcc PROTO1(int, idx)
       case 8:
 	 strcpy(fn, "tclhash.c");
 	 break;
-#ifndef MODULES
-      case 9:
-	 strcpy(fn, "fileq.c");
-	 break;
-      case 10:
-	 strcpy(fn, "blowfish.c");
-	 break;
-      case 11:
-	 strcpy(fn, "assoc.c");
-	 break;
-#else
       case 9:
 	 strcpy(fn, "modules.c");
 	 break;
-#endif
       }
       if (use[i] == exp[i]) {
 	 if (idx < 0)
@@ -304,7 +243,6 @@ void debug_mem_to_dcc PROTO1(int, idx)
 	 }
       }
    }
-#ifdef MODULES
    for (me = module_list; me; me = me->next) {
       Function *f = me->funcs;
       int expt = 0;
@@ -340,7 +278,6 @@ void debug_mem_to_dcc PROTO1(int, idx)
 	 }
       }
    }
-#endif
    if (idx < 0)
       tprintf(-idx, "--- End of debug memory list.\n");
    else
@@ -352,14 +289,10 @@ void debug_mem_to_dcc PROTO1(int, idx)
       dprintf(idx, "Compiled without extensive memory debugging (sorry).\n");
 #endif
    tell_netdebug(idx);
-#ifdef MODULES
    do_module_report(idx);
-#else
-   debug_blowfish(idx);
-#endif
 }
 
-void *n_malloc PROTO3(int, size, char *, file, int, line)
+void *n_malloc (int size, char * file, int line)
 {
    void *x;
    int i = 0;
@@ -385,7 +318,7 @@ void *n_malloc PROTO3(int, size, char *, file, int, line)
    return x;
 }
 
-void *n_realloc PROTO4(void *, ptr, int, size, char *, file, int, line)
+void *n_realloc (void * ptr, int size, char * file, int line)
 {
    void *x;
    int i = 0;
@@ -412,7 +345,7 @@ void *n_realloc PROTO4(void *, ptr, int, size, char *, file, int, line)
    return x;
 }
 
-void n_free PROTO3(void *, ptr, char *, file, int, line)
+void n_free (void * ptr, char * file, int line)
 {
    int i = 0;
    if (ptr == NULL) {

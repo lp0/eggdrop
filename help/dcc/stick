@@ -1,4 +1,4 @@
-%{+O}
+%{+o|o}
 ###  stick <hostmask OR number>
    makes a ban "sticky" -- meaning the bot will always try to
    keep the ban active on the channel, even if the channel is

@@ -8,10 +8,11 @@
   desc <file> <desc>    set description of <file> to <desc>
   stats                 see your upload/download statistics
   quit                  leave the file system
+  filestats             report transfer statistics
 %{+m}
 Masters only:
   hide      share     mkdir     cp        rm        lsa
-  unhide    unshare   rmdir     mv        ln
+  unhide    unshare   rmdir     mv        ln	    sort
 %{-}
 You can get help on any command via:  help <command>
 (To upload a file, just start your dcc transfer.)

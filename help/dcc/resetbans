@@ -1,4 +1,4 @@
-%{+O}
+%{+o|o}
 ###  resetbans
    resets the ban list on the channel you're currently viewing in
    the console.  any bans on the channel that aren't in the ban

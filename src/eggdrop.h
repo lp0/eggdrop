@@ -19,7 +19,16 @@
  *   or disabled -- use "#define" to enable and "#undef" to disable
  */
 
-#include "english.h"
+/*
+ *   Choose a language or dialect for the bot's messages by uncommenting
+ *   only ONE of the following #include's:
+ */
+
+/* #include "lang/english.h"		 Standard English messages 
+ * #include "lang/slang.h"		 Fun slang and rude messages 
+ */
+
+#include "lang/english.h"
 
    /* standalone bot, not connected to any IRC server? ("in limbo") */
    /* this shaves about 55k from the executable on my linux system */
@@ -27,108 +36,6 @@
    /* make your bot useless for protecting channels or interacting on */
    /* any IRC network. */
 #undef NO_IRC
-
-   /* don't include the file system?  (with NO_IRC defined, you will */
-   /* probably want this defined too, unless your bot is a proxy file */
-   /* server.)  leaving out the file system shaves about 45k from the */
-   /* executable on my linux system. */
-   /* it's pretty dumb to #define this if you have modules, since the */
-   /* module code removes more of the file system than the NO_FILE_SYS*/
-#undef NO_FILE_SYSTEM
-
-   /* if you want the bot to die when it receives the TERM or HUP */
-   /* signals, define these (normally TERM just causes the bot to */
-   /* save the userfile and HUP causes a rehash) */
-#undef DIE_ON_SIGTERM
-#undef DIE_ON_SIGHUP
-
-   /* some IRC Networks use the ircdu's SILENCE command */
-   /* else it is useless to define this */
-#undef SILENCE
-
-   /* enable the 'tcl' and 'set' command (let owners */
-   /* directly execute Tcl commands)? */
-#define ENABLE_TCL
-
-   /* add the 'simul' command (masters can manipulate other people on */
-   /* the party line)? saves about 610 bytes :) */
-#define ENABLE_SIMUL
-
-   /* add the 'dccsimul' tcl command (needed by certain scripts like */
-   /* action.fix.tcl) */
-#define ENABLE_TCL_DCCSIMUL
-
-   /* have a separate user level called "owner" (+n) which is above master */
-   /* and has exclusive use of die/exec/set/tcl ?  (strongly recommended) */
-#define OWNER
-
-   /* allow people from other bots (in your bot-net) to boot people off */
-   /* your bot's party line? */
-#define REMOTE_BOOTS
-
-   /* restrict remote boots to share-bots only?  (REMOTE_BOOTS must be on) */
-#define SHAREBOT_BOOTS
-
-   /* when sharing user lists, ignore +n modes from other bots?  this will */
-   /* only work if you are NON-PASSIVE  (ie, only the master bot is able to */
-   /* use this -- and every slave will need to have 'set owner ...' or */
-   /* they will lose their owners when they download the user list */
-#undef PRIVATE_OWNER
-
-   /* enable console mode 'r'?  this mode shows every raw message from the */
-   /* server to people with console 'r' selected -- will take a bit more */
-   /* cpu.  (the 'raw' binding no longer depends on this!) */
-#undef USE_CONSOLE_R
-
-   /* This enables the 'raw' binding for TCL scripts it takes a bit more */
-   /* CPU than a regular binding because it checks everything from the   */
-   /* server      */
-#undef RAW_BINDS
-
-   /* squelch the error message when rejecting a dcc chat or send? */
-   /* (normally it says something silly.  but sometimes irc opers detect */
-   /* bots that way.) */
-#define QUIET_REJECTION
-
-   /* check for stoned servers?  (ie: where the server connection has */
-   /* died, but eggdrop hasn't been notified yet)  works okay for most */
-   /* people */
-#define CHECK_STONED
-
-   /* trigger ctcp/ctcr/pub/pubm/msgm bindings even on a user that's on */
-   /* ignore?  (normally you want this undef, but you might have a good */
-   /* reason for wanting to trigger on would-be-ignored msgs) */
-#undef TRIGGER_BINDS_ON_IGNORE
-
-   /* ctcp messages are supposed to be case sensitive.  however, some */
-   /* clients will respond to lowercase ctcps just like they */
-   /* were uppercase. */
-#undef ALLOW_LOWERCASE_CTCP
-
-   /* ctcp requests are sometimes "stacked" (multiple requests on one */
-   /* line).  most clients will only respond to the first one.  define */
-   /* this to make eggdrop respond to stacked ctcp requests (up to 3 per */
-   /* line). */
-#undef ANSWER_STACKED_CTCP
-
-   /* there are situations where sharebot userfile resynchronization */
-   /* can fail to work correctly.  because of this, it is no longer */
-   /* advised to turn this feature on.  i've lost the mail from the */
-   /* person that spelled out the flaw, so i can't give him/her credit */
-   /* right now or explain it (sorry). */
-#undef ALLOW_RESYNC
-
-   /* maximum number of dcc connections you will allow */
-#define MAXDCC 50
-
-   /* maximum number of logfiles to allow */
-#define MAXLOGS 10
-
-  /* define this if you want to bounce all server bans */
-#define BOUNCE_SERVER_BANS
-
-  /* define if you have a Cisco PIX firewall */
-#undef HAVE_NAT
 
 /***********************************************************************/
 /***** the 'configure' script should make this next part automatic *****/
@@ -139,37 +46,24 @@
 #define UHOSTLEN     161     /* reasonable, i think? */
 #define DIRLEN       256     /* paranoia */
 
-/* useless with no irc */
-#ifdef NO_IRC
-/* #define NO_FILE_SYSTEM <- this *is* usefull with no_irc */
-#undef USE_CONSOLE_R
-#undef CHECK_STONED
-#undef BOUNCE_SERVER_BANS
-/* wont compile with these in here */
-/* #undef DEFAULT_PORT */
-/* #undef MODES_PER_LINE */
-#endif
-
-#ifdef ENABLE_SIMUL
-#define ENABLE_TCL_DCCSIMUL
-#endif
-
 /* have to use a weird way to make the compiler error out cos not all
    compilers support #error or error */
 #if !HAVE_VSPRINTF
-#include "error/you/need/vsprintf/to/compile/eggdrop"
+#include "error_you_need_vsprintf_to_compile_eggdrop"
 #endif
 
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-#if defined(MODULES) && !defined(MODULES_OK)
-#include "you/can't/compile/with/module/support/on/this/system"
+#ifndef STATIC
+#if !defined(MODULES_OK) || !defined(HAVE_DLOPEN)
+#include "you_can't_compile_with_module_support_on_this_system_try_make_static"
+#endif
 #endif
 
-#if defined(MODULES) && defined(NO_FILE_SYSTEM)
-#include "listen_doofus_I_said_it_was_pointless_to_do_modules_and_NO_FILE_SYSTEM"
+#if !defined(STDC_HEADERS)
+#include "you_need_to_upgrade_your_compiler_to_a_standard_c_one_mate!"
 #endif
 
 /* almost every module needs some sort of time thingy, so... */
@@ -289,14 +183,29 @@ struct eggqueue {
 
 
 /* public structure of all the dcc connections */
+struct dcc_table {
+   void (*eof) (int);
+   void (*activity) (int,char *,int);
+   int * timeout_val;
+   void (*timeout) ();
+   void (*display) (int,char *);
+   int (*expmem) (int);
+   void (*kill) (int);
+   void (*output)  (int,char *);
+};
+
+struct userrec;
+
 struct dcc_t {
-  int sock;
+  long sock;  /* this should be a long to keep 64-bit machines sane */
   IP addr;
   unsigned int port;
-  void *user;            /* really struct userrec but SHHH!! */
+  struct userrec *user;
   char nick[NICKLEN];
   char host[UHOSTLEN];
-  unsigned int type;
+  struct dcc_table * type;
+  time_t timeval;        /* use for any timing stuff 
+			  - this is used for timeout checking*/
   union {
     struct chat_info *chat;
     struct file_info *file;
@@ -304,46 +213,14 @@ struct dcc_t {
     struct xfer_info *xfer;
     struct bot_info *bot;
     struct relay_info *relay;
-    struct fork_info *fork;
     struct script_info *script;
     void *other;
   } u;    /* special use depending on type */
 };
-
-/* standard chat modes */
-
-/* 
-   1  dcc chat
-   2  dcc chat, waiting for password
-   3  dcc send active
-   4  dcc get active
-   5  dcc get waiting for connection
-   6  telnet (open listening socket)
-   7  telnet, waiting for handle
-   8  file section
-   9  (unused)
-   10 link to a bot
-   11 bot link being established
-   12 relay
-   13 relaying
-   14 forked process, attempting to connect
-   15 file section, waiting for password
-   16 lost connection (not often used any more)
-   17 telnet, new user, waiting for handle
-   18 telnet, new user, waiting for password
-   19 script has control
-   20 raw socket opened by script
-*/
  
-#define DCC_CHAT        1   /* dcc-chat: command mode */
-#define DCC_CHAT_PASS   2   /* receiving password for dcc chat */
-#define DCC_TELNET_ID   7   /* telnetter identifying self */
-#define DCC_TELNET_NEW  17  /* new user via telnet, giving nick */
-#define DCC_TELNET_PW   18  /* new user via telnet, setting password */
 struct chat_info {
   char *away;               /* non-NULL if user is away */
   unsigned long status;     /* status flags */
-  time_t timer;             /* last time the user typed something */
   int msgs_per_sec;         /* used to stop flooding */
   int con_flags;            /* with console: what to show */
   int strip_flags;          /* what codes to strip (b,r,u,c) */
@@ -355,22 +232,11 @@ struct chat_info {
   int current_lines;        /* number of lines total stoerd */
 };
 
-#define DCC_TELNET      6   /* acceptor socket for telnet */
-/* (no other info defined) */
-
-#define DCC_FILES       8   /* file subsystem */
-#define DCC_FILES_PASS  15  /* awaiting password, file subsystem */
 struct file_info {
   struct chat_info *chat;
   char dir[121];
 };
 
-/* used to be edit */
-#define DCC_unused      9
-
-#define DCC_SEND        3   /* receiving file */
-#define DCC_GET         4   /* sending file */
-#define DCC_GET_PENDING 5   /* waiting for connect to send file */
 struct xfer_info {
   char filename[121];
   char dir[121];            /* used when uploads go to the current dir */
@@ -379,47 +245,26 @@ struct xfer_info {
   unsigned long acked;
   char buf[4];              /* you only need 5 bytes! */
   unsigned char sofar;      /* how much of the byte count received */
-  time_t pending;           /* used to expire stale file offerings */
   char from[NICKLEN];       /* [GET] user who offered the file */
   FILE *f;		    /* pointer to file being sent/received */
 };
 
-#define DCC_BOT         10  /* communication with a bot */
-#define DCC_BOT_NEW     11  /* connecting to a bot... */
 struct bot_info {
   unsigned long status;
-  time_t timer;
   char version[121];        /* channel/version info */
   char linker[21];          /* who requested this link */
   int numver;
+  int x;
+  int port;                 /* base port */
 };
 
-#define DCC_RELAY       12  /* relayed connection to a bot */
-#define DCC_RELAYING    13  /* dcc chat user vanishing to relay connection */
 struct relay_info {
   struct chat_info *chat;
   int sock;
 };
 
-#define DCC_FORK        14  /* forked out to telnet */
-struct fork_info {
-  union {
-    struct chat_info *chat;
-    struct file_info *file;
-    struct bot_info *bot;
-    struct relay_info *relay;
-    struct xfer_info *xfer;
-    void *other;
-  } u;
-  unsigned char type;
-  time_t start;		    /* for timeout */
-  unsigned int port;        /* used for bot links */
-  int x;                    /* differentiates for relay */
-};
-
-#define DCC_SCRIPT      19  /* dcc user in an interactive script */
 struct script_info {
-  unsigned char type;
+  struct dcc_table * type;
   union {
     struct chat_info *chat;
     struct file_info *file;
@@ -427,9 +272,6 @@ struct script_info {
   } u;
   char command[121];
 };
-
-#define DCC_LOST        16  /* lost in a child proess */
-#define DCC_SOCKET      20  /* raw socket opened up by script */
 
 
 /* for dcc chat & files: */
@@ -484,19 +326,10 @@ struct script_info {
 #define USER_PARTY    0x02000000  /* p   user has party line access */
 #define USER_COMMON   0x04000000  /* c   user is actually a public irc site */
 #define USER_BOTMAST  0x08000000  /* B   user is botnet master */
-#define USER_PSUOWN   0x10000000  /* N   psuedo-owner for command binds only */
-#define USER_PSUMST   0x20000000  /* M   psuedo-master for command binds only */
-#define USER_PSUEDOOP 0x40000000  /* O   pseudo-op for command binds only */
 #define USER_MASK    (0xffff003f) /* all non-userdef flags */
+#define USER_CHANMASK 0x0000003f  /* flags common to global & chan records */
 
-#ifndef OWNER
-#undef USER_OWNER
-#define USER_OWNER    USER_MASTER
-#undef USER_PSUOWN
-#define USER_PSUOWN   USER_PSUMST
-#endif
-
-/*   ?NMOBcpx ujbarlhs 09876543 21nmfkdo   */
+/*   ????Bcpx ujbarlhs 09876543 21nmfkdo   */
 /*   (users)    (bots) (users)  (users)    */
 /*   unused letters: egiqtvwyz          */
 
@@ -510,7 +343,7 @@ struct script_info {
 #define BOT_ALT       0x00100000  /* a   auto-link here if all +h's fail */
 #define USER_BOT      0x00200000  /* b   user is a bot (previously 't') */
 
-/*   ???????? ???????? 09876543 21nmfkdo   */
+/*   ???????? ???????s 09876543 21nmfkdo   */
 
 /* channel-specific flags */
 #define CHANUSER_OP       0x00000001  /* o   bot will op the user */
@@ -529,12 +362,8 @@ struct script_info {
 #define CHANUSER_8        0x00002000  /* 8   user defined */
 #define CHANUSER_9        0x00004000  /* 9   user defined */
 #define CHANUSER_0        0x00008000  /* 0   user defined */
+#define CHANBOT_SHARE     0x00010000  /* s   bot shares user files */
 #define CHANUSER_MASK    (0xffff003f) /* all non-use-defined */
-
-#ifndef OWNER
-#undef CHANUSER_OWNER
-#define CHANUSER_OWNER CHANUSER_MASTER
-#endif
 
 /* for detecting floods: */
 #define FLOOD_NICK      0
@@ -614,9 +443,21 @@ typedef struct {
 #define BUILTIN_DCC   1
 #define BUILTIN_MSG   2
 #define BUILTIN_FILES 3
+#define BUILTIN_FILT  4
+#define BUILTIN_BOT   5
 #define STR_PROTECT  2
 #define STR_DIR      1
 
 /* it's used in so many places, let's put it here */
 typedef int (*Function)();
+
+/* this is used by the net module to keep track of sockets and what's
+   queued on them */
+typedef struct {
+   int sock;
+   char flags;
+   char *inbuf;
+   char *outbuf;
+   unsigned long outbuflen;	/* outbuf could be binary data */
+} sock_list;
 #endif
