@@ -1,6 +1,8 @@
 #! /path/to/eggdrop
 # ^- set that to the directory eggdrop is in ie "#! /users/lamest/egg/eggdrop"
 #
+# $Id: eggdrop.conf.dist,v 1.39 1999/12/15 02:32:57 guppy Exp $
+#
 # This is a sample configuration file for your bot.  You will definitely
 # want to edit this, to set up your bot.  Right now it creates a bot called
 # "LamestBot" which sits on channel #lamest.
@@ -33,8 +35,25 @@ set admin "Lamer <email: lamer@lamest.lame.org>"
 # your botnet, for human curiosity only.
 set network "I.didnt.edit.my.config.file.net"
 
-# what timezone is your bot in?  this is simply used for scripting purposes.
+# what timezone is your bot in? This timezone string specifies
+# the name of your timezone. It must be three or more alpabetic
+# characters long.
+#
+# ie: Central European Time (UTC+1) would be "CET"
 set timezone "EST"
+
+# Offset is the amount of time to be added or subtracted from
+# the local timezone to figure out UTC (aka GMT).
+#
+# If your bot is running west of the Prime Merdidian then your
+# offset will be a positive value; however, if east it will be
+# a negative value. (ie: your timezone is UTC+1, offset would be
+# -1)
+set offset "5"
+
+# If you want the timezone setting to take effect for your Eggdrop
+# (ie: logging and logfiles) then uncomment the following line
+#set env(TZ) "$timezone $offset"
 
 # if you're using virtual hosting (your machine has more than 1 IP), you
 # may want to specify the particular IP to bind to.  you can specify

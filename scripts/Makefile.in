@@ -1,4 +1,5 @@
 # Makefile for scripts/
+# $Id: Makefile.in,v 1.6 1999/12/15 02:32:57 guppy Exp $
 
 SHELL = /bin/sh
 top_srcdir = @top_srcdir@
@@ -31,7 +32,7 @@ install:
 	@if test ! -d $(DEST)/scripts; then \
 		echo "Creating a scripts subdirectory."; \
 		$(top_srcdir)/mkinstalldirs $(DEST)/scripts; \
-		echo Copying scripts.; \
+		echo "Copying scripts."; \
 		for i in $(DOCS); do \
 			$(INSTALL_DATA) $$i $(DEST)/scripts/; \
 		done; \

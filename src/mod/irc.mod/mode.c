@@ -1,18 +1,32 @@
 /* 
- * mode.c -- handles:
- * queueing and flushing mode changes made by the bot
- * channel mode changes and the bot's reaction to them
- * setting and getting the current wanted channel modes
+ * mode.c -- part of irc.mod
+ *   queueing and flushing mode changes made by the bot
+ *   channel mode changes and the bot's reaction to them
+ *   setting and getting the current wanted channel modes
+ * 
  * dprintf'ized, 12dec1995
  * multi-channel, 6feb1996
  * stopped the bot deopping masters and bots in bitch mode, pteron 23Mar1997
+ * 
+ * $Id: mode.c,v 1.32 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 /* reversing this mode? */
@@ -154,7 +168,7 @@ static void real_add_mode(struct chanset_t *chan,
   memberlist *mx;
   char s[21];
   
-  context;
+  Context;
   if (!me_op(chan))
     return;			/* no point in queueing the mode */
 
@@ -208,38 +222,38 @@ static void real_add_mode(struct chanset_t *chan,
 	return;
     /* if there are already max_bans bans on the channel, don't try to add 
      * one more */
-    context;
+    Context;
     bans = 0;
     for (m = chan->channel.ban; m && m->mask[0]; m = m->next)
       bans++;
-    context;
+    Context;
     if ((plus == '+') && (mode == 'b'))
       if (bans >= max_bans)
 	return;
     /* if there are already max_exempts exemptions on the channel, don't
      * try to add one more */
-    context;
+    Context;
     exempts = 0;
     for (m = chan->channel.exempt; m && m->mask[0]; m = m->next)
       exempts++;
-    context;
+    Context;
     if ((plus == '+') && (mode == 'e'))
       if (exempts >= max_exempts)
 	return;
     /* if there are already max_invites invitations on the channel, don't
      * try to add one more */
-    context;
+    Context;
     invites = 0;
     for (m = chan->channel.invite; m && m->mask[0]; m = m->next)
       invites++;
-    context;
+    Context;
     if ((plus == '+') && (mode == 'I'))
       if (invites >= max_invites)
 	return;
     /* if there are already max_modes +b/+e/+I modes on the channel, don't 
      * try to add one more */
     modes = bans + exempts + invites;
-    if ((modes >= max_modes) &&
+    if ((modes >= max_modes) && (plus == '+') &&
 	((mode == 'b') || (mode == 'e') || (mode == 'I')))
       return;
     /* op-type mode change */
@@ -385,23 +399,20 @@ static void got_op(struct chanset_t *chan, char *nick, char *from,
   } else if (reversing && !match_my_nick(who))
     add_mode(chan, '-', 'o', who);
   if (!nick[0] && me_op(chan) && !match_my_nick(who)) {
-    if (channel_stopnethack(chan) &&
-    !(chan_op(victim) || (glob_op(victim) && !chan_deop(victim)))) {
-      if (chan_wasoptest(victim) || glob_wasoptest(victim) ||
-      channel_wasoptest(chan)) {
+    if (chan_deop(victim) || (glob_deop(victim) && !chan_op(victim))) {
+      m->flags |= FAKEOP;
+      add_mode(chan, '-', 'o', who);
+    } else if (channel_stopnethack(chan)) {
+      if ((chan_wasoptest(victim) || glob_wasoptest(victim) ||
+      channel_wasoptest(chan)) && (!(m->delay))) {
         if (!chan_wasop(m)) {
-          add_mode(chan, '-', 'o', who);
           m->flags |= FAKEOP;
+          add_mode(chan, '-', 'o', who);
         }
-      } else {
+      } else if (!(chan_op(victim) || (glob_op(victim) && !chan_deop(victim)))) {
         add_mode(chan, '-', 'o', who);
         m->flags |= FAKEOP;
       }
-    }
-    if (!channel_stopnethack(chan) &&
-    (chan_deop(victim) || (glob_deop(victim) && !chan_op(victim)))) {
-      add_mode(chan, '-', 'o', who);
-      m->flags |= FAKEOP;
     }
   }
   m->flags &= ~WASOP;
@@ -485,7 +496,7 @@ static void got_deop(struct chanset_t *chan, char *nick, char *from,
     /* cancel any pending kicks and modes */
     memberlist *m2 = chan->channel.member;
 
-    while (m2->nick[0]) {
+    while (m2 && m2->nick[0]) {
 	m2->flags &= ~(SENTKICK | SENTDEOP | SENTOP | SENTVOICE | SENTDEVOICE);
       m2 = m2->next;
     }
@@ -594,7 +605,7 @@ static void got_ban(struct chanset_t *chan, char *nick, char *from,
     } else {
       /* banning an oplisted person who's on the channel? */
       m = chan->channel.member;
-      while (m->nick[0]) {
+      while (m && m->nick[0]) {
 	sprintf(s1, "%s!%s", m->nick, m->userhost);
 	if (wild_match(who, s1)) {
 	  u = get_user_by_host(s1);
@@ -704,7 +715,7 @@ static void got_exempt(struct chanset_t *chan, char *nick, char *from,
   int check, i, bogus;
   memberlist *m;
 
-  context;
+  Context;
   simple_sprintf(me, "%s!%s", botname, botuserhost);
   simple_sprintf(s, "%s!%s", nick, from);
   newexempt(chan, who, s);
@@ -777,7 +788,7 @@ static void got_unexempt(struct chanset_t *chan, char *nick, char *from,
   masklist *b ;
   int match = 0;
 
-  context;
+  Context;
   e = chan->channel.exempt;
   old = NULL;
   while (e && e->mask[0] && rfc_casecmp(e->mask, who)) {

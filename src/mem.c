@@ -1,24 +1,33 @@
-/*
+/* 
  * mem.c -- handles:
- * memory allocation and deallocation
- * keeping track of what memory is being used by whom
+ *   memory allocation and deallocation
+ *   keeping track of what memory is being used by whom
  * 
  * dprintf'ized, 15nov1995
+ * 
+ * $Id: mem.c,v 1.10 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #define LOG_MISC 32
 #define MEMTBLSIZE 25000	/* yikes! */
-
-#ifdef EBUG_MEM
-#define DEBUG
-#endif
 
 #if HAVE_CONFIG_H
 #  include <config.h>
@@ -31,7 +40,7 @@ typedef int (*Function) ();
 #include "mod/modvals.h"
 extern module_entry *module_list;
 
-#ifdef DEBUG
+#ifdef DEBUG_MEM
 unsigned long memused = 0;
 static int lastused = 0;
 
@@ -77,7 +86,7 @@ void do_module_report(int, int, char *);
 /* initialize the memory structure */
 void init_mem()
 {
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   int i;
 
   for (i = 0; i < MEMTBLSIZE; i++)
@@ -88,7 +97,7 @@ void init_mem()
 /* tell someone the gory memory details */
 void tell_mem_status(char *nick)
 {
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   float per;
 
   per = ((lastused * 1.0) / (MEMTBLSIZE * 1.0)) * 100.0;
@@ -101,7 +110,7 @@ void tell_mem_status(char *nick)
 
 void tell_mem_status_dcc(int idx)
 {
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   int exp;
   float per;
 
@@ -119,7 +128,7 @@ void tell_mem_status_dcc(int idx)
 
 void debug_mem_to_dcc(int idx)
 {
-#ifdef DEBUG
+#ifdef DEBUG_MEM
 #define MAX_MEM 11
   unsigned long exp[MAX_MEM], use[MAX_MEM], l;
   int i, j;
@@ -295,7 +304,7 @@ void *n_malloc(int size, char *file, int line)
 {
   void *x;
 
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   int i = 0;
 
 #endif
@@ -304,7 +313,7 @@ void *n_malloc(int size, char *file, int line)
     putlog(LOG_MISC, "*", "*** FAILED MALLOC %s (%d) (%d)", file, line, size);
     return NULL;
   }
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   if (lastused == MEMTBLSIZE) {
     putlog(LOG_MISC, "*", "*** MEMORY TABLE FULL: %s (%d)", file, line);
     return x;
@@ -336,7 +345,7 @@ void *n_realloc(void *ptr, int size, char *file, int line)
     putlog(LOG_MISC, "*", "*** FAILED REALLOC %s (%d)", file, line);
     return NULL;
   }
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   for (i = 0; (i < lastused) && (memtbl[i].ptr != ptr); i++);
   if (i == lastused) {
     putlog(LOG_MISC, "*", "*** ATTEMPTING TO REALLOC NON-MALLOC'D PTR: %s (%d)",
@@ -364,7 +373,7 @@ void n_free(void *ptr, char *file, int line)
     i = i;
     return;
   }
-#ifdef DEBUG
+#ifdef DEBUG_MEM
   /* give tcl builtins an escape mechanism */
   if (line) {
     for (i = 0; (i < lastused) && (memtbl[i].ptr != ptr); i++);

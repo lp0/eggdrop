@@ -1,25 +1,43 @@
-/*
- *   EGGDROP compile-time settings
- *
+/* 
+ * eggdrop.h
+ *   Eggdrop compile-time settings
+ * 
  *   IF YOU ALTER THIS FILE, YOU NEED TO RECOMPILE THE BOT.
+ * 
+ * $Id: eggdrop.h,v 1.16 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
-#ifndef _H_EGGDROP
-#define _H_EGGDROP
+#ifndef _EGG_EGGDROP_H
+#define _EGG_EGGDROP_H
 
 /* 
- * if you're *only* going to link to new version bots (1.3.0 or higher)
- * then you can safely define this 
+ * If you're *only* going to link to new version bots (1.3.0 or higher)
+ * then you can safely define this.
  */
-
 #undef NO_OLD_BOTNET
+
+/* 
+ * Undefine this to completely disable context debugging.
+ * WARNING: DO NOT send in bug reports if you undefine this!
+ */
+#define DEBUG_CONTEXT
 
 /*
  * define the maximum length a handle on the bot can be.
@@ -34,7 +52,7 @@
 
 #define HANDLEN		9	/* valid values 9->NICKMAX */
 #define BADHANDCHARS  "-,+*=:!.@#;$%&"
-#define NICKMAX       15	/* valid values HANDLEN->32 */
+#define NICKMAX        9	/* valid values HANDLEN->32 */
 #define UHOSTMAX     160        /* reasonable, i think? */
 #define DIRMAX       256	/* paranoia */
 #define MAX_LOG_LINE 767	/* for misc.c/putlog() <cybah> */
@@ -123,56 +141,58 @@
 #endif
 
 /* handy aliases for memory tracking and core dumps */
-
 #define nmalloc(x) n_malloc((x),__FILE__,__LINE__)
 #define nrealloc(x,y) n_realloc((x),(y),__FILE__,__LINE__)
 #define nfree(x) n_free((x),__FILE__,__LINE__)
 
-#define context { cx_ptr=((cx_ptr + 1) & 15); \
-                  strcpy(cx_file[cx_ptr],__FILE__); \
-                  cx_line[cx_ptr]=__LINE__; \
-                  cx_note[cx_ptr][0] = 0; }
-/*      It's usefull to track variables too <cybah> */
-#define contextnote(string) { cx_ptr=((cx_ptr + 1) & 15); \
-                              strncpy(cx_file[cx_ptr],__FILE__,29); \
-                              cx_file[cx_ptr][29] = 0; \
-                              cx_line[cx_ptr]=__LINE__; \
-                              strncpy(cx_note[cx_ptr],string,255); \
-                              cx_note[cx_ptr][255] = 0; }
-#define ASSERT(expr) { if (!(expr)) assert_failed (NULL, __FILE__, __LINE__); }
+#ifdef DEBUG_CONTEXT
+#  define Context eggContext(__FILE__, __LINE__, NULL)
+#  define ContextNote(note) eggContextNote(__FILE__, __LINE__, NULL, note)
+#else
+#  define Context {}
+#  define ContextNote(note) {}
+#endif
 
-/* move these here, makes more sense to me :) */
-extern int cx_line[16];
-extern char cx_file[16][30];
-extern char cx_note[16][256];
-extern int cx_ptr;
+#ifdef DEBUG_ASSERT
+#  define Assert(expr) eggAssert(__FILE__, __LINE__, NULL, (int)(expr))
+#else
+#  define Assert(expr) {}
+#endif
 
 #undef malloc
-#undef free
 #define malloc(x) dont_use_old_malloc(x)
+#undef free
 #define free(x) dont_use_old_free(x)
 
-/* IP type */
+/* 32 bit type */
 #if (SIZEOF_INT == 4)
-typedef unsigned int IP;
-
+typedef unsigned int u_32bit_t;
 #else
-#if (SIZEOF_LONG == 4)
-typedef unsigned long IP;
-
-#else
-#include "cant/find/32bit/type"
-#endif
+# if (SIZEOF_LONG == 4)
+typedef unsigned int u_32bit_t;
+# else
+#  include "cant/find/32bit/type"
+# endif
 #endif
 
-/* macro for simplifying patches */
-#define PATCH(str) { \
-  char *p=strchr(egg_version,'+'); \
-  if (p==NULL) p=&egg_version[strlen(egg_version)]; \
-  sprintf(p,"+%s",str); \
-  egg_numver++; \
-  sprintf(&egg_xtra[strlen(egg_xtra)]," %s",str); \
-}
+#if (SIZEOF_SHORT_INT == 2)
+typedef unsigned short int u_16bit_t;
+#else
+# include "cant/find/16bit/type"
+#endif
+
+#if (SIZEOF_CHAR == 1)
+typedef unsigned char u_8bit_t;
+#else
+# include "cant/find/8bit/type"
+#endif
+
+typedef u_8bit_t byte;
+typedef u_16bit_t word;
+typedef u_32bit_t dword;
+
+/* IP type */
+typedef u_32bit_t IP;
 
 #define debug0(x) putlog(LOG_DEBUG,"*",x)
 #define debug1(x,a1) putlog(LOG_DEBUG,"*",x,a1)
@@ -206,8 +226,9 @@ struct dcc_table {
 struct userrec;
 
 struct dcc_t {
-  long sock;			/* this should be a long to keep 64-bit machines sane */
-  IP addr;
+  long sock;			/* this should be a long to keep 64-bit
+				 * machines sane */
+  IP addr;			/* IP address in host byte order */
   unsigned int port;
   struct userrec *user;
   char nick[NICKLEN];
@@ -215,8 +236,8 @@ struct dcc_t {
   struct dcc_table *type;
   time_t timeval;		/* use for any timing stuff 
 				 * - this is used for timeout checking */
-  unsigned long status;		/* A LOT of dcc types have status thingos, this
-				 * makes it more avaliabe */
+  unsigned long status;		/* A LOT of dcc types have status thingos,
+				 * this makes it more avaliabe */
   union {
     struct chat_info *chat;
     struct file_info *file;
@@ -395,14 +416,14 @@ typedef struct {
 #define FILEDB_UNSHARE  4
 
 /* socket flags: */
-#define SOCK_UNUSED     0x01	/* empty socket */
-#define SOCK_BINARY     0x02	/* do not buffer input */
-#define SOCK_LISTEN     0x04	/* listening port */
-#define SOCK_CONNECT    0x08	/* connection attempt */
-#define SOCK_NONSOCK    0x10	/* used for file i/o on debug */
-#define SOCK_STRONGCONN 0x20	/* don't report success until sure */
-#define SOCK_EOFD       0x40	/* it EOF'd recently during a write */
-#define SOCK_PROXYWAIT	0x80	/* waiting for SOCKS traversal */
+#define SOCK_UNUSED     0x001	/* empty socket */
+#define SOCK_BINARY     0x002	/* do not buffer input */
+#define SOCK_LISTEN     0x004	/* listening port */
+#define SOCK_CONNECT    0x008	/* connection attempt */
+#define SOCK_NONSOCK    0x010	/* used for file i/o on debug */
+#define SOCK_STRONGCONN 0x020	/* don't report success until sure */
+#define SOCK_EOFD       0x040	/* it EOF'd recently during a write */
+#define SOCK_PROXYWAIT	0x080	/* waiting for SOCKS traversal */
 
 /* fake idx's for dprintf - these should be ridiculously large +ve nums */
 #define DP_STDOUT       0x7FF1
@@ -445,4 +466,4 @@ typedef struct {
   unsigned long outbuflen;	/* outbuf could be binary data */
 } sock_list;
 
-#endif
+#endif				/* _EGG_EGGDROP_H */

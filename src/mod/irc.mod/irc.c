@@ -1,6 +1,26 @@
-/*
- * irc.c - part of irc.mod
- * support for channels withing the bot 
+/* 
+ * irc.c -- part of irc.mod
+ *   support for channels withing the bot 
+ * 
+ * $Id: irc.c,v 1.32 1999/12/15 02:32:59 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #define MODULE_NAME "irc"
@@ -75,7 +95,7 @@ static int want_to_revenge(struct chanset_t *chan, struct userrec *u,
   struct flag_record fr = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
   struct flag_record fr2 = { FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0 };
 
-  context;
+  Context;
   get_user_flagrec(u, &fr, chan->name);
   get_user_flagrec(u2, &fr2, chan->name);
 
@@ -122,7 +142,7 @@ static void punish_badguy(struct chanset_t *chan, char *reason, char *whobad,
     return;
   get_user_flagrec(u, &fr, chan->name);
 
-  context;
+  Context;
   /* get current time into a string */
   tm = now;
   strcpy(ct, ctime(&tm));
@@ -132,7 +152,7 @@ static void punish_badguy(struct chanset_t *chan, char *reason, char *whobad,
   strcpy(&ct[2], &ct[3]);
   strcpy(&ct[7], &ct[10]);
  
-  context;
+  Context;
   /* set the offender +d */
   if ((revenge_mode > 0) &&
       /* unless there's no more to do */
@@ -163,7 +183,7 @@ static void punish_badguy(struct chanset_t *chan, char *reason, char *whobad,
     }
     /* or creating new user and setting that to deop */
     else {
-      context;
+      Context;
       strcpy(s1, whobad);
       maskhost(s1, s);
       strcpy(s1, badnick);
@@ -199,7 +219,7 @@ static void punish_badguy(struct chanset_t *chan, char *reason, char *whobad,
   if (revenge_mode > 2) {
     char s[UHOSTLEN], s1[UHOSTLEN];
 
-    context;
+    Context;
     splitnick(&whobad);
     maskhost(whobad, s1);
     simple_sprintf(s, "(%s) %s", ct, reason);
@@ -221,7 +241,7 @@ static void punish_badguy(struct chanset_t *chan, char *reason, char *whobad,
     dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, badnick, IRC_PROTECT);
     m->flags |= SENTKICK;
   }
-  context;
+  Context;
 }
 
 /*  Punishes bad guys under certain circumstances using methods
@@ -233,7 +253,7 @@ static void maybe_revenge(struct chanset_t *chan, char *whobad,
   int mevictim;
   struct userrec *u, *u2;
 
-  context;
+  Context;
   if (!chan || (type < 0))
     return;
 
@@ -250,7 +270,7 @@ static void maybe_revenge(struct chanset_t *chan, char *whobad,
   if (!want_to_revenge(chan, u, u2, badnick, victim, mevictim))
     return;
 
-  context;
+  Context;
   reason[0] = 0;
   switch (type) {
   case REVENGE_KICK:
@@ -284,7 +304,7 @@ static int hand_on_chan(struct chanset_t *chan, struct userrec *u)
   char s[UHOSTLEN];
   memberlist *m = chan->channel.member;
 
-  while (m->nick[0]) {
+  while (m && m->nick[0]) {
     sprintf(s, "%s!%s", m->nick, m->userhost);
     if (u == get_user_by_host(s))
       return 1;
@@ -322,11 +342,11 @@ static int killmember(struct chanset_t *chan, char *nick)
 
   x = chan->channel.member;
   old = NULL;
-  while (x->nick[0] && rfc_casecmp(x->nick, nick)) {
+  while (x && x->nick[0] && rfc_casecmp(x->nick, nick)) {
     old = x;
     x = x->next;
   }
-  if (!x->nick[0] && !channel_pending(chan)) {
+  if ((!x || !x->nick[0]) && !channel_pending(chan)) {
     putlog(LOG_MISC, "*", "(!) killmember(%s) -> nonexistent", nick);
     return 0;
   }
@@ -336,6 +356,26 @@ static int killmember(struct chanset_t *chan, char *nick)
     chan->channel.member = x->next;
   nfree(x);
   chan->channel.members--;
+  /* The following two errors should NEVER happen. We will try to correct
+   * them though, to keep the bot from crashing. */
+  if (chan->channel.members < 0) {
+     putlog(LOG_MISC, "*", "(!) BUG: number of members is negative: %d",
+	    chan->channel.members);
+     chan->channel.members = 0;
+     x = chan->channel.member;
+     while (x && x->nick[0]) {
+       chan->channel.members++;
+       x = x->next;
+     }
+     putlog(LOG_MISC, "*", "(!) actually I know of %d members.",
+	    chan->channel.members);
+  }
+  if (!chan->channel.member) {
+    putlog(LOG_MISC, "*", "(!) BUG: memberlist is NULL");
+    chan->channel.member = (memberlist *) channel_malloc(sizeof(memberlist));
+    chan->channel.member->nick[0] = 0;
+    chan->channel.member->next = NULL;
+  }
   return 1;
 }
 
@@ -358,9 +398,9 @@ static int any_ops(struct chanset_t *chan)
 {
   memberlist *x = chan->channel.member;
 
-  while (x->nick[0] && !chan_hasop(x))
+  while (x && x->nick[0] && !chan_hasop(x))
     x = x->next;
-  if (!x->nick[0])
+  if (!x || !x->nick[0])
     return 0;
   return 1;
 }
@@ -369,9 +409,9 @@ static int any_ops(struct chanset_t *chan)
 static void reset_chan_info(struct chanset_t *chan)
 {
   /* don't reset the channel if we're already resetting it */
-  context;
+  Context;
   if (channel_inactive(chan)) {
-    dprintf(DP_MODE,"PART %s\n",chan->name);
+    dprintf(DP_MODE, "PART %s\n", chan->name);
     return;
   }
   if (!channel_pending(chan)) {
@@ -416,7 +456,7 @@ static void log_chans()
     if (channel_active(chan) && channel_logstatus(chan) &&
         !channel_inactive(chan)) {
       chops = 0;
-      for (m = chan->channel.member; m->nick[0]; m = m->next) {
+      for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
 	if (chan_hasop(m))
 	  chops++;
       }
@@ -456,13 +496,13 @@ static void check_lonely_channel(struct chanset_t *chan)
   int i = 0;
   static int whined = 0;
 
-  context;
+  Context;
   if (channel_pending(chan) || !channel_active(chan) || me_op(chan) ||
       channel_inactive(chan))
     return;
   m = chan->channel.member;
   /* count non-split channel members */
-  while (m->nick[0]) {
+  while (m && m->nick[0]) {
     if (!chan_issplit(m))
       i++;
     m = m->next;
@@ -492,7 +532,7 @@ static void check_lonely_channel(struct chanset_t *chan)
       whined = 1;
     }
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       struct userrec *u;
 
       sprintf(s, "%s!%s", m->nick, m->userhost);
@@ -504,7 +544,7 @@ static void check_lonely_channel(struct chanset_t *chan)
     if (ok) {
       /* ALL bots!  make them LEAVE!!! */
       m = chan->channel.member;
-      while (m->nick[0]) {
+      while (m && m->nick[0]) {
 	if (!match_my_nick(m->nick))
 	  dprintf(DP_SERVER, "PRIVMSG %s :go %s\n", m->nick, chan->name);
 	m = m->next;
@@ -640,7 +680,7 @@ static void check_expired_chanstuff()
       }
     }
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if (m->split) {
 	n = m->next;
 	if (!channel_active(chan))
@@ -661,7 +701,7 @@ static void check_expired_chanstuff()
     }
     if (channel_active(chan) && me_op(chan) && (chan->idle_kick)) {
       m = chan->channel.member;
-      while (m->nick[0]) {
+      while (m && m->nick[0]) {
 	if ((now - m->last) >= (chan->idle_kick * 60) &&
 	    !match_my_nick(m->nick)) {
 	  sprintf(s, "%s!%s", m->nick, m->userhost);
@@ -726,32 +766,30 @@ static int channels_4char STDVAR {
 static void check_tcl_joinpart(char *nick, char *uhost, struct userrec *u,
 			       char *chname, p_tcl_bind_list table)
 {
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   char args[1024];
 
-  context;
+  Context;
   simple_sprintf(args, "%s %s!%s", chname, nick, uhost);
   get_user_flagrec(u, &fr, chname);
   Tcl_SetVar(interp, "_jp1", nick, 0);
   Tcl_SetVar(interp, "_jp2", uhost, 0);
   Tcl_SetVar(interp, "_jp3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_jp4", chname, 0);
-  context;
+  Context;
   check_tcl_bind(table, args, &fr, " $_jp1 $_jp2 $_jp3 $_jp4",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-  context;
+  Context;
 }
 
 static void check_tcl_signtopcnick(char *nick, char *uhost, struct userrec *u,
 				   char *chname, char *reason,
 				   p_tcl_bind_list table)
 {
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   char args[1024];
 
-  context;
+  Context;
   if (table == H_sign)
     simple_sprintf(args, "%s %s!%s", chname, nick, uhost);
   else
@@ -762,21 +800,20 @@ static void check_tcl_signtopcnick(char *nick, char *uhost, struct userrec *u,
   Tcl_SetVar(interp, "_stnm3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_stnm4", chname, 0);
   Tcl_SetVar(interp, "_stnm5", reason, 0);
-  context;
+  Context;
   check_tcl_bind(table, args, &fr, " $_stnm1 $_stnm2 $_stnm3 $_stnm4 $_stnm5",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-  context;
+  Context;
 }
 
 static void check_tcl_kickmode(char *nick, char *uhost, struct userrec *u,
 			       char *chname, char *dest, char *reason,
 			       p_tcl_bind_list table)
 {
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   char args[512];
 
-  context;
+  Context;
   get_user_flagrec(u, &fr, chname);
   if (table == H_mode)
     simple_sprintf(args, "%s %s", chname, dest);
@@ -788,21 +825,20 @@ static void check_tcl_kickmode(char *nick, char *uhost, struct userrec *u,
   Tcl_SetVar(interp, "_kick4", chname, 0);
   Tcl_SetVar(interp, "_kick5", dest, 0);
   Tcl_SetVar(interp, "_kick6", reason, 0);
-  context;
+  Context;
   check_tcl_bind(table, args, &fr, " $_kick1 $_kick2 $_kick3 $_kick4 $_kick5 $_kick6",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-  context;
+  Context;
 }
 
 static int check_tcl_pub(char *nick, char *from, char *chname, char *msg)
 {
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   int x;
   char buf[512], *args = buf, *cmd, host[161], *hand;
   struct userrec *u;
 
-  context;
+  Context;
   strcpy(args, msg);
   cmd = newsplit(&args);
   simple_sprintf(host, "%s!%s", nick, from);
@@ -814,10 +850,10 @@ static int check_tcl_pub(char *nick, char *from, char *chname, char *msg)
   Tcl_SetVar(interp, "_pub3", hand, 0);
   Tcl_SetVar(interp, "_pub4", chname, 0);
   Tcl_SetVar(interp, "_pub5", args, 0);
-  context;
+  Context;
   x = check_tcl_bind(H_pub, cmd, &fr, " $_pub1 $_pub2 $_pub3 $_pub4 $_pub5",
 		     MATCH_EXACT | BIND_USE_ATTR | BIND_HAS_BUILTINS);
-  context;
+  Context;
   if (x == BIND_NOMATCH)
     return 0;
   if (x == BIND_EXEC_LOG)
@@ -827,12 +863,11 @@ static int check_tcl_pub(char *nick, char *from, char *chname, char *msg)
 
 static void check_tcl_pubm(char *nick, char *from, char *chname, char *msg)
 {
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   char buf[1024], host[161];
   struct userrec *u;
 
-  context;
+  Context;
   simple_sprintf(buf, "%s %s", chname, msg);
   simple_sprintf(host, "%s!%s", nick, from);
   u = get_user_by_host(host);
@@ -842,10 +877,10 @@ static void check_tcl_pubm(char *nick, char *from, char *chname, char *msg)
   Tcl_SetVar(interp, "_pubm3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_pubm4", chname, 0);
   Tcl_SetVar(interp, "_pubm5", msg, 0);
-  context;
+  Context;
   check_tcl_bind(H_pubm, buf, &fr, " $_pubm1 $_pubm2 $_pubm3 $_pubm4 $_pubm5",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-  context;
+  Context;
 }
 
 static tcl_ints myints[] =
@@ -897,7 +932,7 @@ static void flush_modes()
   chan = chanset;
   while (chan != NULL) {
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if ((m->delay) && (now - m->delay) > 4) {
         add_mode(chan, '+', 'o', m->nick);
         m->delay = 0L;
@@ -1033,12 +1068,12 @@ static char *irc_close()
 {
   struct chanset_t *chan;
 
-  context;
+  Context;
   for (chan = chanset; chan; chan = chan->next) {
     dprintf(DP_MODE, "PART %s\n", chan->name);
     clear_channel(chan, 1);
   }
-  context;
+  Context;
   del_bind_table(H_topc);
   del_bind_table(H_splt);
   del_bind_table(H_sign);
@@ -1050,14 +1085,14 @@ static char *irc_close()
   del_bind_table(H_join);
   del_bind_table(H_pubm);
   del_bind_table(H_pub);
-  context;
+  Context;
   rem_tcl_ints(myints);
   rem_builtins(H_dcc, irc_dcc);
   rem_builtins(H_msg, C_msg);
   rem_builtins(H_raw, irc_raw);
   rem_tcl_commands(tclchan_cmds);
   rem_help_reference("irc.help");
-  context;
+  Context;
   del_hook(HOOK_MINUTELY, check_expired_chanstuff);
   del_hook(HOOK_5MINUTELY, log_chans);
   del_hook(HOOK_ADD_MODE, real_add_mode);
@@ -1068,9 +1103,9 @@ static char *irc_close()
   Tcl_UntraceVar(interp, "net-type",
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		 traced_nettype, NULL);
-  context;
+  Context;
   module_undepend(MODULE_NAME);
-  context;
+  Context;
   return NULL;
 }
 
@@ -1110,7 +1145,7 @@ char *irc_start(Function * global_funcs)
 
   global = global_funcs;
 
-  context;
+  Context;
   module_register(MODULE_NAME, irc_table, 1, 1);
   if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0)))
     return "You need the server module to use the irc module.";
@@ -1118,14 +1153,14 @@ char *irc_start(Function * global_funcs)
     module_undepend(MODULE_NAME);
     return "You need the channels module to use the irc module.";
   }
-  context;
+  Context;
   for (chan = chanset; chan; chan = chan->next) {
     if (!channel_inactive(chan))
       dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);      
     chan->status &= ~(CHAN_ACTIVE | CHAN_PEND | CHAN_ASKEDBANS);
     chan->ircnet_status &= ~(CHAN_ASKED_INVITED | CHAN_ASKED_EXEMPTS);
   }
-  context;
+  Context;
   add_hook(HOOK_MINUTELY, check_expired_chanstuff);
   add_hook(HOOK_5MINUTELY, log_chans);
   add_hook(HOOK_ADD_MODE, real_add_mode);
@@ -1136,14 +1171,14 @@ char *irc_start(Function * global_funcs)
   Tcl_TraceVar(interp, "rfc-compliant",
 	       TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 	       traced_rfccompliant, NULL);
-  context;
+  Context;
   add_tcl_ints(myints);
   add_builtins(H_dcc, irc_dcc);
   add_builtins(H_msg, C_msg);
   add_builtins(H_raw, irc_raw);
   add_tcl_commands(tclchan_cmds);
   add_help_reference("irc.help");
-  context;
+  Context;
   H_topc = add_bind_table("topc", HT_STACKABLE, channels_5char);
   H_splt = add_bind_table("splt", HT_STACKABLE, channels_4char);
   H_sign = add_bind_table("sign", HT_STACKABLE, channels_5char);
@@ -1155,8 +1190,8 @@ char *irc_start(Function * global_funcs)
   H_join = add_bind_table("join", HT_STACKABLE, channels_4char);
   H_pubm = add_bind_table("pubm", HT_STACKABLE, channels_5char);
   H_pub = add_bind_table("pub", 0, channels_5char);
-  context;
+  Context;
   do_nettype();
-  context;
+  Context;
   return NULL;
 }

@@ -1,16 +1,35 @@
 /* 
- * ctcp.c - all the ctcp handling (except DCC, it's special ;)
- *
+ * ctcp.c -- part of ctcp.mod
+ *   all the ctcp handling (except DCC, it's special ;)
+ * 
+ * $Id: ctcp.c,v 1.4 1999/12/15 02:32:59 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#define MAKING_WOOBIE
 #define MODULE_NAME "ctcp"
+#define MAKING_CTCP
 #include "ctcp.h"
 #include "../module.h"
 #include "../server.mod/server.h"
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
 
 static Function *global = NULL, *server_funcs = NULL;
 
@@ -22,7 +41,7 @@ static int ctcp_mode = 0;
 static int ctcp_FINGER(char *nick, char *uhost, char *handle,
 		       char *object, char *keyword, char *text)
 {
-  context;
+  Context;
   if ((ctcp_finger[0]) && (ctcp_mode != 1))
     simple_sprintf(ctcp_reply, "%s\001FINGER %s\001", ctcp_reply, ctcp_finger);
   return 1;
@@ -31,7 +50,7 @@ static int ctcp_FINGER(char *nick, char *uhost, char *handle,
 static int ctcp_ECHOERR(char *nick, char *uhost, char *handle,
 			char *object, char *keyword, char *text)
 {
-  context;
+  Context;
   if ((strlen(text) <= 80) && (ctcp_mode != 1))
     simple_sprintf(ctcp_reply, "%s\001%s %s\001", ctcp_reply, keyword, text);
   return 1;
@@ -43,7 +62,7 @@ static int ctcp_PING(char *nick, char *uhost, char *handle,
   struct userrec *u = get_user_by_handle(userlist, handle);
   int atr = u ? u->flags : 0;
 
-  context;
+  Context;
   if ((ctcp_mode != 1) || ((atr & (USER_OP)))) {
     if (strlen(text) <= 80)	/* bitch ignores > 80 */
       simple_sprintf(ctcp_reply, "%s\001%s %s\001", ctcp_reply, keyword, text);
@@ -54,7 +73,7 @@ static int ctcp_PING(char *nick, char *uhost, char *handle,
 static int ctcp_VERSION(char *nick, char *uhost, char *handle,
 			char *object, char *keyword, char *text)
 {
-  context;
+  Context;
   if ((ctcp_version[0]) && (ctcp_mode != 1))
     simple_sprintf(ctcp_reply, "%s\001VERSION %s\001", ctcp_reply, ctcp_version);
   return 1;
@@ -63,7 +82,7 @@ static int ctcp_VERSION(char *nick, char *uhost, char *handle,
 static int ctcp_USERINFO(char *nick, char *uhost, char *handle,
 			 char *object, char *keyword, char *text)
 {
-  context;
+  Context;
   if ((ctcp_userinfo[0]) && (ctcp_mode != 1))
     simple_sprintf(ctcp_reply, "%s\001USERINFO %s\001", ctcp_reply, ctcp_userinfo);
   return 1;
@@ -74,7 +93,7 @@ static int ctcp_CLIENTINFO(char *nick, char *uhosr, char *handle,
 {
   char *p = NULL;
 
-  context;
+  Context;
   if ((ctcp_mode == 1))
     return 1;
   if (!msg[0])
@@ -117,7 +136,7 @@ static int ctcp_TIME(char *nick, char *uhost, char *handle, char *object,
 {
   char tms[81];
 
-  context;
+  Context;
   if ((ctcp_mode == 1))
     return 1;
   strcpy(tms, ctime(&now));
@@ -132,7 +151,7 @@ static int ctcp_CHAT(char *nick, char *uhost, char *handle, char *object,
   struct userrec *u = get_user_by_handle(userlist, handle);
   int atr = u ? u->flags : 0, i, ix = (-1);
 
-  context;
+  Context;
   if ((atr & (USER_PARTY | USER_XFER)) ||
       ((atr & USER_OP) && !require_p)) {
     for (i = 0; i < dcc_total; i++) {
@@ -207,7 +226,7 @@ char *ctcp_start(Function * global_funcs)
 {
   global = global_funcs;
 
-  context;
+  Context;
   module_register(MODULE_NAME, ctcp_table, 1, 0);
   if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0)))
     return "You need the server module to use the ctcp module.";

@@ -1,5 +1,26 @@
-/*
- * language.c - language support code.
+/* 
+ * language.c -- handles:
+ *   language support code
+ * 
+ * $Id: language.c,v 1.10 1999/12/15 02:32:58 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 /*
@@ -86,7 +107,7 @@ void add_lang(char *lang)
 {
   lang_pri *lp = langpriority, *lpo = NULL;
 
-  context;
+  Context;
   while (lp) {
     /* the language already exists, moving to the beginning */
     if (!strcmp(lang, lp->lang)) {
@@ -120,7 +141,7 @@ static int del_lang(char *lang)
 {
   lang_pri *lp = langpriority, *lpo = NULL;
 
-  context;
+  Context;
   while (lp) {
     /* found the language? */
     if (!strcmp(lang, lp->lang)) {
@@ -177,7 +198,7 @@ static void recheck_lang_sections(void)
   lang_sec *ls = langsection;
   char *langfile;
 
-  context;
+  Context;
   while (ls) {
     if (ls->section) {
       langfile = get_langfile(ls);
@@ -204,7 +225,7 @@ static void read_lang(char *langfile)
   int ltexts = 0;
   int ladd = 0, lupdate = 0;
 
-  context;
+  Context;
   FLANG = fopen(langfile, "r");
   if (FLANG == NULL) {
     putlog(LOG_MISC, "*", "LANG: unexpected: reading from file %s failed.",
@@ -279,7 +300,7 @@ void add_lang_section(char *section)
   lang_sec *ls = langsection, *ols = NULL;
   int ok = 0;
 
-  context;
+  Context;
   while (ls) {
     /* already know of that section? */
     if (!strcmp(section, ls->section))
@@ -374,7 +395,7 @@ static char *get_langfile(lang_sec *sec)
   char *langfile;
   lang_pri *lp = langpriority;
 
-  context;
+  Context;
   while (lp) {
     /* there is no need to reload the same language */
     if (sec->lang && !strcmp(sec->lang, lp->lang)) {
@@ -400,7 +421,7 @@ static int split_lang(char *par, char **lang, char **section)
 {
   char *p;
 
-  context;
+  Context;
   p = strrchr(par, '/');
   /* path attached? */
   if (p)
@@ -424,7 +445,7 @@ int cmd_loadlanguage(struct userrec *u, int idx, char *par)
 {
   char *section, *lang, *buf;
 
-  context;
+  Context;
   dprintf(idx, "Note: This command is obsoleted by +lang.\n");
   if (!par || !par[0]) {
     dprintf(idx, "Usage: language <section>.<language>\n");
@@ -448,7 +469,7 @@ int cmd_loadlanguage(struct userrec *u, int idx, char *par)
 
 static int cmd_plslang(struct userrec *u, int idx, char *par)
 {
-  context;
+  Context;
   if (!par || !par[0]) {
     dprintf(idx, "Usage: +lang <language>\n");
     return 0;
@@ -461,7 +482,7 @@ static int cmd_plslang(struct userrec *u, int idx, char *par)
 
 static int cmd_mnslang(struct userrec *u, int idx, char *par)
 {
-  context;
+  Context;
   if (!par || !par[0]) {
     dprintf(idx, "Usage: -lang <language>\n");
     return 0;
@@ -476,7 +497,7 @@ static int cmd_mnslang(struct userrec *u, int idx, char *par)
 
 static int cmd_plslsec(struct userrec *u, int idx, char *par)
 {
-  context;
+  Context;
   if (!par || !par[0]) {
     dprintf(idx, "Usage: +lsec <section>\n");
     return 0;
@@ -488,7 +509,7 @@ static int cmd_plslsec(struct userrec *u, int idx, char *par)
 
 static int cmd_mnslsec(struct userrec *u, int idx, char *par)
 {
-  context;
+  Context;
   if (!par || !par[0]) {
     dprintf(idx, "Usage: -lsec <section>\n");
     return 0;
@@ -512,7 +533,7 @@ static int cmd_languagedump(struct userrec *u, int idx, char *par)
   char ltext2[512];
   int idx2, i;
 
-  context;
+  Context;
   putlog(LOG_CMDS, "*", "#%s# ldump %s", dcc[idx].nick, par);
   if (par[0]) {
     /* atoi (hence strtol) don't work right here for hex */
@@ -554,7 +575,7 @@ int expmem_language()
   lang_pri *lp = langpriority;
   int i, size = 0;
 
-  context;
+  Context;
   for (i = 0; i < 64; i++)
     for (l = langtab[i]; l; l = l->next) {
       size += sizeof(lang_tab);
@@ -598,7 +619,7 @@ static int cmd_languagestatus(struct userrec *u, int idx, char *par)
       empty++;
     ltexts += c;
   }
-  context;
+  Context;
   dprintf(idx, "language code report:\n");
   dprintf(idx, "   Table size: %d bytes\n", expmem_language());
   dprintf(idx, "   Text messages: %d\n", ltexts);
@@ -719,7 +740,7 @@ void init_language(int flag)
   int i;
   char *deflang;
 
-  context;
+  Context;
   if (flag) {
     for (i = 0; i < 32; i++)
       langtab[i] = 0;

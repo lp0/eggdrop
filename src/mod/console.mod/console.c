@@ -1,11 +1,31 @@
-/*
- * console.c - part of console.mod
- * saved console settings based on console.tcl by
- * cmwagner/billyjoe/D. Senso
+/* 
+ * console.c -- part of console.mod
+ *   saved console settings based on console.tcl
+ *   by cmwagner/billyjoe/D. Senso
+ * 
+ * $Id: console.c,v 1.13 1999/12/15 02:32:59 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#define MAKING_CONSOLE
 #define MODULE_NAME "console"
+#define MAKING_CONSOLE
 #include "../module.h"
 #include <stdlib.h>
 
@@ -28,9 +48,9 @@ static int console_unpack(struct userrec *u, struct user_entry *e)
   struct console_info *ci = user_malloc(sizeof(struct console_info));
   char *par, *arg;
 
-  ASSERT (e != NULL);
-  ASSERT (e->name != NULL);
-  context;
+  Context;
+  Assert(e);
+  Assert(e->name);
   par = e->u.list->extra;
   arg = newsplit(&par);
   ci->channel = user_malloc(strlen(arg) + 1);
@@ -56,9 +76,9 @@ static int console_pack(struct userrec *u, struct user_entry *e)
   struct console_info *ci;
   int l;
 
-  ASSERT (e != NULL);
-  ASSERT (e->u.extra != NULL);
-  ASSERT (e->name == NULL);
+  Assert(e);
+  Assert(e->u.extra);
+  Assert(!e->name);
 
   ci = (struct console_info *) e->u.extra;
 
@@ -81,7 +101,7 @@ static int console_kill(struct user_entry *e)
 {
   struct console_info *i = e->u.extra;
 
-  context;
+  Context;
   nfree(i->channel);
   nfree(i);
   nfree(e);
@@ -92,7 +112,7 @@ static int console_write_userfile(FILE * f, struct userrec *u, struct user_entry
 {
   struct console_info *i = e->u.extra;
 
-  context;
+  Context;
   if (fprintf(f, "--CONSOLE %s %s %s %d %d %d\n",
 	      i->channel, masktype(i->conflags),
 	      stripmasktype(i->stripflags), i->echoflags,
@@ -110,11 +130,11 @@ static int console_set(struct userrec *u, struct user_entry *e, void *buf)
 
   if (ci != buf) {
     if (ci) {
-      ASSERT (ci->channel != NULL);
-      nfree (ci->channel);
-      nfree (ci);
+      Assert(ci->channel);
+      nfree(ci->channel);
+      nfree(ci);
     }
-    context;
+    Context;
 
     ci = e->u.extra = buf;
   }
@@ -177,7 +197,7 @@ int console_expmem(struct user_entry *e)
 {
   struct console_info *i = e->u.extra;
 
-  context;
+  Context;
   return sizeof(struct console_info) + strlen(i->channel) + 1;
 }
 
@@ -185,7 +205,7 @@ void console_display(int idx, struct user_entry *e)
 {
   struct console_info *i = e->u.extra;
 
-  context;
+  Context;
   if (dcc[idx].user && (dcc[idx].user->flags & USER_MASTER)) {
     dprintf(idx, "  Saved Console Settings:\n");
     dprintf(idx, "    Channel: %s\n", i->channel);
@@ -338,7 +358,7 @@ static cmd_t mydcc[] =
 
 static char *console_close()
 {
-  context;
+  Context;
   rem_builtins(H_chon, mychon);
   rem_builtins(H_dcc, mydcc);
   rem_tcl_ints(myints);
@@ -363,7 +383,7 @@ char *console_start(Function * global_funcs)
 {
   global = global_funcs;
 
-  context;
+  Context;
   module_register(MODULE_NAME, console_table, 1, 1);
   if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
     return "This module requires eggdrop1.4.0 or later";

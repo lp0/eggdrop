@@ -1,12 +1,26 @@
 /* 
- * chancmds.c - handles commands direclty relating to channel interaction
+ * chancmds.c -- part of irc.mod
+ *   handles commands direclty relating to channel interaction
+ * 
+ * $Id: cmdsirc.c,v 1.18 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 /* Do we have any flags that will allow us ops on a channel? */
@@ -14,7 +28,7 @@ static struct chanset_t *has_op(int idx, char *chname)
 {
   struct chanset_t *chan;
 
-  context;
+  Context;
   if (chname && chname[0]) {
     chan = findchan(chname);
     if (!chan) {
@@ -485,7 +499,7 @@ static void cmd_channel(struct userrec *u, int idx, char *par)
 	    spaces, spaces2);
     spaces[NICKMAX - 9] = ' ';
     spaces2[HANDLEN - 9] = ' ';
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if (m->joined > 0) {
 	strcpy(s, ctime(&(m->joined)));
 	if ((now - (m->joined)) > 86400) {
@@ -719,7 +733,7 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
   int statichost = 0;
   char *p1 = s1;
 
-  context;
+  Context;
   if ((!par[0]) || ((par[0]=='!') && (!par[1]))) {
     dprintf(idx, "Usage: adduser <nick> [handle]\n");
     return;
@@ -749,7 +763,7 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
     hand = par;
   }
 
-  context;
+  Context;
   chan = chanset;
   while (chan != NULL) {
     m = ismember(chan, nick);
@@ -807,10 +821,7 @@ static void cmd_deluser(struct userrec *u, int idx, char *par)
   char *nick, s[1024];
   struct chanset_t *chan;
   memberlist *m;
-  struct flag_record victim =
-  {
-    FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0
-  };
+  struct flag_record victim = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
   if (!par[0]) {
     dprintf(idx, "Usage: deluser <nick>\n");

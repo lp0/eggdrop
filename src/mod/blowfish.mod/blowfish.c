@@ -1,15 +1,17 @@
-/*
- * blowfish.c - part of blowfish.mod
- * handles: encryption and decryption of passwords
+/* 
+ * blowfish.c -- part of blowfish.mod
+ *   encryption and decryption of passwords
+ * 
+ * $Id: blowfish.c,v 1.8 1999/12/15 02:32:59 guppy Exp $
  */
-/*
+/* 
  * The first half of this is very lightly edited from public domain
  * sourcecode.  For simplicity, this entire module will remain public
  * domain.
  */
 
-#define MAKING_BLOWFISH
 #define MODULE_NAME "encryption"
+#define MAKING_BLOWFISH
 #include "../module.h"
 #include "blowfish.h"
 #include "bf_tab.h"		/* P-box P-array, S-box */
@@ -45,7 +47,7 @@ static int blowfish_expmem()
 {
   int i, tot = 0;
 
-  context;
+  Context;
   for (i = 0; i < BOXES; i++)
     if (box[i].P != NULL) {
       tot += ((bf_N + 2) * sizeof(UWORD_32bits));
@@ -289,11 +291,13 @@ static char *encrypt_string(char *key, char *str)
   char *p, *s, *dest, *d;
   int i;
 
-  dest = (char *) nmalloc((strlen(str) + 9) * 2);
   /* pad fake string with 8 bytes to make sure there's enough */
   s = (char *) nmalloc(strlen(str) + 9);
   strcpy(s, str);
+  if ((!key) || (!key[0]))
+    return s;
   p = s;
+  dest = (char *) nmalloc((strlen(str) + 9) * 2);
   while (*p)
     p++;
   for (i = 0; i < 8; i++)
@@ -332,11 +336,13 @@ static char *decrypt_string(char *key, char *str)
   char *p, *s, *dest, *d;
   int i;
 
-  dest = (char *) nmalloc(strlen(str) + 12);
   /* pad encoded string with 0 bits in case it's bogus */
   s = (char *) nmalloc(strlen(str) + 12);
   strcpy(s, str);
+  if ((!key) || (!key[0]))
+    return s;
   p = s;
+  dest = (char *) nmalloc(strlen(str) + 12);
   while (*p)
     p++;
   for (i = 0; i < 12; i++)
@@ -440,7 +446,7 @@ char *blowfish_start(Function * global_funcs)
       box[i].key[0] = 0;
       box[i].lastuse = 0L;
     }
-    context;
+    Context;
     module_register(MODULE_NAME, blowfish_table, 2, 0);
     if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
       return "This module requires eggdrop1.4.0 or later";

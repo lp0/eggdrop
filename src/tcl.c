@@ -1,17 +1,30 @@
-/*
+/* 
  * tcl.c -- handles:
- * the code for every command eggdrop adds to Tcl
- * Tcl initialization
- * getting and setting Tcl/eggdrop variables
+ *   the code for every command eggdrop adds to Tcl
+ *   Tcl initialization
+ *   getting and setting Tcl/eggdrop variables
  * 
  * dprintf'ized, 4feb1996
+ * 
+ * $Id: tcl.c,v 1.24 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "main.h"
@@ -83,7 +96,7 @@ int expmem_tcl()
 {
   int i, tot = 0;
 
-  context;
+  Context;
   for (i = 0; i < max_logs; i++)
     if (logs[i].filename != NULL) {
       tot += strlen(logs[i].filename) + 1;
@@ -448,7 +461,7 @@ static void init_traces()
 
 void kill_tcl()
 {
-  context;
+  Context;
   rem_tcl_coups(def_tcl_coups);
   rem_tcl_strings(def_tcl_strings);
   rem_tcl_ints(def_tcl_ints);
@@ -467,7 +480,7 @@ void init_tcl(int argc, char **argv)
   char pver[1024] = "";
 #endif
 
-  context;
+  Context;
 #ifndef HAVE_PRE7_5_TCL
   /* This is used for 'info nameofexecutable'.
    * The filename in argv[0] must exist in a directory listed in
@@ -479,7 +492,7 @@ void init_tcl(int argc, char **argv)
   interp = Tcl_CreateInterp();
   Tcl_Init(interp);
 
-#ifdef EBUG_MEM
+#ifdef DEBUG_MEM
   /* initialize Tcl's memory debugging if we have it */
   Tcl_InitMemory(interp);
 #endif
@@ -521,7 +534,7 @@ void do_tcl(char *whatzit, char *script)
     if (f != NULL)
       fprintf(f, "eval: %s\n", script);
   }
-  context;
+  Context;
   code = Tcl_Eval(interp, script);
   if (debug_tcl && (f != NULL)) {
     fprintf(f, "done eval, result=%d\n", code);
@@ -566,7 +579,7 @@ int readtclprog(char *fname)
 
 void add_tcl_strings(tcl_strings * list)
 {
-  int i;
+  int i, tmp;
   strinfo *st;
 
   for (i = 0; list[i].name; i++) {
@@ -577,7 +590,10 @@ void add_tcl_strings(tcl_strings * list)
       st->max = -st->max;
     st->str = list[i].buf;
     st->flags = (list[i].flags & STR_DIR);
+    tmp = protect_readonly;
+    protect_readonly = 0;
     tcl_eggstr((ClientData) st, interp, list[i].name, NULL, TCL_TRACE_WRITES);
+    protect_readonly = tmp;
     tcl_eggstr((ClientData) st, interp, list[i].name, NULL, TCL_TRACE_READS);
     Tcl_TraceVar(interp, list[i].name, TCL_TRACE_READS | TCL_TRACE_WRITES |
 		 TCL_TRACE_UNSETS, tcl_eggstr, (ClientData) st);
@@ -607,7 +623,7 @@ void rem_tcl_strings(tcl_strings * list)
 
 void add_tcl_ints(tcl_ints * list)
 {
-  int i;
+  int i, tmp;
   intinfo *ii;
 
   for (i = 0; list[i].name; i++) {
@@ -615,7 +631,10 @@ void add_tcl_ints(tcl_ints * list)
     strtot += sizeof(intinfo);
     ii->var = list[i].val;
     ii->ro = list[i].readonly;
+    tmp = protect_readonly;
+    protect_readonly = 0;
     tcl_eggint((ClientData) ii, interp, list[i].name, NULL, TCL_TRACE_WRITES);
+    protect_readonly = tmp;
     tcl_eggint((ClientData) ii, interp, list[i].name, NULL, TCL_TRACE_READS);
     Tcl_TraceVar(interp, list[i].name,
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
@@ -656,6 +675,7 @@ void add_tcl_coups(tcl_coups * list)
     strtot += sizeof(coupletinfo);
     cp->left = list[i].lptr;
     cp->right = list[i].rptr;
+
     tcl_eggcouplet((ClientData) cp, interp, list[i].name, NULL, TCL_TRACE_WRITES);
     tcl_eggcouplet((ClientData) cp, interp, list[i].name, NULL, TCL_TRACE_READS);
     Tcl_TraceVar(interp, list[i].name,

@@ -1,19 +1,33 @@
 /* 
- * chan.c -- handles:
- * almost everything to do with channel manipulation
- * telling channel status
- * 'who' response
- * user kickban, kick, op, deop
- * idle kicking
+ * chan.c -- part of irc.mod
+ *   almost everything to do with channel manipulation
+ *   telling channel status
+ *   'who' response
+ *   user kickban, kick, op, deop
+ *   idle kicking
+ * 
  * dprintf'ized, 27oct1995
  * multi-channel, 8feb1996
+ * 
+ * $Id: chan.c,v 1.48 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 /* new ctcp stuff */
@@ -30,7 +44,7 @@ static memberlist *newmember(struct chanset_t *chan)
   memberlist *x;
 
   x = chan->channel.member;
-  while (x->nick[0])
+  while (x && x->nick[0])
     x = x->next;
   x->next = (memberlist *) channel_malloc(sizeof(memberlist));
   x->next->next = NULL;
@@ -124,10 +138,10 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
   m = ismember(chan, floodnick); 
   /* let's not fight against non-existant channel members and
    * IRC services like ChanServ  (Fabian) */
-  if (!m)
+  if ((!m) && (which != FLOOD_JOIN))
     return 0;
   get_user_flagrec(get_user_by_host(from), &fr, chan->name);
-  context;
+  Context;
   if (glob_bot(fr) ||
       ((which == FLOOD_DEOP) && (glob_master(fr) || chan_master(fr))) ||
       ((which != FLOOD_DEOP) && (glob_friend(fr) || chan_friend(fr))) ||
@@ -199,7 +213,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
     return 0;
   }
   /* deop'n the same person, sillyness ;) - so just ignore it */
-  context;
+  Context;
   if (which == FLOOD_DEOP) {
     if (!rfc_casecmp(chan->deopd, victim))
       return 0;
@@ -207,7 +221,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
       strcpy(chan->deopd, victim);
   }
   chan->floodnum[which]++;
-  context;
+  Context;
   if (chan->floodnum[which] >= thr) {	/* FLOOD */
     /* reset counters */
     chan->floodnum[which] = 0;
@@ -246,14 +260,14 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
 	putlog(LOG_MISC | LOG_JOIN, chan->name, IRC_FLOODIGNORE4, p);
       strcpy(ftype + 4, " flood");
       u_addban(chan, h, origbotname, ftype, now + (60 * ban_time), 0);
-      context;
+      Context;
       /* don't kick user if exempted */
       if (!channel_enforcebans(chan) && me_op(chan) && !isexempted(chan, h))
 	{
 	  char s[UHOSTLEN];
 	  m = chan->channel.member;
 	  
-	  while (m->nick[0]) {
+	  while (m && m->nick[0]) {
 	    sprintf(s, "%s!%s", m->nick, m->userhost);
 	    if (wild_match(h, s) &&
 		(m->joined >= chan->floodtime[which]) &&
@@ -285,7 +299,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
       return 1;
     }
   }
-  context;
+  Context;
   return 0;
 }
 
@@ -311,14 +325,14 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   int k, l, flushed;
 
-  context;
+  Context;
   if (!me_op(chan))
     return;
   k = 0;
   flushed = 0;
   kicknick[0] = 0;
   m = chan->channel.member;
-  while (m->nick[0]) {
+  while (m && m->nick[0]) {
     get_user_flagrec(m->user, &fr, chan->name);
     sprintf(s, "%s!%s", m->nick, m->userhost);
     if (!chan_sentkick(m) && wild_match(hostmask, s) &&
@@ -329,7 +343,7 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
 	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) {	/* arthur2 */
       if (!flushed) {
 	/* we need to kick someone, flush eventual bans first */
-	context;
+	Context;
 	flush_mode(chan, QUICK);
 	flushed += 1;
       }
@@ -349,7 +363,7 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment)
   }
   if (k > 0)
     dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, kicknick, comment);
-  context;
+  Context;
 }
 
 /* if any bans match this wildcard expression, refresh them on the channel */
@@ -447,7 +461,7 @@ static void enforce_bans(struct chanset_t *chan)
   char me[UHOSTLEN];
   masklist *b = chan->channel.ban;
 
-  context;
+  Context;
   if (!me_op(chan))
     return;			/* can't do it */
   simple_sprintf(me, "%s!%s", botname, botuserhost);
@@ -546,8 +560,7 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
 {
   memberlist *m;
   char s[UHOSTLEN], *p;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   int cur, pls, mns;
   static int stacking = 0;
 
@@ -557,9 +570,9 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
     return;                     /* it's better not to deop everybody */
   stacking++;
   /* okay, sort through who needs to be deopped. */
-  context;
+  Context;
   m = chan->channel.member;
-  while (m->nick[0]) {
+  while (m && m->nick[0]) {
     sprintf(s, "%s!%s", m->nick, m->userhost);
     if (!m->user)
       m->user = get_user_by_host(s);
@@ -864,7 +877,7 @@ static int got352(char *from, char *msg)
   char *nick, *user, *host, *chname, *flags;
   struct chanset_t *chan;
 
-  context;
+  Context;
   newsplit(&msg);		/* Skip my nick - effeciently */
   chname = newsplit(&msg);	/* Grab the channel */
   chan = findchan(chname);	/* See if I'm on channel */
@@ -885,7 +898,7 @@ static int got354(char *from, char *msg)
   char *nick, *user, *host, *chname, *flags;
   struct chanset_t *chan;
 
-  context;
+  Context;
   if (use_354) {
     newsplit(&msg);		/* Skip my nick - effeciently */
     if (msg[0] && (strchr(CHANMETA, msg[0]) != NULL)) {
@@ -1316,7 +1329,7 @@ static int got332(char *from, char *msg)
 }
 
 static void do_embedded_mode(struct chanset_t *chan, char *nick,
-			     memberlist * m, char *mode)
+			     memberlist *m, char *mode)
 {
   struct flag_record fr = {0, 0, 0, 0, 0, 0};
   int servidx = findanyidx(serv);
@@ -1345,10 +1358,9 @@ static int gotjoin(char *from, char *chname)
   memberlist *m;
   masklist *b, *e;
   struct userrec *u;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
-  context;
+  Context;
   fixcolon(chname);
   /* ircd 2.9 sometimes does '#chname^Gmodes' when returning from splits */
   newmode = NULL;
@@ -1659,7 +1671,7 @@ static int gotnick(char *from, char *msg)
 	  (u_match_mask(global_bans, s1) || u_match_mask(chan->bans, s1)))
 	refresh_ban_kick(chan, s1, msg);
       strcpy(m->nick, msg);
-      detect_chan_flood(nick, uhost, from, chan, FLOOD_NICK, NULL);
+      detect_chan_flood(msg, uhost, from, chan, FLOOD_NICK, NULL);
       /* any pending kick to the old nick is lost. Ernst 18/3/1998 */
       if (chan_sentkick(m))
 	m->flags &= ~SENTKICK;
@@ -1748,7 +1760,7 @@ static int gotmsg(char *from, char *msg)
   struct flag_record fr =
   {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
-  if (!strchr("&#@$", msg[0]))
+  if (!strchr("&#+@$", msg[0]))
     return 0;
   ignoring = match_ignore(from);
   to = newsplit(&msg);
@@ -1875,8 +1887,7 @@ static int gotnotice(char *from, char *msg)
   struct userrec *u;
   memberlist *m;
   struct chanset_t *chan;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   int ignoring;
 
   if (!strchr(CHANMETA "@", *msg))
@@ -1885,6 +1896,8 @@ static int gotnotice(char *from, char *msg)
   to = newsplit(&msg);
   realto = (*to == '@') ? to + 1 : to;
   chan = findchan(realto);
+  if (!chan)
+    return 0;			/* notice to an unknown channel ?? */
   fixcolon(msg);
   strcpy(uhost, from);
   nick = splitnick(&uhost);

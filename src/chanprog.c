@@ -1,22 +1,35 @@
-/*
+/* 
  * chanprog.c -- handles:
- * rmspace()
- * maintaining the server list
- * revenge punishment
- * timers, utimers
- * telling the current programmed settings
- * initializing a lot of stuff and loading the tcl scripts
+ *   rmspace()
+ *   maintaining the server list
+ *   revenge punishment
+ *   timers, utimers
+ *   telling the current programmed settings
+ *   initializing a lot of stuff and loading the tcl scripts
+ * 
+ * config file format changed 27jan1994 (Tcl outdates that)
  * dprintf'ized, 1nov1995
+ * 
+ * $Id: chanprog.c,v 1.17 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
-
-/* config file format changed 27jan1994 (Tcl outdates that) */
 
 #include "main.h"
 #if HAVE_GETRUSAGE
@@ -75,7 +88,7 @@ memberlist *ismember(struct chanset_t *chan, char *nick)
   memberlist *x;
 
   x = chan->channel.member;
-  while (x->nick[0] && rfc_casecmp(x->nick, nick))
+  while (x && x->nick[0] && rfc_casecmp(x->nick, nick))
     x = x->next;
   if (!x->nick[0])
     return NULL;
@@ -111,7 +124,7 @@ struct userrec *check_chanlist(char *host)
   nick = splitnick(&uhost);
   for (chan = chanset; chan; chan = chan->next) {
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if (!rfc_casecmp(nick, m->nick) &&
 	  !strcasecmp(uhost, m->userhost))
 	return m->user;
@@ -129,7 +142,7 @@ struct userrec *check_chanlist_hand(char *hand)
 
   while (chan) {
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if (m->user)
 	if (!strcasecmp(m->user->handle, hand))
 	  return m->user;
@@ -149,7 +162,7 @@ void clear_chanlist()
 
   while (chan) {
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       m->user = NULL;
       m = m->next;
     }
@@ -164,13 +177,14 @@ void set_chanlist(char *host, struct userrec *rec)
   memberlist *m;
   struct chanset_t *chan = chanset;
 
-  context;
-  strcpy(buf, host);
+  Context;
+  strncpy(buf, host, UHOSTMAX);
+  buf[UHOSTMAX] = 0;
   uhost = buf;
   nick = splitnick(&uhost);
   while (chan) {
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if (!rfc_casecmp(nick, m->nick) &&
 	  !strcasecmp(uhost, m->userhost))
 	m->user = rec;
@@ -186,7 +200,7 @@ int expmem_chanprog()
   int tot;
   tcl_timer_t *t;
 
-  context;
+  Context;
   tot = 0;
   for (t = timer; t; t = t->next) {
     tot += sizeof(tcl_timer_t);
@@ -393,7 +407,7 @@ void chanprog()
   /* turn off read-only variables (make them write-able) for rehash */
   protect_readonly = 0;
   /* now read it */
-  context;
+  Context;
   if (!readtclprog(configfile))
     fatal(MISC_NOCONFIGFILE, 0);
   for (i = 0; i < max_logs; i++) {
@@ -416,7 +430,7 @@ void chanprog()
   }
   /* We should be safe now */
   call_hook(HOOK_REHASH);
-  context;
+  Context;
   protect_readonly = 1;
   if (!userfile[0])
     fatal(MISC_NOUSERFILE2, 0);
@@ -436,7 +450,7 @@ void chanprog()
      make_userfile = 0;
      printf("%s\n", MISC_USERFEXISTS);
   }
-  context;
+  Context;
   if (helpdir[0])
     if (helpdir[strlen(helpdir) - 1] != '/')
       strcat(helpdir, "/");
@@ -449,7 +463,7 @@ void chanprog()
   }
   if (!botnetnick[0])
     fatal("I don't have a botnet nick!!\n", 0);
-  context;
+  Context;
   /* test tempdir: it's vital */
   {
     FILE *f;
@@ -465,7 +479,7 @@ void chanprog()
     fclose(f);
     unlink(s);
   }
-  context;
+  Context;
   reaffirm_owners();
 }
 
@@ -486,7 +500,7 @@ void reload()
   userlist = NULL;
   if (!readuserfile(userfile, &userlist))
     fatal(MISC_MISSINGUSERF, 0);
-  context;
+  Context;
   reaffirm_owners();
   call_hook(HOOK_READ_USERFILE);
 }
@@ -551,22 +565,22 @@ void do_check_timers(tcl_timer_t ** stack)
   /* new timers could be added by a Tcl script inside a current timer */
   /* so i'll just clear out the timer list completely, and add any
    * unexpired timers back on */
-  context;
+  Context;
   *stack = NULL;
   while (mark) {
-    context;
+    Context;
     if (mark->mins > 0)
       mark->mins--;
     old = mark;
     mark = mark->next;
     if (old->mins == 0) {
-      context;
+      Context;
       simple_sprintf(x, "timer%d", old->id);
       do_tcl(x, old->cmd);
       nfree(old->cmd);
       nfree(old);
     } else {
-      context;
+      Context;
       old->next = *stack;
       *stack = old;
     }

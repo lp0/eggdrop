@@ -1,13 +1,26 @@
-/*
- * channels.c - part of channels.mod
- * support for channels within the bot
+/* 
+ * channels.c -- part of channels.mod
+ *   support for channels within the bot
+ * 
+ * $Id: channels.c,v 1.32 1999/12/15 02:32:59 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #define MODULE_NAME "channels"
@@ -49,6 +62,8 @@ static int gfld_join_time;
 static int gfld_ctcp_thr;
 static int gfld_ctcp_time;
 
+static void remove_channel(struct chanset_t *);
+
 #include "channels.h"
 #include "cmdschan.c"
 #include "tclchan.c"
@@ -58,7 +73,7 @@ void *channel_malloc(int size, char *file, int line)
 {
   char *p;
 
-#ifdef EBUG_MEM
+#ifdef DEBUG_MEM
   p = ((void *) (global[0] (size, MODULE_NAME, file, line)));
 #else
   p = nmalloc(size);
@@ -205,7 +220,6 @@ static int ismodeline(masklist *m, char *user)
       return 1;
     m = m->next;
   }
-
   return 0;
 }
 
@@ -217,7 +231,6 @@ static int ismasked(masklist *m, char *user)
       return 1;
     m = m->next;
   }
-
   return 0;
 }
 
@@ -242,12 +255,34 @@ static int killchanset(struct chanset_t *chan)
   return 0;
 }
 
+/* Completely removes a channel.
+ * This includes the removal of all channel-bans, -exempts and -invites, as
+ * well as all user flags related to the channel.
+ */
+static void remove_channel(struct chanset_t *chan)
+{
+   clear_channel(chan, 0);
+   noshare = 1;
+   /* Remove channel-bans */
+   while (chan->bans)
+     u_delban(chan, chan->bans->mask, 1);
+   /* Remove channel-exempts */
+   while (chan->exempts)
+     u_delexempt(chan, chan->exempts->mask, 1);
+   /* Remove channel-invites */
+   while (chan->invites)
+     u_delinvite(chan, chan->invites->mask, 1);
+   /* Remove channel specific user flags */
+   user_del_chan(chan->name);
+   noshare = 0;
+   killchanset(chan);
+}
+
 /* bind this to chon and *if* the users console channel == ***
  * then set it to a specific channel */
 static int channels_chon(char *handle, int idx)
 {
-  struct flag_record fr =
-  {FR_CHAN | FR_ANYWH | FR_GLOBAL, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_CHAN | FR_ANYWH | FR_GLOBAL, 0, 0, 0, 0, 0};
   int find, found = 0;
   struct chanset_t *chan = chanset;
 
@@ -285,17 +320,8 @@ static int channels_chon(char *handle, int idx)
 
 static char *convert_element(char *src, char *dst)
 {
-/*
-  char *out = dst;
-  while (src && src[0]) {
-    if (strchr("[];$\\", *src))
-      *out++ = '\\';
-    *out++ = *src++;
-  }
-  *out = 0;
-  return dst;
-*/
   int flags;
+
   Tcl_ScanElement(src, &flags);
   Tcl_ConvertElement(src, dst, flags);
   return dst;
@@ -310,7 +336,7 @@ static void write_channels()
   char need1[242], need2[242], need3[242], need4[242], need5[242];
   struct chanset_t *chan;
 
-  context;
+  Context;
   if (!chanfile[0])
     return;
   sprintf(s, "%s~new", chanfile);
@@ -420,18 +446,10 @@ static void read_channels(int create)
   while (chan != NULL) {
     if (chan->status & CHAN_FLAGGED) {
       putlog(LOG_MISC, "*", "No longer supporting channel %s", chan->name);
-      dprintf(DP_SERVER, "PART %s\n", chan->name);
-      clear_channel(chan, 0);
-      noshare = 1;
-      while (chan->bans)
-	u_delban(chan, chan->bans->mask, 1);
-      while (chan->exempts)
-	u_delexempt(chan, chan->exempts->mask, 1);
-      while (chan->invites)
-	u_delinvite(chan, chan->invites->mask, 1);
-      noshare = 0;
+      if (!channel_inactive(chan))
+	dprintf(DP_SERVER, "PART %s\n", chan->name);
       chan2 = chan->next;
-      killchanset(chan);
+      remove_channel(chan);
       chan = chan2;
     } else
       chan = chan->next;
@@ -464,17 +482,9 @@ static void channels_rehash()
   while (chan) {
     if (chan->status & CHAN_FLAGGED) {
       putlog(LOG_MISC, "*", "No longer supporting channel %s", chan->name);
-      dprintf(DP_SERVER, "PART %s\n", chan->name);
-      clear_channel(chan, 0);
-      noshare = 1;
-      while (chan->bans)
-	u_delban(chan, chan->bans->mask, 1);
-      while (chan->exempts)
-	u_delexempt(chan, chan->exempts->mask, 1);
-      while (chan->invites)
-	u_delinvite(chan, chan->invites->mask, 1);
-      noshare = 0;
-      killchanset(chan);
+      if (!channel_inactive(chan))
+	dprintf(DP_SERVER, "PART %s\n", chan->name);
+      remove_channel(chan);
       chan = chanset;
     } else
       chan = chan->next;
@@ -611,10 +621,8 @@ static int expmem_masklist(masklist *m)
         result += strlen(m->mask) + 1;
     if (m->who)
         result += strlen(m->who) + 1;
-
     m = m->next;
   }
-
   return result;
 }
 
@@ -623,7 +631,7 @@ static int channels_expmem()
   int tot = 0;
   struct chanset_t *chan = chanset;
 
-  context;
+  Context;
   while (chan != NULL) {
     tot += sizeof(struct chanset_t);
 
@@ -650,7 +658,7 @@ static char *traced_globchanset(ClientData cdata, Tcl_Interp * irp,
   int items;
   char **item;
 
-  context;
+  Context;
   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
     Tcl_SetVar2(interp, name1, name2, glob_chanset, TCL_GLOBAL_ONLY);
     if (flags & TCL_TRACE_UNSETS)
@@ -660,13 +668,13 @@ static char *traced_globchanset(ClientData cdata, Tcl_Interp * irp,
   } else { /* write */
     s = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
     Tcl_SplitList(interp, s, &items, &item);
-    context;
+    Context;
     for (i = 0; i<items; i++) {
       if (!(item[i]) || (strlen(item[i]) < 2)) continue;
       s = glob_chanset;
       while (s[0]) {
 	t = strchr(s, ' '); /* cant be NULL coz of the extra space */
-	context;
+	Context;
 	t[0] = 0;
 	if (!strcmp(s + 1, item[i] + 1)) {
 	  s[0] = item[i][0]; /* +- */
@@ -715,7 +723,7 @@ static tcl_strings my_tcl_strings[] =
 
 static char *channels_close()
 {
-  context;
+  Context;
   write_channels();
   rem_builtins(H_chon, my_chon);
   rem_builtins(H_dcc, C_dcc_irc);
@@ -789,14 +797,12 @@ static Function channels_table[] =
 /* *HOLE* channels_funcs[32] used to be u_sticky_exempt() <cybah> */
   (Function) NULL,
   (Function) NULL,
-/* *HOLE* channels_funcs[34] used to be u_setsticky_invite() <cybah> */
-  (Function) NULL,
+  (Function) killchanset,
   (Function) u_delinvite,
   /* 36 - 39 */
   (Function) u_addinvite,
-  (Function) NULL,
-/* *HOLE* channels_funcs[38] used to be u_sticky_invite() <cybah> */
-  (Function) NULL,
+  (Function) tcl_channel_add,
+  (Function) tcl_channel_modify,
   (Function) write_exempts,
   /* 40 - 43 */
   (Function) write_invites,
@@ -817,7 +823,7 @@ char *channels_start(Function * global_funcs)
   gfld_join_time = 60;
   gfld_ctcp_thr = 5;
   gfld_ctcp_time = 60;
-  context;
+  Context;
   module_register(MODULE_NAME, channels_table, 1, 0);
   if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
     return "This module needs eggdrop1.4.0 or later";

@@ -1,17 +1,30 @@
 /* 
  * userrec.c -- handles:
- * add_q() del_q() str2flags() flags2str() str2chflags() chflags2str()
- * a bunch of functions to find and change user records
- * change and check user (and channel-specific) flags
+ *   add_q() del_q() str2flags() flags2str() str2chflags() chflags2str()
+ *   a bunch of functions to find and change user records
+ *   change and check user (and channel-specific) flags
  * 
  * dprintf'ized, 10nov1995
+ * 
+ * $Id: userrec.c,v 1.17 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "main.h"
@@ -42,7 +55,7 @@ maskrec *global_bans = NULL,
 struct igrec *global_ign = NULL;
 int cache_hit = 0, cache_miss = 0;	/* temporary cache accounting */
 
-#ifdef EBUG_MEM
+#ifdef DEBUG_MEM
 void *_user_malloc(int size, char *file, int line)
 {
   char x[1024];
@@ -50,6 +63,7 @@ void *_user_malloc(int size, char *file, int line)
   simple_sprintf(x, "userrec.c:%s", file);
   return n_malloc(size, x, line);
 }
+
 void *_user_realloc(void *ptr, int size, char *file, int line)
 {
   char x[1024];
@@ -97,7 +111,7 @@ int expmem_users()
   struct user_entry *ue;
   struct igrec *i;
 
-  context;
+  Context;
   tot = 0;
   u = userlist;
   while (u != NULL) {
@@ -249,7 +263,7 @@ void clear_userlist(struct userrec *bu)
   struct userrec *u = bu, *v;
   int i;
 
-  context;
+  Context;
   while (u != NULL) {
     v = u->next;
     freeuser(u);
@@ -280,7 +294,7 @@ void clear_userlist(struct userrec *bu)
     }
   }
   /* remember to set your userlist to NULL after calling this */
-  context;
+  Context;
 }
 
 /* find CLOSEST host match */
@@ -372,11 +386,9 @@ int write_user(struct userrec *u, FILE * f, int idx)
   struct chanuserrec *ch;
   struct chanset_t *cst;
   struct user_entry *ue;
-  struct flag_record fr =
-  {FR_GLOBAL, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL, 0, 0, 0, 0, 0};
 
   fr.global = u->flags;
-
   fr.udef_global = u->flags_udef;
   build_flags(s, &fr, NULL);
   if (fprintf(f, "%-10s - %-24s\n", u->handle, s) == EOF)
@@ -495,7 +507,7 @@ void write_userfile(int idx)
   struct userrec *u;
   int ok;
 
-  context;
+  Context;
   /* also write the channel file at the same time */
   if (userlist == NULL)
     return;			/* no point in saving userfile */
@@ -513,23 +525,23 @@ void write_userfile(int idx)
   tt = now;
   strcpy(s1, ctime(&tt));
   fprintf(f, "#4v: %s -- %s -- written %s", ver, botnetnick, s1);
-  context;
+  Context;
   ok = 1;
   u = userlist;
   while ((u != NULL) && (ok)) {
     ok = write_user(u, f, idx);
     u = u->next;
   }
-  context;
+  Context;
   if (!ok || fflush(f)) {
     putlog(LOG_MISC, "*", "%s (%s)", USERF_ERRWRITE, strerror(ferror(f)));
     fclose(f);
     return;
   }
   fclose(f);
-  context;
+  Context;
   call_hook(HOOK_USERFILE);
-  context;
+  Context;
   unlink(userfile);
   sprintf(s, "%s~new", userfile);
   movefile(s, userfile);
@@ -622,7 +634,7 @@ struct userrec *adduser(struct userrec *bu, char *handle, char *host,
     char x[100];
 
     build_flags(x, &fr, 0);
-    shareout(NULL, "n %s %s %s %s\n", handle, host, pass, x);
+    shareout(NULL, "n %s %s %s %s\n", handle, host ? host : "none", pass, x);
   }
   if (bu == NULL)
     bu = u;
@@ -713,7 +725,7 @@ int delhost_by_handle(char *handle, char *host)
   struct user_entry *e = NULL;
   int i = 0;
 
-  context;
+  Context;
   u = get_user_by_handle(userlist, handle);
   if (!u)
     return 0;
@@ -806,10 +818,10 @@ struct userrec *get_user_by_nick(char *nick)
   struct chanset_t *chan = chanset;
   memberlist *m;
 
-  context;
+  Context;
   while (chan) {
     m = chan->channel.member;
-    while (m->nick[0]) {
+    while (m && m->nick[0]) {
       if (!rfc_casecmp(nick, m->nick)) {
   	char word[512];
 
@@ -823,4 +835,26 @@ struct userrec *get_user_by_nick(char *nick)
   }
   /* sorry, no matches */
   return NULL;
+}
+
+void user_del_chan(char *name)
+{
+  struct chanuserrec *ch, *z;
+  struct userrec *u;
+
+  for (u = userlist; u; u = u->next) {
+    ch = u->chanrec;
+    while (ch)
+      if (!rfc_casecmp(name, ch->channel)) {
+	z = ch;
+	ch = ch->next;
+	if (u->chanrec == z)
+	  u->chanrec = ch;
+	if (z->info != NULL)
+	  nfree(z->info);
+	nfree(z);
+	break;
+      } else
+	ch = ch->next;
+  }
 }

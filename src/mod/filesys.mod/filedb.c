@@ -1,13 +1,30 @@
 /* 
- * filedb.c -- handles: low-level manipulation of the filesystem database
- * files reaction to remote requests for files 
- * dprintf'ized, 25feb1996 english, 5mar1996
+ * filedb.c -- part of filesys.mod
+ *   low-level manipulation of the filesystem database
+ *   files reaction to remote requests for files 
+ * 
+ * dprintf'ized, 25feb1996
+ * english, 5mar1996
+ * 
+ * $Id: filedb.c,v 1.6 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code copyright (c) 1997 Robey
- * Pointer and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called COPYING
- * that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 /* lock the file, using fcntl */
@@ -436,13 +453,12 @@ static void filedb_add(FILE * f, char *filename, char *nick)
   fwrite(&fdb, sizeof(filedb), 1, f);
 }
 
-static void filedb_ls(FILE * f, int idx, char *mask, int showall)
+static void filedb_ls(FILE *f, int idx, char *mask, int showall)
 {
   filedb fdb;
   int ok = 0, cnt = 0, is = 0;
   char s[81], s1[81], *p;
-  struct flag_record user =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record user = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   rewind(f);
   while (!feof(f)) {
@@ -453,8 +469,7 @@ static void filedb_ls(FILE * f, int idx, char *mask, int showall)
 	ok = 0;
       if (fdb.stat & FILE_DIR) {
 	/* check permissions */
-	struct flag_record req =
-	{FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+	struct flag_record req = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
 	break_down_flags(fdb.flags_req, &req, NULL);
 	get_user_flagrec(dcc[idx].user, &user,

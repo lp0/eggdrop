@@ -1,50 +1,87 @@
 /* 
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+ * servmsg.c -- part of server.mod
+ * 
+ * $Id: servmsg.c,v 1.22 1999/12/15 02:33:00 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 static time_t last_ctcp = (time_t) 0L;
 static int count_ctcp = 0;
+static char altnick_char = 0;
 
-/* shrug (guppy:24Feb1999) */
+/* We try to change to a preferred unique nick here. We always first try the
+ * specified alternate nick. If that failes, we repeatedly modify the nick
+ * until it gets accepted.
+ * 
+ * sent nick:
+ *     "<altnick><c>"
+ *                ^--- additional count character: 1-9^-_\\[]`a-z
+ *          ^--------- given, alternate nick
+ * 
+ * The last added character is always saved in altnick_char. At the very first
+ * attempt (were altnick_char is 0), we try the alternate nick without any
+ * additions.
+ * 
+ * fixed by guppy (1999/02/24) and Fabian (1999/11/26)
+ */
 static int gotfake433(char *from)
 {
-  char c, *oknicks = "^-_\\[]`", *p, *alt = get_altbotnick();
+  int l = strlen(botname) - 1;
 
-  context;
-  /* alternate nickname defined? */
-  if ((alt[0]) && (rfc_casecmp(alt, botname)))
-    strcpy(botname, alt);
-  /* if alt nickname failed, drop thru to here */
-  else {
-    int l = strlen(botname) - 1;
-
-    c = botname[l];
-    p = strchr(oknicks, c);
-    if (((c >= '0') && (c <= '9')) || (p != NULL)) {
-      if (p == NULL) {
-	if (c == '9')
-	  botname[l] = oknicks[0];
-	else
-	  botname[l] = c + 1;
+  Context;
+  /* First run? */
+  if (altnick_char == 0) {
+    char *alt = get_altbotnick();
+   
+    if (alt[0] && (rfc_casecmp(alt, botname)))
+      /* Alternate nickname defined. Let's try that first. */
+      strcpy(botname, alt);
+    else {
+      /* Fall back to appending count char. */
+      altnick_char = '0';
+      if (l + 1 == NICKMAX) {
+	botname[l] = altnick_char;
       } else {
-	p++;
-	if (!*p)
-	  botname[l] = 'a' + random() % 26;
-	else
-	  botname[l] = (*p);
-      }
-    } else {
-      if (l + 1 == NICKLEN)
-	botname[l] = '0';
-      else {
-	botname[++l] = '0';
-	botname[++l] = 0;
+	botname[++l]   = altnick_char;
+	botname[l + 1] = 0;
       }
     }
+  /* No, we already tried the default stuff. Now we'll go through variations
+   * of the original alternate nick. */
+  } else {
+    char *oknicks = "^-_\\[]`";
+    char *p = strchr(oknicks, altnick_char);
+    
+    if (p == NULL) {
+      if (altnick_char == '9')
+        altnick_char = oknicks[0];
+      else
+	altnick_char = altnick_char + 1;
+    } else {
+      p++;
+      if (!*p)
+	altnick_char = 'a' + random() % 26;
+      else
+	altnick_char = (*p);
+    }
+    botname[l] = altnick_char;
   }
   putlog(LOG_MISC, "*", IRC_BOTNICKINUSE, botname);
   dprintf(DP_MODE, "NICK %s\n", botname);
@@ -56,21 +93,20 @@ static int gotfake433(char *from)
 static int check_tcl_msg(char *cmd, char *nick, char *uhost,
 			 struct userrec *u, char *args)
 {
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
   char *hand = u ? u->handle : "*";
   int x;
 
-  context;
+  Context;
   get_user_flagrec(u, &fr, NULL);
   Tcl_SetVar(interp, "_msg1", nick, 0);
   Tcl_SetVar(interp, "_msg2", uhost, 0);
   Tcl_SetVar(interp, "_msg3", hand, 0);
   Tcl_SetVar(interp, "_msg4", args, 0);
-  context;
+  Context;
   x = check_tcl_bind(H_msg, cmd, &fr, " $_msg1 $_msg2 $_msg3 $_msg4",
 		     MATCH_PARTIAL | BIND_HAS_BUILTINS | BIND_USE_ATTR);
-  context;
+  Context;
   if (x == BIND_EXEC_LOG)
     putlog(LOG_CMDS, "*", "(%s!%s) !%s! %s %s", nick, uhost, hand,
 	   cmd, args);
@@ -82,16 +118,16 @@ static void check_tcl_notc(char *nick, char *uhost, struct userrec *u, char *arg
   struct flag_record fr =
   {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
 
-  context;
+  Context;
   get_user_flagrec(u, &fr, NULL);
   Tcl_SetVar(interp, "_notc1", nick, 0);
   Tcl_SetVar(interp, "_notc2", uhost, 0);
   Tcl_SetVar(interp, "_notc3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_notc4", arg, 0);
-  context;
+  Context;
   check_tcl_bind(H_notc, arg, &fr, " $_notc1 $_notc2 $_notc3 $_notc4",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-  context;
+  Context;
 }
 
 static void check_tcl_msgm(char *cmd, char *nick, char *uhost,
@@ -101,7 +137,7 @@ static void check_tcl_msgm(char *cmd, char *nick, char *uhost,
   {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
   char args[1024];
 
-  context;
+  Context;
   if (arg[0])
     simple_sprintf(args, "%s %s", cmd, arg);
   else
@@ -111,10 +147,10 @@ static void check_tcl_msgm(char *cmd, char *nick, char *uhost,
   Tcl_SetVar(interp, "_msgm2", uhost, 0);
   Tcl_SetVar(interp, "_msgm3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_msgm4", args, 0);
-  context;
+  Context;
   check_tcl_bind(H_msgm, args, &fr, " $_msgm1 $_msgm2 $_msgm3 $_msgm4",
 		 MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE);
-  context;
+  Context;
 }
 
 /* return 1 if processed */
@@ -122,14 +158,14 @@ static int check_tcl_raw(char *from, char *code, char *msg)
 {
   int x;
 
-  context;
+  Context;
   Tcl_SetVar(interp, "_raw1", from, 0);
   Tcl_SetVar(interp, "_raw2", code, 0);
   Tcl_SetVar(interp, "_raw3", msg, 0);
-  context;
+  Context;
   x = check_tcl_bind(H_raw, code, 0, " $_raw1 $_raw2 $_raw3",
 		     MATCH_EXACT | BIND_STACKABLE | BIND_WANTRET);
-  context;
+  Context;
   return (x == BIND_EXEC_LOG);
 }
 
@@ -141,7 +177,7 @@ static int check_tcl_ctcpr(char *nick, char *uhost, struct userrec *u,
   {FR_GLOBAL | FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
   int x;
 
-  context;
+  Context;
   get_user_flagrec(u, &fr, NULL);
   Tcl_SetVar(interp, "_ctcpr1", nick, 0);
   Tcl_SetVar(interp, "_ctcpr2", uhost, 0);
@@ -154,7 +190,7 @@ static int check_tcl_ctcpr(char *nick, char *uhost, struct userrec *u,
 		     (lowercase_ctcp ? MATCH_EXACT : MATCH_CASE)
 		     | BIND_USE_ATTR | BIND_STACKABLE |
 		     ((table == H_ctcp) ? BIND_WANTRET : 0));
-  context;
+  Context;
   return (x == BIND_EXEC_LOG) || (table == H_ctcr);
 }
 
@@ -162,12 +198,12 @@ static int check_tcl_wall(char *from, char *msg)
 {
   int x;
 
-  context;
+  Context;
   Tcl_SetVar(interp, "_wall1", from, 0);
   Tcl_SetVar(interp, "_wall2", msg, 0);
-  context;
+  Context;
   x = check_tcl_bind(H_wall, msg, 0, " $_wall1 $_wall2", MATCH_MASK | BIND_STACKABLE);
-  context;
+  Context;
   if (x == BIND_EXEC_LOG) {
     putlog(LOG_WALL, "*", "!%s! %s", from, msg);
     return 1;
@@ -181,17 +217,17 @@ static int check_tcl_flud(char *nick, char *uhost, struct userrec *u,
 {
   int x;
 
-  context;
+  Context;
   Tcl_SetVar(interp, "_flud1", nick, 0);
   Tcl_SetVar(interp, "_flud2", uhost, 0);
   Tcl_SetVar(interp, "_flud3", u ? u->handle : "*", 0);
   Tcl_SetVar(interp, "_flud4", ftype, 0);
   Tcl_SetVar(interp, "_flud5", chname, 0);
-  context;
+  Context;
   x = check_tcl_bind(H_flud, ftype, 0,
 		     " $_flud1 $_flud2 $_flud3 $_flud4 $_flud5",
 		     MATCH_MASK | BIND_STACKABLE | BIND_WANTRET);
-  context;
+  Context;
   return (x == BIND_EXEC_LOG);
 }
 
@@ -214,6 +250,7 @@ static int got001(char *from, char *msg)
   fixcolon(msg);
   strncpy(botname, msg, NICKMAX);
   botname[NICKMAX] = 0;
+  altnick_char = 0;
   /* init-server */
   if (initserver[0])
     do_tcl("init-server", initserver);
@@ -283,7 +320,7 @@ static int detect_flood(char *floodnick, char *floodhost,
   int thr = 0, lapse = 0;
   int atr;
 
-  context;
+  Context;
   u = get_user_by_host(from);
   atr = u ? u->flags : 0;
   if (atr & (USER_BOT | USER_FRIEND))
@@ -615,7 +652,7 @@ static int gotwall(char *from, char *msg)
   char *p;
   int r;
 
-  context;
+  Context;
 
   fixcolon(msg);
   p = strchr(from, '!');
@@ -641,6 +678,9 @@ static void minutely_checks()
   int ok = 0;
   struct chanset_t *chan;
 
+  /* Only check if we have already successfully logged in */
+  if (!server_online)
+    return;
   if (keepnick) {
     /* NOTE: now that botname can but upto NICKLEN bytes long,
      * check that it's not just a truncation of the full nick */
@@ -760,7 +800,7 @@ static int got432(char *from, char *msg)
 static int got433(char *from, char *msg)
 {
   char *tmp;
-  context;
+  Context;
   if (server_online) {
     /* we are online and have a nickname, we'll keep it */
 	newsplit(&msg);
@@ -768,7 +808,7 @@ static int got433(char *from, char *msg)
     putlog(LOG_MISC, "*", "NICK IN USE: %s (keeping '%s').", tmp, botname);
     return 0;
   }
-  context;
+  Context;
   gotfake433(from);
   return 0;
 }
@@ -802,7 +842,7 @@ static int got437(char *from, char *msg)
 /* 438 : nick change too fast */
 static int got438(char *from, char *msg)
 {
-  context;
+  Context;
   newsplit(&msg);
   newsplit(&msg);
   fixcolon(msg);
@@ -871,6 +911,7 @@ static int gotnick(char *from, char *msg)
     /* regained nick! */
     strncpy(botname, msg, NICKMAX);
     botname[NICKMAX] = 0;
+    altnick_char = 0;
     waiting_for_awake = 0;
     if (!strcmp(msg, origbotname))
       putlog(LOG_SERV | LOG_MISC, "*", "Regained nickname '%s'.", msg);
@@ -942,7 +983,8 @@ static void kill_server(int idx, void *x)
   module_entry *me;
 
   server_online = 0;
-  killsock(dcc[idx].sock);
+  if (dcc[idx].sock >= 0)
+    killsock(dcc[idx].sock);
   serv = -1;
   if ((me = module_find("channels", 0, 0)) && me->funcs) {
     struct chanset_t *chan;
@@ -1002,7 +1044,7 @@ static void server_activity(int idx, char *msg, int len)
   }
   if (from[0])
     fixfrom(from);
-  context;
+  Context;
   /* this has GOT to go into the raw binding table, * merely because this
    * is less effecient */
   check_tcl_raw(from, code, msg);
@@ -1088,8 +1130,10 @@ static void connect_server(void)
       dcc[servidx].host[UHOSTMAX] = 0;
       dcc[servidx].timeval = now;
       SERVER_SOCKET.timeout_val = &server_timeout;
+      /* Another server may have truncated it, so use the original */
       strcpy(botname, origbotname);
-      /* another server may have truncated it :/ */
+      /* Start alternate nicks from the beginning */
+      altnick_char = 0;
       dprintf(DP_MODE, "NICK %s\n", botname);
       if (pass[0])
 	dprintf(DP_MODE, "PASS %s\n", pass);

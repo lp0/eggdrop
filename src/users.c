@@ -1,21 +1,34 @@
 /* 
  * users.c -- handles:
- * testing and enforcing ignores
- * adding and removing ignores
- * listing ignores
- * auto-linking bots
- * sending and receiving a userfile from a bot
- * listing users ('.whois' and '.match')
- * reading the user file
+ *   testing and enforcing ignores
+ *   adding and removing ignores
+ *   listing ignores
+ *   auto-linking bots
+ *   sending and receiving a userfile from a bot
+ *   listing users ('.whois' and '.match')
+ *   reading the user file
  * 
  * dprintf'ized, 9nov1995
+ * 
+ * $Id: users.c,v 1.14 1999/12/16 04:03:46 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "main.h"
@@ -77,7 +90,7 @@ int delignore(char *ign)
   struct igrec **u;
   struct igrec *t;
 
-  context;
+  Context;
 
   i = 0;
   if (!strchr(ign, '!') && (j = atoi(ign))) {
@@ -475,7 +488,7 @@ void tell_user(int idx, struct userrec *u, int master)
   struct flag_record fr =
   {FR_GLOBAL, 0, 0, 0, 0, 0};
 
-  context;
+  Context;
   fr.global = u->flags;
 
   fr.udef_global = u->flags_udef;
@@ -499,14 +512,14 @@ void tell_user(int idx, struct userrec *u, int master)
       strcpy(s1, &s1[11]);
     }
   }
-  context;
+  Context;
   spaces[l] = 0;
   dprintf(idx, "%s%s %-5s%5d %-15s %s (%-10.10s)\n", u->handle, spaces,
 	  get_user(&USERENTRY_PASS, u) ? "yes" : "no", n, s, s1,
 	  (li && li->lastonplace) ? li->lastonplace : "nowhere");
   spaces[l] = ' ';
   /* channel flags? */
-  context;
+  Context;
   ch = u->chanrec;
   while (ch != NULL) {
     fr.match = FR_CHAN | FR_GLOBAL;
@@ -539,7 +552,7 @@ void tell_user(int idx, struct userrec *u, int master)
     ch = ch->next;
   }
   /* user-defined extra fields */
-  context;
+  Context;
   for (ue = u->entries; ue; ue = ue->next)
     if (!ue->name && ue->type->display)
       ue->type->display(idx, ue);
@@ -574,7 +587,7 @@ void tell_users_match(int idx, char *mtch, int start, int limit,
   struct list_type *q;
   struct flag_record user, pls, mns;
 
-  context;
+  Context;
   dprintf(idx, "*** %s '%s':\n", MISC_MATCHING, mtch);
   cnt = 0;
   spaces[HANDLEN - 6] = 0;
@@ -681,7 +694,7 @@ int readuserfile(char *file, struct userrec **ret)
   struct flag_record fr;
   struct chanuserrec *cr;
 
-  context;
+  Context;
   bu = (*ret);
   ignored[0] = 0;
   if (bu == userlist) {
@@ -697,7 +710,7 @@ int readuserfile(char *file, struct userrec **ret)
   if (f == NULL)
     return 0;
   noshare = noxtra = 1;
-  context;
+  Context;
   /* read opening comment */
   s = buf;
   fgets(s, 180, f);
@@ -889,7 +902,7 @@ int readuserfile(char *file, struct userrec **ret)
 	  struct user_entry *ue;
 	  int ok = 0;
 
-	  context;
+	  Context;
 	  if (u) {
 	    ue = u->entries;
 	    for (; ue && !ok; ue = ue->next)
@@ -975,14 +988,14 @@ int readuserfile(char *file, struct userrec **ret)
       }
     }
   }
-  context;
+  Context;
   fclose(f);
   (*ret) = bu;
   if (ignored[0]) {
     putlog(LOG_MISC, "*", "%s %s", USERF_IGNBANS, ignored);
   }
   putlog(LOG_MISC, "*", "Userfile loaded, unpacking...");
-  context;
+  Context;
   for (u = bu; u; u = u->next) {
     struct user_entry *e;
 
@@ -1004,7 +1017,7 @@ int readuserfile(char *file, struct userrec **ret)
       }
   }
   noshare = noxtra = 0;
-  context;
+  Context;
   /* process the user data *now* */
   return 1;
 }
@@ -1020,7 +1033,7 @@ void autolink_cycle(char *start)
   int got_hub = 0, got_alt = 0, got_shared = 0, linked, ready = 0, i,
    bfl;
 
-  context;
+  Context;
   /* don't start a new cycle if some links are still pending */
   if (!start) {
     for (i = 0; i < dcc_total; i++) {
@@ -1096,8 +1109,11 @@ void autolink_cycle(char *start)
 	    dprintf(i, "bye\n");
 	    killsock(dcc[i].sock);
 	    lostdcc(i);
-	  } else {
-	    botnet_send_reject(i, botnetnick, NULL, u->handle, NULL, NULL);
+	  } else if (i < 0) {
+	    /* The bot is not connected, but listed in our tandem list! */
+	    putlog(LOG_BOTS, "*", "(!) BUG: rejecting not connected bot %s!",
+		   u->handle);
+	    rembot(u->handle);
 	  }
 	}
       }

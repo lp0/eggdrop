@@ -1,28 +1,43 @@
-/*
- * wire.c   - An encrypted partyline communication.
- *            Compatible with wire.tcl.
- *
- *            by ButchBub - Scott G. Taylor (staylor@mrynet.com)
- *
- *      REQUIRED: Eggdrop Modules (see dependancies below).
- *                Wire will only compile and work on the latest Required
- *                Eggdrop version listed below.
- *
- *    Version   Date            Req'd Eggver    Notes                    Who
- *    .......   ..........      ............    ....................     ......
- *      1.0     1997-07-17      1.2.0           Initial.                 BB
- *      1.1     1997-07-28      1.2.0           Release version.         BB
- *      1.2     1997-08-19      1.2.1           Update and bugfixes.     BB
- *      1.3     1997-09-24      1.2.2.0         Reprogrammed for 1.2.2   BB
- *      1.4     1997-11-25      1.2.2.0         Added language addition  Kirk
- *      1.5     1998-07-12      1.3.0.0         Fixed ;me and updated    BB
- *
+/* 
+ * wire.c -- part of wire.mod
+ *   An encrypted partyline communication.
+ *   Compatible with wire.tcl.
  *   This module does not support wire usage in the files area.
- *
+ * 
+ * by ButchBub - Scott G. Taylor (staylor@mrynet.com)
+ * 
+ * Version   Date            Req'd Eggver    Notes                    Who
+ * .......   ..........      ............    ....................     ......
+ * 1.0       1997-07-17      1.2.0           Initial.                 BB
+ * 1.1       1997-07-28      1.2.0           Release version.         BB
+ * 1.2       1997-08-19      1.2.1           Update and bugfixes.     BB
+ * 1.3       1997-09-24      1.2.2.0         Reprogrammed for 1.2.2   BB
+ * 1.4       1997-11-25      1.2.2.0         Added language addition  Kirk
+ * 1.5       1998-07-12      1.3.0.0         Fixed ;me and updated    BB
+ * 
+ * $Id: wire.c,v 1.8 1999/12/15 02:33:00 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-#define MAKING_WIRE
 #define MODULE_NAME "wire"
+#define MAKING_WIRE
 #include "../module.h"
 #include "../../users.h"
 #include "../../chan.h"
@@ -55,7 +70,7 @@ static int wire_expmem()
   wire_list *w = wirelist;
   int size = 0;
 
-  context;
+  Context;
   while (w) {
     size += sizeof(wirelist);
     size += strlen(w->crypt);
@@ -87,7 +102,7 @@ static void wire_filter(char *from, char *cmd, char *param)
   char idle[20];
   char *enctmp;
 
-  context;
+  Context;
   strcpy(wirecrypt, &cmd[5]);
   strcpy(wiretmp, param);
   nsplit(wirereq, param);
@@ -98,7 +113,7 @@ static void wire_filter(char *from, char *cmd, char *param)
  */
 
   if (!strcmp(wirereq, "!wirereq")) {
-    context;
+    Context;
     nsplit(wirewho, param);
     while (w) {
       if (!strcmp(w->crypt, wirecrypt)) {
@@ -146,7 +161,7 @@ static void wire_filter(char *from, char *cmd, char *param)
     return;
   }
   if (!strcmp(wirereq, "!wireresp")) {
-    context;
+    Context;
     nsplit(wirewho, param);
     reqsock = atoi(wirewho);
     w = wirelist;
@@ -167,7 +182,7 @@ static void wire_filter(char *from, char *cmd, char *param)
     }
     return;
   }
-  context;
+  Context;
   while (w) {
     if (!strcmp(wirecrypt, w->crypt))
       wire_display(findanyidx(w->sock), w->key, wirereq, param);
@@ -179,7 +194,7 @@ static void wire_display(int idx, char *key, char *from, char *message)
 {
   char *enctmp;
 
-  context;
+  Context;
   enctmp = decrypt_string(key, message);
   if (from[0] == '!')
     dprintf(idx, "----- > %s %s\n", &from[1], enctmp + 1);
@@ -193,7 +208,7 @@ static int cmd_wirelist(struct userrec *u, int idx, char *par)
   wire_list *w = wirelist;
   int entry = 0;
 
-  context;
+  Context;
   dprintf(idx, "Current Wire table:  (Base table address = %U)\n", w);
   while (w) {
     dprintf(idx, "entry %d: w=%U  idx=%d  sock=%d  next=%U\n",
@@ -210,7 +225,7 @@ static int cmd_onwire(struct userrec *u, int idx, char *par)
   char idle[20], *enctmp;
   time_t now2 = now;
 
-  context;
+  Context;
   w = wirelist;
   while (w) {
     if (w->sock == dcc[idx].sock)
@@ -266,7 +281,7 @@ static int cmd_wire(struct userrec *u, int idx, char *par)
 {
   wire_list *w = wirelist;
 
-  context;
+  Context;
   if (!par[0]) {
     dprintf(idx, "%s: .wire [<encrypt-key>|OFF|info]\n", USAGE);
     return 0;
@@ -319,7 +334,7 @@ static void wire_join(int idx, char *key)
   char *enctmp;
   wire_list *w = wirelist, *w2;
 
-  context;
+  Context;
   while (w) {
     if (w->next == 0)
       break;
@@ -336,7 +351,7 @@ static void wire_join(int idx, char *key)
   w->key = (char *) nmalloc(strlen(key) + 1);
   strcpy(w->key, key);
   w->next = 0;
-  context;
+  Context;
   enctmp = encrypt_string(w->key, "wire");
   strcpy(wiretmp, enctmp);
   nfree(enctmp);
@@ -386,7 +401,7 @@ static void wire_leave(int sock)
   wire_list *w2 = wirelist;
   wire_list *wlast = wirelist;
 
-  context;
+  Context;
   while (w) {
     if (w->sock == sock)
       break;
@@ -462,7 +477,7 @@ static char *cmd_putwire(int idx, char *message)
   char wiretmp2[512];
   char *enctmp;
 
-  context;
+  Context;
   while (w) {
     if (w->sock == dcc[idx].sock)
       break;
@@ -505,7 +520,7 @@ static void wire_report(int idx, int details)
   int wiretot = 0;
   wire_list *w = wirelist;
 
-  context;
+  Context;
   while (w) {
     wiretot++;
     w = w->next;
@@ -544,7 +559,7 @@ static char *wire_close()
 
   /* Remove any current wire encrypt bindings
    * for now, don't worry about duplicate unbinds */
-  context;
+  Context;
   while (w) {
     enctmp = encrypt_string(w->key, "wire");
     sprintf(wiretmp, "!wire%s", enctmp);
@@ -567,6 +582,7 @@ static char *wire_close()
   rem_builtins(H_temp, wire_filt);
   H_temp = find_bind_table("chof");
   rem_builtins(H_temp, wire_chof);
+  del_lang_section("wire");
   module_undepend(MODULE_NAME);
   return NULL;
 }
@@ -588,7 +604,7 @@ char *wire_start(Function * global_funcs)
 
   global = global_funcs;
 
-  context;
+  Context;
   module_register(MODULE_NAME, wire_table, 2, 0);
   if (!module_depend(MODULE_NAME, "eggdrop", 104, 0)) {
     module_undepend(MODULE_NAME);

@@ -1,3 +1,28 @@
+/* 
+ * transfer.h -- part of transfer.mod
+ * 
+ * $Id: transfer.h,v 1.4 1999/12/16 04:03:46 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+#ifndef _EGG_MOD_TRANSFER_TRANSFER_H
+#define _EGG_MOD_TRANSFER_TRANSFER_H
 
 #define DCCSEND_OK     0
 #define DCCSEND_FULL   1	/* dcc table is full */
@@ -15,7 +40,7 @@
 #define queue_file(a,b,c,d) (((void (*)(char *,char *,char *,char *))transfer_funcs[8])(a,b,c,d))
 #define raw_dcc_send(a,b,c,d) (((int (*) (char *,char *,char *,char *))transfer_funcs[9])(a,b,c,d))
 #define show_queued_files(a) (((void (*) (int))transfer_funcs[10])(a))
-#define wild_match_file(a,b) (((int (*)(register unsigned char * m, register unsigned char * n))transfer_funcs[11])(a,b))
+#define wild_match_file(a,b) (((int (*)(register char * m, register char * n))transfer_funcs[11])(a,b))
 /* 12 - 15 */
 #define wipe_tmp_filename(a,b) (((void (*) (char *,int))transfer_funcs[12])(a,b))
 #define DCC_GET (*(struct dcc_table *)(transfer_funcs[13]))
@@ -27,4 +52,7 @@
 
 #else
 static int raw_dcc_send(char *, char *, char *, char *);
-#endif
+
+#endif				/* MAKING_TRANSFER */
+
+#endif				/* _EGG_MOD_TRANSFER_TRANSFER_H */

@@ -1,4 +1,5 @@
 # Makefile for src/mod/server.mod/
+# $Id: Makefile,v 1.11 1999/12/15 02:33:00 guppy Exp $
 
 doofus:
 	@echo ""
@@ -30,4 +31,4 @@ clean:
  ../../lang.h ../../eggdrop.h ../../flags.h ../../proto.h \
  ../../../lush.h ../../cmdt.h ../../tclegg.h ../../tclhash.h \
  ../../chan.h ../../users.h ../modvals.h ../../tandem.h server.h \
- servmsg.c cmdsserv.c
+ servmsg.c cmdsserv.c tclserv.c

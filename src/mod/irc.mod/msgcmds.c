@@ -1,15 +1,28 @@
 /* 
- * msgcmds.c -- handles:
- * all commands entered via /MSG
+ * msgcmds.c -- part of irc.mod
+ *   all commands entered via /MSG
  * 
  * dprintf'ized, 4feb1996
+ * 
+ * $Id: msgcmds.c,v 1.17 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 static int msg_hello(char *nick, char *h, struct userrec *u, char *p)
@@ -395,12 +408,12 @@ static int msg_who(char *nick, char *host, struct userrec *u, char *par)
     dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_CHANHIDDEN);
     return 1;
   }
-  context;
+  Context;
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! WHO", nick, host, u->handle);
   also[0] = 0;
   i = 0;
   m = chan->channel.member;
-  while (m->nick[0]) {
+  while (m && m->nick[0]) {
     struct userrec *u;
 
     simple_sprintf(s, "%s!%s", m->nick, m->userhost);
@@ -449,7 +462,7 @@ static int msg_who(char *nick, char *host, struct userrec *u, char *par)
   if (i) {
     dprintf(DP_HELP, "NOTICE %s :No info: %s\n", nick, also);
   }
-  context;
+  Context;
   return 1;
 }
 
@@ -790,7 +803,7 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
     dprintf(DP_HELP, "NOTICE %s :Admin: %s\n", nick, admin);
   /* Fixed previous lame code. Well it's still lame, will overflow the
    * buffer with a long channel-name. <cybah> */
-  context;
+  Context;
   strcpy(s, "Channels: ");
   l = 10;
   for (chan = chanset; chan; chan = chan->next) {
@@ -814,7 +827,7 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
     s[l] = 0;
     dprintf(DP_HELP, "NOTICE %s :%s\n", nick, s);
   }
-  context;
+  Context;
   i = count_users(userlist);
   dprintf(DP_HELP, "NOTICE %s :%d user%s  (mem: %uk)\n", nick, i, i == 1 ? "" : "s",
 	  (int) (expected_memory() / 1024));

@@ -2,6 +2,7 @@
 #  This is the Makefile for EGGDROP (the irc bot)
 #  You should never need to edit this.
 #
+# $Id: Makefile.in,v 1.31 1999/12/15 02:32:56 guppy Exp $
 
 SHELL = /bin/sh
 top_srcdir = @top_srcdir@
@@ -15,8 +16,11 @@ EGGVERSION = @EGGVERSION@
 # things you can put here:
 #   -Wall            if you're using gcc and it supports it
 #                    (configure usually detects this anyway now)
-#   -DEBUG_MEM       to be able to debug memory allocation (.debug)
-#                    this can now be set by using 'make debug' or 'make sdebug'
+#
+#   -DDEBUG_ASSERT   to enable assert debugging
+#   -DDEBUG_MEM      to be able to debug memory allocation (.debug)
+#                    These can both be set by using 'make debug'
+#                    or 'make sdebug'
 CFLGS =
 
 # configure SHOULD set these...you may need to tweak them to get modules
@@ -58,7 +62,7 @@ TCLLIB = @TCLLIB@
 TCLLIBFN = @TCLLIBFN@
 
 CFLAGS = @CFLAGS@ -I.. @DEFS@ $(CFLGS)
-DEBCFLAGS = @CFLAGS@ -I.. @DEFS@ $(CFLGS)
+DEBCFLAGS = @CFLAGS@ -I.. @DEFS@ -DDEBUG_ASSERT -DDEBUG_MEM $(CFLGS)
 
 MAKE_MODEGG = $(MAKE) 'MAKE=$(MAKE)' 'CC=$(MOD_CC)' 'LD=$(MOD_LD)' \
 'STRIP=$(MOD_STRIP)' 'RANLIB=$(RANLIB)' 'CFLAGS=$(CFLAGS)' \

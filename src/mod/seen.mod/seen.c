@@ -1,44 +1,62 @@
-/*
- * seen.c   - Implement the seen.tcl script functionality via module.
- *
- *            by ButchBub - Scott G. Taylor (staylor@mrynet.com)
- *
- *      REQUIRED: Eggdrop Module version 1.2.0
- *
- *      0.1     1997-07-29      Initial. [BB]
- *      1.0     1997-07-31      Release. [BB]
- *      1.1     1997-08-05      Add nick->handle lookup for NICK's. [BB]
- *      1.2     1997-08-20      Minor fixes. [BB]
- *      1.2a    1997-08-24      Minor fixes. [BB]
- *
+/* 
+ * seen.c
+ *  Implement the seen.tcl script functionality via module
+ * 
+ * by ButchBub - Scott G. Taylor (staylor@mrynet.com)
+ * 
+ * 0.1     1997-07-29      Initial. [BB]
+ * 1.0     1997-07-31      Release. [BB]
+ * 1.1     1997-08-05      Add nick->handle lookup for NICK's. [BB]
+ * 1.2     1997-08-20      Minor fixes. [BB]
+ * 1.2a    1997-08-24      Minor fixes. [BB]
+ * 
+ * $Id: seen.c,v 1.11 1999/12/15 02:33:00 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
-/*
+/* 
  *  Currently, PUB, DCC and MSG commands are supported.  No party-line
  *      filtering is performed.
- *
+ * 
  *  For boyfriend/girlfriend support, this module relies on the XTRA
  *      fields in the userfile to use BF and GF, respectively, for
  *      these fields.
- *
+ * 
  *  userinfo1.0.tcl nicely compliments this script by providing
  *      the necessary commands to facilitate modification of these
  *      fields via DCC and IRC MSG commands.
- *
+ * 
  *  A basic definition of the parsing syntax follows:
- *
+ * 
  *      trigger :: seen [ <key> [ [ and | or ] <key> [...]]]
- *
+ * 
  *        <key> :: <keyword> [ <keyarg> ]
- *
+ * 
  *    <keyword> :: god | jesus | shit | me | yourself | my | <nick>'s |
  *                 your
  *       <nick> :: (any current on-channel IRC nick or userlist nick or handle)
- *
+ * 
  *     <keyarg> :: (see below)
- *
+ * 
  *              KEYWORD KEYARG
- *
+ * 
  *              my      boyfriend
  *                      bf
  *                      girlfriend
@@ -50,11 +68,11 @@
  *                      bf
  *                      girlfriend
  *                      gf
- *
+ * 
  */
 
-#define MAKING_SEEN
 #define MODULE_NAME "seen"
+#define MAKING_SEEN
 
 #include <time.h>
 
@@ -100,7 +118,7 @@ static int pub_seen(char *nick, char *host, char *hand,
   char prefix[50];
   struct chanset_t *chan = findchan(channel);
 
-  context;
+  Context;
   if ((chan != NULL) && channel_seen(chan)) {
     sprintf(prefix, "PRIVMSG %s :", channel);
     do_seen(DP_HELP, prefix, nick, hand, channel, text);
@@ -112,7 +130,7 @@ static int msg_seen(char *nick, char *host, struct userrec *u, char *text)
 {
   char prefix[50];
 
-  context;
+  Context;
   if (!u) {
     putlog(LOG_CMDS, "*", "[%s!%s] seen %s", nick, host, text);
     return 0;
@@ -125,7 +143,7 @@ static int msg_seen(char *nick, char *host, struct userrec *u, char *text)
 
 static int dcc_seen(struct userrec *u, int idx, char *par)
 {
-  context;
+  Context;
   putlog(LOG_CMDS, "*", "#%s# seen %s", dcc[idx].nick, par);
   do_seen(idx, "", dcc[idx].nick, dcc[idx].nick, "", par);
   return 0;
@@ -167,7 +185,7 @@ static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel
   /* Have we got a NICK's target? */
   if (oix == word1)
     return;			/* Skip anything starting with ' */
-  context;
+  Context;
   if (oix && *oix &&
       ((oix[1] && (oix[1] == 's' || oix[1] == 'S') && !oix[2]) ||
        (!oix[1] &&
@@ -328,7 +346,7 @@ static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel
     strcpy(whotarget, word1);
   }
   TARGETCONT:
-  context;
+  Context;
   /* Looking for ones own nick? */
   if (!rfc_casecmp(nick, whotarget)) {
     dprintf(idx, "%s%sLooking for yourself, eh %s?\n",
@@ -358,7 +376,7 @@ static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel
     chan = chanset;
     while (chan) {
       m = chan->channel.member;
-      while (m->nick[0]) {
+      while (m && m->nick[0]) {
 	sprintf(word2, "%s!%s", m->nick, m->userhost);
 	urec = get_user_by_host(word2);
 	if (urec && !strcasecmp(urec->handle, whotarget)) {
@@ -376,7 +394,7 @@ static void do_seen(int idx, char *prefix, char *nick, char *hand, char *channel
     }
   }
   /* Check if the target was on the channel, but is netsplit */
-  context;
+  Context;
   chan = findchan(channel);
   if (chan) {
     m = ismember(chan, whotarget);
@@ -647,7 +665,7 @@ char *seen_start(Function * egg_func_table)
 {
   global = egg_func_table;
 
-  context;
+  Context;
   module_register(MODULE_NAME, seen_table, 2, 0);
   if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
     return "This module needs eggdrop1.4.0 or later";

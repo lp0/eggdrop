@@ -1,15 +1,29 @@
-/*
- * botmsg.c - formatting of messages to be sent on the botnet ...
- * by beldin<beldin@light.iinet.net.au>
+/* 
+ * botmsg.c -- handles:
+ *   formatting of messages to be sent on the botnet
+ *   sending differnet messages to different versioned bots
  * 
- * it allows us to send different messages to different versioned bots
+ * by Darrin Smith (beldin@light.iinet.net.au)
+ * 
+ * $Id: botmsg.c,v 1.12 1999/12/15 02:32:57 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "main.h"
@@ -369,7 +383,7 @@ void botnet_send_unlinked(int idx, char *bot, char *args)
 {
   int l;
 
-  context;
+  Context;
 
   if (tands > 0) {
     l = simple_sprintf(OBUF, "un %s %s\n", bot, args ? args : "");
@@ -548,7 +562,7 @@ void botnet_send_idle(int idx, char *bot, int sock, int idle, char *away)
 {
   int l;
 
-  context;
+  Context;
   if (tands > 0) {
     l = simple_sprintf(OBUF, "i %s %D %D %s\n", bot, sock, idle,
 		       away ? away : "");
@@ -637,7 +651,7 @@ void botnet_send_join_party(int idx, int linking, int useridx, int oldchan)
 {
   int l;
 
-  context;
+  Context;
   if (tands > 0) {
     l = simple_sprintf(OBUF, "j %s%s %s %D %c%D %s\n", linking ? "!" : "",
 		       party[useridx].bot, party[useridx].nick,
@@ -883,7 +897,7 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
   Tcl_SetVar(interp, "_from", from, 0);
   Tcl_SetVar(interp, "_to", to, 0);
   Tcl_SetVar(interp, "_data", msg, 0);
-  simple_sprintf(ss, "%d", idx);
+  simple_sprintf(ss, "%d", dcc[idx].sock);
   Tcl_SetVar(interp, "_idx", ss, 0);
   if (Tcl_VarEval(interp, "storenote", " $_from $_to $_data $_idx", NULL) == TCL_OK) {
     if (interp->result && interp->result[0]) {

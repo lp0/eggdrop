@@ -1,9 +1,33 @@
+/* 
+ * module.h
+ * 
+ * $Id: module.h,v 1.19 1999/12/15 02:32:58 guppy Exp $
+ */
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ */
+#ifndef _EGG_MOD_MODULE_H
+#define _EGG_MOD_MODULE_H
+
 /* just include *all* the include files...it's slower but EASIER */
-
 #ifdef HAVE_CONFIG_H
-#include "../../config.h"
+#  include "../../config.h"
 #endif
-
 #include "../main.h"
 #include "modvals.h"
 #include "../tandem.h"
@@ -21,21 +45,25 @@
 #undef nmalloc
 #undef nfree
 #undef nrealloc
-#undef context
-#undef contextnote
 #undef feof
 #undef user_malloc
 #undef dprintf
 #undef get_data_ptr
 #undef wild_match
 #undef user_realloc
-#undef ASSERT
+#undef Context
+#undef ContextNote
+#undef Assert
 
 /* redefine for module-relevance */
 /* 0 - 3 */
 #define nmalloc(x) ((void *)(global[0]((x),MODULE_NAME,__FILE__,__LINE__)))
 #define nfree(x) (global[1]((x),MODULE_NAME,__FILE__,__LINE__))
-#define context (global[2](MODULE_NAME,__FILE__,__LINE__))
+#ifdef DEBUG_CONTEXT
+#  define Context (global[2](__FILE__, __LINE__, MODULE_NAME))
+#else
+#  define Context {}
+#endif
 #define module_rename ((int (*)(char *, char *))global[3])
 /* 4 - 7 */
 #define module_register ((int (*)(char *, Function *, int, int))global[4])
@@ -276,7 +304,7 @@
 #define USERENTRY_PASS (*(struct user_entry_type *)(global[191]))
 /* 192 - 195 */
 #define USERENTRY_XTRA (*(struct user_entry_type *)(global[192]))
-
+#define user_del_chan ((void(*)(char *))(global[193]))
 #define USERENTRY_INFO (*(struct user_entry_type *)(global[194]))
 #define USERENTRY_COMMENT (*(struct user_entry_type *)(global[195]))
 /* 196 - 199 */
@@ -325,11 +353,18 @@
 #define nrealloc(x,y) ((void *)(global[230]((x),(y),MODULE_NAME,__FILE__,__LINE__)))
 #define xtra_set ((int(*)(struct userrec *,struct user_entry *, void *))global[231])
 /* 232 - 235 */
-#define contextnote(note) (global[232](MODULE_NAME, __FILE__, __LINE__, note))
-#define assert_failed (global[233])
+#ifdef DEBUG_CONTEXT
+#  define ContextNote(note) (global[232](__FILE__, __LINE__, MODULE_NAME, note))
+#else
+#  define ContextNote(note) {}
+#endif
+#ifdef DEBUG_ASSERT
+#  define Assert(expr) (global[233](__FILE__, __LINE__, MODULE_NAME, (int)(expr)))
+#else
+#  define Assert(expr) {}
+#endif
 #define protect_readonly (*(int *)(global[234]))
-
-#define ASSERT(expr) { if (!(expr)) assert_failed (MODULE_NAME, __FILE__, __LINE__); }
+#define del_lang_section ((int(*)(char *))global[235])
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h
  * file for it ;) */
@@ -337,3 +372,5 @@
 #define encrypt_string(a,b) (((char *(*)(char *,char*))blowfish_funcs[4])(a,b))
 #define decrypt_string(a,b) (((char *(*)(char *,char*))blowfish_funcs[5])(a,b))
 #endif
+
+#endif				/* _EGG_MOD_MODULE_H */

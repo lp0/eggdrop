@@ -1,13 +1,26 @@
 /* 
- * cmdschan.c - part of channels.mod
- * handles: commands from a user via dcc that cause server interaction.
+ * cmdschan.c -- part of channels.mod
+ *   commands from a user via dcc that cause server interaction
+ * 
+ * $Id: cmdschan.c,v 1.29 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include <ctype.h>
@@ -1011,7 +1024,7 @@ static void cmd_pls_chrec(struct userrec *u, int idx, char *par)
   struct userrec *u1;
   struct chanuserrec *chanrec;
 
-  context;
+  Context;
   if (!par[0]) {
     dprintf(idx, "Usage: +chrec <User> [channel]\n");
     return;
@@ -1059,7 +1072,7 @@ static void cmd_mns_chrec(struct userrec *u, int idx, char *par)
   struct userrec *u1;
   struct chanuserrec *chanrec;
 
-  context;
+  Context;
   if (!par[0]) {
     dprintf(idx, "Usage: -chrec <User> [channel]\n");
     return;
@@ -1104,7 +1117,7 @@ static void cmd_pls_chan(struct userrec *u, int idx, char *par)
   char *chname;
 
   if (!par[0]) {
-    dprintf(idx, "Usage: +chan <#channel>\n");
+    dprintf(idx, "Usage: +chan [%s]<channel>\n", CHANMETA);
     return;
   }
   chname = newsplit(&par);
@@ -1125,7 +1138,7 @@ static void cmd_mns_chan(struct userrec *u, int idx, char *par)
   int i;
 
   if (!par[0]) {
-    dprintf(idx, "Usage: -chan <#channel>\n");
+    dprintf(idx, "Usage: -chan [%s]<channel>\n", CHANMETA);
     return;
   }
   chname = newsplit(&par);
@@ -1139,21 +1152,11 @@ static void cmd_mns_chan(struct userrec *u, int idx, char *par)
 	    chname);
     return;
   }
-  clear_channel(chan, 0);
-  noshare = 1;
-  while (chan->bans)
-    u_delban(chan, chan->bans->mask, 1);
-  /* trash any invites and exemptions as well */
-  while (chan->exempts)
-    u_delexempt(chan,chan->exempts->mask,1);
-  while (chan->invites)
-    u_delinvite(chan,chan->invites->mask,1);
-  noshare = 0;
   if (!channel_inactive(chan))  
     dprintf(DP_SERVER, "PART %s\n", chname);
-  killchanset(chan);
+  remove_channel(chan);
   dprintf(idx, "Channel %s removed from the bot.\n", chname);
-  dprintf(idx, "This includes any channel specific bans, invites and exemptions that you set.\n");
+  dprintf(idx, "This includes any channel specific bans, invites, exemptions and user records that you set.\n");
   putlog(LOG_CMDS, "*", "#%s# -chan %s", dcc[idx].nick, chname);
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type->flags & DCT_CHAT) &&
@@ -1261,7 +1264,7 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
   struct chanset_t *chan = NULL;
 
   if (!par[0])
-    dprintf(idx, "Usage: chanset [#channel] <settings>\n");
+    dprintf(idx, "Usage: chanset [%schannel] <settings>\n", CHANMETA);
   else {
     if (strchr(CHANMETA, par[0])) {
       chname = newsplit(&par);

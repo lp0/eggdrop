@@ -1,9 +1,26 @@
-/*
- * flags.c - all the flag matching/conversion functions in one neat
- * package :)
+/* 
+ * flags.c -- handles:
+ *   all the flag matching/conversion functions in one neat package :)
+ * 
+ * $Id: flags.c,v 1.7 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * see main.c for licencing info 
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "main.h"
@@ -685,10 +702,9 @@ static int botfl_unpack(struct userrec *u, struct user_entry *e)
 {
   struct flag_record fr = {FR_BOT, 0, 0, 0, 0, 0};
  
-  ASSERT (e != NULL);
-  ASSERT (e->name != NULL);
-
-  context;
+  Context;
+  Assert(e);
+  Assert(e->name);
   break_down_flags(e->u.list->extra, &fr, NULL);
   list_type_kill(e->u.list);
   e->u.ulong = fr.bot;
@@ -710,7 +726,7 @@ static int botfl_pack(struct userrec *u, struct user_entry *e)
 
 static int botfl_kill(struct user_entry *e)
 {
-  context;
+  Context;
   nfree(e);
   return 1;
 }
@@ -721,7 +737,7 @@ static int botfl_write_userfile(FILE * f, struct userrec *u, struct user_entry *
   struct flag_record fr =
   {FR_BOT, 0, 0, 0, 0, 0};
 
-  context;
+  Context;
   fr.bot = e->u.ulong;
   build_flags(x, &fr, NULL);
   if (fprintf(f, "--%s %s\n", e->type->name, x) == EOF)
@@ -733,7 +749,7 @@ static int botfl_set(struct userrec *u, struct user_entry *e, void *buf)
 {
   register long atr = ((long) buf & BOT_VALID);
 
-  context;
+  Context;
   if (!(u->flags & USER_BOT))
     return 1;			/* don't even bother trying to set the flags for a non-bot */
   if ((atr & BOT_HUB) && (atr & BOT_ALT))
@@ -749,7 +765,7 @@ static int botfl_set(struct userrec *u, struct user_entry *e, void *buf)
   if (!(atr & BOT_SHARE))
     atr &= ~BOT_GLOBAL;
   e->u.ulong = atr;
-  context;
+  Context;
   return 1;
 }
 
@@ -782,7 +798,7 @@ static int botfl_tcl_set(Tcl_Interp * irp, struct userrec *u,
 
 static int botfl_expmem(struct user_entry *e)
 {
-  context;
+  Context;
   return 0;
 }
 
@@ -792,7 +808,7 @@ static void botfl_display(int idx, struct user_entry *e)
   {FR_BOT, 0, 0, 0, 0, 0};
   char x[100];
 
-  context;
+  Context;
   fr.bot = e->u.ulong;
   build_flags(x, &fr, NULL);
   dprintf(idx, "  BOT FLAGS: %s\n", x);

@@ -1,13 +1,28 @@
 /* 
- * tclfiles.c -- handles: Tcl stubs for file system commands moved here to 
- * support modules
+ * tclfiles.c -- part of filesys.mod
+ *   Tcl stubs for file system commands moved here to support modules
+ * 
  * dprintf'ized, 1aug1996
+ * 
+ * $Id: tclfiles.c,v 1.5 1999/12/15 02:32:59 guppy Exp $
  */
 /* 
- * This file is part of the eggdrop source code copyright (c) 1997 Robey
- * Pointer and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called COPYING
- * that was distributed with this code.
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 static int tcl_getdesc STDVAR
@@ -168,14 +183,15 @@ static int tcl_setflags STDVAR
     d = s;
   }
   f = filedb_open(d, 0);
-  if (!findmatch(f, p, &where, &fdb))
+  if (!f)
+    Tcl_AppendResult(irp, "-1", NULL);  /* no such dir */
+  else if (!findmatch(f, p, &where, &fdb))
     Tcl_AppendResult(irp, "-1", NULL);	/* no such dir */
   else if (!(fdb.stat & FILE_DIR))
     Tcl_AppendResult(irp, "-2", NULL);	/* not a dir */
   else {
     if (argc >= 3) {
-      struct flag_record fr =
-      {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+      struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
       break_down_flags(argv[2], &fr, NULL);
       build_flags(s, &fr, NULL);
@@ -216,7 +232,9 @@ static int tcl_getflags STDVAR
     d = s;
   }
   f = filedb_open(d, 0);
-  if (!findmatch(f, p, &where, &fdb))
+  if (!f)
+    Tcl_AppendResult(irp, "", NULL);  /* no such dir */
+  else if (!findmatch(f, p, &where, &fdb))
     Tcl_AppendResult(irp, "", NULL);	/* no such dir */
   else if (!(fdb.stat & FILE_DIR))
     Tcl_AppendResult(irp, "", NULL);	/* not a dir */
@@ -237,8 +255,7 @@ static int tcl_mkdir STDVAR
   FILE *f;
   filedb fdb;
   long where = 0;
-  struct flag_record fr =
-  {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
 
   BADARGS(2, 3, " dir ?required-flags ?channel??");
   strcpy(s, argv[1]);
@@ -254,6 +271,10 @@ static int tcl_mkdir STDVAR
     d = s;
   }
   f = filedb_open(d, 0);
+  if (!f) {
+    Tcl_AppendResult(irp, "1", NULL);
+    return TCL_OK;
+  }
   if (!findmatch(f, p, &where, &fdb)) {
     sprintf(t, "%s%s/%s", dccdir, d, p);
     if (mkdir(t, 0755) != 0) {
@@ -320,6 +341,10 @@ static int tcl_rmdir STDVAR
     d = s;
   }
   f = filedb_open(d, 0);
+  if (!f) {
+    Tcl_AppendResult(irp, "1", NULL);
+    return TCL_OK;
+  }
   if (!findmatch(f, p, &where, &fdb)) {
     Tcl_AppendResult(irp, "1", NULL);
     filedb_close(f);
@@ -349,7 +374,7 @@ static int tcl_rmdir STDVAR
   return TCL_OK;
 }
 
-static int tcl_mv_cp(Tcl_Interp * irp, int argc, char **argv, int copy)
+static int tcl_mv_cp(Tcl_Interp *irp, int argc, char **argv, int copy)
 {
   char *p, fn[161], oldpath[161], s[161], s1[161], newfn[161], newpath[161];
   int ok, only_first, skip_this, ret, ret2;
@@ -358,7 +383,7 @@ static int tcl_mv_cp(Tcl_Interp * irp, int argc, char **argv, int copy)
   long where, gwhere, wherez;
 
   BADARGS(3, 3, " oldfilepath newfilepath");
-  context;
+  Context;
   strcpy(fn, argv[1]);
   p = strrchr(fn, '/');
   if (p != NULL) {
@@ -403,10 +428,19 @@ static int tcl_mv_cp(Tcl_Interp * irp, int argc, char **argv, int copy)
   else
     only_first = 0;
   f = filedb_open(oldpath, 0);
+  if (!f) {
+    Tcl_AppendResult(irp, "-1", NULL);	/* invalid source */
+    return TCL_OK;
+  }
   if (!strcmp(oldpath, newpath))
     g = NULL;
-  else
+  else {
     g = filedb_open(newpath, 0);
+    if (!g) {
+      Tcl_AppendResult(irp, "-2", NULL);	/* invalid destination */
+      return TCL_OK;
+    }
+  }
   where = 0L;
   ok = 0;
   ret = findmatch(f, fn, &where, &fdb);

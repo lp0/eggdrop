@@ -1,21 +1,34 @@
 /* 
  * misc.c -- handles:
- * split() maskhost() copyfile() movefile() fixfrom()
- * dumplots() daysago() days() daysdur()
- * logging things
- * queueing output for the bot (msg and help)
- * resync buffers for sharebots
- * help system
- * motd display and %var substitution
+ *   split() maskhost() copyfile() movefile() fixfrom()
+ *   dumplots() daysago() days() daysdur()
+ *   logging things
+ *   queueing output for the bot (msg and help)
+ *   resync buffers for sharebots
+ *   help system
+ *   motd display and %var substitution
  * 
  * dprintf'ized, 12dec1995
+ * 
+ * $Id: misc.c,v 1.21 1999/12/15 02:32:58 guppy Exp $
  */
-/*
- * This file is part of the eggdrop source code
- * copyright (c) 1997 Robey Pointer
- * and is distributed according to the GNU general public license.
- * For full details, read the top of 'main.c' or the file called
- * COPYING that was distributed with this code.
+/* 
+ * Copyright (C) 1997  Robey Pointer
+ * Copyright (C) 1999  Eggheads
+ * 
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  */
 
 #include "main.h"
@@ -538,7 +551,7 @@ void check_logsize()
 /* int x=1; */
   char buf[1024];		/* should be plenty */
 
-  context;
+  Context;
   if ((keep_all_logs == 0) && (max_logsize != 0)) {
     for (i = 0; i < max_logs; i++) {
       if (logs[i].filename) {
@@ -546,16 +559,16 @@ void check_logsize()
 	  break;
 	}
 	if ((ss.st_size >> 10) > max_logsize) {
-	  context;
+	  Context;
 	  if (logs[i].f) {
 	    /* write to the log before closing it huh.. */
 	    putlog(LOG_MISC, "*", MISC_CLOGS, logs[i].filename, ss.st_size);
 	    fflush(logs[i].f);
 	    fclose(logs[i].f);
 	    logs[i].f = NULL;
-	    context;
+	    Context;
 	  }
-	  context;
+	  Context;
 
 	  simple_sprintf(buf, "%s.yesterday", logs[i].filename);
 	  buf[1023] = 0;
@@ -582,7 +595,7 @@ void check_logsize()
       }
     }
   }
-  context;
+  Context;
 }
 
 /* flush the logfiles to disk */
@@ -591,7 +604,7 @@ void flushlogs()
   int i;
   struct tm *T = localtime(&now);
 
-  context;
+  Context;
   /* logs may not be initialised yet.  (Fabian) */
   if (!logs)
     return;
@@ -615,7 +628,7 @@ void flushlogs()
       fflush(logs[i].f);
     }
   }
-  context;
+  Context;
 }
 
 /********** STRING SUBSTITUTION **********/
