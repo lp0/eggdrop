@@ -1,7 +1,7 @@
 /*
  * share.c -- part of share.mod
  *
- * $Id: share.c,v 1.55 2001/07/17 19:53:42 guppy Exp $
+ * $Id: share.c,v 1.58 2001/12/03 03:02:41 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -597,8 +597,7 @@ static void share_change(int idx, char *par)
 	!(u->flags & USER_UNSHARED)) {
       if (!(uet = find_entry_type(key)))
 	/* If it's not a supported type, forget it */
-	putlog(LOG_CMDS, "*", "Ignore ch %s from %s (unknown type)",
-	       key, dcc[idx].nick);
+	debug2("Ignore ch %s from %s (unknown type)", key, dcc[idx].nick);
       else {
 	if (!(dcc[idx].status & STAT_GETTING))
 	  shareout_but(NULL, idx, "c %s %s %s\n", key, hand, par);
@@ -1081,7 +1080,7 @@ static void share_userfileq(int idx, char *par)
 
   flush_tbuf(dcc[idx].nick);
   if (bfl & BOT_AGGRESSIVE)
-    dprintf(idx, "s un I have you marked for Agressive sharing.\n");
+    dprintf(idx, "s un I have you marked for Aggressive sharing.\n");
   else if (!(bfl & BOT_PASSIVE))
     dprintf(idx, "s un You are not marked for sharing with me.\n");
   else if (min_share > dcc[idx].u.bot->numver)
@@ -1176,12 +1175,6 @@ static void share_resyncq(int idx, char *par)
       dcc[idx].status |= STAT_SHARE;
       putlog(LOG_BOTS, "*", "Resync'd user file with %s", dcc[idx].nick);
       updatebot(-1, dcc[idx].nick, '+', 0);
-    } else if (bfl & BOT_PASSIVE) {
-      dprintf(idx, "s r!\n");
-      dcc[idx].status &= ~STAT_OFFERED;
-      dcc[idx].status |= STAT_SHARE;
-      updatebot(-1, dcc[idx].nick, '+', 0);
-      putlog(LOG_BOTS, "*", "Resyncing user file from %s", dcc[idx].nick);
     } else
       dprintf(idx, "s rn No resync buffer.\n");
   }
@@ -2167,7 +2160,7 @@ static void share_report(int idx, int details)
 	} else if (dcc[i].status & STAT_AGGRESSIVE) {
 	  dprintf(idx, "    Passively sharing with %s.\n", dcc[i].nick);
 	} else if (dcc[i].status & STAT_SHARE) {
-	  dprintf(idx, "    Agressively sharing with %s.\n", dcc[i].nick);
+	  dprintf(idx, "    Aggressively sharing with %s.\n", dcc[i].nick);
 	}
       }
     status_tbufs(idx);

@@ -1,7 +1,7 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.50 2001/07/18 06:03:29 tothwolf Exp $
+ * $Id: module.h,v 1.54 2001/10/20 19:03:09 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -363,8 +363,8 @@
 #define sanitycheck_dcc ((int (*)(char *, char *, char *, char *))global[214])
 #define isowner ((int (*)(char *))global[215])
 /* 216 - 219 */
-#define min_dcc_port (*(int *)(global[216]))	/* dcc-portrange dw/guppy */
-#define max_dcc_port (*(int *)(global[217]))
+/* 216: min_dcc_port -- UNUSED (guppy) */
+/* 217: max_dcc_port -- UNUSED (guppy) */
 #define rfc_casecmp ((int(*)(char *, char *))(*(Function**)(global[218])))
 #define rfc_ncasecmp ((int(*)(char *, char *, int *))(*(Function**)(global[219])))
 /* 220 - 223 */
@@ -437,10 +437,7 @@
 #define str_unescape ((void (*)(char *, register const char))global[264])
 #define egg_strcatn ((int (*)(char *dst, const char *src, size_t max))global[265])
 #define clear_chanlist_member ((void (*)(const char *nick))global[266])
-#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
-#define str_nutf8tounicode ((int (*)(char *str, int len))global[267])
-#endif
-/* 168 - 270 */
+/* 168 - 271 */
 /* Please don't modify socklist directly, unless there's no other way.
  * Its structure might be changed, or it might be completely removed,
  * so you can't rely on it without a version-check.
@@ -448,6 +445,11 @@
 #define socklist (*(struct sock_list **)global[268])
 #define sockoptions ((int (*)(int, int, int))global[269])
 #define flush_inbuf ((int (*)(int))global[270])
+#define kill_bot ((void (*)(char *, char *))global[271])
+/* 272 - 275 */
+#define quit_msg ((char *)(global[272]))
+#define module_load ((char *(*)(char *))global[273])
+#define module_unload ((char *(*)(char *, char *))global[274])
 
 /* This is for blowfish module, couldnt be bothered making a whole new .h
  * file for it ;)

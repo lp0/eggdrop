@@ -37,7 +37,7 @@ specific commands, see later.
   putquick <text> [options]
     sends text to the server, like 'dump' (intended for direct server
     commands); output is queued so that you won't flood yourself off
-    the server, using the MODE queue (should be alot faster)
+    the server, using the MODE queue (should be a lot faster)
     options are:
       -next     push messages to the front of the queue
     returns: nothing
@@ -75,6 +75,7 @@ specific commands, see later.
       help.
 
    clearqueue <queue>
+     valid arguments for queue are: mode, server, help, or all.
      returns: number of deleted lines from the specified queue
 
 
@@ -91,12 +92,12 @@ specific commands, see later.
     returns: the handle found, or "*" if none
 
   userlist [flags]
-    returns: a list of the handles of users on the bot
       you can use the new flag matching system here,
       usage: [global]{&/|}[chan]{&/|}[bot]
-      matchs the flags relvantly, (chan matches vs anywhere), & specifies
-      and when match, | specifies or, only the first of these is relevant
-      the default is or.
+      matches the flags relevantly, (chan matches vs anywhere), &
+      specifies and when match, | specifies or. only the first of these is
+      relevant, the default is or.
+    returns: a list of the handles of users on the bot
 
   passwdok <handle> <pass>
     checks the password given against the user's password
@@ -138,10 +139,10 @@ specific commands, see later.
                   will set a users laston time in a channel record
                   (if it already exists)
 
-|  chhandle <old-handle> <new-handle>
-|    changes a user's handle
-|    returns: "1" on success; "0" if the handle is already used, the handle
-|      is invalid, or the user can't be found
+  chhandle <old-handle> <new-handle>
+    changes a user's handle
+    returns: "1" on success; "0" if the handle is already used, the handle
+      is invalid, or the user can't be found
 
   chattr <handle> [changes [channel]]
     changes the attributes for a user record, if you include any -- changes
@@ -162,7 +163,7 @@ specific commands, see later.
     returns: "1" if the specified user has the matching flags.
     (using the new matching system)
 
-  adduser <handle> <hostmask>
+  adduser <handle> [hostmask]
     creates a new user entry with the handle and hostmask given (with no
       password, and the default flags)
     returns: "1" if successful, "0" if it already existed
@@ -192,8 +193,8 @@ specific commands, see later.
     returns: "1" on success, "0" if the user does not exist or if there
       isn't such a channel
 
-| haschanrec <handle> <channel>
-|   returns: "1" if handle has a chanrec for that channel, "0" otherwise
+ haschanrec <handle> <channel>
+    returns: "1" if handle has a chanrec for that channel, "0" otherwise
 
   getchaninfo <handle> <channel>
     returns: info line for a specific channel (behaves just like 'getinfo')
@@ -402,7 +403,7 @@ specific commands, see later.
     returns: "1" if the ignore is in the list, "0" otherwise
 
   save
-    writes the userfile to disk
+    writes the user and channel files to disk
     returns: nothing
 
   reload
@@ -411,6 +412,8 @@ specific commands, see later.
 
   backup
     makes a simple backup of the userfile that's on disk
+   if the channels module is loaded, this also makes a simple backup of
+   the channel file.
     returns: nothing
 
   getting-users
@@ -452,24 +455,24 @@ specific commands, see later.
   channels
     returns: list of the channels the bot is monitoring (or trying to)
 
-| channame2dname <channel-name>
-| chandname2name <channel-dname>
-|   These two functions are important to correctly support !channels. The
-|   bot differentiates between channel description names (chan dnames) and
-|   real channel names (chan names). The chan dnames are what you would
-|   normally call the channel; "!channel". The chan names are what the
-|   IRC server uses to identify the channel, they consist of the chan dname
-|   prefixed with an ID; "!ABCDEchannel".
-|
-|   For bot functions like isop, isvoice, etc. you need to know the chan
-|   dnames. If you communicate with the server, you usually get the chan
-|   name though. That's what you need the channame2dname function for.
-|
-|   If you only have the chan dname and want to directly send raw server
-|   commands, you need the chan name. Use the chandname2name function for
-|   that case.
-|
-|   NOTE: For non-!channels, chan dname and chan name are the same.
+ channame2dname <channel-name>
+ chandname2name <channel-dname>
+   These two functions are important to correctly support !channels. The
+   bot differentiates between channel description names (chan dnames) and
+   real channel names (chan names). The chan dnames are what you would
+   normally call the channel; "!channel". The chan names are what the
+   IRC server uses to identify the channel, they consist of the chan dname
+   prefixed with an ID; "!ABCDEchannel".
+
+   For bot functions like isop, isvoice, etc. you need to know the chan
+   dnames. If you communicate with the server, you usually get the chan
+   name though. That's what you need the channame2dname function for.
+
+   If you only have the chan dname and want to directly send raw server
+   commands, you need the chan name. Use the chandname2name function for
+   that case.
+
+   NOTE: For non-!channels, chan dname and chan name are the same.
 
   isbotnick <nick>
     returns: "1" if the nick matches the botnick; "0" otherwise
@@ -594,7 +597,7 @@ specific commands, see later.
 
   pushmode <channel> <mode> [arg]
     sends out a channel mode change (ex: pushmode #lame +o goober) through
-      the bot's queueing system; all the mode changes will be sent out at
+      the bot's queuing system; all the mode changes will be sent out at
       once (combined into one line as much as possible) after the script
       finishes, or when 'flushmode' is called
 
@@ -637,7 +640,8 @@ specific commands, see later.
 
   dccputchan <channel> <message>
     sends your message to everyone on a certain channel on the bot net, in
-      a form exactly like dccbroadcast does -- valid channels are 0 thru 99999
+      a form exactly like dccbroadcast does -- valid channels are 0
+      through 99999
     returns: nothing
 
   boot <user@bot> [reason]
@@ -645,9 +649,9 @@ specific commands, see later.
      returns: nothing
 
   restart
-    rehashes the bot and kills all timers
-    note that as this will also unload and reload all the modules, your bot
-      will also jump servers.
+    rehashes the bot and kills all timers.
+      note that as this will unload and reload all the modules and your
+      bot will jump servers.
     returns: nothing
 
   rehash
@@ -809,7 +813,7 @@ specific commands, see later.
       is added -- instead, the current binding is returned (if it's stackable,
       a list of the current bindings is returned)
       yes, you can use the new flag binding method here too, and this is
-      where it becomes truely phearfull since you may never need to check
+      where it becomes truly phearfull since you may never need to check
       attributes inside functions again...imagine:
         bind pub -o&+o command command_proc
       to only allow channel-spec ops to use it! no problem! works fine!
@@ -820,10 +824,10 @@ specific commands, see later.
     removes a previously-made binding
     returns: name of the command that was removed
 
-| binds ?type/mask?
-|  returns: a list of tcl binds, each item in the list will be a sublist of
-|    five elements:
-|      {<type> <flags> <name> <hits> <proc>}
+ binds ?type/mask?
+  returns: a list of Tcl binds, each item in the list will be a sublist of
+    five elements:
+      {<type> <flags> <name> <hits> <proc>}
 
   logfile [<modes> <channel> <filename>]
     creates a new logfile, which will log the modes given for the channel
@@ -839,11 +843,11 @@ specific commands, see later.
       "n!u@lame.com" -> "*!u@lame.com", "n!u@a.b.edu" -> "*!u@*.b.edu")
 
   timer <minutes> <tcl-command>
-    executes the tcl command after a certain number of minutes have passed
+    executes the Tcl command after a certain number of minutes have passed
     returns: a timerID
 
   utimer <seconds> <tcl-command>
-    executes the tcl command after a certain number of seconds have passed
+    executes the Tcl command after a certain number of seconds have passed
     returns: a timerID
 
   timers
@@ -944,9 +948,9 @@ specific commands, see later.
   md5 <string>
     returns: the 128 bit MD5 message-digest of the specified string.
 
-| callevent <event>
-|   Triggers the evnt bind manually for a certain event. For example:
-|     callevent rehash
+ callevent <event>
+   Triggers the evnt bind manually for a certain event. For example:
+     callevent rehash
 
 GLOBAL VARIABLES:
   (All config-file variables are global, too. But these variables
@@ -982,10 +986,10 @@ GLOBAL VARIABLES:
 
   lastbind
     The last command binding which triggered. This allows you to
-    identify which command triggered a tcl routine.
+    identify which command triggered a Tcl routine.
 
-| isjuped
-|   value is 1 if bot's nick is juped(437) 0 otherwise.
+ isjuped
+   value is 1 if bot's nick is juped(437) 0 otherwise.
 
 COMMAND EXTENSION:
 
@@ -1010,14 +1014,14 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
 
   (1)  MSG
        bind msg <flags> <command> <proc>
-       procname <nick> <user@host> <handle> <arg>
+       procname <nick> <user@host> <handle> <text>
 
        used for /msg commands; the first word of the user's msg is the
        command, and everything else becomes the argument string
 
   (2)  DCC
        bind dcc <flags> <command> <proc>
-       procname <handle> <idx> <arg>
+       procname <handle> <idx> <text>
 
        used for commands from a dcc chat on the party line; as in MSG, the
        command is the first word and everything else is the argument string;
@@ -1026,15 +1030,15 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
 
   (3)  FIL
        bind fil <flags> <command> <proc>
-       procname <handle> <idx> <arg>
+       procname <handle> <idx> <text>
 
        the same as DCC, except this is triggered if the user is in the file
        area instead of the party line
-       (This is only avaliable when the 'filesys' module is loaded.)
+       (This is only available when the 'filesys' module is loaded.)
 
   (4)  PUB
        bind pub <flags> <command> <proc>
-       procname <nick> <user@host> <handle> <channel> <arg>
+       procname <nick> <user@host> <handle> <channel> <text>
 
        used for commands given on a channel; just like MSG, the first word
        becomes the command and everything else is the argument string
@@ -1058,20 +1062,20 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
 
   (7)  NOTC   (stackable)
        bind notc <flags> <mask> <proc>
-|      procname <nick> <user@host> <handle> <text> <dest>
+       procname <nick> <user@host> <handle> <text> <dest>
 
-|      destination will be a nickname (the bot's nickname, obviously) or
-|      a channel name; matches the entire line of text from a /notice with
+      destination will be a nickname (the bot's nickname, obviously) or
+      a channel name; matches the entire line of text from a /notice with
        the mask; it is considered a breach of protocol to respond to a
        /notice on IRC, so this is intended for internal use (logging, etc)
        only
 
-|      new Tcl procs should be declared as
-|      proc notcproc {nick uhost hand text {dest ""}} {
-|        global botnick; if {$dest == ""} {set dest $botnick}
-|        ...
-|      }
-|      for compatiblity
+      new Tcl procs should be declared as
+      proc notcproc {nick uhost hand text {dest ""}} {
+        global botnick; if {$dest == ""} {set dest $botnick}
+        ...
+      }
+      for compatibility
 
   (8)  JOIN   (stackable)
        bind join <flags> <mask> <proc>
@@ -1083,23 +1087,23 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
 
   (9)  PART   (stackable)
        bind part <flags> <mask> <proc>
-|      procname <nick> <user@host> <handle> <channel> <msg>
+      procname <nick> <user@host> <handle> <channel> <msg>
 
        triggered by someone leaving the channel; as in JOIN, the <mask>
        is matched against "#channel nick!user@host" and can contain
        wildcards. if no part message is specified msg will be set to "".
 
-|      new Tcl procs should be declared as
-|      proc partproc {nick uhost hand chan {msg ""}} { ... }
-|      for compatiblity
+      new Tcl procs should be declared as
+      proc partproc {nick uhost hand chan {msg ""}} { ... }
+      for compatibility
 
-  (10) SIGN   (stackable)
-       bind sign <flags> <mask> <proc>
-       procname <nick> <user@host> <handle> <channel> <reason>
-
-       triggered by a signoff, or possibly by someone who got netsplit and
-       never returned; the signoff message is the last argument to the proc;
-       wildcards can be used in <mask>, which contains the channel name
+   (10) SIGN   (stackable)
+        bind sign <flags> <mask> <proc>
+        procname <nick> <user@host> <handle> <channel> <reason>
+ 
+        triggered by a signoff, or possibly by someone who got netsplit and
+        never returned; the signoff message is the last argument to the proc;
+        wildcards can be used in <mask>, which contains 'channel + nick!user@host'
 
   (11) TOPC   (stackable)
        bind topc <flags> <mask> <proc>
@@ -1141,7 +1145,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        address and handle is *
 
        note that "victim" was added in 1.3.23 and that this will break
-       tcl scripts that were written for pre-1.3.23 versions and use this
+       Tcl scripts that were written for pre-1.3.23 versions and use this
        binding. An easy fix (by guppy) is as follows (example):
 
        Old script looks as follows:
@@ -1168,14 +1172,14 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
 
   (16) CTCR
        bind ctcr <flags> <keyword-mask> <proc>
-       proc-name <nick> <user@host> <handle> <dest> <keyword> <arg...>
+       proc-name <nick> <user@host> <handle> <dest> <keyword> <text...>
 
        just like ctcp, but this is triggered for a ctcp-reply (ctcp
        embedded in a notice instead of a privmsg)
 
   (17) RAW   (stackable)
        bind raw <flags> <keyword-mask> <proc>
-       procname <from> <keyword> <arg...>
+       procname <from> <keyword> <text...>
 
        previous versions of eggdrop required a special compile option to
        enable this binding, but it's now standard; the mask is checked
@@ -1189,7 +1193,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
 
   (18) BOT
        bind bot <flags> <command> <proc>
-       proc-name <from-bot> <command> <arg>
+       proc-name <from-bot> <command> <text>
 
        triggered by a message coming from another bot in the botnet; works
        similar to a DCC binding; the first word is the command and the rest
@@ -1224,7 +1228,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        the file; the path is relative to the dcc directory (unless the file
        transfer was started by a script call to 'dccsend', in which case the
        path is the exact path given in the call to 'dccsend')
-       (This is only avaliable when the 'transfer' module is loaded.)
+       (This is only available when the 'transfer' module is loaded.)
 
   (22) RCVD   (stackable)
        bind rcvd <flags> <mask> <proc>
@@ -1234,7 +1238,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        against the user's handle; nick is the nickname on IRC that the file
        transfer originated from; the path is where the file ended up,
        relative to the dcc directory (usually this is your incoming dir)
-       (This is only avaliable when the 'transfer' module is loaded.)
+       (This is only available when the 'transfer' module is loaded.)
 
   (23) CHAT   (stackable)
        bind chat <flags> <mask> <proc>
@@ -1288,13 +1292,16 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        from the proc and continue parsing that
 
 | (29) NEED   (stackable)
-|      bind need <flags> <type/mask> <proc>
+|      bind need <flags> <mask> <proc>
 |      procname <channel> <type>
 |
 |      this bind is triggered on certain events, like when the bot needs
 |      operator status or the key for a channel; the types are: op, unban,
-|      invite, and key; <type/mask> can contain wildcards, and contains
-|      the channel and the type of need request; flags are ignored
+|      invite, and key; the <mask> in the bind is matched against 
+|      "#channel type" and can contain wildcards; flags are ignored
+|
+|      example: bind need - "% op" needop < handles only need op
+|               bind need - "*" needall   < handles all needs
 
   (30) FLUD   (stackable)
        bind flud <flags> <type> <proc>
@@ -1358,7 +1365,7 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
        proc-name <minute> <hour> <day> <month> <year>
 
        allows you to schedule procedure calls at certain times,
-       mask matches 5 space seperated integers of the form:
+       mask matches 5 space separated integers of the form:
        "minute hour day month year"
 
        minute, hour, day, month have a zero padding so they are
@@ -1402,31 +1409,31 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
          save              (called when the userfile is saved)
          rehash            (called just after a rehash)
          prerehash         (called just before a rehash)
-|        prerestart        (called just before a restart)
+        prerestart        (called just before a restart)
          logfile           (called when the logs are switched daily)
-|        loaded            (called when the bot is done loading itself)
+        loaded            (called when the bot is done loading itself)
 
-|        connect-server    (called just before we connect to an irc server)
-|        init-server       (called when we actually get on our irc server)
-|        disconnect-server (called when we disconnect from our irc server)
+        connect-server    (called just before we connect to an irc server)
+        init-server       (called when we actually get on our irc server)
+        disconnect-server (called when we disconnect from our irc server)
 
-| (43) LOST   (stackable)
-|      bind lost <flags> <mask> <proc>
-|      proc-name <handle> <nick> <path> <bytes-transferred> <length-of-file>
-|
-|      Triggered when a DCC SEND transfer gets lost, such as when the
-|      connection is terminated before all data was successfully
-|      sent/received. This is typically caused by a user abort.
-|      (This is only avaliable when the 'transfer' module is loaded.)
+ (43) LOST   (stackable)
+      bind lost <flags> <mask> <proc>
+      proc-name <handle> <nick> <path> <bytes-transferred> <length-of-file>
 
-| (44) TOUT   (stackable)
-|      bind tout <flags> <mask> <proc>
-|      proc-name <handle> <nick> <path> <bytes-transferred> <length-of-file>
-|
-|      Triggered when a DCC SEND transfer times out. This may either happen
-|      because the dcc connection was not accepted or because the data
-|      transfer stalled for some reason.
-|      (This is only avaliable when the 'transfer' module is loaded.)
+      Triggered when a DCC SEND transfer gets lost, such as when the
+      connection is terminated before all data was successfully
+      sent/received. This is typically caused by a user abort.
+      (This is only available when the 'transfer' module is loaded.)
+
+ (44) TOUT   (stackable)
+      bind tout <flags> <mask> <proc>
+      proc-name <handle> <nick> <path> <bytes-transferred> <length-of-file>
+
+      Triggered when a DCC SEND transfer times out. This may either happen
+      because the dcc connection was not accepted or because the data
+      transfer stalled for some reason.
+      (This is only available when the 'transfer' module is loaded.)
 
 
 
@@ -1493,8 +1500,8 @@ for the msg-command "stop", use 'unbind msg - stop msg_stop'.
     To indicate that the connection has closed, your control procedure
     will be called with blank text (the input-text will be ""). This
     is the only time it will ever be called with "" as the text, and it
-    is the last time your proc will be called for that connection. Dont call
-    killdcc on the idx when text is blank, it will always fail with
+    is the last time your proc will be called for that connection. Don't
+    call killdcc on the idx when text is blank, it will always fail with
     "invalid idx".
 
     If you want to hand control of your connection back to eggdrop, your
@@ -1664,12 +1671,12 @@ users to read later
     returns: "0" on failure; "1" on success (either an immediate send
       or a queued send)
 
-| fileresend <idx> <filename> [ircnick]
-|   like filesend, only that it starts a DCC RESEND instead of a DCC SEND,
-|     which allows people to resume aborted file transfers if their client
-|     supports that protocol. ircII/BitchX/etc. support it, mIRC does not.
-|   returns: "0" on failure; "1" on success (either an immediate send
-|     or a queued send)
+ fileresend <idx> <filename> [ircnick]
+   like filesend, only that it starts a DCC RESEND instead of a DCC SEND,
+     which allows people to resume aborted file transfers if their client
+     supports that protocol. ircII/BitchX/etc. support it, mIRC does not.
+   returns: "0" on failure; "1" on success (either an immediate send
+     or a queued send)
 
   setdesc <dir> <file> <desc>
     sets the description for a file in a file system directory; the
@@ -1721,15 +1728,15 @@ users to read later
 
   mv <file> <destination>
     moves the file from it's source to the given destination, file
-    can also be a mask, eg /incoming/* provided the destination is
+    can also be a mask, e.g. /incoming/* provided the destination is
     a directory
     returns: number of files copied on success or negative numbers
-      to indicat errors: -1 = invalid source file, -2 = invalid desto
-      -3 = you're trying to copy onto itself (duh!) -4 = no matchs found
+      to indicate errors: -1 = invalid source file, -2 = invalid desto
+      -3 = you're trying to copy onto itself (duh!) -4 = no matches found
 
   cp <file> <destination>
     exactly the same as mv except it leaves the original file there
-    aswell
+    as well
     returns: same as mv
 
   getflags <dir>

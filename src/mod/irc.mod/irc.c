@@ -2,7 +2,7 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot
  *
- * $Id: irc.c,v 1.54 2001/07/17 19:53:41 guppy Exp $
+ * $Id: irc.c,v 1.59 2001/12/06 04:57:17 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -445,8 +445,6 @@ static void reset_chan_info(struct chanset_t *chan)
       dprintf(DP_MODE, "WHO %s %%c%%h%%n%%u%%f\n", chan->name);
     else
       dprintf(DP_MODE, "WHO %s\n", chan->name);
-    /* This is not so critical, so slide it into the standard q */
-    dprintf(DP_SERVER, "TOPIC %s\n", chan->name);
     /* clear_channel nuked the data...so */
   }
 }
@@ -476,6 +474,9 @@ static void status_log()
   struct chanset_t *chan;
   char s[20], s2[20];
   int chops, voice, nonops, bans, invites, exempts;
+
+  if (!server_online)
+    return;
 
   for (chan = chanset; chan != NULL; chan = chan->next) {
     if (channel_active(chan) && channel_logstatus(chan) &&
@@ -552,7 +553,7 @@ static void check_lonely_channel(struct chanset_t *chan)
       /* + is opless. Complaining about no ops when without special
        * help(services), we cant get them - Raist
        */
-      if (chan->name[0] != '+')
+      if (chan->name[0] != '+' && channel_logstatus(chan))
 	putlog(LOG_MISC, "*", "%s is active but has no ops :(", chan->dname);
       whined = 1;
     }
@@ -564,7 +565,7 @@ static void check_lonely_channel(struct chanset_t *chan)
 	break;
       }
     }
-    if (ok) {
+    if (ok && channel_cycle(chan)) {
       /* ALL bots!  make them LEAVE!!! */
       for (m = chan->channel.member; m && m->nick[0]; m = m->next)
 	if (!match_my_nick(m->nick))
@@ -1109,6 +1110,7 @@ static Function irc_table[] =
   (Function) do_channel_part,
   /* 20 - 23 */
   (Function) check_this_ban,
+  (Function) check_this_user,
 };
 
 char *irc_start(Function * global_funcs)

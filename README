@@ -21,7 +21,7 @@ README
             1. What do I do if I get the Error "User file not found"?
             2. My Eggdrop won't run; It just says "Can't find your
                hostname!"
-            3. What the Heck is TCL?
+            3. What the Heck is Tcl?
             4. My bot dies and the last entry in the logfile is "Received
                terminate signal". What does that mean and can I prevent it?
             5. My compile dies at the last minute with "LD fatal signal
@@ -31,7 +31,7 @@ README
             7. What are modules?
             8. Can I compile eggdrop without dynamic modules?
                8.1    Do I still need to "loadmodule modules"???
-            9. Where can I get a precompiled Eggdrop for my computer?
+            9. Where can I get a pre-compiled Eggdrop for my computer?
            10. I get "Makefile:3 : invalid operator" of some such thing
                When I try to "make"
            11. When I "tclsh scripts/weed <userfile> c" It barfs chunks at
@@ -177,7 +177,7 @@ README
                upgrading, and you have even a slight possibility
                of downgrading again later you will HAVE to back
                up your userfile, or you will lose it. v1.3 of
-               eggdrop radically changed alot of things.
+               eggdrop radically changed a lot of things.
 
                There are many major changes between v0.9, v1.0,
                v1.1 and v1.6 so PAY ATTENTION to this part if you
@@ -256,7 +256,7 @@ README
                file correctly, or add those above commands to
                your '.login' file (sh or ksh: '.profile').
 
-          3. WHAT THE HECK IS TCL?
+          3. WHAT THE HECK IS Tcl?
 
                Tcl is a scripting language written by John
                Ousterhout. It's much better than most "in-built"
@@ -351,17 +351,17 @@ README
                     functionality with static modules as
                     dynamic modules.
 
-          9. WHERE CAN I GET A PRECOMPILED EGGDROP FOR MY COMPUTER?
+          9. WHERE CAN I GET A PRE-COMPILED EGGDROP FOR MY COMPUTER?
 
-               It is HIGHLY recommended AGAINST using precompiled
-               Eggdrops from untrusted sources. Eggdrop has been
+               It is HIGHLY recommended AGAINST using pre-compiled
+               Eggdrops from un-trusted sources. Eggdrop has been
                a regular target for hacking and crashing.
-               Distribution of precompiled (binary) versions of
+               Distribution of pre-compiled (binary) versions of
                Eggdrop are the easiest way of hackers to provide
                you with the easiest (and most dangerous) way of
                gaining access to not only your bot, but to your
                computer account directly. Don't advertise your
-               precompiled eggdrop binary sites on the eggdrop
+               pre-compiled eggdrop binary sites on the eggdrop
                list either =P
 
           10. I GET 'Makefile:3 :invalid operator' OR SOME-SUCH-THING
@@ -372,9 +372,9 @@ README
           11. WHEN I 'tclsh scripts/weed <userfile> c' IT BARFS CHUNKS
           AT ME AND DIES :(
 
-               UPGRADE YOUR TCL, you are probably using tcl 7.5
+               UPGRADE YOUR Tcl, you are probably using Tcl 7.5
                or earlier, some of the commands in weed require
-               tcl7.6 to run, so either upgrade it, or removing
+               Tcl7.6 to run, so either upgrade it, or removing
                the offending lines from you userfile (those
                starting with '.' generally) and accept the loss
                of that data.
@@ -385,22 +385,22 @@ README
           or directory" when I try to start my bot.
 
                './configure' is looking in the wrong place for
-               tcl; it looks like it compiled with one version of
-               tcl and tries to load another. Maybe your sysadmin
-               upgraded tcl and didn't tell you. In that case,
+               Tcl; it looks like it compiled with one version of
+               Tcl and tries to load another. Maybe your sysadmin
+               upgraded Tcl and didn't tell you. In that case,
                you should just need to recompile your bot.
 
                Or maybe when upgrading he didn't clean the old
-               version of tcl, and './configure' is looking for
+               version of Tcl, and './configure' is looking for
                the files in the wrong places, or trying to use
                different versions of tcl.h and libtcl*. Smack
-               your admin and have him install tcl properly ;) Or
+               your admin and have him install Tcl properly ;) Or
                try to:
 
                ./configure --with-tcllib=<path-to-tcl-lib>
                --with-tclinc=<path-to-tcl-inc>
 
-               tell configure where to look for the tcl files.
+               tell configure where to look for the Tcl files.
                try to look for them like:
                for libtcl:
 
@@ -412,7 +412,7 @@ README
                     ls /usr/include/tcl.h
                     ls /usr/local/include/tcl.h
 
-               If everything else fails, try to install tcl to
+               If everything else fails, try to install Tcl to
                your home dir ;) (Suggested by dw@Undernet,
                dw@lixom.nu)
 
@@ -428,9 +428,9 @@ README
                for static linking only on your machine, you have
                3 options:
 
-               (1) if it's your own machine, recompile TCL using
+               (1) if it's your own machine, recompile Tcl using
                dynamic linking by using './configure
-               --enable-shared' when you configure TCL (not the
+               --enable-shared' when you configure Tcl (not the
                bot) and then remake, & reinstall
                (2) if it's not you machine, you make have to
                resort to 'make static' and 'make sinstall
@@ -565,7 +565,7 @@ README
           spelling), or even substantive issues either for that
           matter. Please read and follow the mailing list rules.
 
-          The eggheads@eggheads.org maillist is not dedicated to those
+          The eggheads@eggheads.org mailing list is not dedicated to those
           all too common questions we have all seen on other lists...
           for example:
 
@@ -610,7 +610,7 @@ README
           - don't msg people without their agreement, if they know help and
             have time, they will answer.
           - don't repeat yourself. This will result in being kicked
-          - don't use !!, colours or only CAPITAL letters.
+          - don't use !!, colors or only CAPITAL letters.
 
           If there are any serious places that should be added, let us
           know.

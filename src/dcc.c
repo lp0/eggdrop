@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  *
- * $Id: dcc.c,v 1.47 2001/06/30 06:29:55 guppy Exp $
+ * $Id: dcc.c,v 1.49 2001/09/25 23:21:44 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -40,8 +40,7 @@ extern Tcl_Interp	*interp;
 extern time_t		 now;
 extern int		 egg_numver, connect_timeout, conmask, backgrd,
 			 max_dcc, make_userfile, default_flags, debug_output,
-			 ignore_time, min_dcc_port, max_dcc_port,
-			 par_telnet_flood;
+			 ignore_time, par_telnet_flood;
 extern char		 botnetnick[], ver[], origbotname[], notify_new[];
 
 
@@ -299,10 +298,10 @@ static void dcc_bot_digest(int idx, char *challenge, char *password)
   unsigned char digest[16];
   int           i;
 
-  MD5Init(&md5context);
-  MD5Update(&md5context, (unsigned char *) challenge, strlen(challenge));
-  MD5Update(&md5context, (unsigned char *) password, strlen(password));
-  MD5Final(digest, &md5context);
+  MD5_Init(&md5context);
+  MD5_Update(&md5context, (unsigned char *) challenge, strlen(challenge));
+  MD5_Update(&md5context, (unsigned char *) password, strlen(password));
+  MD5_Final(digest, &md5context);
 
   for (i = 0; i < 16; i++)
     sprintf(digest_string + (i*2), "%.2x", digest[i]);
@@ -511,17 +510,17 @@ static int dcc_bot_check_digest(int idx, char *remote_digest)
   int           i;
   char          *password = get_user(&USERENTRY_PASS, dcc[idx].user);
 
-  MD5Init(&md5context);
+  MD5_Init(&md5context);
 
   egg_snprintf(digest_string, 33, "<%x%x@", getpid(),
 	       (unsigned int) dcc[idx].timeval);
-  MD5Update(&md5context, (unsigned char *) digest_string,
+  MD5_Update(&md5context, (unsigned char *) digest_string,
 	    strlen(digest_string));
-  MD5Update(&md5context, (unsigned char *) botnetnick, strlen(botnetnick));
-  MD5Update(&md5context, (unsigned char *) ">", 1);
-  MD5Update(&md5context, (unsigned char *) password, strlen(password));
+  MD5_Update(&md5context, (unsigned char *) botnetnick, strlen(botnetnick));
+  MD5_Update(&md5context, (unsigned char *) ">", 1);
+  MD5_Update(&md5context, (unsigned char *) password, strlen(password));
 
-  MD5Final(digest, &md5context);
+  MD5_Final(digest, &md5context);
 
   for (i = 0; i < 16; i++)
     sprintf(digest_string + (i * 2), "%.2x", digest[i]);
@@ -1108,9 +1107,14 @@ static void dcc_telnet(int idx, char *buf, int i)
 
   /* <bindle> [09:37] Telnet connection: 168.246.255.191/0
    * <bindle> [09:37] Lost connection while identing [168.246.255.191/0]
+   *
+   * These are hardcoded now (perhaps move to a #define when we clean up
+   * more) since in over a year since this setting was added, I've never
+   * seen anyone who actually knew what this setting did it change it for
+   * the better (including myself) -- guppy (13Aug2001) 
+   *
    */
-  /* Use dcc-portrange x:x on incoming telnets too, dw */
-  if ((port < min_dcc_port) || (port > max_dcc_port)) {
+  if (port < 1024 || port > 65535) {
     putlog(LOG_BOTS, "*", DCC_BADSRC, s, port);
     killsock(sock);
     return;

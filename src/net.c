@@ -2,7 +2,7 @@
  * net.c -- handles:
  *   all raw network i/o
  * 
- * $Id: net.c,v 1.31 2001/06/28 19:21:55 guppy Exp $
+ * $Id: net.c,v 1.38 2001/11/11 20:43:12 poptix Exp $
  */
 /* 
  * This is hereby released into the public domain.
@@ -657,20 +657,23 @@ static int sockread(char *s, int *len)
 	  *len = 0;
 	  return i;
 	}
+	errno = 0;
 	if ((socklist[i].sock == STDOUT) && !backgrd)
 	  x = read(STDIN, s, grab);
 	else
 	  x = read(socklist[i].sock, s, grab);
 	if (x <= 0) {		/* eof */
-	  if (errno == EAGAIN) {
-	    s[0] = 0;
-	    *len = 0;
-	    return -3;
+	  if (errno != EAGAIN) { /* EAGAIN happens when the operation would block 
+				    on a non-blocking socket, if the socket is going
+				    to die, it will die later, otherwise it will connect */
+	    *len = socklist[i].sock;
+	    socklist[i].flags &= ~SOCK_CONNECT;
+	    debug1("net: eof!(read) socket %d", socklist[i].sock);
+	    return -1;
+	  } else {
+	    debug3("sockread EAGAIN: %d %d (%s)",socklist[i].sock,errno,strerror(errno));
+	    continue; /* EAGAIN */
 	  }
-	  *len = socklist[i].sock;
-	  socklist[i].flags &= ~SOCK_CONNECT;
-	  debug1("net: eof!(read) socket %d", socklist[i].sock);
-	  return -1;
 	}
 	s[x] = 0;
 	*len = x;
@@ -994,10 +997,46 @@ void dequeue_sockets()
 {
   int i, x;
 
+  int z=0, fds;
+  fd_set wfds;
+  struct timeval tv;
+/* ^-- start poptix test code, this should avoid writes to sockets not ready to be written to. */
+  fds = getdtablesize();
+
+#ifdef FD_SETSIZE
+  if (fds > FD_SETSIZE)
+    fds = FD_SETSIZE;           /* Fixes YET ANOTHER freebsd bug!!! */
+#endif
+  FD_ZERO(&wfds);
+  tv.tv_sec = 0;
+  tv.tv_usec = 0; /* we only want to see if it's ready for writing, no need to actually wait.. */
   for (i = 0; i < MAXSOCKS; i++) { 
     if (!(socklist[i].flags & SOCK_UNUSED) &&
 	socklist[i].outbuf != NULL) {
+	  FD_SET(socklist[i].sock, &wfds);
+	  z=1; 
+	}
+  }
+  if (!z) { 
+	return; /* nothing to write */
+  }
+#ifdef HPUX_HACKS
+ #ifndef HPUX10_HACKS
+  select(fds, (int *) NULL, (int *) &wfds, (int *) NULL, &tv);
+ #else
+  select(fds, NULL, &wfds, NULL, &tv);
+ #endif
+#else
+  select(fds, NULL, &wfds, NULL, &tv);
+#endif
+
+/* end poptix */
+
+  for (i = 0; i < MAXSOCKS; i++) { 
+    if (!(socklist[i].flags & SOCK_UNUSED) &&
+	(socklist[i].outbuf != NULL) && (FD_ISSET(socklist[i].sock, &wfds))) {
       /* Trick tputs into doing the work */
+      errno = 0;
       x = write(socklist[i].sock, socklist[i].outbuf,
 		socklist[i].outbuflen);
       if ((x < 0) && (errno != EAGAIN)
@@ -1025,8 +1064,9 @@ void dequeue_sockets()
 	egg_memcpy(socklist[i].outbuf, p + x, socklist[i].outbuflen - x);
 	socklist[i].outbuflen -= x;
 	nfree(p);
+      } else {
+	debug3("dequeue_sockets(): errno = %d (%s) on %d",errno,strerror(errno),socklist[i].sock);
       }
-     
       /* All queued data was sent. Call handler if one exists and the
        * dcc entry wants it.
        */
@@ -1136,7 +1176,8 @@ int hostsanitycheck_dcc(char *nick, char *from, IP ip, char *dnsname,
   }
   if (!strcmp(badaddress, dnsname))
     putlog(LOG_MISC, "*", "ALERT: (%s!%s) sent a DCC request with bogus IP "
-	   "information of %s port %u!", nick, from, badaddress, prt);
+	   "information of %s port %s. %s does not resolve to %s!", nick, from,
+	    badaddress, prt, from, badaddress);
   else
     return 1; /* <- usually happens when we have 
 		    a user with an unresolved hostmask! */

@@ -1,7 +1,7 @@
 /*
  * modvals.h
  *
- * $Id: modvals.h,v 1.18 2001/06/01 21:56:41 guppy Exp $
+ * $Id: modvals.h,v 1.21 2001/12/04 19:58:06 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -39,7 +39,9 @@
 #define HOOK_IDLE		 11
 #define HOOK_5MINUTELY		 12
 #define HOOK_LOADED		 13
-#define REAL_HOOKS		 14
+#define HOOK_BACKUP     	 14
+#define HOOK_DIE		 15
+#define REAL_HOOKS		 16
 #define HOOK_SHAREOUT		105
 #define HOOK_SHAREIN		106
 #define HOOK_ENCRYPT_PASS	107
@@ -77,6 +79,7 @@
 #define IRC_RECHECK_CHANNEL_MODES 17
 #define IRC_DO_CHANNEL_PART	  19
 #define IRC_CHECK_THIS_BAN	  20
+#define IRC_CHECK_THIS_USER       21
 /* Notes */
 #define NOTES_CMD_NOTE		  4
 /* Console */

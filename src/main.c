@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.66 2001/07/15 05:15:14 guppy Exp $
+ * $Id: main.c,v 1.74 2001/11/16 05:01:32 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -81,8 +81,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.6.6";
-int	egg_numver = 1060600;
+char	egg_version[1024] = "1.6.7";
+int	egg_numver = 1060700;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -104,7 +104,7 @@ time_t	online_since;		/* Unix-time that the bot loaded up */
 int	make_userfile = 0;	/* Using bot in make-userfile mode? (first
 				   user to 'hello' becomes master) */
 char	owner[121] = "";	/* Permanent owner(s) of the bot */
-char	pid_file[HANDLEN + 5];		/* Name of the file for the pid to be
+char	pid_file[120];		/* Name of the file for the pid to be
 				   stored in */
 int	save_users_at = 0;	/* How many minutes past the hour to
 				   save the userfile? */
@@ -119,6 +119,7 @@ int	do_restart = 0;		/* .restart has been called, restart asap */
 int	die_on_sighup = 0;	/* die if bot receives SIGHUP */
 int	die_on_sigterm = 1;	/* die if bot receives SIGTERM */
 int	resolve_timeout = 15;	/* hostname/address lookup timeout */
+char	quit_msg[1024];		/* quit message */
 time_t	now;			/* duh, now :) */
 
 /* Traffic stats
@@ -174,7 +175,8 @@ void fatal(const char *s, int recoverable)
 
 int expmem_chanprog(), expmem_users(), expmem_misc(), expmem_dccutil(),
  expmem_botnet(), expmem_tcl(), expmem_tclhash(), expmem_net(),
- expmem_modules(int), expmem_language(), expmem_tcldcc();
+ expmem_modules(int), expmem_language(), expmem_tcldcc(),
+ expmem_tclmisc();
 
 /* For mem.c : calculate memory we SHOULD be using
  */
@@ -184,7 +186,8 @@ int expected_memory(void)
 
   tot = expmem_chanprog() + expmem_users() + expmem_misc() +
     expmem_dccutil() + expmem_botnet() + expmem_tcl() + expmem_tclhash() +
-    expmem_net() + expmem_modules(0) + expmem_language() + expmem_tcldcc();
+    expmem_net() + expmem_modules(0) + expmem_language() + expmem_tcldcc() +
+    expmem_tclmisc();
   return tot;
 }
 
@@ -264,21 +267,15 @@ void write_debug()
 	    ((interp) && (Tcl_Eval(interp, "info library") == TCL_OK)) ?
 	    interp->result : "*unknown*");
 
-    /* info tclversion */
+    /* info tclversion/patchlevel */
     dprintf(-x, "TCL version: %s (header version %s)\n",
-	    ((interp) && (Tcl_Eval(interp, "info tclversion") == TCL_OK)) ?
-	    interp->result : "*unknown*", TCL_VERSION);
-
-    /* info patchlevel */
-    dprintf(-x, "TCL patchlevel: %s (header patchlevel %s)\n",
 	    ((interp) && (Tcl_Eval(interp, "info patchlevel") == TCL_OK)) ?
-	    interp->result : "*unknown*",
-	    TCL_PATCH_LEVEL ? TCL_PATCH_LEVEL : "*unknown*");
+     interp->result : (Tcl_Eval(interp, "info tclversion") == TCL_OK) ?
+     interp->result : "*unknown*", TCL_PATCH_LEVEL ? TCL_PATCH_LEVEL :
+     "*unknown*");
 
 #if HAVE_TCL_THREADS
     dprintf(-x, "TCL is threaded\n");
-#else
-    dprintf(-x, "TCL isn't threaded\n");
 #endif
 
 #ifdef CCFLAGS
@@ -560,7 +557,7 @@ static void core_secondly()
 
 	strncpyz(s, ctime(&now), sizeof s);
 	putlog(LOG_ALL, "*", "--- %.11s%s", s, s + 20);
-	backup_userfile();
+	call_hook(HOOK_BACKUP);
 	for (j = 0; j < max_logs; j++) {
 	  if (logs[j].filename != NULL && logs[j].f != NULL) {
 	    fclose(logs[j].f);
@@ -807,6 +804,7 @@ int main(int argc, char **argv)
 	 botnetnick, i, count_users(userlist));
   cache_miss = 0;
   cache_hit = 0;
+  if (!pid_file[0])
   egg_snprintf(pid_file, sizeof pid_file, "pid.%s", botnetnick);
 
   /* Check for pre-existing eggdrop! */
@@ -849,7 +847,7 @@ int main(int argc, char **argv)
       } else
         printf(EGG_NOWRITE, pid_file);
 #ifdef CYGWIN_HACKS
-      printf("Launched  (pid: %d)\n\n", xx);
+      printf("Launched into the background  (pid: %d)\n\n", xx);
 #endif
     }
   }
@@ -904,6 +902,7 @@ int main(int argc, char **argv)
   add_hook(HOOK_REHASH, (Function) event_rehash);
   add_hook(HOOK_PRE_REHASH, (Function) event_prerehash);
   add_hook(HOOK_USERFILE, (Function) event_save);
+  add_hook(HOOK_BACKUP, (Function) backup_userfile);
   add_hook(HOOK_DAILY, (Function) event_logfile);
   add_hook(HOOK_DAILY, (Function) event_resettraffic);
   add_hook(HOOK_LOADED, (Function) event_loaded);
@@ -937,14 +936,14 @@ int main(int argc, char **argv)
       dcc_remove_lost();
 
       /* Check for server or dcc activity. */
-      dequeue_sockets();
+      dequeue_sockets();		
     } else
       socket_cleanup--;
 
     /* Free unused structures. */
     garbage_collect();
 
-    xx = sockgets(buf, &i);
+    xx = sockgets(buf, &i); 
     if (xx >= 0) {		/* Non-error */
       int idx;
 

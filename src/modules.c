@@ -4,7 +4,7 @@
  * 
  * by Darrin Smith (beldin@light.iinet.net.au)
  * 
- * $Id: modules.c,v 1.52 2001/07/16 14:54:01 guppy Exp $
+ * $Id: modules.c,v 1.59 2001/10/21 07:06:08 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -69,15 +69,14 @@ extern struct userrec	*userlist, *lastuser;
 extern char		 tempdir[], botnetnick[], botname[], natip[],
 			 hostname[], origbotname[], botuser[], admin[],
 			 userfile[], ver[], notify_new[], helpdir[],
-			 version[];
+			 version[], quit_msg[];
 extern int	 noshare, dcc_total, egg_numver, userfile_perm,
 			 use_console_r, ignore_time, must_be_owner,
 			 debug_output, gban_total, make_userfile,
 			 gexempt_total, ginvite_total, default_flags,
 			 require_p, max_dcc, share_greet, password_timeout,
-			 min_dcc_port, max_dcc_port, use_invites, use_exempts,
-			 force_expire, do_restart, protect_readonly,
-			 reserved_port_min, reserved_port_max;
+			 use_invites, use_exempts, force_expire, do_restart,
+			 protect_readonly, reserved_port_min, reserved_port_max;
 extern time_t now, online_since;
 extern struct chanset_t *chanset;
 extern tand_t *tandbot;
@@ -458,8 +457,8 @@ Function global_table[] =
   (Function) sanitycheck_dcc,
   (Function) isowner,
   /* 216 - 219 */
-  (Function) & min_dcc_port,	/* int					*/
-  (Function) & max_dcc_port,	/* int					*/
+  (Function) 0, /* min_dcc_port -- UNUSED! (guppy) */
+  (Function) 0, /* max_dcc_port -- UNUSED! (guppy) */
   (Function) & rfc_casecmp,	/* Function *				*/
   (Function) & rfc_ncasecmp,	/* Function *				*/
   /* 220 - 223 */
@@ -529,14 +528,16 @@ Function global_table[] =
   (Function) str_unescape,
   (Function) egg_strcatn,
   (Function) clear_chanlist_member,
-#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
-  (Function) str_nutf8tounicode,
-#else
   (Function) 0,
-#endif
-  (Function) & socklist,              /* sock_list *                      */
+  /* 268 - 271 */
+  (Function) & socklist,	/* sock_list *				*/
   (Function) sockoptions,
   (Function) flush_inbuf,
+  (Function) kill_bot,
+  /* 272 - 275 */
+  (Function) quit_msg,		/* char *				*/
+  (Function) module_load,
+  (Function) module_unload,
 };
 
 void init_modules(void)
@@ -691,7 +692,7 @@ const char *module_load(char *name)
 #  else
   for (sl = static_modules; sl && egg_strcasecmp(sl->name, name); sl = sl->next);
   if (!sl)
-    return "Unkown module.";
+    return "Unknown module.";
   f = (Function) sl->func;
 #endif
   p = nmalloc(sizeof(module_entry));
@@ -1009,7 +1010,7 @@ void del_hook(int hook_num, Function func)
 	add_mode = null_func;
       break;
     case HOOK_MATCH_NOTEREJ:
-      if (match_noterej == (int (*)(struct userrec *, char *))false_func)
+      if (match_noterej == (int (*)(struct userrec *, char *))func)
 	match_noterej = false_func;
       break;
     case HOOK_DNS_HOSTBYIP:

@@ -4,7 +4,7 @@
  *   channel mode changes and the bot's reaction to them
  *   setting and getting the current wanted channel modes
  *
- * $Id: mode.c,v 1.44 2001/07/06 16:36:41 guppy Exp $
+ * $Id: mode.c,v 1.51 2001/11/28 23:26:05 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -431,8 +431,9 @@ static void got_op(struct chanset_t *chan, char *nick, char *from,
     if (chan_deop(victim) || (glob_deop(victim) && !chan_op(victim))) {
       m->flags |= FAKEOP;
       add_mode(chan, '-', 'o', who);
-    } else if (snm > 0 && snm < 7 && !(m->delay) &&
-	       !glob_exempt(victim) && !chan_exempt(victim)) {
+    } else if (snm > 0 && snm < 7 && !((channel_autoop(chan) || glob_autoop(victim) ||
+	       chan_autoop(victim)) && (chan_op(victim) || (glob_op(victim) &&
+               !chan_deop(victim)))) && !glob_exempt(victim) && !chan_exempt(victim)) {
       if (snm == 5) snm = channel_bitch(chan) ? 1 : 3;
       if (snm == 6) snm = channel_bitch(chan) ? 4 : 2;
       if (chan_wasoptest(victim) || glob_wasoptest(victim) ||
@@ -645,8 +646,26 @@ static void got_ban(struct chanset_t *chan, char *nick, char *from,
    * at the same time.
    */
   refresh_exempt(chan,who);
-  if (check && channel_enforcebans(chan))
-    kick_all(chan, who, IRC_BANNED, match_my_nick(nick) ? 0 : 1);
+  /* Does the ban match anyone in the internal banlist in that case
+   * use the stored ban reason when kicking
+   */
+  if (check && channel_enforcebans(chan)) {
+    register maskrec *b;
+    int cycle;
+    char resn[512]="";
+
+    for (cycle = 0; cycle < 2; cycle++) {
+      for (b = cycle ? chan->bans : global_bans; b; b = b->next) {
+	if (wild_match(b->mask, who)) {
+	  if (b->desc && b->desc[0] != '@')
+	    egg_snprintf(resn, sizeof resn, "%s%s", IRC_PREBANNED, b->desc);
+          else 
+            resn[0] = 0;
+	}
+      }
+    }
+    kick_all(chan, who, resn[0] ? resn : IRC_BANNED, match_my_nick(nick) ? 0 : 1);
+  }
   /* Is it a server ban from nowhere? */
   if (reversing ||
       (bounce_bans && (!nick[0]) &&
@@ -929,6 +948,11 @@ static int gotmode(char *from, char *origmsg)
 	  break;
 	case 'R':
 	  todo = CHANREGON;
+	  if ((!nick[0]) && (bounce_modes))
+	    reversing = 1;
+	  break;
+	case 'M':
+	  todo = CHANMODR;
 	  if ((!nick[0]) && (bounce_modes))
 	    reversing = 1;
 	  break;

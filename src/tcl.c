@@ -4,7 +4,7 @@
  *   Tcl initialization
  *   getting and setting Tcl/eggdrop variables
  *
- * $Id: tcl.c,v 1.35 2001/07/14 12:37:08 poptix Exp $
+ * $Id: tcl.c,v 1.41 2001/11/04 09:18:44 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -54,7 +54,7 @@ extern char	origbotname[], botuser[], motdfile[], admin[], userfile[],
 		firewall[], helpdir[], notify_new[], hostname[], myip[],
 		moddir[], tempdir[], owner[], network[], botnetnick[],
 		bannerfile[], egg_version[], natip[], configfile[],
-		logfile_suffix[], textdir[];
+		logfile_suffix[], textdir[], pid_file[];
 extern int	die_on_sighup, die_on_sigterm, max_logs, max_logsize,
 		enable_simul, dcc_total, debug_output, identtimeout,
 		protect_telnet, dupwait_timeout, egg_numver, share_unlinks,
@@ -62,7 +62,6 @@ extern int	die_on_sighup, die_on_sigterm, max_logs, max_logsize,
 		default_uflags, strict_host, userfile_perm;
 extern struct dcc_t	*dcc;
 extern tcl_timer_t	*timer, *utimer;
-extern log_t		*logs;
 
 int	    protect_readonly = 0;	/* turn on/off readonly protection */
 char	    whois_fields[1025] = "";	/* fields to display in a .whois */
@@ -77,99 +76,22 @@ int	    allow_dk_cmds = 1;
 int	    must_be_owner = 1;
 int	    max_dcc = 20;		/* needs at least 4 or 5 just to
 					   get started. 20 should be enough   */
-int	    min_dcc_port = 1024;	/* dcc-portrange, min port - dw/guppy */
-int	    max_dcc_port = 65535;	/* dcc-portrange, max port - dw/guppy */
 int	    quick_logs = 0;		/* quick write logs? (flush them
 					   every min instead of every 5	      */
 int	    par_telnet_flood = 1;       /* trigger telnet flood for +f
 					   ppl? - dw			      */
 int	    quiet_save = 0;             /* quiet-save patch by Lucas	      */
 int	    strtot = 0;
+int utftot = 0;
+int clientdata_stuff = 0;
 
 
 /* Prototypes for tcl */
 Tcl_Interp *Tcl_CreateInterp();
 
-
 int expmem_tcl()
 {
-  int i, tot = 0;
-
-  for (i = 0; i < max_logs; i++)
-    if (logs[i].filename != NULL) {
-      tot += strlen(logs[i].filename) + 1;
-      tot += strlen(logs[i].chname) + 1;
-    }
-  return tot + strtot;
-}
-
-
-/*
- *      Logging
- */
-
-/* logfile [<modes> <channel> <filename>] */
-static int tcl_logfile STDVAR
-{
-  int i;
-  char s[151];
-
-  BADARGS(1, 4, " ?logModes channel logFile?");
-  if (argc == 1) {
-    /* They just want a list of the logfiles and modes */
-    for (i = 0; i < max_logs; i++)
-      if (logs[i].filename != NULL) {
-	strcpy(s, masktype(logs[i].mask));
-	strcat(s, " ");
-	strcat(s, logs[i].chname);
-	strcat(s, " ");
-	strcat(s, logs[i].filename);
-	Tcl_AppendElement(interp, s);
-      }
-    return TCL_OK;
-  }
-  BADARGS(4, 4, " ?logModes channel logFile?");
-  for (i = 0; i < max_logs; i++)
-    if ((logs[i].filename != NULL) && (!strcmp(logs[i].filename, argv[3]))) {
-      logs[i].flags &= ~LF_EXPIRING;
-      logs[i].mask = logmodes(argv[1]);
-      nfree(logs[i].chname);
-      logs[i].chname = NULL;
-      if (!logs[i].mask) {
-	/* ending logfile */
-	nfree(logs[i].filename);
-	logs[i].filename = NULL;
-	if (logs[i].f != NULL) {
-	  fclose(logs[i].f);
-	  logs[i].f = NULL;
-	}
-        logs[i].flags = 0;
-      } else {
-	logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
-	strcpy(logs[i].chname, argv[2]);
-      }
-      Tcl_AppendResult(interp, argv[3], NULL);
-      return TCL_OK;
-    }
-  /* Do not add logfiles without any flags to log ++rtc */
-  if (!logmodes (argv [1])) {
-    Tcl_AppendResult (interp, "can't remove \"", argv[3],
-                     "\" from list: no such logfile", NULL);
-    return TCL_ERROR;
-  }
-  for (i = 0; i < max_logs; i++)
-    if (logs[i].filename == NULL) {
-      logs[i].flags = 0;
-      logs[i].mask = logmodes(argv[1]);
-      logs[i].filename = (char *) nmalloc(strlen(argv[3]) + 1);
-      strcpy(logs[i].filename, argv[3]);
-      logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
-      strcpy(logs[i].chname, argv[2]);
-      Tcl_AppendResult(interp, argv[3], NULL);
-      return TCL_OK;
-    }
-  Tcl_AppendResult(interp, "reached max # of logfiles", NULL);
-  return TCL_ERROR;
+  return strtot + utftot + clientdata_stuff;
 }
 
 int findidx(int z)
@@ -366,20 +288,122 @@ static char *tcl_eggstr(ClientData cdata, Tcl_Interp *irp, char *name1,
 
 /* Add/remove tcl commands
  */
-void add_tcl_commands(tcl_cmds *tab)
-{
-  int i;
 
-  for (i = 0; tab[i].name; i++)
-    Tcl_CreateCommand(interp, tab[i].name, tab[i].func, NULL, NULL);
+#if ((TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION >= 1)) || (TCL_MAJOR_VERSION > 8)
+
+static int utf_converter(ClientData cdata, Tcl_Interp *myinterp, int objc,
+			 Tcl_Obj *CONST objv[])
+{
+  char **strings, *byteptr;
+  int i, len, retval, *intarray, diff;
+  Function func;
+  ClientData cd;
+
+  objc += 5;
+  strings = (char **)nmalloc(sizeof(char *) * objc);
+  egg_memset(strings, 0, sizeof(char *) * objc);
+  diff = utftot;
+  utftot += sizeof(char *) * objc;
+  objc -= 5;
+  for (i = 0; i < objc; i++) {
+    byteptr = (char *)Tcl_GetByteArrayFromObj(objv[i], &len);
+    strings[i] = (char *)nmalloc(len+1);
+    utftot += len+1;
+    strncpy(strings[i], byteptr, len);
+    strings[i][len] = 0;
+  }
+  intarray = (int *)cdata;
+  func = (Function) intarray[0];
+  cd = (ClientData) intarray[1];
+  diff -= utftot;
+  retval = func(cd, myinterp, objc, strings);
+  for (i = 0; i < objc; i++) nfree(strings[i]);
+  nfree(strings);
+  utftot += diff;
+  return(retval);
 }
 
-void rem_tcl_commands(tcl_cmds *tab)
+void cmd_delete_callback(ClientData cdata)
+{
+  nfree(cdata);
+  clientdata_stuff -= sizeof(int) * 2;
+}
+
+void add_tcl_commands(tcl_cmds *table)
+{
+  int *cdata;
+
+  while (table->name) {
+    cdata = (int *)nmalloc(sizeof(int) * 2);
+    clientdata_stuff += sizeof(int) * 2;
+    cdata[0] = (int) table->func;
+    cdata[1] = (int) NULL;
+    Tcl_CreateObjCommand(interp, table->name, utf_converter, (ClientData) cdata,
+			 cmd_delete_callback);
+    table++;
+  }
+}
+
+void add_cd_tcl_cmds(cd_tcl_cmd *table)
+{
+  int *cdata;
+
+  while (table->name) {
+    cdata = (int *)nmalloc(sizeof(int) * 2);
+    clientdata_stuff += sizeof(int) * 2;
+    cdata[0] = (int) table->callback;
+    cdata[1] = (int) table->cdata;
+    Tcl_CreateObjCommand(interp, table->name, utf_converter, (ClientData) cdata, 
+			 cmd_delete_callback);
+    table++;
+  }
+}
+
+#else
+
+void add_tcl_commands(tcl_cmds *table)
 {
   int i;
 
-  for (i = 0; tab[i].name; i++)
-    Tcl_DeleteCommand(interp, tab[i].name);
+  for (i = 0; table[i].name; i++)
+    Tcl_CreateCommand(interp, table[i].name, table[i].func, NULL, NULL);
+}
+
+void add_cd_tcl_cmds(cd_tcl_cmd *table)
+{
+  while (table->name) {
+    Tcl_CreateCommand(interp, table->name, table->callback, 
+		      (ClientData) table->cdata, NULL);
+    table++;
+  }
+}
+
+#endif
+
+void rem_tcl_commands(tcl_cmds *table)
+{
+  int i;
+
+  for (i = 0; table[i].name; i++)
+    Tcl_DeleteCommand(interp, table[i].name);
+}
+
+void rem_cd_tcl_cmds(cd_tcl_cmd *table)
+{
+  while (table->name) {
+    Tcl_DeleteCommand(interp, table->name);
+    table++;
+  }
+}
+
+void add_tcl_objcommands(tcl_cmds *table)
+{
+#if (TCL_MAJOR_VERSION >= 8)
+  int i;
+
+  for (i = 0; table[i].name; i++)
+    Tcl_CreateObjCommand(interp, table[i].name, table[i].func, (ClientData) 0, NULL);
+#endif
 }
 
 /* Strings */
@@ -409,6 +433,7 @@ static tcl_strings def_tcl_strings[] =
   {"config",		configfile,	0,		0},
   {"telnet-banner",	bannerfile,	120,		STR_PROTECT},
   {"logfile-suffix",	logfile_suffix,	20,		0},
+  {"pidfile",		pid_file,       120,		STR_PROTECT},
   {NULL,		NULL,		0,		0}
 };
 
@@ -464,7 +489,6 @@ static tcl_ints def_tcl_ints[] =
 static tcl_coups def_tcl_coups[] =
 {
   {"telnet-flood",	&flood_telnet_thr,	&flood_telnet_time},
-  {"dcc-portrange",	&min_dcc_port,		&max_dcc_port},	/* dw */
   {"reserved-portrange", &reserved_port_min, &reserved_port_max},
   {NULL,		NULL,			NULL}
 };
@@ -488,7 +512,7 @@ void kill_tcl()
   Tcl_DeleteInterp(interp);
 }
 
-extern tcl_cmds tcluser_cmds[], tcldcc_cmds[], tclmisc_cmds[], tcldns_cmds[];
+extern tcl_cmds tcluser_cmds[], tcldcc_cmds[], tclmisc_cmds[], tclmisc_objcmds[], tcldns_cmds[];
 
 /* Not going through Tcl's crazy main() system (what on earth was he
  * smoking?!) so we gotta initialize the Tcl interpreter
@@ -618,10 +642,10 @@ resetPath:
   init_traces();
 
   /* Add new commands */
-  Tcl_CreateCommand(interp, "logfile", tcl_logfile, NULL, NULL);
   add_tcl_commands(tcluser_cmds);
   add_tcl_commands(tcldcc_cmds);
   add_tcl_commands(tclmisc_cmds);
+  add_tcl_objcommands(tclmisc_objcmds);
   add_tcl_commands(tcldns_cmds);
 }
 

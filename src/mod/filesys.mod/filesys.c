@@ -2,7 +2,7 @@
  * filesys.c -- part of filesys.mod
  *   main file of the filesys eggdrop module
  *
- * $Id: filesys.c,v 1.43 2001/07/17 19:53:41 guppy Exp $
+ * $Id: filesys.c,v 1.45 2001/10/09 10:55:07 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -646,8 +646,8 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
   } else {
     ip = newsplit(&msg);
     prt = newsplit(&msg);
-    if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
-      /* Invalid port range. */
+    if (atoi(prt) < 1024 || atoi(prt) > 65535) {
+      /* Invalid port */
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
 	      DCC_CONNECTFAILED1);
       putlog(LOG_FILES, "*", "Refused dcc send %s (%s): invalid port", param,
@@ -856,8 +856,8 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
 	     nick, from);
       putlog(LOG_MISC, "*", "    (%s)", buf);
       killsock(sock);
-    } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
-      /* Invalid port range. */
+    } else if (atoi(prt) < 1024 || atoi(prt) > 65535) {
+      /* Invalid port */
       if (!quiet_reject)
         dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
 	        DCC_CONNECTFAILED1);
@@ -873,8 +873,6 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
       dcc[i].status = STAT_ECHO;
       dcc[i].timeval = now;
       dcc[i].u.file->chat = get_data_ptr(sizeof(struct chat_info));
-      egg_bzero(dcc[i].u.file->chat, sizeof(struct chat_info));
-
       strcpy(dcc[i].u.file->chat->con_chan, "*");
       dcc[i].user = u;
       putlog(LOG_MISC, "*", "DCC connection: CHAT(file) (%s!%s)", nick, from);

@@ -16,11 +16,12 @@
 # Tothwolf  18Jun2000: added ispermowner
 # Sup       02Apr2001: added matchbotattr
 # Tothwolf  13Jun2001: updated/modified several commands
+# Hanno     28Sep2001: fixed testip
 #
-# $Id: alltools.tcl,v 1.10 2001/06/15 05:31:38 tothwolf Exp $
+# $Id: alltools.tcl,v 1.12 2001/11/28 23:51:16 guppy Exp $
 #
 ########################################
-# Descriptions of avaliable commands:
+# Descriptions of available commands:
 ## (toolkit):
 # putmsg <nick/chan> <text>
 #   send a privmsg to the given nick or channel
@@ -124,7 +125,7 @@
 set alltools_loaded 1
 set allt_version 204
 
-# For backward comptibility.
+# For backward compatibility.
 set toolbox_revision 1007
 set toolbox_loaded 1
 set toolkit_loaded 1
@@ -274,7 +275,7 @@ proc testip {ip} {
   }
   set index 0
   foreach i $tmp {
-    if {((![regexp \[^0-9\] $i]) || ([string length $i] > 3) || \
+    if {(([regexp \[^0-9\] $i]) || ([string length $i] > 3) || \
          (($index == 3) && (($i > 254) || ($i < 1))) || \
          (($index <= 2) && (($i > 255) || ($i < 0))))} then {
       return 0

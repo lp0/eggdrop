@@ -44,14 +44,14 @@ help/
 
 language/
    a directory of language files, for multiple language support.
-   More information on contributing/customising for languages will be
+   More information on contributing/customizing for languages will be
    forthcoming.
 
 motd
    sample "message of the day" displayed to party-line users as they join
 
 scripts/
-   some tcl scripts that you might want to use
+   some Tcl scripts that you might want to use
 
 src/
    the eggdrop source

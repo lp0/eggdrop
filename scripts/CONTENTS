@@ -17,7 +17,7 @@ alltools.tcl
       more useful procs from David Sesno
 
 autobotchk
-   tcl script used to crontab your Eggdrop
+   Tcl script used to crontab your Eggdrop
    usage: ./autobotchk <eggdrop config file>
 
 botchk
@@ -28,10 +28,10 @@ cmd_resolve.tcl
    or ip addresses in the partyline.
 
 compat.tcl
-   maps old tcl functions to new ones, for lazy people who can't be bothered
+   maps old Tcl functions to new ones, for lazy people who can't be bothered
    updating their scripts
    
-getops-2.2d.tcl
+getops.tcl
    a way to get ops from other bots on the botnet (if they're on the
    same channel)
 
@@ -51,7 +51,7 @@ sentinel.tcl (by slennox)
    this script is designed to provide strong protection for your bot and
    channels against large floodnets and proxy floods.
 
-userinfo1.0.tcl
+userinfo.tcl
    cute user info settings things 
  
 weed

@@ -6,7 +6,7 @@
  *   user kickban, kick, op, deop
  *   idle kicking
  *
- * $Id: chan.c,v 1.67 2001/06/30 06:29:56 guppy Exp $
+ * $Id: chan.c,v 1.73 2001/12/04 19:58:06 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -93,6 +93,8 @@ static char *getchanmode(struct chanset_t *chan)
     s[i++] = 'R';
   if (atr & CHANTOPIC)
     s[i++] = 't';
+  if (atr & CHANMODR)
+    s[i++] = 'M';
   if (atr & CHANNOMSG)
     s[i++] = 'n';
   if (atr & CHANANON)
@@ -645,6 +647,10 @@ static void recheck_channel_modes(struct chanset_t *chan)
       add_mode(chan, '+', 'R', "");
     else if (mns & CHANREGON && cur & CHANREGON)
       add_mode(chan, '-', 'R', "");
+    if (pls & CHANMODR && !(cur & CHANMODR))
+      add_mode(chan, '+', 'M', "");
+    else if (mns & CHANMODR && cur & CHANMODR)
+      add_mode(chan, '-', 'M', "");
     if (pls & CHANTOPIC && !(cur & CHANTOPIC))
       add_mode(chan, '+', 't', "");
     else if (mns & CHANTOPIC && cur & CHANTOPIC)
@@ -679,12 +685,109 @@ static void recheck_channel_modes(struct chanset_t *chan)
   }
 }
 
+static void check_this_member(struct chanset_t *chan, char *nick, struct flag_record *fr)
+{
+  memberlist *m;
+  char s[UHOSTLEN], *p;
+
+  m = ismember(chan, nick);
+  if (!m || match_my_nick(nick))
+    return;
+
+  sprintf(s, "%s!%s", m->nick, m->userhost);
+  /* if channel user is current a chanop */
+  if (chan_hasop(m)) {
+  /* if user is channel deop */
+    if (chan_deop(*fr) ||
+	/* OR global deop and NOT channel op */
+	(glob_deop(*fr) && !chan_op(*fr))) {
+      /* de-op! */
+      add_mode(chan, '-', 'o', m->nick);
+      /* if channel mode is bitch */
+    } else if (channel_bitch(chan) &&
+	       /* AND the user isnt a channel op */
+	       (!chan_op(*fr) &&
+		/* AND the user isnt a global op, (or IS a chan deop) */
+		!(glob_op(*fr) && !chan_deop(*fr)))) {
+      /* de-op! mmmbop! */
+      add_mode(chan, '-', 'o', m->nick);
+    }
+  }
+  /* check vs invites */
+  if (use_invites &&
+      (u_match_mask(global_invites,s) ||
+       u_match_mask(chan->invites, s)))
+    refresh_invite(chan, s);
+  /* don't kickban if permanent exempted */
+  if (!(use_exempts &&
+	(u_match_mask(global_exempts,s) ||
+	 u_match_mask(chan->exempts, s)))) {
+    /* if match a ban */
+    if (u_match_mask(global_bans, s) ||
+        u_match_mask(chan->bans, s)) {
+      /* bewm */
+      refresh_ban_kick(chan, s, m->nick);
+      /* ^ will use the ban comment */
+    }
+    /* are they +k ? */
+    if (chan_kick(*fr) || glob_kick(*fr)) {
+      check_exemptlist(chan, s);
+      quickban(chan, m->userhost);
+      p = get_user(&USERENTRY_COMMENT, m->user);
+      dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
+	      p ? p : IRC_POLITEKICK);
+      m->flags |= SENTKICK;
+    }
+  }
+  /* now lets look at de-op'd ppl */
+  if (!chan_hasop(m) &&
+      /* if they're an op, channel or global (without channel +d) */
+      (chan_op(*fr) || (glob_op(*fr) && !chan_deop(*fr))) &&
+      /* and the channel is op on join, or they are auto-opped */
+      (channel_autoop(chan) || (glob_autoop(*fr) || chan_autoop(*fr)))) {
+    /* op them! */
+    add_mode(chan, '+', 'o', m->nick);
+    /* otherwise, lets check +v stuff if the llamas want it */
+  } else if (!chan_hasvoice(m) && !chan_hasop(m)) {
+    if ((channel_autovoice(chan) && !chan_quiet(*fr) &&
+	 (chan_voice(*fr) || glob_voice(*fr))) ||
+	  (!chan_quiet(*fr) && (glob_gvoice(*fr) || chan_gvoice(*fr)))) {
+      add_mode(chan, '+', 'v', m->nick);
+    }
+    /* do they have a voice on the channel */
+    if (chan_hasvoice(m) &&
+	/* do they have the +q & no +v */
+	(chan_quiet(*fr) || (glob_quiet(*fr) && !chan_voice(*fr)))) {
+      add_mode(chan, '-', 'v', m->nick);
+    }
+  }
+}
+
+static void check_this_user(char *hand)
+{
+  char s[UHOSTLEN];
+  memberlist *m;
+  struct userrec *u;
+  struct chanset_t *chan;
+  struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
+
+  for (chan = chanset; chan; chan = chan->next)
+    for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
+      sprintf(s, "%s!%s", m->nick, m->userhost);
+      u = m->user ? m->user : get_user_by_host(s);
+      if (u && !egg_strcasecmp(u->handle, hand)) {
+	get_user_flagrec(u, &fr, chan->dname);
+	check_this_member(chan, m->nick, &fr);
+      }
+    }
+}
+
 /* Things to do when i just became a chanop:
  */
 static void recheck_channel(struct chanset_t *chan, int dobans)
 {
   memberlist *m;
-  char s[UHOSTLEN], *p;
+  char s[UHOSTLEN];
   struct flag_record fr = {FR_GLOBAL | FR_CHAN, 0, 0, 0, 0, 0};
   static int stacking = 0;
   int stop_reset = 0;
@@ -697,80 +800,10 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
   /* Okay, sort through who needs to be deopped. */
   for (m = chan->channel.member; m && m->nick[0]; m = m->next) { 
     sprintf(s, "%s!%s", m->nick, m->userhost);
-    if (!m->user)
-      m->user = get_user_by_host(s);
-    get_user_flagrec(m->user, &fr, chan->dname);
-    /* ignore myself */
-    if (!match_my_nick(m->nick)) {
-      /* if channel user is current a chanop */
-      if (chan_hasop(m)) {
-	if (glob_bot(fr))
-	  stop_reset = 1;
-	/* if user is channel deop */
-	if (chan_deop(fr) ||
-	/* OR global deop and NOT channel op */
-	    (glob_deop(fr) && !chan_op(fr))) {
-	  /* de-op! */
-	  add_mode(chan, '-', 'o', m->nick);
-	/* if channel mode is bitch */
-	} else if (channel_bitch(chan) &&
-	  /* AND the user isnt a channel op */
-		   (!chan_op(fr) &&
-	  /* AND the user isnt a global op, (or IS a chan deop) */
-		   !(glob_op(fr) && !chan_deop(fr)))) {
-	  /* de-op! mmmbop! */
-	  add_mode(chan, '-', 'o', m->nick);
-	}
-      }
-      /* check vs invites */
-      if (use_invites &&
-	  (u_match_mask(global_invites,s) ||
-	   u_match_mask(chan->invites, s)))
-	refresh_invite(chan, s);
-      /* don't kickban if permanent exempted */
-      if (!(use_exempts &&
-	    (u_match_mask(global_exempts,s) ||
-	     u_match_mask(chan->exempts, s)))) {
-        /* if match a ban */
-        if (u_match_mask(global_bans, s) ||
-            u_match_mask(chan->bans, s)) {
-	  /* bewm */
-	  refresh_ban_kick(chan, s, m->nick);
-	/* ^ will use the ban comment */
-	}
-	/* are they +k ? */
-	if (chan_kick(fr) || glob_kick(fr)) {
-	  check_exemptlist(chan, s);
-	  quickban(chan, m->userhost);
-	  p = get_user(&USERENTRY_COMMENT, m->user);
-	  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
-		  p ? p : IRC_POLITEKICK);
-	  m->flags |= SENTKICK;
-	}
-      }
-      /* now lets look at de-op'd ppl */
-      if (!chan_hasop(m) &&
-	  /* if they're an op, channel or global (without channel +d) */
-	  (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))) &&
-	  /* and the channel is op on join, or they are auto-opped */
-	  (channel_autoop(chan) || (glob_autoop(fr) || chan_autoop(fr)))) {
-	/* op them! */
-	add_mode(chan, '+', 'o', m->nick);
-	  /* otherwise, lets check +v stuff if the llamas want it */
-      } else if (!chan_hasvoice(m) && !chan_hasop(m)) {
-	if ((channel_autovoice(chan) && !chan_quiet(fr) &&
-	     (chan_voice(fr) || glob_voice(fr))) ||
-	    (!chan_quiet(fr) && (glob_gvoice(fr) || chan_gvoice(fr)))) {
-	  add_mode(chan, '+', 'v', m->nick);
-	}
-	/* do they have a voice on the channel */
-	if (chan_hasvoice(m) &&
-	    /* do they have the +q & no +v */
-	    (chan_quiet(fr) || (glob_quiet(fr) && !chan_voice(fr)))) {
-	  add_mode(chan, '-', 'v', m->nick);
-	}
-      }
-    }
+    get_user_flagrec(m->user ? m->user : get_user_by_host(s), &fr, chan->dname);
+      if (glob_bot(fr) && chan_hasop(m) && !match_my_nick(m->nick))
+	stop_reset = 1;
+      check_this_member(chan, m->nick, &fr);
   }
   if (dobans) {
     if (channel_nouserbans(chan) && !stop_reset)
@@ -834,6 +867,8 @@ static int got324(char *from, char *msg)
       chan->channel.mode |= CHANNOCLR;
     if (msg[i] == 'R')
       chan->channel.mode |= CHANREGON;
+    if (msg[i] == 'M')
+      chan->channel.mode |= CHANMODR;
     if (msg[i] == 't')
       chan->channel.mode |= CHANTOPIC;
     if (msg[i] == 'n')
@@ -1531,7 +1566,7 @@ static int gotjoin(char *from, char *chname)
     detect_chan_flood(nick, uhost, from, chan, FLOOD_JOIN, NULL);
     /* Grab last time joined before we update it */
     u = get_user_by_host(from);
-    get_user_flagrec(u, &fr, chname);
+    get_user_flagrec(u, &fr, chan->dname); /* Lam: fix to work with !channels */
     if (!channel_active(chan) && !match_my_nick(nick)) {
       /* uh, what?!  i'm on the channel?! */
       putlog(LOG_MISC, chan->dname,
@@ -1833,7 +1868,6 @@ static int gotnick(char *from, char *msg)
   struct chanset_t *chan;
   struct userrec *u;
 
-  u = get_user_by_host(from);
   strcpy(uhost, from);
   nick = splitnick(&uhost);
   fixcolon(msg);
@@ -1874,6 +1908,8 @@ static int gotnick(char *from, char *msg)
       /* Any pending kick to the old nick is lost. Ernst 18/3/1998 */
       if (chan_sentkick(m))
 	m->flags &= ~SENTKICK;
+      u = get_user_by_host(from); /* make sure this is in the loop, someone could have changed the record
+                                     in an earlier iteration of the loop */
       check_tcl_nick(nick, uhost, u, chan->dname, msg);
     }
   }
@@ -1887,11 +1923,13 @@ static int gotquit(char *from, char *msg)
 {
   char *nick, *p, *alt;
   int split = 0;
+  char from2[NICKMAX + UHOSTMAX + 1];
   memberlist *m;
   struct chanset_t *chan;
   struct userrec *u;
 
-  u = get_user_by_host(from);
+  strcpy(from2,from);
+  u = get_user_by_host(from2);
   nick = splitnick(&from);
   fixcolon(msg);
   /* Fred1: Instead of expensive wild_match on signoff, quicker method.
@@ -1917,7 +1955,7 @@ static int gotquit(char *from, char *msg)
   for (chan = chanset; chan; chan = chan->next) {
     m = ismember(chan, nick);
     if (m) {
-      u = get_user_by_host(from);
+      u = get_user_by_host(from2);
       if (u) {
         set_handle_laston(chan->dname, u, now); /* If you remove this, the bot will crash when the user record in question
 						   is removed/modified during the tcl binds below, and the users was on more
@@ -2062,13 +2100,13 @@ static int gotmsg(char *from, char *msg)
   /* Send out possible ctcp responses */
   if (ctcp_reply[0]) {
     if (ctcp_mode != 2) {
-      dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, ctcp_reply);
     } else {
       if (now - last_ctcp > flud_ctcp_time) {
-	dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+	dprintf(DP_HELP, "NOTICE %s :%s\n", nick, ctcp_reply);
 	count_ctcp = 1;
       } else if (count_ctcp < flud_ctcp_thr) {
-	dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+	dprintf(DP_HELP, "NOTICE %s :%s\n", nick, ctcp_reply);
 	count_ctcp++;
       }
       last_ctcp = now;

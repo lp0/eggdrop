@@ -7,7 +7,7 @@
  *   (non-Tcl) procedure lookups for msg/dcc/file commands
  *   (Tcl) binding internal procedures to msg/dcc/file commands
  *
- * $Id: tclhash.c,v 1.27 2001/07/14 12:37:08 poptix Exp $
+ * $Id: tclhash.c,v 1.30 2001/09/25 23:11:59 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -206,12 +206,16 @@ int expmem_tclhash(void)
 extern cmd_t C_dcc[];
 static int tcl_bind();
 
+static cd_tcl_cmd cd_cmd_table[] = {
+  {"bind", tcl_bind, (void *)0},
+  {"unbind", tcl_bind, (void *)1}
+};
+
 void init_bind(void)
 {
   bind_table_list = NULL;
   Context;
-  Tcl_CreateCommand(interp, "bind", tcl_bind, (ClientData) 0, NULL);
-  Tcl_CreateCommand(interp, "unbind", tcl_bind, (ClientData) 1, NULL);
+  add_cd_tcl_cmds(cd_cmd_table);
   H_unld = add_bind_table("unld", HT_STACKABLE, builtin_char);
   H_time = add_bind_table("time", HT_STACKABLE, builtin_5int);
   H_note = add_bind_table("note", 0, builtin_3char);
@@ -1122,13 +1126,18 @@ void add_builtins(tcl_bind_list_t *tl, cmd_t *cc)
 {
   int	k, i;
   char	p[1024], *l;
+  cd_tcl_cmd table[2];
 
+  table[0].name = p;
+  table[0].callback = tl->func;
+  table[1].name = NULL;
   for (i = 0; cc[i].name; i++) {
     egg_snprintf(p, sizeof p, "*%s:%s", tl->name,
 		   cc[i].funcname ? cc[i].funcname : cc[i].name);
     l = (char *) nmalloc(Tcl_ScanElement(p, &k));
     Tcl_ConvertElement(p, l, k | TCL_DONT_USE_BRACES);
-    Tcl_CreateCommand(interp, p, tl->func, (ClientData) cc[i].func, NULL);
+    table[0].cdata = (void *)cc[i].func;
+    add_cd_tcl_cmds(table);
     bind_bind_entry(tl, cc[i].flags, cc[i].name, l);
     nfree(l);
   }

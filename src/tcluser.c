@@ -2,7 +2,7 @@
  * tcluser.c -- handles:
  *   Tcl stubs for the user-record-oriented commands
  *
- * $Id: tcluser.c,v 1.22 2001/06/30 06:29:55 guppy Exp $
+ * $Id: tcluser.c,v 1.28 2001/11/21 00:07:43 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -86,18 +86,12 @@ static int tcl_chattr STDVAR
     user.match = FR_GLOBAL | FR_CHAN;
     chan = argv[3];
     chg = argv[2];
-  } else if (argc == 3 && argv[2][0] &&
-             strchr(CHANMETA, argv[2][0]) != NULL) {
-    /* We need todo extra checking here to stop us mixing up +channel's
-     * with flags. <cybah>
-     */
-    if (!findchan_by_dname(argv[2]) && argv[2][0] != '+') {
-      /* Channel doesnt exist, and it cant possibly be flags as there
-       * is no + at the start of the string.
-       */
+  } else if (argc == 3 && argv[2][0]) {
+    int ischan = (findchan_by_dname(argv[2]) != NULL);
+    if (strchr(CHANMETA, argv[2][0]) && !ischan && argv[2][0] != '+' && argv[2][0] != '-') {
       Tcl_AppendResult(irp, "no such channel", NULL);
       return TCL_ERROR;
-    } else if(findchan_by_dname(argv[2])) {
+    } else if (ischan) {
       /* Channel exists */
       user.match = FR_GLOBAL | FR_CHAN;
       chan = argv[2];
@@ -113,7 +107,7 @@ static int tcl_chattr STDVAR
   } else {
     user.match = FR_GLOBAL;
     chan = NULL;
-    chg = argv[2];
+    chg = NULL;
   }
   if (chan && !findchan_by_dname(chan)) {
     Tcl_AppendResult(irp, "no such channel", NULL);
@@ -190,7 +184,10 @@ static int tcl_botattr STDVAR
   } else {
     user.match = FR_BOT;
     chan = NULL;
-    chg = argv[2];
+    if (argc < 3)
+    chg = NULL;
+    else
+      chg = argv[2];
   }
   if (chan && !findchan_by_dname(chan)) {
     Tcl_AppendResult(irp, "no such channel", NULL);
@@ -226,8 +223,7 @@ static int tcl_matchattr STDVAR
   int ok = 0, f;
 
   BADARGS(3, 4, " handle flags ?channel?");
-  if ((u = get_user_by_handle(userlist, argv[1])) &&
-      ((argc == 3) || findchan_by_dname(argv[3]))) {
+  if ((u = get_user_by_handle(userlist, argv[1]))) {
     user.match = FR_GLOBAL | (argc == 4 ? FR_CHAN : 0) | FR_BOT;
     get_user_flagrec(u, &user, argv[3]);
     plus.match = user.match;
@@ -250,7 +246,7 @@ static int tcl_matchattr STDVAR
 
 static int tcl_adduser STDVAR
 {
-  BADARGS(3, 3, " handle ?hostmask?");
+  BADARGS(2, 3, " handle ?hostmask?");
   if (strlen(argv[1]) > HANDLEN)
     argv[1][HANDLEN] = 0;
   if ((argv[1][0] == '*') || get_user_by_handle(userlist, argv[1]))
@@ -342,7 +338,11 @@ static int tcl_userlist STDVAR
   for (u = userlist; u; u = u->next) {
     if (argc >= 2) {
       user.match = FR_GLOBAL | FR_CHAN | FR_BOT | (argc == 3 ? 0 : FR_ANYWH);
-      get_user_flagrec(u, &user, argv[2]);	/* argv[2] == NULL for argc = 2 ;) */
+      if (argc == 3) 
+	      get_user_flagrec(u, &user, argv[2]);
+      else
+	      get_user_flagrec(u, &user, NULL);
+
       if (flagrec_eq(&plus, &user) && !(f && flagrec_eq(&minus, &user)))
 	ok = 1;
       else
@@ -433,10 +433,10 @@ static int tcl_newignore STDVAR
   if (argc == 4)
      expire_time = now + (60 * ignore_time);
   else {
-    if (atol(argv[4]) == 0)
+    if (argc == 5 && atol(argv[4]) == 0)
       expire_time = 0L;
     else
-      expire_time = now + (60 * atol(argv[4]));
+      expire_time = now + (60 * atol(argv[4])); /* This is a potential crash. FIXME  -poptix */
   }
   addignore(ign, from, cmt, expire_time);
   return TCL_OK;

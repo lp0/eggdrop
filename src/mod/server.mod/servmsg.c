@@ -1,7 +1,7 @@
 /*
  * servmsg.c -- part of server.mod
  *
- * $Id: servmsg.c,v 1.56 2001/07/04 19:27:37 poptix Exp $
+ * $Id: servmsg.c,v 1.61 2001/10/30 03:01:02 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -177,8 +177,7 @@ static int check_tcl_ctcpr(char *nick, char *uhost, struct userrec *u,
   Tcl_SetVar(interp, "_ctcpr6", args, 0);
   x = check_tcl_bind(table, keyword, &fr,
 		     " $_ctcpr1 $_ctcpr2 $_ctcpr3 $_ctcpr4 $_ctcpr5 $_ctcpr6",
-		     (lowercase_ctcp ? MATCH_EXACT : MATCH_CASE)
-		     | BIND_USE_ATTR | BIND_STACKABLE |
+		     MATCH_MASK | BIND_USE_ATTR | BIND_STACKABLE |
 		     ((table == H_ctcp) ? BIND_WANTRET : 0));
   return (x == BIND_EXEC_LOG) || (table == H_ctcr);
 }
@@ -234,6 +233,7 @@ static int got001(char *from, char *msg)
   fixcolon(msg);
   strncpyz(botname, msg, NICKLEN);
   altnick_char = 0;
+  dprintf(DP_SERVER, "WHOIS %s\n", botname); /* get user@host */
   /* Call Tcl init-server */
   if (initserver[0])
     do_tcl("init-server", initserver);
@@ -516,13 +516,13 @@ static int gotmsg(char *from, char *msg)
   /* Send out possible ctcp responses */
   if (ctcp_reply[0]) {
     if (ctcp_mode != 2) {
-      dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, ctcp_reply);
     } else {
       if (now - last_ctcp > flud_ctcp_time) {
-	dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+	dprintf(DP_HELP, "NOTICE %s :%s\n", nick, ctcp_reply);
 	count_ctcp = 1;
       } else if (count_ctcp < flud_ctcp_thr) {
-	dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+	dprintf(DP_HELP, "NOTICE %s :%s\n", nick, ctcp_reply);
 	count_ctcp++;
       }
       last_ctcp = now;
@@ -619,14 +619,14 @@ static int gotnotice(char *from, char *msg)
       putlog(LOG_MSGS | LOG_SERV, "*", "-%s (%s) to %s- %s",
 	     nick, uhost, to, msg);
     } else {
-      detect_flood(nick, uhost, from, FLOOD_NOTICE);
-      u = get_user_by_host(from);
       /* Server notice? */
-      if ((from[0] == 0) || (nick[0] == 0)) {
+      if ((nick[0] == 0) || (uhost[0] == 0)) {
 	/* Hidden `250' connection count message from server */
 	if (strncmp(msg, "Highest connection count:", 25))
 	  putlog(LOG_SERV, "*", "-NOTICE- %s", msg);
       } else {
+        detect_flood(nick, uhost, from, FLOOD_NOTICE);
+        u = get_user_by_host(from);
         if (!ignoring || trigger_on_ignore)
           check_tcl_notc(nick, uhost, u, botname, msg);
         if (!ignoring)
@@ -883,7 +883,11 @@ static int got451(char *from, char *msg)
  */
 static int goterror(char *from, char *msg)
 {
-  fixcolon(msg);
+ /* FIXME: fixcolon doesn't do what we need here, this is a temp fix
+  * fixcolon(msg);
+  */
+  if (msg[0] == ':')
+    msg++;       
   putlog(LOG_SERV | LOG_MSGS, "*", "-ERROR from server- %s", msg);
   if (serverror_quit) {
     putlog(LOG_SERV, "*", "Disconnecting from server.");
@@ -971,6 +975,7 @@ static void disconnect_server(int idx)
     killsock(dcc[idx].sock);
   dcc[idx].sock = (-1);
   serv = (-1);
+  botuserhost[0] = 0;
 }
 
 static void eof_server(int idx)
@@ -1110,6 +1115,24 @@ static int whoispenalty(char *from, char *msg)
   return 0;
 }
 
+static int got311(char *from, char *msg)
+{
+  char *n1, *n2, *u, *h;
+  
+  n1 = newsplit(&msg);
+  n2 = newsplit(&msg);
+  u = newsplit(&msg);
+  h = newsplit(&msg);
+  
+  if (!n1 || !n2 || !u || !h)
+    return 0;
+    
+  if (match_my_nick(n2))
+    egg_snprintf(botuserhost, sizeof botuserhost, "%s@%s", u, h);
+  
+  return 0;
+}
+
 static cmd_t my_raw_binds[] =
 {
   {"PRIVMSG",	"",	(Function) gotmsg,		NULL},
@@ -1129,8 +1152,11 @@ static cmd_t my_raw_binds[] =
   {"442",	"",	(Function) got442,		NULL},
   {"NICK",	"",	(Function) gotnick,		NULL},
   {"ERROR",	"",	(Function) goterror,		NULL},
+/* ircu2.10.10 has a bug when a client is throttled ERROR is sent wrong */
+  {"ERROR:",	"",	(Function) goterror,		NULL},
   {"KICK",	"",	(Function) gotkick,		NULL},
   {"318",	"",	(Function) whoispenalty,	NULL},
+  {"311", 	"", 	(Function) got311, 		NULL},
   {NULL,	NULL,	NULL,				NULL}
 };
 
@@ -1189,6 +1215,8 @@ static void connect_server(void)
     dcc[servidx].port = botserverport;
     strcpy(dcc[servidx].nick, "(server)");
     strncpyz(dcc[servidx].host, botserver, UHOSTLEN);
+
+    botuserhost[0] = 0;
 
     nick_juped = 0;
     for (chan = chanset; chan; chan = chan->next)
@@ -1258,8 +1286,7 @@ static void server_resolve_success(int servidx)
     if (pass[0])
       dprintf(DP_MODE, "PASS %s\n", pass);
     dprintf(DP_MODE, "NICK %s\n", botname);
-    dprintf(DP_MODE, "USER %s %s %s :%s\n",
-	    botuser, bothost, dcc[servidx].host, botrealname);
+    dprintf(DP_MODE, "USER %s . . :%s\n", botuser, botrealname);
     /* Wait for async result now */
   }
 }

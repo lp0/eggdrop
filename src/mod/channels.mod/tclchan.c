@@ -1,7 +1,7 @@
 /*
  * tclchan.c -- part of channels.mod
  *
- * $Id: tclchan.c,v 1.48 2001/06/30 06:34:44 guppy Exp $
+ * $Id: tclchan.c,v 1.53 2001/12/03 02:57:31 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -28,11 +28,8 @@ static int tcl_killban STDVAR
 
   BADARGS(2, 2, " ban");
   if (u_delban(NULL, argv[1], 1) > 0) {
-    chan = chanset;
-    while (chan != NULL) {
+    for (chan = chanset; chan; chan = chan->next)
       add_mode(chan, '-', 'b', argv[1]);
-      chan = chan->next;
-    }
     Tcl_AppendResult(irp, "1", NULL);
   } else
     Tcl_AppendResult(irp, "0", NULL);
@@ -63,11 +60,8 @@ static int tcl_killexempt STDVAR
 
   BADARGS(2, 2, " exempt");
   if (u_delexempt(NULL,argv[1],1) > 0) {
-    chan = chanset;
-    while (chan != NULL) {
+    for (chan = chanset; chan; chan = chan->next)
       add_mode(chan, '-', 'e', argv[1]);
-      chan = chan->next;
-    }
     Tcl_AppendResult(irp, "1", NULL);
   } else
     Tcl_AppendResult(irp, "0", NULL);
@@ -98,11 +92,8 @@ static int tcl_killinvite STDVAR
 
   BADARGS(2, 2, " invite");
   if (u_delinvite(NULL,argv[1],1) > 0) {
-    chan = chanset;
-    while (chan != NULL) {
+    for (chan = chanset; chan; chan = chan->next)
       add_mode(chan, '-', 'I', argv[1]);
-      chan = chan->next;
-    }
     Tcl_AppendResult(irp, "1", NULL);
   } else
     Tcl_AppendResult(irp, "0", NULL);
@@ -497,6 +488,7 @@ static int tcl_newchanban STDVAR
   struct chanset_t *chan;
   char ban[161], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
+  module_entry *me;
 
   BADARGS(5, 7, " channel ban creator comment ?lifetime? ?options?");
   chan = findchan_by_dname(argv[1]);
@@ -526,7 +518,8 @@ static int tcl_newchanban STDVAR
       expire_time = now + (atoi(argv[5]) * 60);
   }
   if (u_addban(chan, ban, from, cmt, expire_time, sticky))
-    add_mode(chan, '+', 'b', ban);
+    if ((me = module_find("irc", 0, 0)))
+      (me->funcs[IRC_CHECK_THIS_BAN])(chan, ban, sticky);
   return TCL_OK;
 }
 
@@ -536,6 +529,7 @@ static int tcl_newban STDVAR
   struct chanset_t *chan;
   char ban[UHOSTLEN], cmt[MASKREASON_LEN], from[HANDLEN + 1];
   int sticky = 0;
+  module_entry *me;
 
   BADARGS(4, 6, " ban creator comment ?lifetime? ?options?");
   if (argc == 6) {
@@ -559,12 +553,10 @@ static int tcl_newban STDVAR
     else
       expire_time = now + (atoi(argv[4]) * 60);
   }
-  u_addban(NULL, ban, from, cmt, expire_time, sticky);
-  chan = chanset;
-  while (chan != NULL) {
-    add_mode(chan, '+', 'b', ban);
-    chan = chan->next;
-  }
+  if (u_addban(NULL, ban, from, cmt, expire_time, sticky))
+    if ((me = module_find("irc", 0, 0)))
+      for (chan = chanset; chan != NULL; chan = chan->next)
+	(me->funcs[IRC_CHECK_THIS_BAN])(chan, ban, sticky);
   return TCL_OK;
 }
 
@@ -603,7 +595,7 @@ static int tcl_newchanexempt STDVAR
       expire_time = now + (atoi(argv[5]) * 60);
   }
   if (u_addexempt(chan, exempt, from, cmt, expire_time,sticky))
-    add_mode(chan, '+', 'e', exempt);
+      add_mode(chan, '+', 'e', exempt);
   return TCL_OK;
 }
 
@@ -637,11 +629,8 @@ static int tcl_newexempt STDVAR
       expire_time = now + (atoi(argv[4]) * 60);
   }
   u_addexempt(NULL,exempt, from, cmt, expire_time,sticky);
-  chan = chanset;
-  while (chan != NULL) {
-    add_mode(chan, '+', 'e', exempt);
-    chan = chan->next;
-  }
+  for (chan = chanset; chan; chan = chan->next)
+      add_mode(chan, '+', 'e', exempt);
   return TCL_OK;
 }
 
@@ -680,7 +669,7 @@ static int tcl_newchaninvite STDVAR
       expire_time = now + (atoi(argv[5]) * 60);
   }
   if (u_addinvite(chan, invite, from, cmt, expire_time,sticky))
-    add_mode(chan, '+', 'I', invite);
+      add_mode(chan, '+', 'I', invite);
   return TCL_OK;
 }
 
@@ -714,11 +703,8 @@ static int tcl_newinvite STDVAR
       expire_time = now + (atoi(argv[4]) * 60);
   }
   u_addinvite(NULL,invite, from, cmt, expire_time,sticky);
-  chan = chanset;
-  while (chan != NULL) {
-     add_mode(chan, '+', 'I', invite);
-     chan = chan->next;
-  }
+  for (chan = chanset; chan; chan = chan->next)
+      add_mode(chan, '+', 'I', invite);
   return TCL_OK;
 }
 
@@ -1586,11 +1572,6 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
   strncat(buf, glob_chanset, 2047 - strlen(buf));
   strncat(buf, options, 2047 - strlen(buf));
   buf[2047] = 0;
-#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
-  str_nutf8tounicode(newname, strlen(newname) + 1);
-  str_nutf8tounicode(buf2, sizeof buf2);
-  str_nutf8tounicode(buf, sizeof buf);
-#endif
 
   if (Tcl_SplitList(NULL, buf, &items, &item) != TCL_OK)
     return TCL_ERROR;

@@ -1,7 +1,7 @@
 # core.english.lang
 #   core language messages for eggdrop
 #
-# $Id: core.english.lang,v 1.24 2001/04/19 04:49:54 guppy Exp $
+# $Id: core.english.lang,v 1.27 2001/12/01 04:31:29 guppy Exp $
 
 # General stuff
 0x001,Usage
@@ -32,7 +32,7 @@
 0x124,Global invites
 0x126,Channel invites for
 0x129,Use '.invites all' to see the total list
-0x12a,No longer inviteing
+0x12a,No longer inviting
 
 # MOD_
 0x200,Already loaded.
@@ -116,7 +116,7 @@ module, please consult the default config file for info.\n
 0x52c,log dump mode
 0x52d,Online for
 0x52e,cache hit
-0x52f,Using Tcl library:
+0x52f,Tcl library:
 0x530,New users get flags
 0x531,notify
 0x532,Permanent owner(s)
@@ -138,8 +138,6 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x543,No free sockets available.
 0x544,Tcl version:
 0x545,header version
-0x546,Tcl patchlevel:
-0x547,header patchlevel
 
 # IRC_
 0x600,Banned
@@ -199,7 +197,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x639,Nickname has been juped
 0x63a,Channel %s is juped. :(
 0x63b,%s says I'm not registered, trying next one.
-0x63c,You have a fucked up server.
+0x63c,The server says we are not registered yet..
 0x63d,Flood from @%s!  Placing on ignore!
 0x63f,JOIN flood from @%s!  Banning.
 0x640,Channel flood from %s -- kicking
@@ -241,7 +239,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x665,NOTICE %s :All major commands are used from DCC chat. From now on, you don't need to use the -m option when starting the bot.  Enjoy !!!\n
 0x666,This is the telnet interface to %s, an eggdrop bot.\nDon't abuse it, and it will be open for all your friends, too.\n
 0x667,You now get to pick a nick to use on the bot,\nand a password so nobody else can pretend to be you.\nPlease remember both!
-0x668,From now on, you dont need to use the -m option to start the bot.\nEnjoy !!
+0x668,From now on, you don't need to use the -m option to start the bot.\nEnjoy !!
 0x669,Telnet connection flood from %s!  Placing on ignore!
 0x66a,banned: 
 0x66b,join flood

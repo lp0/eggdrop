@@ -29,70 +29,61 @@ do \
 done; \
 exec tclsh$lastver "$0" "$@"
 #
-# AutoBotchk, (C)1999 Jeff Fisher (guppy@eggheads.org)
+# AutoBotchk - An Eggdrop utility to autogenerate botchk/crontab entries
 #
-# updates
-# -------
-#  03Feb99: wrote the first version and it worked
-#  04Feb99: made it easier to use, how? ./autobotchk
-#           <config> will create the botchk and crontab
-#           automatically, no command line options now.
-#  20Feb99: added a '-noemail' setting for [s]
-#  21Feb99: added '-5' '-10' '-15' '-30' to allow people to
-#           use a diff time value then 10 minutes.
-#  10May99: to be compatible, don't use */XX's, etc (Ernst)
-#  23Oct99: updated the internal botchk to reflect Tothwolf's
-#           changes in the eggdrop copy.
-#  13Apr01: borrowed code from Tothwolf's Wolfpack to find tclsh
-#           better
+# Copyright (C) 2001 Jeff Fisher (guppy@eggheads.org)
 #
-# $Id: autobotchk,v 1.5 2001/04/13 19:19:14 guppy Exp $
-#
-# how to use
+# How to use
 # ----------
-#  well, first you need to put the program into your Eggdrop
-#  directory (the one you run from hopefully). then you should
-#  probably type 'chmod u+x autobotchk' so the file permissions
-#  are set correctly. and finally, type './autobotchk <config>'
-#  replacing <config> with the name of your config file right?
 #
-#  in 1.05z, because of [z], you can now specify the bot directory
-#  to use, for example, './autobotchk eggdrop.conf -dir /home/bot'
-#  this now allows you to run the program from any dir :P~
+#   Most people begin to use AutoBotchk by moving it from the script
+# directory to their Eggdrop directory -- this will save you from having to
+# use the -dir option.
 #
-# other Stuff
-# -----------
-# [22:36] <cHr|s`> when you type ./autobotchk without any options, it should give you the menu
-# [22:36] <cHr|s`> like the nukes do
-#  ^ -- he might be Urkel, but we love him anyways ..
-# [18:10] <[z]> nope...came back weith can't crontab -l error
-#  ^ -- no one said this script was perfect, mmmm z's wife
-# [19:27] <[z]> also guppy..would be nice if i could reference my bots directories ;)
-#  ^ -- just when I finished 1.05 :P
-# [18:50] <[s]> how to set the autobotchk not to recieve e-mails about the cron ??
-# [18:51] <slennox> add >/dev/null 2>&1 to the end of the crontab entry
-# [18:52] <[s]> what crontab
-# [18:52] <[s]> i have gupy's script
-# [18:52] <[s]> autobotchk
+#   If you run AutoBotchk without any arguments, it will present you with
+# a list of valid ones. Most people run AutoBotchk by doing:
+#
+#     ./autobotchk <config file>
+#
+#   This will setup crontab to check every 10 minutes to see whether or not
+# your bot needs to be restarted and it will e-mail if a restart was
+# performed. A lot of people turn off crontab e-mail support; however, I do
+# not recommend this since you will be unable to see any errors that might
+# happen.
+#
+# Updates
+# -------
+#   27Sep2001: added new pidfile setting
+#   14Nov2001: removed old autobotchk update entries and updated the help
+#              section a little bit. also made autobotchk move down one
+#              directory if being run from the scripts directory.
+#
+# $Id: autobotchk,v 1.7 2001/11/15 06:28:35 guppy Exp $
+#
 
 if {$argc == 0} {
  puts "\nusage: $argv0 <eggdrop config> \[options\]"
- puts " -dir     (bot directory to use instead of \[pwd\])"
- puts " -noemail (will make crontab not mail you)"
+ puts " -dir     (directory to run from instead of the current one)"
+ puts " -noemail (redirect crontab e-mail to /dev/null)"
  puts " -5       (5 minute checks)"
  puts " -10      (10 minute checks)"
  puts " -15      (15 minute checks)"
- puts " -30      (30 minute checks)\n\n"
+ puts " -30      (30 minute checks)"
+ puts ""
  exit
 } {
- puts "\nAutoBotchk 1.08, (C)1999 Jeff Fisher (guppy@eggheads.org)"
- puts "----------------------------------------------------------"
+ puts "\nAutoBotchk 1.09.1, (C) 2001 Jeff Fisher (guppy@eggheads.org)"
+ puts "------------------------------------------------------------"
 
  set x [join [lindex [split $argv] 0]]
  set q [lrange $argv 1 end]
  set dir [pwd]
  set delay 10
  set email 1
+
+ # If you renamed your eggdrop binary, you should change this variable
+ set binary "eggdrop"
+
  for {set z 0} {$z < [llength $q]} {incr z} {
   set opt [join [lindex $q $z]]
   switch -- $opt {
@@ -108,11 +99,13 @@ if {$argc == 0} {
    -dir {
     set dir [string trimright [join [lindex $q [expr $z + 1]]] /]
     if {[string match -* $dir]} {
-     puts " *** ERROR: you did not supply a directory name\n\n"
+     puts " *** ERROR: you did not supply a directory name"
+     puts ""
      exit
     }
     if {![file isdirectory $dir]} {
-     puts " *** ERROR: the directory you supplied is not a directory\n\n"
+     puts " *** ERROR: the directory you supplied is not a directory"
+     puts ""
      exit
     }
     incr z
@@ -126,29 +119,39 @@ if {$argc == 0} {
    1 { set minutes "*" }
   default { set minutes "0,10,20,30,40,50" }
  }
+ if {[string match "*/scripts" $dir]} {
+  set dir [string range $dir 0 [expr [string length $dir] - 8]]
+  puts " *** AutoBotchk is running from the scripts directory, moving down one directory"
+ }
  if {![file exists $dir/$x]} {
-  puts " *** ERROR: you supplied a non-existant filename\n\n"
+  puts " *** ERROR: you supplied a non-existant filename"
+  puts ""
   exit
  } elseif {![file isfile $dir/$x]} {
-  puts " *** ERROR: unknown filetype, config files should be text files\n\n"
+  puts " *** ERROR: unknown filetype, config files should be text files"
+  puts ""
   exit
  } elseif {![file readable $dir/$x]} {
-  puts " *** ERROR: unable to open the file, permission denied\n\n"
+  puts " *** ERROR: unable to open the file, permission denied"
+  puts ""
   exit
  } elseif {![file exists $dir/help] || ![file isdirectory $dir/help]} {
-  puts " *** ERROR: are you sure you are running from a bot directory?\n\n"
+  puts " *** ERROR: are you sure you are running from a bot directory?"
+  puts ""
   exit
- } elseif {![file exists $dir/eggdrop]} {
-  puts " *** ERROR: are you sure you are running from a bot directory?\n\n"
+ } elseif {![file exists $dir/$binary]} {
+  puts " *** ERROR: are you sure you are running from a bot directory?"
+  puts ""
   exit
  }
- puts " *** Attempting to process '$x', be patient ..."
+ puts " *** Processing '$x', this will take only a second ..."
 
  set f [open $dir/$x r]
  while {![eof $f]} {
   set z [split [gets $f]]
   if {[join [lindex $z 0]] != "set"} {continue}
   switch -- [join [lindex $z 1]] {
+   pidfile -
    nick -
    userfile -
    botnet-nick {
@@ -159,46 +162,39 @@ if {$argc == 0} {
  }
  close $f
  if {![info exists {botnet-nick}] && [info exists nick]} {
-  puts "         !! setting \$botnet-nick to \$nick"
+  puts "         !! setting \$botnet-nick to $nick"
   set botnet-nick $nick
+ }
+ if {![info exists pidfile]} {
+  puts "         !! setting \$pidfile to pid.${botnet-nick}"
+  set pidfile "pid.${botnet-nick}"
  }
  if {![info exists {botnet-nick}] || ![info exists userfile]} {
   puts " *** ERROR: could not find either \$userfile or \$botnet-nick"
-  puts "      !! you sure its a valid Eggdrop config file?\n\n"
+  puts "      !! you sure its a valid Eggdrop config file?"
+  puts ""
   exit
  }
  if {[catch {open $dir/${botnet-nick}.botchk w} fd]} {
   puts " *** ERROR: unable to open '${botnet-nick}.botchk' for writing"
-  puts "      !! without this, this program is useless\n\n"
+  puts "      !! without this, this program is useless"
+  puts ""
   exit
  }
  puts $fd "
 #! /bin/sh
 #
-# new botchk  (for eggdrop 1.1+)
+# ${botnet-nick}.botchk (generated on [clock format [clock seconds] -format "%B %d, %Y @ %I:%M%p"])
 #
-# Created on: [clock format [clock seconds] -format "%B %d, %Y @ %I:%M%p"]
-# Created by: AutoBotchk 1.08 (C)1999 Jeff Fisher
-#
-# This is a script suitable for use in a crontab.  It checks to make sure
-# your bot is running.  YOU NEED A SEPARATE CRON JOB FOR EACH BOT.  If your
-# bot isn't found, it'll try to start it back up.
-#
-# You'll need to edit this script for your bot.
-#
-# To check for your bot every 10 minutes, put the following line in your
-# crontab:
-#    0,10,20,30,40,50 * * * *   /home/mydir/botchk
-# And if you don't want to get email from crontab when it checks you bot,
-# put the following in your crontab:
-#    0,10,20,30,40,50 * * * *   /home/mydir/botchk >/dev/null 2>&1
+# Generated by AutoBotchk 1.09.1
+# Copyright (C) 2001 Jeff Fisher <guppy@eggheads.org>
 #
 
 # change this to the directory you run your bot from:
 botdir=\"$dir\"
 
 # change this to the name of your bot's script in that directory:
-botscript=\"eggdrop $x\"
+botscript=\"$binary $x\"
 
 # change this to the nickname of your bot (capitalization COUNTS)
 botname=\"${botnet-nick}\"
@@ -206,23 +202,26 @@ botname=\"${botnet-nick}\"
 # change this to the name of your bot's userfile (capitalization COUNTS)
 userfile=\"$userfile\"
 
+# change this to the name of your bot's pidfile (capitalization COUNTS)
+pidfile=\"$pidfile\"
+
 ########## you probably don't need to change anything below here ##########
 
 cd \$botdir
 
 # is there a pid file?
-if test -r pid.\$botname
+if test -r \$pidfile
 then
   # there is a pid file -- is it current?
-  botpid=`cat pid.\$botname`
+  botpid=`cat \$pidfile`
   if `kill -CHLD \$botpid >/dev/null 2>&1`
   then
     # it's still going -- back out quietly
     exit 0
   fi
   echo \"\"
-  echo \"Stale pid.\$botname file, erasing...\"
-  rm -f pid.\$botname
+  echo \"Stale \$pidfile file, erasing...\"
+  rm -f \$pidfile
 fi
 
 if test -r CANTSTART.\$botname
@@ -278,12 +277,13 @@ exit 0
  close $fd
  puts " *** Wrote '${botnet-nick}.botchk' successfully ([file size $dir/${botnet-nick}.botchk] bytes)"
  if {[catch {exec chmod u+x $dir/${botnet-nick}.botchk} 0]} {
-  puts "      *** ERROR: unable to 'chmod u+x' the output file\n\n"
+  puts "      *** ERROR: unable to 'chmod u+x' the output file"
+  puts ""
   exit
  }
  puts "      !! chmod u+x completed"
- puts " *** Crontab mode?? Heaven forbid I automated this ..."
- set tmp "[pwd]/.autobotchk"
+ puts " *** Crontab mode?? Heaven forbid this is automated ..."
+ set tmp "$dir/.autobotchk"
  if {$delay != "10"} {puts "      *** Using a time delay of $delay minutes."}
  if {$email} {
   set line "$minutes \* \* \* \* $dir/${botnet-nick}.botchk"
@@ -296,7 +296,8 @@ exit 0
       ![string match "*can't open*" [string tolower $error]]} {
    catch {exec rm -rf $tmp} 0
    puts "      *** ERROR: unable to get crontab listing"
-   puts "           *** MSG: $error\n\n"
+   puts "           *** MSG: $error"
+   puts ""
    exit
   }
  }
@@ -304,7 +305,8 @@ exit 0
  while {![eof $fd]} {
   set z [split [gets $fd]]
   if {[string match "*$dir/${botnet-nick}.botch*" $z]} {
-   puts "      !! ${botnet-nick}.botchk is already crontab'd, but why?\n\n"
+   puts "      !! ${botnet-nick}.botchk already has a crontab entry, skipping this stage"
+   puts ""
    exit
   }
  }
@@ -315,13 +317,15 @@ exit 0
  close $fd
  if {[catch {exec crontab $tmp} error]} {
   puts "      *** ERROR: unable to do 'crontab $tmp'"
-  puts "           *** MSG: $error\n\n"
+  puts "           *** MSG: $error"
+  puts ""
   exit
  }
- catch {exec rm -rf $tmp} 0
+ catch {exec rm -f $tmp} 0
  puts "      !! crontab reloaded"
  puts ""
  puts "      !! Use 'crontab -r' to remove all your crontab entries"
- puts "      !!     'crontab -l' to view the current crontabs\n\n"
+ puts "      !!     'crontab -l' to view the current crontabs"
+ puts ""
  exit
 }

@@ -3,7 +3,7 @@
  *   Tcl stubs for file system commands
  *   Tcl stubs for everything else
  *
- * $Id: tclmisc.c,v 1.20 2001/05/19 22:19:02 guppy Exp $
+ * $Id: tclmisc.c,v 1.26 2001/09/29 06:33:21 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -36,11 +36,93 @@
 extern p_tcl_bind_list	 bind_table_list;
 extern tcl_timer_t	*timer, *utimer;
 extern struct dcc_t	*dcc;
-extern char		 origbotname[], botnetnick[];
+extern char		 origbotname[], botnetnick[], quit_msg[];
 extern struct userrec	*userlist;
 extern time_t		 now;
 extern module_entry	*module_list;
+extern int max_logs;
+extern log_t *logs;
+extern Tcl_Interp *interp;
 
+int expmem_tclmisc()
+{
+  int i, tot = 0;
+
+  for (i = 0; i < max_logs; i++)
+    if (logs[i].filename != NULL) {
+      tot += strlen(logs[i].filename) + 1;
+      tot += strlen(logs[i].chname) + 1;
+    }
+  return tot;
+}
+
+/*
+ *      Logging
+ */
+
+/* logfile [<modes> <channel> <filename>] */
+static int tcl_logfile STDVAR
+{
+  int i;
+  char s[151];
+
+  BADARGS(1, 4, " ?logModes channel logFile?");
+  if (argc == 1) {
+    /* They just want a list of the logfiles and modes */
+    for (i = 0; i < max_logs; i++)
+      if (logs[i].filename != NULL) {
+	strcpy(s, masktype(logs[i].mask));
+	strcat(s, " ");
+	strcat(s, logs[i].chname);
+	strcat(s, " ");
+	strcat(s, logs[i].filename);
+	Tcl_AppendElement(interp, s);
+      }
+    return TCL_OK;
+  }
+  BADARGS(4, 4, " ?logModes channel logFile?");
+  for (i = 0; i < max_logs; i++)
+    if ((logs[i].filename != NULL) && (!strcmp(logs[i].filename, argv[3]))) {
+      logs[i].flags &= ~LF_EXPIRING;
+      logs[i].mask = logmodes(argv[1]);
+      nfree(logs[i].chname);
+      logs[i].chname = NULL;
+      if (!logs[i].mask) {
+	/* ending logfile */
+	nfree(logs[i].filename);
+	logs[i].filename = NULL;
+	if (logs[i].f != NULL) {
+	  fclose(logs[i].f);
+	  logs[i].f = NULL;
+	}
+        logs[i].flags = 0;
+      } else {
+	logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
+	strcpy(logs[i].chname, argv[2]);
+      }
+      Tcl_AppendResult(interp, argv[3], NULL);
+      return TCL_OK;
+    }
+  /* Do not add logfiles without any flags to log ++rtc */
+  if (!logmodes (argv [1])) {
+    Tcl_AppendResult (interp, "can't remove \"", argv[3],
+                     "\" from list: no such logfile", NULL);
+    return TCL_ERROR;
+  }
+  for (i = 0; i < max_logs; i++)
+    if (logs[i].filename == NULL) {
+      logs[i].flags = 0;
+      logs[i].mask = logmodes(argv[1]);
+      logs[i].filename = (char *) nmalloc(strlen(argv[3]) + 1);
+      strcpy(logs[i].filename, argv[3]);
+      logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
+      strcpy(logs[i].chname, argv[2]);
+      Tcl_AppendResult(interp, argv[3], NULL);
+      return TCL_OK;
+    }
+  Tcl_AppendResult(interp, "reached max # of logfiles", NULL);
+  return TCL_ERROR;
+}
 
 static int tcl_putlog STDVAR
 {
@@ -368,28 +450,23 @@ static int tcl_dccdumpfile STDVAR
 static int tcl_backup STDVAR
 {
   BADARGS(1, 1, "");
-  backup_userfile();
+  call_hook(HOOK_BACKUP);
   return TCL_OK;
 }
 
 static int tcl_die STDVAR
 {
-  char s[501];
-  char g[501];
+  char s[1024];
 
   BADARGS(1, 2, " ?reason?");
   if (argc == 2) {
     egg_snprintf(s, sizeof s, "BOT SHUTDOWN (%s)", argv[1]);
-    egg_snprintf(g, sizeof g, "%s", argv[1]);
+    strncpyz(quit_msg, argv[1], 1024);
   } else {
-    egg_snprintf(s, sizeof s, "BOT SHUTDOWN (aboot time -- eh?)");
-    egg_snprintf(g, sizeof g, "EXIT");
+    strncpyz(s, "BOT SHUTDOWN (No reason)", sizeof s);
+    quit_msg[0] = 0;
   }
-  chatout("*** %s\n", s);
-  botnet_send_chat(-1, botnetnick, s);
-  botnet_send_bye();
-  write_userfile(-1);
-  fatal(g, 0);
+  kill_bot(s, quit_msg[0] ? quit_msg : "EXIT");
   return TCL_OK;
 }
 
@@ -494,25 +571,60 @@ static int tcl_callevent STDVAR
   return TCL_OK;
 }
 
+#if (TCL_MAJOR_VERSION >= 8)
+static int tcl_md5(cd, irp, objc, objv)
+ClientData cd;
+Tcl_Interp *irp;
+int objc;
+Tcl_Obj *CONST objv[];
+{
+#else
 static int tcl_md5 STDVAR
 {
+#endif
   MD5_CTX       md5context;
-  char          digest_string[33];       /* 32 for digest in hex + null */
+  char digest_string[33], *string;
   unsigned char digest[16];
-  int           i;
+  int i, len;
 
+#if (TCL_MAJOR_VERSION >= 8)
+  if (objc != 2) {
+    Tcl_WrongNumArgs(irp, 1, objv, "string");
+    return TCL_ERROR;
+  }
+
+#if (TCL_MAJOR_VERSION == 8 && TCL_MINOR_VERSION < 1)
+  string = Tcl_GetStringFromObj(objv[1], &len);
+#else
+  string = Tcl_GetByteArrayFromObj(objv[1], &len);
+#endif
+
+#else
   BADARGS(2, 2, " string");
-  MD5Init(&md5context);
-  MD5Update(&md5context, (unsigned char *)argv[1], strlen(argv[1]));
-  MD5Final(digest, &md5context);
+  string = argv[1];
+  len = strlen(argv[1]);
+#endif
+
+  MD5_Init(&md5context);
+  MD5_Update(&md5context, (unsigned char *)string, len);
+  MD5_Final(digest, &md5context);
   for(i=0; i<16; i++)
     sprintf(digest_string + (i*2), "%.2x", digest[i]);
   Tcl_AppendResult(irp, digest_string, NULL);
   return TCL_OK;
 }
 
+tcl_cmds tclmisc_objcmds[] =
+{
+#if (TCL_MAJOR_VERSION >= 8)
+  {"md5",	tcl_md5},
+#endif
+  {NULL,	NULL}
+};
+
 tcl_cmds tclmisc_cmds[] =
 {
+  {"logfile",           tcl_logfile},
   {"putlog",		tcl_putlog},
   {"putcmdlog",		tcl_putcmdlog},
   {"putxferlog",	tcl_putxferlog},
@@ -543,7 +655,9 @@ tcl_cmds tclmisc_cmds[] =
   {"unloadhelp",	tcl_unloadhelp},
   {"reloadhelp",	tcl_reloadhelp},
   {"duration",		tcl_duration},
+#if (TCL_MAJOR_VERSION < 8)
   {"md5",		tcl_md5},
+#endif
   {"binds",		tcl_binds},
   {"callevent",		tcl_callevent},
   {NULL,		NULL}

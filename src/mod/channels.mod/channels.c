@@ -2,7 +2,7 @@
  * channels.c -- part of channels.mod
  *   support for channels within the bot
  *
- * $Id: channels.c,v 1.52 2001/07/17 19:53:40 guppy Exp $
+ * $Id: channels.c,v 1.57 2001/11/28 23:17:41 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -121,6 +121,9 @@ static void set_mode_protect(struct chanset_t *chan, char *set)
     case 'R':
       i = CHANREGON;
       break;
+    case 'M':
+      i = CHANMODR;
+      break;
     case 't':
       i = CHANTOPIC;
       break;
@@ -208,6 +211,8 @@ static void get_mode_protect(struct chanset_t *chan, char *s)
       *p++ = 'c';
     if (tst & CHANREGON)
       *p++ = 'R';
+    if (tst & CHANMODR)
+      *p++ = 'M';
     if (tst & CHANTOPIC)
       *p++ = 't';
     if (tst & CHANNOMSG)
@@ -494,6 +499,15 @@ static void read_channels(int create)
       remove_channel(chan);
     }
   }
+}
+
+static void backup_chanfile()
+{
+  char s[125];
+
+  putlog(LOG_MISC, "*", "Backing up channel file...");
+  egg_snprintf(s, sizeof s, "%s~bak", chanfile);
+  copyfile(chanfile, s);
 }
 
 static void channels_prerehash()
@@ -786,6 +800,7 @@ static char *channels_close()
   rem_tcl_ints(my_tcl_ints);
   rem_tcl_coups(mychan_tcl_coups);
   del_hook(HOOK_USERFILE, (Function) channels_writeuserfile);
+  del_hook(HOOK_BACKUP, (Function) backup_chanfile);
   del_hook(HOOK_REHASH, (Function) channels_rehash);
   del_hook(HOOK_PRE_REHASH, (Function) channels_prerehash);
   del_hook(HOOK_MINUTELY, (Function) check_expired_bans);
@@ -900,14 +915,15 @@ char *channels_start(Function * global_funcs)
 +userexempts +dynamicexempts +userinvites +dynamicinvites -revengebot \
 -nodesynch" /* Do not remove this extra space: */ " ");
   module_register(MODULE_NAME, channels_table, 1, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
+  if (!module_depend(MODULE_NAME, "eggdrop", 106, 7)) {
     module_undepend(MODULE_NAME);
-    return "This module needs eggdrop1.6.0 or later";
+    return "This module needs eggdrop1.6.7 or later";
   }
   add_hook(HOOK_MINUTELY, (Function) check_expired_bans);
   add_hook(HOOK_MINUTELY, (Function) check_expired_exempts);
   add_hook(HOOK_MINUTELY, (Function) check_expired_invites);
   add_hook(HOOK_USERFILE, (Function) channels_writeuserfile);
+  add_hook(HOOK_BACKUP, (Function) backup_chanfile);
   add_hook(HOOK_REHASH, (Function) channels_rehash);
   add_hook(HOOK_PRE_REHASH, (Function) channels_prerehash);
   Tcl_TraceVar(interp, "global-chanset",

@@ -34,7 +34,7 @@ Tcl related questions
        3. UNDEFINED SYMBOLS IN tclUnixChan.o -- AND MANY OTHERS   (Tcl
           7.5/SunOS 5.4)
        4. UNDEFINED SYMBOL 'getwd' IN getcwd.o   (Tcl 7.5/SunOS 5.4)
-       5. There's no TCL installed on your shell
+       5. There's no Tcl installed on your shell
 
   ------------------------------------------------------------------------
 
@@ -84,7 +84,7 @@ A. EGGDROP
 
      This seems to be caused by a non-ELF Tcl library binary, and the
      compiler doesn't seem to like it.  The first thing you want to do is
-     download and compile tcl yourself.  And then follow this set of
+     download and compile Tcl yourself.  And then follow this set of
      commands to help you reconfigure eggdrop using the newly compiled Tcl
      library (all of this should be done from your home directory):
 
@@ -337,9 +337,12 @@ A. EGGDROP
 
 10. Bot crashes at startup with msg "net.c/708" for example
 
-     On some not IA32 systems the gcc options -O2 and -O3 cause that. We don't
+     On some non IA32 systems the gcc options -O2 and -O3 cause that. We don't
      know why this happens but sometimes it helps to remove those options from
-     the Makefile. Just give it a try.
+     the Makefile. To disable them use:
+
+        ./configure --disable-cc-optimization
+
      Ah well, drop us a note if you know why, so we can extend the info here.
 
 11. I get lot's of warnings
@@ -355,7 +358,7 @@ A. EGGDROP
 
   ------------------------------------------------------------------------
 
-B. TCL
+B. Tcl
 
 1. REDECLARATION IN COMPAT/UNISTD.H   (Tcl 7.4/AIX 4)
 
@@ -507,13 +510,13 @@ B. TCL
      configure didn't detect that getcwd() wasn't necessary, so it caused a
      compatible getcwd() function to be compiled.
 
-5. There's no TCL installed on your shell
+5. There's no Tcl installed on your shell
 
-     If there's really no TCL installed on your shell, you can install it
-     temporary in /tmp or your home. Get the newest version of TCL from
-     ftp.eggheads.org/pub/tcl/ (anything above TCL 8.2 should be fine) and
+     If there's really no Tcl installed on your shell, you can install it
+     temporary in /tmp or your home. Get the newest version of Tcl from
+     ftp.eggheads.org/pub/tcl/ (anything above Tcl 8.2 should be fine) and
      follow the installation steps in the README. After you've installed
-     tcl, you have to make configure detect tcl. To achieve this, you have
+     Tcl, you have to make configure detect Tcl. To achieve this, you have
      to set either environmental variables:
 
          export TCLLIB=/path/to/tcl/lib
@@ -521,7 +524,7 @@ B. TCL
 
      Please note that on some unix machines export doesn't work and you
      have to use 'setenv' instead or to pass configure the full qualified
-     path to tcl:
+     path to Tcl:
 
      ./configure --with-tcllib=/path/to/libtclx.x.so
      --with-tclinc=/path/to/tcl.h

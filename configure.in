@@ -29,6 +29,9 @@ EGG_PROG_AWK
 EGG_PROG_BASENAME
 AC_CHECK_PROG(UNAME,uname,uname)
 
+# Should -O2 CFLAG be removed? 
+EGG_DISABLE_CC_OPTIMIZATION
+
 # Test the os and set the module linking settings
 EGG_CHECK_OS
 
@@ -61,13 +64,12 @@ EGG_HEADER_STDC
 # Make sure we are using the correct result from a broken libsafe sscanf
 EGG_CHECK_LIBSAFE_SSCANF
 
-# Checks for cygwin
-EGG_CYGWIN
+# Checks for executable extension
 EGG_EXEEXT
 
-# Where is tcl?  Is it here?
-# ---------- begin robey's tcl thingies
-# (well, what used to be robey's tcl thingies...)
+# Where is Tcl?  Is it here?
+# ---------- begin robey's Tcl thingies
+# (well, what used to be robey's Tcl thingies...)
 
 # Latest tested Tcl version to recommend if Tcl isn't found
 tclrecommendver="8.3.3"
@@ -116,7 +118,7 @@ EGG_TCL_ENABLE_THREADS
 EGG_TCL_CHECK_THREADS
 EGG_TCL_LIB_REQS
 EGG_TCL_LUSH
-# ---------- end of (what used to be) robey's tcl thingies
+# ---------- end of (what used to be) robey's Tcl thingies
 
 EGG_FUNC_DLOPEN
 

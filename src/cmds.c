@@ -3,7 +3,7 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.59 2001/07/14 12:37:08 poptix Exp $
+ * $Id: cmds.c,v 1.66 2001/12/04 19:58:06 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -48,7 +48,7 @@ extern unsigned long	 otraffic_irc, otraffic_irc_today,
 			 itraffic_unknown, itraffic_unknown_today;
 extern Tcl_Interp	*interp;
 extern char		 botnetnick[], origbotname[], ver[], network[],
-			 owner[], spaces[];
+			 owner[], spaces[], quit_msg[];
 extern time_t		 now, online_since;
 
 
@@ -588,7 +588,7 @@ static void cmd_boot(struct userrec *u, int idx, char *par)
   if (strchr(who, '@') != NULL) {
     char whonick[HANDLEN + 1];
 
-    splitcn(whonick, who, '@', HANDLEN);
+    splitcn(whonick, who, '@', HANDLEN + 1);
     if (!egg_strcasecmp(who, botnetnick)) {
       cmd_boot(u, idx, whonick);
       return;
@@ -1054,26 +1054,21 @@ static void cmd_reload(struct userrec *u, int idx, char *par)
   reload();
 }
 
-/* NOTE: This gets replaced in the server mod, with a version that handles
- *       the server disconnect better.
- */
 void cmd_die(struct userrec *u, int idx, char *par)
 {
-  char s[1024];
+  char s1[1024], s2[1024];
 
   putlog(LOG_CMDS, "*", "#%s# die %s", dcc[idx].nick, par);
   if (par[0]) {
-    simple_sprintf(s, "BOT SHUTDOWN (%s: %s)", dcc[idx].nick, par);
+    egg_snprintf(s1, sizeof s1, "BOT SHUTDOWN (%s: %s)", dcc[idx].nick, par);
+    egg_snprintf(s2, sizeof s2, "DIE BY %s!%s (%s)", dcc[idx].nick, dcc[idx].host, par);
+    strncpyz(quit_msg, par, 1024);
   } else {
-    simple_sprintf(s, "BOT SHUTDOWN (authorized by %s)", dcc[idx].nick);
+    egg_snprintf(s1, sizeof s1, "BOT SHUTDOWN (Authorized by %s)", dcc[idx].nick);
+    egg_snprintf(s2, sizeof s2, "DIE BY %s!%s (request)", dcc[idx].nick, dcc[idx].host);
+    strncpyz(quit_msg, dcc[idx].nick, 1024);
   }
-  chatout("*** %s\n", s);
-  botnet_send_chat(-1, botnetnick, s);
-  botnet_send_bye();
-  write_userfile(-1);
-  simple_sprintf(s, "DIE BY %s!%s (%s)", dcc[idx].nick,
-		 dcc[idx].host, par[0] ? par : "request");
-  fatal(s, 0);
+  kill_bot(s1, s2);
 }
 
 static void cmd_debug(struct userrec *u, int idx, char *par)
@@ -1189,8 +1184,8 @@ static void cmd_save(struct userrec *u, int idx, char *par)
 static void cmd_backup(struct userrec *u, int idx, char *par)
 {
   putlog(LOG_CMDS, "*", "#%s# backup", dcc[idx].nick);
-  dprintf(idx, "Backing up the user file...\n");
-  backup_userfile();
+  dprintf(idx, "Backing up the channel & user file...\n");
+  call_hook(HOOK_BACKUP);
 }
 
 static void cmd_trace(struct userrec *u, int idx, char *par)
@@ -1587,12 +1582,11 @@ static void cmd_chattr(struct userrec *u, int idx, char *par)
 	      chan->dname, work);
     else
       dprintf(idx, "No flags for %s on %s.\n", hand, chan->dname);
-    if (chg && (me = module_find("irc", 0, 0))) {
-      Function *func = me->funcs;
+  }
+  if (chg && (me = module_find("irc", 0, 0))) {
+    Function *func = me->funcs;
 
-      if (chan)
-	(func[IRC_RECHECK_CHANNEL]) (chan, 0);
-    }
+    (func[IRC_CHECK_THIS_USER]) (hand);
   }
   if (tmpchg)
     nfree(tmpchg);
@@ -2447,6 +2441,7 @@ static void cmd_pls_host(struct userrec *u, int idx, char *par)
   struct userrec *u2;
   struct list_type *q;
   struct flag_record fr = {FR_CHAN | FR_ANYWH, 0, 0, 0, 0, 0};
+  module_entry *me;
 
   if (!par[0]) {
     dprintf(idx, "Usage: +host [handle] <newhostmask>\n");
@@ -2503,6 +2498,11 @@ static void cmd_pls_host(struct userrec *u, int idx, char *par)
   putlog(LOG_CMDS, "*", "#%s# +host %s %s", dcc[idx].nick, handle, host);
   addhost_by_handle(handle, host);
   dprintf(idx, "Added '%s' to %s\n", host, handle);
+  if ((me = module_find("irc", 0, 0))) {
+    Function *func = me->funcs;
+
+   (func[IRC_CHECK_THIS_USER]) (handle);
+  }
 }
 
 static void cmd_mns_host(struct userrec *u, int idx, char *par)
@@ -2705,9 +2705,9 @@ cmd_t C_dcc[] =
   {"binds",		"m",	(Function) cmd_binds,		NULL},
   {"boot",		"t",	(Function) cmd_boot,		NULL},
   {"botattr",		"t",	(Function) cmd_botattr,		NULL},
-  {"botinfo",		"t",	(Function) cmd_botinfo,		NULL},
+  {"botinfo",		"",	(Function) cmd_botinfo,		NULL},
   {"bots",		"",	(Function) cmd_bots,		NULL},
-  {"bottree",		"t",	(Function) cmd_bottree,		NULL},
+  {"bottree",		"",	(Function) cmd_bottree,		NULL},
   {"chaddr",		"t",	(Function) cmd_chaddr,		NULL},
   {"chat",		"",	(Function) cmd_chat,		NULL},
   {"chattr",		"m|m",	(Function) cmd_chattr,		NULL},
@@ -2737,7 +2737,7 @@ cmd_t C_dcc[] =
   {"quit",		"",	(Function) NULL,		NULL},
   {"rehash",		"m",	(Function) cmd_rehash,		NULL},
   {"rehelp",		"n",	(Function) cmd_rehelp,		NULL},
-  {"relay",		"t",	(Function) cmd_relay,		NULL},
+  {"relay",		"o",	(Function) cmd_relay,		NULL},
   {"reload",		"m|m",	(Function) cmd_reload,		NULL},
   {"restart",		"m",	(Function) cmd_restart,		NULL},
   {"save",		"m|m",	(Function) cmd_save,		NULL},
@@ -2751,7 +2751,7 @@ cmd_t C_dcc[] =
   {"unlink",		"t",	(Function) cmd_unlink,		NULL},
   {"unloadmod",		"n",	(Function) cmd_unloadmod,	NULL},
   {"uptime",		"m|m",	(Function) cmd_uptime,		NULL},
-  {"vbottree",		"t",	(Function) cmd_vbottree,	NULL},
+  {"vbottree",		"",	(Function) cmd_vbottree,	NULL},
   {"who",		"",	(Function) cmd_who,		NULL},
   {"whois",		"to|o",	(Function) cmd_whois,		NULL},
   {"whom",		"",	(Function) cmd_whom,		NULL},

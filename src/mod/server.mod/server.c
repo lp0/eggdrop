@@ -2,7 +2,7 @@
  * server.c -- part of server.mod
  *   basic irc server support
  *
- * $Id: server.c,v 1.68 2001/07/17 19:53:42 guppy Exp $
+ * $Id: server.c,v 1.73 2001/11/29 04:43:38 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -27,7 +27,6 @@
 #define MAKING_SERVER
 #include "src/mod/module.h"
 #include "server.h"
-#include <netdb.h>
 
 static Function *global = NULL;
 
@@ -78,7 +77,6 @@ static char oldnick[NICKLEN];	/* previous nickname *before* rehash */
 static int trigger_on_ignore;	/* trigger bindings if user is ignored ? */
 static int answer_ctcp;		/* answer how many stacked ctcp's ? */
 static int lowercase_ctcp;	/* answer lowercase CTCP's (non-standard) */
-static char bothost[81];	/* dont mind me, Im stupid */
 static int check_mode_r;	/* check for IRCNET +r modes */
 static int net_type;
 static char connectserver[121];	/* what, if anything, to do before connect
@@ -90,6 +88,7 @@ static int double_help;
 static int double_warned;
 static int lastpingtime;	/* IRCNet LAGmeter support -- drummer */
 static char stackablecmds[511];
+static char stackable2cmds[511];
 static time_t last_time;
 static int use_penalties;
 static int use_fastdeq;
@@ -395,7 +394,7 @@ static int fast_deq(int which)
   struct msgq *m, *nm;
   char msgstr[511], nextmsgstr[511], tosend[511], victims[511], stackable[511],
        *msg, *nextmsg, *cmd, *nextcmd, *to, *nextto, *stckbl;
-  int len, doit = 0, found = 0, who_count =0;
+  int len, doit = 0, found = 0, who_count =0, stack_method = 1;
 
   if (!use_fastdeq)
     return 0;
@@ -432,6 +431,14 @@ static int fast_deq(int which)
      */
     if (use_fastdeq == 3 && found)
       return 0;
+    /* we check for the stacking method (default=1) */
+    strncpyz(stackable, stackable2cmds, sizeof stackable);
+    stckbl = stackable;
+    while (strlen(stckbl) > 0)
+      if (!egg_strcasecmp(newsplit(&stckbl), cmd)) {
+        stack_method = 2;
+        break;
+      }    
   }
   to = newsplit(&msg);
   len = strlen(to);
@@ -449,13 +456,17 @@ static int fast_deq(int which)
     len = strlen(nextto);
     if (nextto[len - 1] == '\n')
       nextto[len - 1] = 0;
-    if (!strcmp(cmd, nextcmd) && !strcmp(msg, nextmsg)
+    if ( strcmp(to, nextto) /* we don't stack to the same recipients */
+        && !strcmp(cmd, nextcmd) && !strcmp(msg, nextmsg)
         && ((strlen(cmd) + strlen(victims) + strlen(nextto)
 	     + strlen(msg) + 2) < 510)
         && (egg_strcasecmp(cmd, "WHO") || who_count < MAXPENALTY - 1)) {
       if (!egg_strcasecmp(cmd, "WHO"))
         who_count++;
-      simple_sprintf(victims, "%s,%s", victims, nextto);
+      if (stack_method == 1)
+      	simple_sprintf(victims, "%s,%s", victims, nextto);
+      else
+      	simple_sprintf(victims, "%s %s", victims, nextto);
       doit = 1;
       m->next = nm->next;
       if (!nm->next)
@@ -826,7 +837,7 @@ static void queue_server(int which, char *buf, int len)
     break;
 
   default:
-    putlog(LOG_MISC, "*", "!!! queueing unknown type to server!!");
+    putlog(LOG_MISC, "*", "!!! queuing unknown type to server!!");
     return;
   }
 
@@ -1189,7 +1200,8 @@ static char *traced_botname(ClientData cdata, Tcl_Interp *irp, char *name1,
 {
   char s[1024];
 
-  simple_sprintf(s, "%s!%s", botname, botuserhost);
+  simple_sprintf(s, "%s%s%s", botname, 
+		 botuserhost[0] ? "!" : "", botuserhost[0] ? botuserhost : "");
   Tcl_SetVar2(interp, name1, name2, s, TCL_GLOBAL_ONLY);
   if (flags & TCL_TRACE_UNSETS)
     Tcl_TraceVar(irp, name1, TCL_TRACE_READS | TCL_TRACE_WRITES |
@@ -1209,18 +1221,22 @@ static void do_nettype(void)
     use_penalties = 1;
     use_fastdeq = 3;
     nick_len = 9;
-    simple_sprintf(stackablecmds, "INVITE AWAY VERSION NICK ISON");
+    simple_sprintf(stackablecmds, "INVITE AWAY VERSION NICK");
     kick_method = 4;
     break;
   case NETT_UNDERNET:
     check_mode_r = 0;
     use_fastdeq = 2;
     nick_len = 9;
-    simple_sprintf(stackablecmds, "PRIVMSG NOTICE TOPIC PART WHOIS");
+    simple_sprintf(stackablecmds, "PRIVMSG NOTICE TOPIC PART WHOIS USERHOST USERIP ISON");
+    simple_sprintf(stackable2cmds, "USERHOST USERIP ISON");
     break;
   case NETT_DALNET:
     check_mode_r = 0;
+    use_fastdeq = 2;
     nick_len = 32;
+    simple_sprintf(stackablecmds, "PRIVMSG NOTICE PART WHOIS WHOWAS USERHOST ISON WATCH DCCALLOW");
+    simple_sprintf(stackable2cmds, "USERHOST ISON WATCH");
     break;
   case NETT_HYBRID_EFNET:
     check_mode_r = 0;
@@ -1268,6 +1284,7 @@ static tcl_strings my_tcl_strings[] =
   {"init-server",		initserver,	120,		0},
   {"connect-server",		connectserver,	120,		0},
   {"stackable-commands",	stackablecmds,	510,		0},
+  {"stackable2-commands",	stackable2cmds,	510,		0},
   {NULL,			NULL,		0,		0}
 };
 
@@ -1413,8 +1430,8 @@ static int ctcp_DCC_CHAT(char *nick, char *from, char *handle,
     if (!quiet_reject)
       dprintf(DP_HELP, "NOTICE %s :%s\n", nick, DCC_REFUSED3);
     putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
-  } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
-    /* Invalid port range. */
+  } else if (atoi(prt) < 1024 || atoi(prt) > 65535) {
+    /* Invalid port */
     if (!quiet_reject)
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
 	      DCC_CONNECTFAILED1);
@@ -1543,31 +1560,43 @@ static void server_postrehash()
     do_tcl("init-server", initserver);
 }
 
+static void server_die()
+{
+  cycle_time = 100;
+  if (server_online) {
+    dprintf(-serv, "QUIT :%s\n", quit_msg[0] ? quit_msg : "");
+    sleep(3); /* Give the server time to understand */
+  }
+  nuke_server(NULL);
+}
+
 /* A report on the module status.
  */
 static void server_report(int idx, int details)
 {
-  char s1[128], s[128];
+  char s1[64], s[128];
+  int servidx;
 
-  if (nick_juped)
-    dprintf(idx, "    NICK IS JUPED: %s %s\n", origbotname,
-            keepnick ? "(trying)" : "");
-  dprintf(idx, "    Online as: %s!%s (%s)\n", botname, botuserhost,
-	  botrealname);
-  if (!trying_server) {
+  if (server_online) {
+    dprintf(idx, "    Online as: %s%s%s (%s)\n", botname,
+	    botuserhost[0] ? "!" : "", botuserhost[0] ? botuserhost : "",
+	    botrealname);
+    if (nick_juped)
+      dprintf(idx, "    NICK IS JUPED: %s %s\n", origbotname,
+	      keepnick ? "(trying)" : "");
+    nick_juped = 0; /* WHY?? -- drummer */
     daysdur(now, server_online, s1);
     egg_snprintf(s, sizeof s, "(connected %s)", s1);
-    if ((server_lag) && !(waiting_for_awake)) {
-      egg_snprintf(s1, sizeof s1, " (lag: %ds)", server_lag);
+    if (server_lag && !waiting_for_awake) {
       if (server_lag == (-1))
 	egg_snprintf(s1, sizeof s1, " (bad pong replies)");
+      else
+	egg_snprintf(s1, sizeof s1, " (lag: %ds)", server_lag);
       strcat(s, s1);
     }
   }
-  if (server_online) {
-    int servidx = findanyidx(serv);
-
-    nick_juped = 0;
+  if ((trying_server || server_online) &&
+	((servidx = findanyidx(serv)) != (-1))) {
     dprintf(idx, "    Server %s:%d %s\n", dcc[servidx].host, dcc[servidx].port,
 	    trying_server ? "(trying)" : s);
   } else
@@ -1639,32 +1668,6 @@ static int server_expmem()
   return tot;
 }
 
-/* Put the full hostname in s.
- */
-static void getmyhostname(char *s)
-{
-  struct hostent	*hp;
-  char			*p;
-
-  if (hostname[0]) {
-    strcpy(s, hostname);
-    return;
-  }
-  p = getenv("HOSTNAME");
-  if (p != NULL) {
-    strncpyz(s, p, 81);
-    if (strchr(s, '.') != NULL)
-      return;
-  }
-  gethostname(s, 80);
-  if (strchr(s, '.') != NULL)
-    return;
-  hp = gethostbyname(s);
-  if (hp == NULL)
-    fatal("Hostname self-lookup failed.", 0);
-  strcpy(s, hp->h_name);
-}
-
 static cmd_t my_ctcps[] =
 {
   {"DCC",	"",	ctcp_DCC_CHAT,		"server:DCC"},
@@ -1673,14 +1676,6 @@ static cmd_t my_ctcps[] =
 
 static char *server_close()
 {
-  /* FIXME - I'm an ugly hack. */
-  cmd_t C_t[] =
-  {
-    {"die",	"m",	NULL /* Inserted below. */,	NULL},
-    {NULL,	NULL,	NULL,				NULL}
-  };
-  C_t[0].func = (Function) cmd_die;
-
   cycle_time = 100;
   nuke_server("Connection reset by peer");
   clearq(serverlist);
@@ -1688,7 +1683,6 @@ static char *server_close()
   rem_builtins(H_raw, my_raw_binds);
   rem_builtins(H_ctcp, my_ctcps);
   /* Restore original commands. */
-  add_builtins(H_dcc, C_t);
   del_bind_table(H_wall);
   del_bind_table(H_raw);
   del_bind_table(H_notc);
@@ -1727,6 +1721,7 @@ static char *server_close()
   del_hook(HOOK_MINUTELY, (Function) minutely_checks);
   del_hook(HOOK_PRE_REHASH, (Function) server_prerehash);
   del_hook(HOOK_REHASH, (Function) server_postrehash);
+  del_hook(HOOK_DIE, (Function) server_die);
   module_undepend(MODULE_NAME);
   return NULL;
 }
@@ -1829,7 +1824,6 @@ char *server_start(Function *global_funcs)
   trigger_on_ignore = 0;
   answer_ctcp = 1;
   lowercase_ctcp = 0;
-  bothost[0] = 0;
   check_mode_r = 0;
   maxqmsg = 300;
   burst = 0;
@@ -1840,6 +1834,7 @@ char *server_start(Function *global_funcs)
   use_penalties = 0;
   use_fastdeq = 0;
   stackablecmds[0] = 0;
+  strcpy(stackable2cmds, "USERHOST ISON");
   resolvserv = 0;
   lastpingtime = 0;
   last_time = 0;
@@ -1848,10 +1843,10 @@ char *server_start(Function *global_funcs)
   optimize_kicks = 0;
 
   server_table[4] = (Function) botname;
-  module_register(MODULE_NAME, server_table, 1, 1);
-  if (!module_depend(MODULE_NAME, "eggdrop", 106, 0)) {
+  module_register(MODULE_NAME, server_table, 1, 2);
+  if (!module_depend(MODULE_NAME, "eggdrop", 106, 7)) {
     module_undepend(MODULE_NAME);
-    return "This module requires eggdrop1.6.0 or later";
+    return "This module requires eggdrop1.6.7 or later";
   }
 
   /* Fool bot in reading the values. */
@@ -1902,6 +1897,7 @@ char *server_start(Function *global_funcs)
   add_hook(HOOK_QSERV, (Function) queue_server);
   add_hook(HOOK_PRE_REHASH, (Function) server_prerehash);
   add_hook(HOOK_REHASH, (Function) server_postrehash);
+  add_hook(HOOK_DIE, (Function) server_die);
   mq.head = hq.head = modeq.head = NULL;
   mq.last = hq.last = modeq.last = NULL;
   mq.tot = hq.tot = modeq.tot = 0;
@@ -1909,9 +1905,6 @@ char *server_start(Function *global_funcs)
   double_warned = 0;
   newserver[0] = 0;
   newserverport = 0;
-  getmyhostname(bothost);
-  /* Wishful thinking ... */
-  egg_snprintf(botuserhost, sizeof botuserhost, "%s@%s", botuser, bothost);
   curserv = 999;
   do_nettype();
   return NULL;

@@ -1,7 +1,7 @@
 dnl aclocal.m4
 dnl   macros autoconf uses when building configure from configure.in
 dnl
-dnl $Id: aclocal.m4,v 1.42 2001/07/03 16:47:14 guppy Exp $
+dnl $Id: aclocal.m4,v 1.52 2001/12/06 04:52:18 guppy Exp $
 dnl
 
 
@@ -127,6 +127,16 @@ fi
 ])dnl
 
 
+dnl  EGG_DISABLE_CC_OPTIMIZATION()
+dnl
+dnl check if user requested to remove -O2 cflag 
+dnl would be usefull on some weird *nix
+AC_DEFUN(EGG_DISABLE_CC_OPTIMIZATION, [dnl
+ AC_ARG_ENABLE(cc-optimization,
+   [  --disable-cc-optimization   disable -O2 cflag],  
+   CFLAGS=`echo $CFLAGS | sed 's/\-O2//'`)
+])dnl
+
 dnl  EGG_CHECK_OS()
 dnl
 dnl  FIXME/NOTICE:
@@ -176,12 +186,13 @@ case "$egg_cv_var_system_type" in
       ;;
     esac
   ;;
-  CYGWIN*)
+  CYGWI*)
     case "`echo $egg_cv_var_system_release | cut -c 1-3`" in
       1.*)
         NEED_DL=0
         SHLIB_LD="$CC -shared"
-        CC="$CC -mwin32"
+        AC_PROG_CC_WIN32
+        CC="$CC $WIN32FLAGS"
         MOD_CC="$CC"
         MOD_LD="$CC"
         AC_MSG_CHECKING(for /usr/lib/binmode.o)
@@ -202,6 +213,7 @@ case "$egg_cv_var_system_type" in
         AC_MSG_WARN(Make sure the directory eggdrop is installed into is mounted in binary mode.)
       ;;
     esac
+    AC_DEFINE(CYGWIN_HACKS)
   ;;
   HP-UX)
     HPUX=yes
@@ -259,10 +271,16 @@ case "$egg_cv_var_system_type" in
     DEFAULT_MAKE=static
     SHLIB_STRIP=strip
   ;;
+  QNX)
+    NEED_DL=0
+    DEFAULT_MAKE=static
+    SHLIB_LD="ld -shared"
+    SHLIB_STRIP=strip
+  ;;
   OSF1)
     case "`echo $egg_cv_var_system_release | cut -d . -f 1`" in
       V*)
-        # FIXME: we should check this in a seperate test
+        # FIXME: we should check this in a separate test
         # Digital OSF uses an ancient version of gawk
         if test "$AWK" = "gawk"
         then
@@ -461,18 +479,6 @@ fi
 ])dnl
 
 
-dnl  EGG_CYGWIN()
-dnl
-dnl  Check for Cygwin support.
-AC_DEFUN(EGG_CYGWIN, [dnl
-AC_CYGWIN
-if test "$ac_cv_cygwin" = "yes"
-then
-  AC_DEFINE(CYGWIN_HACKS)dnl
-fi
-])dnl
-
-
 dnl  EGG_EXEEXT()
 dnl
 dnl  Test for executable suffix and define eggdrop's executable name
@@ -491,9 +497,9 @@ AC_SUBST(EGGEXEC)dnl
 dnl  EGG_TCL_ARG_WITH()
 dnl
 AC_DEFUN(EGG_TCL_ARG_WITH, [dnl
-# oohh new configure --variables for those with multiple tcl libs
-AC_ARG_WITH(tcllib, [  --with-tcllib=PATH      full path to tcl library], tcllibname="$withval")
-AC_ARG_WITH(tclinc, [  --with-tclinc=PATH      full path to tcl header], tclincname="$withval")
+# oohh new configure --variables for those with multiple Tcl libs
+AC_ARG_WITH(tcllib, [  --with-tcllib=PATH      full path to Tcl library], tcllibname="$withval")
+AC_ARG_WITH(tclinc, [  --with-tclinc=PATH      full path to Tcl header], tclincname="$withval")
 
 WARN=0
 # Make sure either both or neither $tcllibname and $tclincname are set
@@ -814,13 +820,13 @@ AC_DEFUN(EGG_CACHE_UNSET, [dnl
 
 dnl  EGG_TCL_DETECT_CHANGE()
 dnl
-dnl  Detect whether the tcl system has changed since our last
+dnl  Detect whether the Tcl system has changed since our last
 dnl  configure run. Set egg_tcl_changed accordingly.
 dnl
 dnl  Tcl related feature and version checks should re-run their
 dnl  checks as soon as egg_tcl_changed is set to "yes".
 AC_DEFUN(EGG_TCL_DETECT_CHANGE, [dnl
-  AC_MSG_CHECKING(whether the tcl system has changed)
+  AC_MSG_CHECKING(whether the Tcl system has changed)
   egg_tcl_changed=yes
   egg_tcl_id="$TCLLIB:$TCLLIBFN:$TCLINC:$TCLINCFN"
   if test ! "$egg_tcl_id" = ":::"
@@ -876,7 +882,7 @@ then
     TCL_FOUND=0
   fi
 
-  # Check Tcl's patch level (if avaliable)
+  # Check Tcl's patch level (if available)
   if test "$egg_tcl_changed" = "yes"
   then
     EGG_CACHE_UNSET(egg_cv_var_tcl_patch_level)
@@ -929,7 +935,7 @@ then
 configure: error:
 
   Your Tcl version is much too old for eggdrop to use.
-  I suggest you download and complie a more recent version.
+  I suggest you download and compile a more recent version.
   The most reliable current version is $tclrecommendver and
   can be downloaded from $tclrecommendsite
 
@@ -987,7 +993,7 @@ dnl  EGG_TCL_ENABLE_THREADS()
 dnl
 AC_DEFUN(EGG_TCL_ENABLE_THREADS, [dnl
 AC_ARG_ENABLE(tcl-threads,
-[  --disable-tcl-threads   Disable threaded tcl support if detected. (Ignore this
+[  --disable-tcl-threads   Disable threaded Tcl support if detected. (Ignore this
                           option unless you know what you are doing)],
 enable_tcl_threads="$enableval",
 enable_tcl_threads=yes)
@@ -1033,6 +1039,11 @@ fi
 dnl  EGG_TCL_LIB_REQS()
 dnl
 AC_DEFUN(EGG_TCL_LIB_REQS, [dnl
+if test "$ac_cv_cygwin" = "yes"
+then
+  TCL_REQS="$TCLLIB/lib$TCLLIBFN"
+  TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS $EGG_MATH_LIB"
+else
 if test ! "$TCLLIBEXT" = ".a"
 then
   TCL_REQS="$TCLLIB/lib$TCLLIBFN"
@@ -1078,6 +1089,7 @@ EOF
     TCL_REQS="libtcle.a"
     TCL_LIBS="-L`pwd` -ltcle $EGG_MATH_LIB"
   fi
+fi
 fi
 AC_SUBST(TCL_REQS)dnl
 AC_SUBST(TCL_LIBS)dnl
@@ -1178,7 +1190,7 @@ AC_SUBST(MOD_UPDIR)dnl
 dnl  EGG_REPLACE_IF_CHANGED(FILE-NAME, CONTENTS-CMDS, INIT-CMDS)
 dnl
 dnl  Replace FILE-NAME if the newly created contents differs from the existing
-dnl  file contents.  Otherwise leave the file allone.  This avoids needless
+dnl  file contents.  Otherwise leave the file alone.  This avoids needless
 dnl  recompiles.
 dnl
 define(EGG_REPLACE_IF_CHANGED, [dnl
@@ -1224,11 +1236,71 @@ fi])
 dnl  EGG_SAVE_PARAMETERS()
 dnl
 AC_DEFUN(EGG_SAVE_PARAMETERS, [dnl
-  dnl  Normally, we shouldn't use this level as it's not intended for this
-  dnl  type of code, but there's no other way to run it before the main
-  dnl  parameter loop in configure.
-  AC_DIVERT_PUSH(AC_DIVERSION_NOTICE)dnl
-  egg_ac_parameters="[$]*"
-  AC_DIVERT_POP()dnl to NORMAL
+  # Remove --cache-file and --srcdir arguments so they do not pile up.
+  egg_ac_parameters=
+  ac_prev=
+  for ac_arg in $ac_configure_args; do
+    if test -n "$ac_prev"; then
+      ac_prev=
+      continue
+    fi
+    case $ac_arg in
+    -cache-file | --cache-file | --cache-fil | --cache-fi \
+    | --cache-f | --cache- | --cache | --cach | --cac | --ca | --c)
+      ac_prev=cache_file ;;
+    -cache-file=* | --cache-file=* | --cache-fil=* | --cache-fi=* \
+    | --cache-f=* | --cache-=* | --cache=* | --cach=* | --cac=* | --ca=* \
+    | --c=*)
+      ;;
+    --config-cache | -C)
+      ;;
+    -srcdir | --srcdir | --srcdi | --srcd | --src | --sr)
+      ac_prev=srcdir ;;
+    -srcdir=* | --srcdir=* | --srcdi=* | --srcd=* | --src=* | --sr=*)
+      ;;
+    *) egg_ac_parameters="$egg_ac_parameters $ac_arg" ;;
+    esac
+  done
+
   AC_SUBST(egg_ac_parameters)dnl
 ])dnl
+
+
+AC_DEFUN([AC_PROG_CC_WIN32], [
+AC_MSG_CHECKING([how to access the Win32 API])
+WIN32FLAGS=
+AC_TRY_COMPILE(,[
+#ifndef WIN32
+# ifndef _WIN32
+#  error WIN32 or _WIN32 not defined
+# endif
+#endif], [
+dnl found windows.h with the current config.
+AC_MSG_RESULT([present by default])
+], [
+dnl try -mwin32
+ac_compile_save="$ac_compile"
+dnl we change CC so config.log looks correct
+save_CC="$CC"
+ac_compile="$ac_compile -mwin32"
+CC="$CC -mwin32"
+AC_TRY_COMPILE(,[
+#ifndef WIN32
+# ifndef _WIN32
+#  error WIN32 or _WIN32 not defined
+# endif
+#endif], [
+dnl found windows.h using -mwin32
+AC_MSG_RESULT([found via -mwin32])
+ac_compile="$ac_compile_save"
+CC="$save_CC"
+WIN32FLAGS="-mwin32"
+], [
+ac_compile="$ac_compile_save"
+CC="$save_CC"
+AC_MSG_RESULT([not found])
+])
+])
+
+])
+dnl

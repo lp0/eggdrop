@@ -2,7 +2,7 @@
  * chancmds.c -- part of irc.mod
  *   handles commands direclty relating to channel interaction
  *
- * $Id: cmdsirc.c,v 1.25 2001/07/02 16:39:11 guppy Exp $
+ * $Id: cmdsirc.c,v 1.27 2001/12/04 19:58:07 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -218,7 +218,7 @@ static void cmd_kickban(struct userrec *u, int idx, char *par)
 	  s1[1] = '!';
 	  s1[2] = '*';
 	  break;
-	case '!':
+	case '-':
 	  s1 = strchr(s, '-');
 	  s1[1] = '*';
 	  s1--;
@@ -868,9 +868,7 @@ static void cmd_adduser(struct userrec *u, int idx, char *par)
     dprintf(idx, "Added hostmask %s to %s.\n", p1, u->handle);
     addhost_by_handle(hand, p1);
     get_user_flagrec(u, &user, chan->dname);
-    if ((chan_op(user) || (glob_op(user) && !chan_deop(user))) &&
-	(channel_autoop(chan) || glob_autoop(user) || chan_autoop(user)))
-      add_mode(chan, '+', 'o', m->nick);
+    check_this_user(hand);
   }
   putlog(LOG_CMDS, "*", "#%s# adduser %s %s", dcc[idx].nick, nick,
 	 hand == nick ? "" : hand);

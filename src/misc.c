@@ -7,7 +7,7 @@
  *   help system
  *   motd display and %var substitution
  *
- * $Id: misc.c,v 1.42 2001/07/16 14:54:01 guppy Exp $
+ * $Id: misc.c,v 1.45 2001/12/02 07:17:24 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -33,6 +33,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "chan.h"
+#include "tandem.h"
+#include "modules.h"
 #ifdef HAVE_UNAME
 #  include <sys/utsname.h>
 #endif
@@ -41,7 +43,7 @@
 extern struct dcc_t	*dcc;
 extern struct chanset_t	*chanset;
 extern char		 helpdir[], version[], origbotname[], botname[],
-			 admin[], motdfile[], ver[], botnetnick[],
+			 admin[], network[], motdfile[], ver[], botnetnick[],
 			 bannerfile[], logfile_suffix[], textdir[];
 extern int		 backgrd, con_chan, term_z, use_stderr, dcc_total,
 			 keep_all_logs, quick_logs, strict_host;
@@ -369,38 +371,6 @@ void maskhost(const char *s, char *nw)
     }
   }
 }
-
-#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
-/* Converts an UTF-8 string to unicode safe string
- */
-void str_nutf8tounicode(char *str, int len)
-{
-  Tcl_DString       ds_conversion;
-  Tcl_SavedResult   sr_oldresult;
-
-  /* Don't call this before calling init_tcl() */
-  if (interp) {
-    Tcl_DStringInit(&ds_conversion);
-
-    /* save our old result */
-    Tcl_SaveResult(interp, &sr_oldresult);
-
-    /* clear any previous interp->result */
-    Tcl_ResetResult(interp);
-
-    /* convert UTF-8 to unicode */
-    Tcl_UtfToExternalDString(NULL, str, -1, &ds_conversion);
-    Tcl_DStringResult(interp, &ds_conversion);
-    strncpyz(str, interp->result, len);
-
-    /* restore our old result */
-    Tcl_RestoreResult(interp, &sr_oldresult);
-
-    /* free our DString buffers */
-    Tcl_DStringFree(&ds_conversion);
-  }
-}
-#endif
 
 /* Dump a potentially super-long string of text.
  */
@@ -762,6 +732,7 @@ static void subst_addcol(char *s, char *newcol)
  * %C = list of channels i monitor
  * %E = eggdrop banner
  * %A = admin line
+ * %n = network name
  * %T = current time ("14:15")
  * %N = user's nickname
  * %U = display system name if possible
@@ -900,6 +871,9 @@ void help_subst(char *s, char *nick, struct flag_record *flags,
       break;
     case 'A':
       towrite = admin;
+      break;
+    case 'n':
+      towrite = network;
       break;
     case 'T':
       egg_strftime(sub, 6, "%H:%M", localtime(&now));
@@ -1505,4 +1479,17 @@ char *strchr_unescape(char *str, const char div, register const char esc_char)
 void str_unescape(char *str, register const char esc_char)
 {
   (void) strchr_unescape(str, 0, esc_char);
+}
+
+/* Kills the bot. s1 is the reason shown to other bots, 
+ * s2 the reason shown on the partyline. (Sup 25Jul2001)
+ */
+void kill_bot(char *s1, char *s2)
+{
+  call_hook(HOOK_DIE);
+  chatout("*** %s\n", s1);
+  botnet_send_chat(-1, botnetnick, s1);
+  botnet_send_bye();
+  write_userfile(-1);
+  fatal(s2, 0);
 }
