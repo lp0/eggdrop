@@ -2,7 +2,7 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  *
- * $Id: cmdschan.c,v 1.35 2000/11/03 17:15:49 fabian Exp $
+ * $Id: cmdschan.c,v 1.37 2000/11/21 05:18:04 guppy Exp $
  */
 /*
  * Copyright (C) 1997  Robey Pointer
@@ -134,7 +134,11 @@ static void cmd_pls_ban(struct userrec *u, int idx, char *par)
 		 dcc[idx].u.chat->con_chan, s, chan->dname, par);
 	  dprintf(idx, "New %s ban: %s (%s)\n", chan->dname, s, par);
 	}
-	add_mode(chan, '+', 'b', s);
+	/* Avoid unnesessary modes if you got +dynamicbans, and there is
+	 * no reason to set mode if irc.mod aint loaded. (dw 001120)
+	 */
+	if ((me = module_find("irc", 0, 0)))
+	  (me->funcs[IRC_RECHECK_CHANNEL])(chan, 1);
       } else {
 	u_addban(NULL, s, dcc[idx].nick, par,
 		 expire_time ? now + expire_time : 0, 0);
@@ -149,10 +153,11 @@ static void cmd_pls_ban(struct userrec *u, int idx, char *par)
 	  dprintf(idx, "New ban: %s (%s)\n", s, par);
 	}
 	chan = chanset;
-	while (chan != NULL) {
-	  add_mode(chan, '+', 'b', s);
-	  chan = chan->next;
-	}
+	if ((me = module_find("irc", 0, 0)))
+	  while (chan != NULL) {
+	    (me->funcs[IRC_RECHECK_CHANNEL])(chan, 1);
+	    chan = chan->next;
+	  }
       }
     }
   }
@@ -1178,11 +1183,15 @@ static void cmd_chaninfo(struct userrec *u, int idx, char *par)
     if (chan->idle_kick)
       dprintf(idx, "Idle Kick after (idle-kick): %d\n", chan->idle_kick);
     else
-      dprintf(idx, "Idle Kick after (idle-kick): DONT!\n");
+      dprintf(idx, "Idle Kick after (idle-kick): DON'T!\n");
     if (chan->stopnethack_mode)
       dprintf(idx, "stopnethack-mode: %d\n", chan->stopnethack_mode);
     else
-      dprintf(idx, "stopnethack: DONT!\n");
+      dprintf(idx, "stopnethack: DON'T!\n");
+    if (chan->revenge_mode)
+      dprintf(idx, "revenge-mode: %d\n", chan->revenge_mode);
+    else
+      dprintf(idx, "revenge-mode: 0\n");
     /* Only bot owners can see/change these (they're TCL commands) */
     if (u->flags & USER_OWNER) {
       if (chan->need_op[0])

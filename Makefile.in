@@ -64,7 +64,7 @@ XLIBS = @TCL_LIBS@ @LIBS@
 TCLLIB = @TCLLIB@
 TCLLIBFN = @TCLLIBFN@
 
-DEBCFLAGS = -DDEBUG_ASSERT -DDEBUG_MEM
+DEBCFLAGS = -DDEBUG_ASSERT -DDEBUG_MEM 
 
 modconf = $(top_srcdir)/misc/modconfig --top_srcdir=$(top_srcdir)
 

@@ -2,6 +2,26 @@
 Changes in eggdrop: (since v1.6.0)
 ----------------------------------
 
+1.6.1 (November 22, 2000)
+Found by  Fixed by  What...
+          Wiktor    updated KNOWN-PROBLEMS
+          Eule      fixed a crash dealing with expired masks and a memleak
+                    in misc.c
+          toot      made revenge-mode a per-channel setting, rather than
+                    global.
+          dw        set quiet-save was missing in the help file.
+suizide   dw        Seen module returned %s instead of nick in certain replys.
+          Eule      small fix for enforcebans
+          dw        Do not set bans if they don't match someone in the channel
+                    and the channel is set +dynamicbans.
+various   Fabian    Channel masks for unsupported channels weren't properly
+                    skipped when parsing the user-file.
+          Bob/      Now using lines with up to 500 instead of only 480
+          Fabian    characters. Not truncating message anymore if it's longer
+                    than 500 characters and doesn't contain spaces.
+paran0id  Fabian    Fixed crash in expired_mask() when checking ops not present
+                    in the user-list.
+
 1.6.0 (November 15, 2000)
 Found by  Fixed by  What...
 Paladin   guppy     MISC_NOUSERFILE includes the actual config filename now
