@@ -1,4 +1,4 @@
-/* 
+/*
  * misc.c -- handles:
  *   split() maskhost() dumplots() daysago() days() daysdur()
  *   logging things
@@ -6,23 +6,23 @@
  *   resync buffers for sharebots
  *   help system
  *   motd display and %var substitution
- * 
- * $Id: misc.c,v 1.35 2001/01/26 21:18:22 guppy Exp $
+ *
+ * $Id: misc.c,v 1.39 2001/04/12 02:39:43 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -167,7 +167,7 @@ int egg_strcatn(char *dst, const char *src, size_t max)
     *dst++ = *src++;
     max--;
   }
-	
+
   /* null-terminate the buffer */
   *dst = 0;
 
@@ -299,7 +299,7 @@ void maskhost(const char *s, char *nw)
         if (strict_host)
 	  nw[i] = '?';
 	else
-	  i--; 
+	  i--;
       } else
 	nw[i] = *p;
       fl++;
@@ -370,6 +370,38 @@ void maskhost(const char *s, char *nw)
   }
 }
 
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
+/* Converts an UTF-8 string to unicode safe string
+ */
+void str_nutf8tounicode(char *str, int len)
+{
+  Tcl_DString       ds_conversion;
+  Tcl_SavedResult   sr_oldresult;
+
+  /* Don't call this before calling init_tcl() */
+  if (interp) {
+    Tcl_DStringInit(&ds_conversion);
+
+    /* save our old result */
+    Tcl_SaveResult(interp, &sr_oldresult);
+
+    /* clear any previous interp->result */
+    Tcl_ResetResult(interp);
+
+    /* convert UTF-8 to unicode */
+    Tcl_UtfToExternalDString(NULL, str, -1, &ds_conversion);
+    Tcl_DStringResult(interp, &ds_conversion);
+    strncpyz(str, interp->result, len);
+
+    /* restore our old result */
+    Tcl_RestoreResult(interp, &sr_oldresult);
+
+    /* free our DString buffers */
+    Tcl_DStringFree(&ds_conversion);
+  }
+}
+#endif
+
 /* Dump a potentially super-long string of text.
  */
 void dumplots(int idx, const char *prefix, char *data)
@@ -427,7 +459,7 @@ void daysago(time_t now, time_t then, char *out)
   if (now - then > 86400) {
     int days = (now - then) / 86400;
 
-    sprintf(out, "%d day%s ago", days, (days == 1) ? "" : "s");    
+    sprintf(out, "%d day%s ago", days, (days == 1) ? "" : "s");
     return;
   }
   egg_strftime(out, 6, "%H:%M", localtime(&then));
@@ -775,7 +807,7 @@ void help_subst(char *s, char *nick, struct flag_record *flags,
   writeidx = s;
   current = strchr(readidx, '%');
   while (current) {
-    /* Are we about to copy a chuck to the end of the buffer? 
+    /* Are we about to copy a chuck to the end of the buffer?
      * if so return
      */
     if ((writeidx + (current - readidx)) >= (s + HELP_BUF_LEN)) {
@@ -1199,7 +1231,7 @@ static int display_tellhelp(int idx, char *file, FILE *f,
 {
   char s[HELP_BUF_LEN + 1];
   int lines = 0;
-  
+
   if (f) {
     help_subst(NULL, NULL, 0,
 	       (dcc[idx].status & STAT_TELNET) ? 0 : HELP_IRC, NULL);
@@ -1470,10 +1502,10 @@ char *str_escape(const char *str, const char div, const char mask)
  * The string
  *
  *   "\\3a\\5c i am funny \\3a):further text\\5c):oink"
- * 
+ *
  * as str, '\\' as mask and ':' as div would change the str buffer
  * to
- * 
+ *
  *   ":\\ i am funny :)"
  *
  * and return a pointer to "further text\\5c):oink".

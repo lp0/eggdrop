@@ -1,4 +1,4 @@
-/* 
+/*
  * tclhash.c -- handles:
  *   bind and unbind
  *   checking and triggering the various in-bot bindings
@@ -6,23 +6,23 @@
  *   adding/removing new binding tables
  *   (non-Tcl) procedure lookups for msg/dcc/file commands
  *   (Tcl) binding internal procedures to msg/dcc/file commands
- * 
- * $Id: tclhash.c,v 1.23 2001/01/21 07:49:05 guppy Exp $
+ *
+ * $Id: tclhash.c,v 1.26 2001/04/12 02:39:43 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -36,7 +36,7 @@
 extern Tcl_Interp	*interp;
 extern struct dcc_t	*dcc;
 extern struct userrec	*userlist;
-extern int		 debug_tcl, dcc_total;
+extern int		 dcc_total;
 extern time_t		 now;
 
 p_tcl_bind_list		bind_table_list;
@@ -257,7 +257,7 @@ tcl_bind_list_t *add_bind_table(const char *nme, int flg, Function func)
 
   /* Do not allow coders to use bind table names longer than
      4 characters. */
-  Assert(strlen(nme) <= 4); 
+  Assert(strlen(nme) <= 4);
 
   for (tl = bind_table_list, tl_prev = NULL; tl; tl_prev = tl, tl = tl->next) {
     if (tl->flags & HT_DELETED)
@@ -656,18 +656,12 @@ static int builtin_dcc STDVAR
 static int trigger_bind(const char *proc, const char *param)
 {
   int x;
-  FILE *f = 0;
 
-  if (debug_tcl) {
-    f = fopen("DEBUG.TCL", "a");
-    if (f != NULL)
-      fprintf(f, "eval: %s%s\n", proc, param);
-  }
+  /* We now try to debug the Tcl_VarEval() call below by remembering both
+   * the called proc name and it's parameters. This should render us a bit
+   * less helpless when we see context dumps.
+   */
   {
-    /* We now try to debug the Tcl_VarEval() call below by remembering both
-     * the called proc name and it's parameters. This should render us a bit
-     * less helpless when we see context dumps.
-     */
     const char *msg = "TCL proc: %s, param: %s";
     char *buf;
 
@@ -681,19 +675,11 @@ static int trigger_bind(const char *proc, const char *param)
   x = Tcl_VarEval(interp, proc, param, NULL);
   Context;
   if (x == TCL_ERROR) {
-    if (debug_tcl && (f != NULL)) {
-      fprintf(f, "done eval. error.\n");
-      fclose(f);
-    }
     if (strlen(interp->result) > 400)
       interp->result[400] = 0;
     putlog(LOG_MISC, "*", "Tcl error [%s]: %s", proc, interp->result);
     return BIND_EXECUTED;
   } else {
-    if (debug_tcl && (f != NULL)) {
-      fprintf(f, "done eval. ok.\n");
-      fclose(f);
-    }
     if (!strcmp(interp->result, "break"))
       return BIND_EXEC_BRK;
     return (atoi(interp->result) > 0) ? BIND_EXEC_LOG : BIND_EXECUTED;
@@ -1046,7 +1032,7 @@ void check_tcl_time(struct tm *tm)
   Tcl_SetVar(interp, "_time4", (char *) y, 0);
   egg_snprintf(y, sizeof y, "%04d", tm->tm_year + 1900);
   Tcl_SetVar(interp, "_time5", (char *) y, 0);
-  egg_snprintf(y, sizeof y, "%02d %02d %02d %02d %04d", tm->tm_min, tm->tm_hour, 
+  egg_snprintf(y, sizeof y, "%02d %02d %02d %02d %04d", tm->tm_min, tm->tm_hour,
 	       tm->tm_mday, tm->tm_mon, tm->tm_year + 1900);
   check_tcl_bind(H_time, y, 0,
 		 " $_time1 $_time2 $_time3 $_time4 $_time5",
@@ -1105,7 +1091,7 @@ void tell_binds(int idx, char *par)
 	  int	ok = 0;
 
           if (patmatc == 1) {
-            if (wild_match(name, tl->name) || 
+            if (wild_match(name, tl->name) ||
                 wild_match(name, tm->mask) ||
                 wild_match(name, tc->func_name))
 	      ok = 1;

@@ -1,28 +1,28 @@
-/* 
+/*
  * proto.h
  *   prototypes for every function used outside its own module
- * 
+ *
  * (i guess i'm not very modular, cuz there are a LOT of these.)
  * with full prototyping, some have been moved to other .h files
  * because they use structures in those
  * (saves including those .h files EVERY time) - Beldin
- * 
- * $Id: proto.h,v 1.37 2000/12/17 21:48:42 guppy Exp $
+ *
+ * $Id: proto.h,v 1.42 2001/04/12 02:39:43 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -232,6 +232,9 @@ void logsuffix_change(char *);
 char *str_escape(const char *str, const char div, const char mask);
 char *strchr_unescape(char *str, const char div, register const char esc_char);
 void str_unescape(char *str, register const char esc_char);
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
+void str_nutf8tounicode(char *str, int len);
+#endif
 
 /* net.c */
 IP my_atoul(char *);

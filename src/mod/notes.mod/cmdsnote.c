@@ -1,23 +1,23 @@
-/* 
+/*
  * cmdsnote.c -- part of notes.mod
  *   handles all notes interaction over the party line
- * 
- * $Id: cmdsnote.c,v 1.10 2001/01/21 07:32:40 guppy Exp $
+ *
+ * $Id: cmdsnote.c,v 1.12 2001/04/12 02:44:23 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -73,7 +73,7 @@ static void cmd_mns_noteign(struct userrec *u, int idx, char *par)
     dprintf(idx, "%s: -noteign [handle] <ignoremask>\n", NOTES_USAGE);
     return;
   }
-  putlog(LOG_CMDS, "*", "#%s# -noteignore %s", dcc[idx].nick, par);
+  putlog(LOG_CMDS, "*", "#%s# -noteign %s", dcc[idx].nick, par);
   p = buf = nmalloc(strlen(par)+1);
   strcpy(p, par);
   handle = newsplit(&p);

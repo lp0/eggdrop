@@ -2,11 +2,11 @@
  * cmdschan.c -- part of channels.mod
  *   commands from a user via dcc that cause server interaction
  *
- * $Id: cmdschan.c,v 1.40 2001/01/16 17:13:21 guppy Exp $
+ * $Id: cmdschan.c,v 1.42 2001/04/12 02:39:45 guppy Exp $
  */
 /*
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -547,7 +547,7 @@ static void cmd_mns_exempt (struct userrec *u, int idx, char *par)
 	dprintf(idx, "Removed %s channel exempt: %s\n", chan->dname, s);
 	add_mode(chan, '-', 'e', s);
 	return;
-      }	
+      }
       i = 0;
       for (e = chan->channel.exempt; e && e->mask && e->mask[0]; e = e->next) {
 	if (!u_equals_mask(global_exempts, e->mask) &&
@@ -636,7 +636,7 @@ static void cmd_mns_invite (struct userrec *u, int idx, char *par)
 	dprintf(idx, "Removed %s channel invite: %s\n", chan->dname, s);
 	add_mode(chan, '-', 'I', s);
 	return;
-      }	
+      }
       i = 0;
       for (inv = chan->channel.invite; inv && inv->mask && inv->mask[0];
 	   inv = inv->next) {
@@ -860,8 +860,9 @@ static void cmd_chinfo(struct userrec *u, int idx, char *par)
 static void cmd_stick_yn(int idx, char *par, int yn)
 {
   int i = 0, j;
-  struct chanset_t *chan;
+  struct chanset_t *chan, *achan;
   char *stick_type, s[UHOSTLEN], chname[81];
+  module_entry *me;
 
   stick_type = newsplit(&par);
   strncpyz(s, newsplit(&par), sizeof s);
@@ -946,12 +947,15 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     return;
   }
   if (!chname[0]) {
-    i = u_setsticky_ban(NULL, s, 
+    i = u_setsticky_ban(NULL, s,
                         (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
     if (i > 0) {
       putlog(LOG_CMDS, "*", "#%s# %sstick ban %s",
              dcc[idx].nick, yn ? "" : "un", s);
       dprintf(idx, "%stuck ban: %s\n", yn ? "S" : "Uns", s);
+      if ((me = module_find("irc", 0, 0)))
+	for (achan = chanset; achan != NULL; achan = achan->next)
+	  (me->funcs[IRC_RECHECK_CHANNEL])(achan, 1);
       return;
     }
     strncpyz(chname, dcc[idx].u.chat->con_chan, sizeof chname);
@@ -968,6 +972,8 @@ static void cmd_stick_yn(int idx, char *par, int yn)
     putlog(LOG_CMDS, "*", "#%s# %sstick ban %s %s", dcc[idx].nick,
            yn ? "" : "un", s, chname);
     dprintf(idx, "%stuck %s ban: %s\n", yn ? "S" : "Uns", chname, s);
+    if ((me = module_find("irc", 0, 0)))
+      (me->funcs[IRC_RECHECK_CHANNEL])(chan, 1);
     return;
   }
   dprintf(idx, "No such ban.\n");

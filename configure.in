@@ -50,9 +50,11 @@ AC_C_BIGENDIAN
 AC_C_INLINE
 AC_CHECK_SIZEOF(long, 0)
 AC_CHECK_SIZEOF(int, 0)
+AC_MSG_CHECKING(for energymech)
+AC_MSG_RESULT(no)
 
 # Checks for library functions
-AC_CHECK_FUNCS(clock getrusage setpgid uname sigaction sigemptyset rename strcasecmp strncasecmp getdtablesize memset random srandom dlopen dprintf snprintf vsnprintf isascii inet_aton memcpy strftime)
+AC_CHECK_FUNCS(clock getrusage setpgid uname sigaction sigemptyset rename strcasecmp strncasecmp getdtablesize memset random srandom dlopen dprintf snprintf vsnprintf isascii inet_aton memcpy strftime fsync)
 EGG_CHECK_FUNC_VSPRINTF
 
 # Make sure we have stdc headers, since we can't compile without them
@@ -67,7 +69,7 @@ EGG_EXEEXT
 # (well, what used to be robey's tcl thingies...)
 
 # Latest tested Tcl version to recommend if Tcl isn't found
-tclrecommendver="8.3.2"
+tclrecommendver="8.3.3"
 
 # Site recommended to download Tcl from
 tclrecommendsite="ftp://ftp.scriptics.com/pub/tcl/tcl8_3/"

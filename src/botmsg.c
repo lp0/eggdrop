@@ -1,26 +1,26 @@
-/* 
+/*
  * botmsg.c -- handles:
  *   formatting of messages to be sent on the botnet
  *   sending differnet messages to different versioned bots
- * 
+ *
  * by Darrin Smith (beldin@light.iinet.net.au)
- * 
- * $Id: botmsg.c,v 1.18 2001/01/16 17:13:20 guppy Exp $
+ *
+ * $Id: botmsg.c,v 1.22 2001/04/12 02:39:43 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -44,21 +44,28 @@ static char	OBUF[1024];
  */
 void tandout_but EGG_VARARGS_DEF(int, arg1)
 {
-  int i, x, l;
+  int i, x, len;
   char *format;
   char s[601];
   va_list va;
 
   x = EGG_VARARGS_START(int, arg1, va);
   format = va_arg(va, char *);
-
-  if ((l = egg_vsnprintf(s, 511, format, va)) < 0)
-    s[l = 511] = 0;
+  egg_vsnprintf(s, 511, format, va);
   va_end(va);
+  len = strlen(s);
+  if (len > 511)
+    len = 511;
+  s[len + 1] = 0;
+
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
+  str_nutf8tounicode(s, sizeof s);
+#endif
+
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type == &DCC_BOT) && (i != x) &&
-	(b_numver(i) < NEAT_BOTNET))
-      tputs(dcc[i].sock, s, l);
+        (b_numver(i) < NEAT_BOTNET))
+      tputs(dcc[i].sock, s, len);
 }
 #endif
 
@@ -287,7 +294,7 @@ void botnet_send_pong(int idx)
 
 void botnet_send_priv EGG_VARARGS_DEF(int, arg1)
 {
-  int idx, l;
+  int idx, l, len;
   char *from, *to, *tobot, *format;
   char tbuf[1024];
   va_list va;
@@ -297,10 +304,18 @@ void botnet_send_priv EGG_VARARGS_DEF(int, arg1)
   to = va_arg(va, char *);
   tobot = va_arg(va, char *);
   format = va_arg(va, char *);
-
-  if (egg_vsnprintf(tbuf, 450, format, va) < 0)
-    tbuf[450] = 0;
+  egg_vsnprintf(tbuf, 450, format, va);
   va_end(va);
+
+  len = strlen(tbuf);
+  if (len > 450)
+    len = 450;
+  tbuf[len + 1] = 0;
+
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
+  str_nutf8tounicode(tbuf, sizeof tbuf);
+#endif
+
   if (tobot) {
 #ifndef NO_OLD_BOTNET
     if (b_numver(idx) < NEAT_BOTNET)

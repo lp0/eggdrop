@@ -1,22 +1,22 @@
-/* 
+/*
  * module.h
- * 
- * $Id: module.h,v 1.40 2001/02/27 03:18:24 guppy Exp $
+ *
+ * $Id: module.h,v 1.45 2001/04/12 02:39:44 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -30,7 +30,7 @@
 #include "modvals.h"
 #include "src/tandem.h"
 
-/* 
+/*
  * This file contains all the orrible stuff required to do the lookup
  * table for symbols, rather than getting the OS to do it, since most
  * OS's require all symbols resolved, this can cause a problem with
@@ -431,6 +431,9 @@
 #define str_unescape ((void (*)(char *, register const char))global[264])
 #define egg_strcatn ((int (*)(char *dst, const char *src, size_t max))global[265])
 #define clear_chanlist_member ((void (*)(const char *nick))global[266])
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
+#define str_nutf8tounicode ((int (*)(char *str, int len))global[267])
+#endif
 
 /* This is for blowfish module, couldnt be bothered making a whole new .h
  * file for it ;)

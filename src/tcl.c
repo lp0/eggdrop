@@ -1,25 +1,25 @@
-/* 
+/*
  * tcl.c -- handles:
  *   the code for every command eggdrop adds to Tcl
  *   Tcl initialization
  *   getting and setting Tcl/eggdrop variables
- * 
- * $Id: tcl.c,v 1.30 2001/01/26 21:18:22 guppy Exp $
+ *
+ * $Id: tcl.c,v 1.33 2001/04/12 02:39:43 guppy Exp $
  */
-/* 
- * Copyright (C) 1997  Robey Pointer
- * Copyright (C) 1999, 2000  Eggheads
- * 
+/*
+ * Copyright (C) 1997 Robey Pointer
+ * Copyright (C) 1999, 2000, 2001 Eggheads Development Team
+ *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
  * as published by the Free Software Foundation; either version 2
  * of the License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
@@ -69,7 +69,6 @@ char	    whois_fields[1025] = "";	/* fields to display in a .whois */
 Tcl_Interp *interp;			/* eggdrop always uses the same
 					   interpreter */
 int	    dcc_flood_thr = 3;
-int	    debug_tcl = 0;
 int	    use_invites = 0;		/* Jason/drummer */
 int	    use_exempts = 0;		/* Jason/drummer */
 int	    force_expire = 0;		/* Rufus */
@@ -154,7 +153,7 @@ static int tcl_logfile STDVAR
     }
   /* Do not add logfiles without any flags to log ++rtc */
   if (!logmodes (argv [1])) {
-    Tcl_AppendResult (interp, "can't remove \"", argv[3], 
+    Tcl_AppendResult (interp, "can't remove \"", argv[3],
                      "\" from list: no such logfile", NULL);
     return TCL_ERROR;
   }
@@ -432,7 +431,6 @@ static tcl_ints def_tcl_ints[] =
   {"default-flags",		&default_flags,		0},
   /* moved from eggdrop.h */
   {"numversion",		&egg_numver,		2},
-  {"debug-tcl",			&debug_tcl,		1},
   {"die-on-sighup",		&die_on_sighup,		1},
   {"die-on-sigterm",		&die_on_sigterm,	1},
   {"remote-boots",		&remote_boots,		1},
@@ -496,7 +494,7 @@ extern tcl_cmds tcluser_cmds[], tcldcc_cmds[], tclmisc_cmds[], tcldns_cmds[];
  */
 void init_tcl(int argc, char **argv)
 {
-#if TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
   const char *encoding;
   int i;
   char *langEnv;
@@ -509,7 +507,7 @@ void init_tcl(int argc, char **argv)
 /* This must be done *BEFORE* Tcl_SetSystemEncoding(),
  * or Tcl_SetSystemEncoding() will cause a segfault.
  */
-#ifndef HAVE_PRE7_5_TCL	
+#ifndef HAVE_PRE7_5_TCL
   /* This is used for 'info nameofexecutable'.
    * The filename in argv[0] must exist in a directory listed in
    * the environment variable PATH for it to register anything.
@@ -532,7 +530,7 @@ void init_tcl(int argc, char **argv)
   Tcl_Init(interp);
 
 /* Code based on Tcl's TclpSetInitialEncodings() */
-#if TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1
+#if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
   /* Determine the current encoding from the LC_* or LANG environment
    * variables.
    */
@@ -629,18 +627,8 @@ resetPath:
 void do_tcl(char *whatzit, char *script)
 {
   int code;
-  FILE *f = 0;
 
-  if (debug_tcl) {
-    f = fopen("DEBUG.TCL", "a");
-    if (f != NULL)
-      fprintf(f, "eval: %s\n", script);
-  }
   code = Tcl_Eval(interp, script);
-  if (debug_tcl && (f != NULL)) {
-    fprintf(f, "done eval, result=%d\n", code);
-    fclose(f);
-  }
   if (code != TCL_OK) {
     putlog(LOG_MISC, "*", "Tcl error in script for '%s':", whatzit);
     putlog(LOG_MISC, "*", "%s", interp->result);

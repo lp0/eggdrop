@@ -1,8 +1,40 @@
-
+    
 Changes in eggdrop: (since v1.6.0)
 ----------------------------------
 
-1.6.3 (February 27, 2001)
+1.6.4 (13 April 2001)
+Found by  Fixed by  What...
+          Eugene    more German translations and some typo fixes
+          guppy     modified weed and autobotchk to find tclsh better
+NaTaS     ITE       fixed weed's b<days> switch
+          Sup       When rejecting bots don't try to execute rembot()
+                    for bots that match bot's botnet-nick.
+          Eugene    improved the German translations
+fabulous  guppy     dcc resumes with no requested data are now ignored
+                    properly
+          Krome     call sync() after saving the userfile
+various   Krome     fixed .-noteign from crashing the bot
+          Wingman/  updated all the copyright info for 2001
+          guppy
+          Krome     modes-per-line works now when its set to 3
+various   Darude    fixed channel add #chan from crashing the bot
+          Eugene    various small typo fixes
+          nakee     solaris make gcc fix
+          Zart      small fix to the unicode stuff to handle Tcl > v9
+guruz     Sup       Added matchbotattr to alltools.tcl.
+          kirben    removed some legacy cygwin compatibility
+          dw        cmd_stick activates the bans now
+          Abraham   fixed a small remote-boots issue
+          ITE       fixed the remote motd bug
+blaster   ITE       fixed a small dns.c bug with hostname resolving
+          Wingman   removed debug-tcl, since this is something noone uses and is
+                    more bloat than anything
+Darude    Darude/   encrypt/decrypt with highbit character messed up the string
+          Wingman
+KingBob   Tothwolf/ Fixed rest of the problems with utf8 characters. 
+          Wingman
+
+1.6.3 (27 February 2001)
 Found by  Fixed by  What...
           guppy     made blowfish.mod a bit more friendly with other encryption
                     modules and also added hooks in the core for string
