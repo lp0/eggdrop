@@ -1,6 +1,19 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.17
+Foundby   Fixedby   What....
+          smok      potential error with tld's in new maskhost
+smok      beldin    private_owner was not being handled in finish_share
+          mht       notes.tcl fixes
+Daklop    Beldin    refinement of maskhost to deal with that nasty 
+                    4 component hosts
+          Kirk      extremely small fixes to userinfo1.0.tcl
+ButchBub  Beldin    args for mode bind tabe seperate mode change from victim
+ButchBub  Beldin    gamespak wants me_op exported from irc.mod
+          ButchBub  .channel differentiates global vs channel flags
+          Beldin    ban cleanup code was unbanning & rebanning existing bans
+	  
 1.3.16
 Foundby   Fixedby   What....
 Various   Segfault  +m's can .deluser +n's (actually the fix is much shorter,

@@ -83,7 +83,7 @@ static void do_ban (struct chanset_t * chan, char * ban ) {
    banlist *b;
    
    for (b  = chan->channel.ban; b->ban[0]; b = b->next) 
-     if (wild_match(ban, b->ban)) 
+     if (wild_match(ban, b->ban) && strcasecmp(ban, b->ban)) 
        add_mode (chan, '-', 'b', b->ban);
    add_mode(chan, '+', 'b', ban);
    flush_mode(chan, QUICK);
@@ -1023,20 +1023,17 @@ static int got332 (char * from, char * msg)
 static void do_embedded_mode (struct chanset_t * chan, char * nick,
 		       memberlist * m, char * mode)
 {
-   char s[81];
    struct flag_record fr = {0,0,0,0,0,0};
    int servidx = findanyidx(serv);
    
    while (*mode) {
       switch (*mode) {
       case 'o':
-	 sprintf(s, "+o %s", nick);
-	 check_tcl_mode(dcc[servidx].host, "", NULL, chan->name, s);
+	 check_tcl_mode(dcc[servidx].host, "", NULL, chan->name, "+o", nick);
 	 got_op(chan, "", dcc[servidx].host, nick, &fr);
 	 break;
       case 'v':
-	 sprintf(s, "+v %s", nick);
-	 check_tcl_mode(dcc[servidx].host, "", NULL, chan->name, s);
+	 check_tcl_mode(dcc[servidx].host, "", NULL, chan->name, "+v", nick);
 	 m->flags |= CHANVOICE;
 	 break;
       }

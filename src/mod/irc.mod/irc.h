@@ -2,15 +2,17 @@
 #define check_tcl_part(a,b,c,d) check_tcl_joinpart(a,b,c,d,H_part)
 #define check_tcl_splt(a,b,c,d) check_tcl_joinpart(a,b,c,d,H_splt)
 #define check_tcl_rejn(a,b,c,d) check_tcl_joinpart(a,b,c,d,H_rejn)
-#define check_tcl_sign(a,b,c,d,e) check_tcl_signtopcnickmode(a,b,c,d,e,H_sign)
-#define check_tcl_topc(a,b,c,d,e) check_tcl_signtopcnickmode(a,b,c,d,e,H_topc)
-#define check_tcl_nick(a,b,c,d,e) check_tcl_signtopcnickmode(a,b,c,d,e,H_nick)
-#define check_tcl_mode(a,b,c,d,e) check_tcl_signtopcnickmode(a,b,c,d,e,H_mode)
+#define check_tcl_sign(a,b,c,d,e) check_tcl_signtopcnick(a,b,c,d,e,H_sign)
+#define check_tcl_topc(a,b,c,d,e) check_tcl_signtopcnick(a,b,c,d,e,H_topc)
+#define check_tcl_nick(a,b,c,d,e) check_tcl_signtopcnick(a,b,c,d,e,H_nick)
+#define check_tcl_mode(a,b,c,d,e,f) check_tcl_kickmode(a,b,c,d,e,f,H_mode)
+#define check_tcl_kick(a,b,c,d,e,f) check_tcl_kickmode(a,b,c,d,e,f,H_kick)
 
 #ifdef MAKING_IRC
-static void check_tcl_kick (char *,char *,struct userrec *,char *,char *,char *);
+static void check_tcl_kickmode (char *,char *,struct userrec *,char *,char *,char *,
+				p_tcl_bind_list);
 static void check_tcl_joinpart (char *,char *,struct userrec *,char *, p_tcl_bind_list);
-static void check_tcl_signtopcnickmode (char *, char *, struct userrec * u, char *,
+static void check_tcl_signtopcnick (char *, char *, struct userrec * u, char *,
 				 char *, p_tcl_bind_list);
 static void check_tcl_pubm (char *, char *, char *, char *);
 static int check_tcl_pub (char *, char *, char *, char *);
@@ -48,4 +50,7 @@ static void gotmode (char *, char *);
 #define H_pubm (*(p_tcl_bind_list*)(irc_funcs[12]))
 #define H_pub (*(p_tcl_bind_list*)(irc_funcs[13]))
 #define H_topc (*(p_tcl_bind_list*)(irc_funcs[14]))
+/* recheck_channel is here */
+/* 16 - 19 */
+#define me_op ((int(*)(irc_funcs[16]))(struct chanset_t *))
 #endif

@@ -375,7 +375,7 @@ void chanprog()
       /* like rm -rf /etc :) */
       printf("\n\n%s\n", MISC_ROOTWARN);
    }
-   if (!readuserfile(userfile, &userlist,0)) {
+   if (!readuserfile(userfile, &userlist)) {
       if (!make_userfile)
 	fatal(MISC_NOUSERFILE, 0);
       printf("\n\n%s\n", MISC_NOUSERFILE2);
@@ -428,7 +428,7 @@ void reload()
    clear_userlist(userlist);
    noshare = 0;
    userlist = NULL;
-   if (!readuserfile(userfile, &userlist,0))
+   if (!readuserfile(userfile, &userlist))
       fatal(MISC_MISSINGUSERF, 0);
    context;
    reaffirm_owners();

@@ -1148,7 +1148,7 @@ static void finish_share (int idx) {
       /* read the rest in */
       for (i =0; i < dcc_total;i++) 
 	dcc[i].user = get_user_by_handle(u,dcc[i].nick);
-      if (!readuserfile(dcc[idx].u.xfer->filename, &u,private_owner)) 
+      if (!readuserfile(dcc[idx].u.xfer->filename, &u))
 	putlog(LOG_MISC, "*", "%s",USERF_CANTREAD);
       else {
 	 putlog(LOG_MISC, "*", "%s.", USERF_XFERDONE);
@@ -1168,7 +1168,9 @@ static void finish_share (int idx) {
 	       if (private_global) {
 		  u->flags = u2->flags;
 		  u->flags_udef = u2->flags_udef;
-	       }
+	       } else if (private_owner) 
+		    u->flags = (u2->flags & USER_OWNER) 
+		      | (u->flags & ~ USER_OWNER);
 	       for (cr = u2->chanrec; cr; cr = cr2) {
 		  struct chanset_t * chan = findchan (cr->channel);
 		  int ok = 0;
@@ -1208,7 +1210,8 @@ static void finish_share (int idx) {
 	    } else if (!u2 && private_global) {
 	       u->flags = 0;
 	       u->flags_udef = 0;
-	    }
+	    } else if (private_owner) 
+		 u->flags = (u->flags & ~USER_OWNER);
 	 }
 	 clear_userlist(ou);
 	 unlink(dcc[idx].u.xfer->filename);	/* done with you! */

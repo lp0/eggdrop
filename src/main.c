@@ -77,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.16";
-int egg_numver = 1031600;
+char egg_version[1024] = "1.3.17";
+int egg_numver = 1031700;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";

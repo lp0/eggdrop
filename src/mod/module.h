@@ -93,7 +93,7 @@
 /* 52 - 55 */
 #define addhost_by_handle ((void (*) (char *, char *))global[52])
 #define delhost_by_handle ((int(*)(char *,char *))global[53])
-#define readuserfile ((int (*)(char *,struct userrec **,int))global[54])
+#define readuserfile ((int (*)(char *,struct userrec **))global[54])
 #define write_userfile ((void(*)(int))global[55])
 /* 56 - 59 */
 #define geticon ((char (*) (int))global[56])

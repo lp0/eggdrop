@@ -17,7 +17,6 @@ static p_tcl_bind_list H_topc, H_splt, H_sign, H_rejn, H_part, H_pub, H_pubm;
 static p_tcl_bind_list H_nick, H_mode, H_kick, H_join;
 static Function * global = NULL, *channels_funcs = NULL, *server_funcs = NULL;
 
-
 /* time to wait for user to return for net-split */
 static int wait_split = 300;
 static int bounce_bans = 0;
@@ -487,9 +486,9 @@ static void check_tcl_joinpart (char * nick, char * uhost, struct userrec * u,
    context;
 }
 
-static void check_tcl_signtopcnickmode (char * nick, char * uhost, struct userrec * u,
-					char * chname, char * reason,
-					p_tcl_bind_list table)
+static void check_tcl_signtopcnick (char * nick, char * uhost, struct userrec * u,
+				    char * chname, char * reason,
+				    p_tcl_bind_list table)
 {
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    char args[1024];
@@ -511,15 +510,18 @@ static void check_tcl_signtopcnickmode (char * nick, char * uhost, struct userre
    context;
 }
 
-static void check_tcl_kick (char * nick, char * uhost, struct userrec * u,
-			    char * chname, char * dest, char * reason)
-{
+static void check_tcl_kickmode (char * nick, char * uhost, struct userrec * u,
+				char * chname, char * dest, char * reason,
+				p_tcl_bind_list table) {
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    char args[512];
    
    context;
    get_user_flagrec(u,&fr,chname);
-   simple_sprintf(args, "%s %s", chname, dest);
+   if (table == H_mode)
+     simple_sprintf(args, "%s %s", chname, dest);
+   else
+     simple_sprintf(args, "%s %s %s", chname, dest, reason);
    Tcl_SetVar(interp, "_kick1", nick, 0);
    Tcl_SetVar(interp, "_kick2", uhost, 0);
    Tcl_SetVar(interp, "_kick3", u?u->handle:"*", 0);
@@ -716,6 +718,8 @@ static Function irc_table[] =
      (Function) &H_pub ,
      (Function) &H_topc,
      (Function) recheck_channel,
+     /* 16 - 19 */
+     (Function) me_op,
 };
 
 char *server_start ();

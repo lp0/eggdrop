@@ -1,10 +1,11 @@
 #
-# userinfo.tcl v1.01 for Eggdrop 1.1.6 and higher 
+# userinfo.tcl v1.02 for Eggdrop 1.1.6 and higher 
 #			Scott G. Taylor -- ButchBub!staylor@mrynet.com
 #
 # V1.00	     ButchBub	  14 July      1997  Original release.  Based on
 #						whois.tcl "URL" commands.
 # v1.01      Beldin       11 November  1997  1.3 only version
+# v1.02      Kirk         19 June      1998  extremely small fixes
 #
 # TO USE:  o	Set the desired userinfo field keywords to the 
 #		`userinfo-fields' line below where indicated.
@@ -54,13 +55,15 @@ set userinfo-fields "URL BF GF IRL EMAIL DOB"
 
 # This script's identification
 
-set userinfover "Userinfo v1.01"
+set userinfover "Userinfo v1.02"
 
 # This script is NOT for pre-1.3.0 versions.
 
 if {![info exists numversion] || ($numversion < 1030000)} {
-  putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
-  return 0
+    if {[string range $version 0 2] != "1.3"} {
+    putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
+    return 0
+  }
 }
 
 # Make sure we don't bail because whois-fields isn't set
@@ -74,7 +77,7 @@ if {![info exists whois-fields]} {
 foreach f1 [split ${userinfo-fields}] {
   set ffound 0
   foreach f2 [split ${whois-fields}] {
-    if {$f1 == $f2} { 
+    if {[string tolower $f1] == [string tolower $f2]} { 
       set ffound 1
       break
     }

@@ -1,10 +1,22 @@
 #
-# notes2.tcl - v2.0.0 - released by MHT <mht@mygale.org>
+# notes2.tcl - v2.0.2 - released by MHT <mht@mygale.org>
 #                     - a bind apart script from #TSF
-#                     - for eggdrop 1.3.14+mht and 1.3.15+
+#                     - for eggdrop 1.3.15+
 #
 ####
 #
+# history:
+# --------
+# 2.0.0 - first release for 1.3.14+mht series
+#         (get notesat.tcl for 1.1.5 series)
+#
+# 2.0.2 - Message bug corrected: "erased <m> notes; <n> left." is better.
+#       - Corrected weird switch tcl syntax, bug found by Islandic.
+#         It's so different from C (I hate tcl!).
+#       - Desactivated message "I don't know you", boring me !
+#       - No more logs for notes-indexing on join :-)
+#
+####
 # Check your notes on every shared bot of the hub.
 #
 # .notes [bot|all] index
@@ -27,10 +39,11 @@ bind   bot  - notes2reply: *bot:notes2reply
 ########
 proc n2_notesindex {bot handle} {
     global nick
-    switch [notes $handle] {
-	-2 { putbot $bot "notes2reply: $handle Notefile failure." }
-	-1 { putbot $bot "notes2reply: $handle I don't know you." }
-	0  { putbot $bot "notes2reply: $handle You have no messages." }
+    switch "([notes $handle])" {
+	"(-2)" { putbot $bot "notes2reply: $handle Notefile failure." }
+	#"-1" { putbot $bot "notes2reply: $handle I don't know you." }
+	"(-1)" { return 0 }
+	"(0)"  { putbot $bot "notes2reply: $handle You have no messages." }
 	default {
 	    putbot $bot "notes2reply: $handle ### You have the following notes waiting:"
 	    set index 0
@@ -45,15 +58,17 @@ proc n2_notesindex {bot handle} {
 	    putbot $bot "notes2reply: $handle ### Use '.notes $nick read' to read them."
 	}
     }
+    return 1
 }
 
 ########
 proc n2_notesread {bot handle numlist} {
     if {($numlist == "")} { set numlist "-" }
-    switch [notes $handle] {
-	-2 { putbot $bot "notes2reply: $handle Notefile failure." }
-	-1 { putbot $bot "notes2reply: $handle I don't know you." }
-	0  { putbot $bot "notes2reply: $handle You have no messages." }
+    switch "([notes $handle])" {
+        "(-2)" { putbot $bot "notes2reply: $handle Notefile failure." }
+	#"(-1)" { putbot $bot "notes2reply: $handle I don't know you." }
+	"(-1)" { return 0 }
+        "(0)"  { putbot $bot "notes2reply: $handle You have no messages." }
 	default {
 	    set count 0
 	    set list [listnotes $handle $numlist]
@@ -69,14 +84,16 @@ proc n2_notesread {bot handle numlist} {
 	    }
 	}
     }
+    return 1
 }
 
 ########
 proc n2_noteserase {bot handle numlist} {
     switch [notes $handle] {
-	-2 { putbot $bot "notes2reply: $handle Notefile failure." }
-	-1 { putbot $bot "notes2reply: $handle I don't know you." }
-	0  { putbot $bot "notes2reply: $handle You have no messages." }
+	"(-2)" { putbot $bot "notes2reply: $handle Notefile failure." }
+	#"(-1)" { putbot $bot "notes2reply: $handle I don't know you." }
+	"(-1)" { return 0 }
+	"(0)"  { putbot $bot "notes2reply: $handle You have no messages." }
 	default {
 	    set erased [erasenotes $handle $numlist]
 	    set remaining [notes $handle]
@@ -86,11 +103,14 @@ proc n2_noteserase {bot handle numlist} {
 		putbot $bot "notes2reply: $handle Erased all notes."
 	    } elseif {($erased == 0)} {
 		putbot $bot "notes2reply: $handle You don't have that many messages."
+	    } elseif {($erased == 1)} {
+		putbot $bot "notes2reply: $handle Erased 1 note, $remaining left."
 	    } else {
-		putbot $bot "notes2reply: $handle Erased #$erased, $remaining left."
+		putbot $bot "notes2reply: $handle Erased $erased notes, $remaining left."
 	    }
 	}
     }
+    return 1
 }
 
 ########
@@ -103,11 +123,13 @@ proc *bot:notes2 {handle idx arg} {
     set num  [lindex $arg 2]
     if {$num == "all"} { set num "-" }
     switch $cmd {
-	"index" { n2_notesindex $handle $nick }
-	"read"  { n2_notesread $handle $nick $num }
-	"erase" { n2_noteserase $handle $nick $num }
+       "silentindex" { set ret 0; n2_notesindex $handle $nick }
+       "index" { set ret [n2_notesindex $handle $nick] }
+       "read"  { set ret [n2_notesread $handle $nick $num] }
+       "erase" { set ret [n2_noteserase $handle $nick $num] }
+       default { set ret 0 }
     }
-    putcmdlog "#$nick@$handle# notes $cmd $num"
+    if {($ret == 1)} { putcmdlog "#$nick@$handle# notes $cmd $num" }
 }
 
 ########
@@ -122,7 +144,7 @@ proc *bot:notes2reply {handle idx arg} {
 
 ########
 proc *chon:notes2 {handle idx} {
-    putallbots "notes2: $handle index"
+    putallbots "notes2: $handle silentindex"
     return 0
 }
 
@@ -164,6 +186,6 @@ proc *dcc:notes2 {handle idx arg} {
 }
 
 ########
-putlog "Notes 2.0.0 - Released by MHT <mht@mygale.org>"
+putlog "Notes 2.0.2 - Released by MHT <mht@mygale.org>"
 
 ####

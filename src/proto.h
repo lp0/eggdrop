@@ -235,5 +235,5 @@ void autolink_cycle (char *);
 void tell_file_stats (int, char *);
 void tell_user_ident (int,char *,int);
 void tell_users_match (int,char *,int,int,int,char *);
-int readuserfile (char *,struct userrec **,int);
+int readuserfile (char *,struct userrec **);
 #endif

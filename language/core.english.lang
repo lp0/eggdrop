@@ -231,7 +231,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x660,Bad key--can't join:
 0x661,NOTICE %s :All commands are done via /MSG. For the complete list, /MSG %s help   Cya!\n
 0x662,NOTICE %s :I don't recognize you from that host.\n
-0x663,NOTICE %s :Either you are using someone else's nickname or you need to type: /MSG %s IDENT (password)
+0x663,NOTICE %s :Either you are using someone else's nickname or you need to type: /MSG %s IDENT (password)\n
 0x664,NOTICE %s :As master you really need to set a password: with /MSG %s pass <your-chosen-password>.\n
 0x665,NOTICE %s :All major commands are used from DCC chat. From now on, you don't need to use the -m option when starting the bot.  Enjoy !!!\n
 0x666,This is the telnet interface to %s, an eggdrop bot.\nDon't abuse it, and it will be open for all your friends, too.\n
@@ -261,7 +261,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x903,Mass deop on %s by %s
 0x904,Mass deop.  Go sit in a corner.
 0x905,Bogus ban
-0x906,is in my permaban list.  You need to\n\
+0x906,is in my permban list.  You need to\n\
 use .-ban' in dcc chat if you want it gone for good.
 0x907,Oops.   Someone made me join %s... leaving...
 0x908,Mode change by fake op on %s!  Reversing...

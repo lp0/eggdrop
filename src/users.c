@@ -566,7 +566,7 @@ void tell_users_match (int idx, char * mtch, int start, int limit,
  */
 
 int noxtra = 0;
-int readuserfile (char * file, struct userrec ** ret, int private_owner) {
+int readuserfile (char * file, struct userrec ** ret) {
    char *p, buf[512], lasthand[512], *attr, *pass, * code,s1[512],*s;
    FILE *f;
    struct userrec *bu, *u = NULL;
@@ -768,8 +768,6 @@ int readuserfile (char * file, struct userrec ** ret, int private_owner) {
 			       code);
 			strcpy(pass, "-");
 		     }
-		     if ((*ret != userlist) && private_owner)
-		       fr.global &= ~USER_OWNER;
 		     bu = adduser(bu, code, 0, pass, 
 				  sanity_check(fr.global & USER_VALID));
 		     u = get_user_by_handle(bu,code);

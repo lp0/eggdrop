@@ -825,13 +825,14 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 
   (14) MODE   (stackable)
        bind mode <flags> <mask> <proc>
-       proc-name <nick> <user@host> <handle> <channel> <mode-change>
+       proc-name <nick> <user@host> <handle> <channel> <mode-change> <victim>
   
        mode changes are broken down into their component parts before being
        sent here, so the <mode-change> will always be a single mode, like
-       "+m" or "-o snowbot"; flags are ignored; the bot's automatic response
-       to a mode change will happen AFTER all matching Tcl procs are called;
-       the <mask> will have the channel prefixed (ie, "#turtle +m")
+       "+m" or "-o" and victim will show the value of the mode change
+       (for o/v/b) otherwise ""; flags are ignored; the bot's automatic
+       response to a mode change will happen AFTER all matching Tcl procs
+       are called; the <mask> will have the channel prefixed (ie, "#turtle +m")
 
   (15) CTCP
        bind ctcp <flags> <keyword-mask> <proc>

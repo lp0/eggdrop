@@ -186,47 +186,63 @@ char * newsplit ( char ** rest ) {
    or "abc!user@1.2.3.4" into "*!user@1.2.3.*"  */
 void maskhost (char * s, char * nw)
 {
-   char *p, *q, xx[UHOSTLEN + 1], *e, *f;
+   char *p, *q, *e, *f;
    int i;
 
+   *nw++ = '*';
+   *nw++ = '!';
    p = (q = strchr(s, '!')) ? q + 1 : s;
    /* strip of any nick, if a username is found, use last 8 chars */
    if ((q = strchr(p, '@'))) {
          if ((q - p) > 10) {
-	          xx[0] = '*';
+	          nw[0] = '*';
 	          p = q - 8;
 	          i = 1;
 	       } else
            i = 0;
          while (*p != '@')
-           xx[i++] = *p++;
-         xx[i++] = '@';
+           nw[i++] = *p++;
+         nw[i++] = '@';
          q++;
       } else {
-            xx[0] = '*';
-            xx[1] = '@';
+            nw[0] = '*';
+            nw[1] = '@';
             i = 2;
             q = s;
-         }
-   /* now q points to the hostname, i point to where to put the mask */
-   p = strchr(q, '.');
-   e = strchr(p + 1, '.');
-   if (!p || !e)
-     /* TLD or 2 part host */
-     strcpy(xx + i, q);
-   else {
-         for (f = e; *f; f++);
-         f--;
-         if ((*f >= '0') && (*f <= '9')) {  /* numeric IP address */
-	          while (*f != '.')
-	            f--;
-	          strncpy(xx + i, q, f - q);
-	          i += (f - q);
-	          strcpy(xx + i, ".*");
-	       } else  /* normal host >= 3 parts */
-	sprintf(xx + i, "*%s", strchr(e + 1, '.') ? e : p);
       }
-   sprintf(nw, "*!%s", xx);
+   /* now q points to the hostname, i point to where to put the mask */
+   if (!(p = strchr(q, '.')) || !(e = strchr(p + 1, '.')))
+     /* TLD or 2 part host */
+     strcpy(nw + i, q);
+   else {
+      for (f = e; *f; f++);
+      f--;
+      if ((*f >= '0') && (*f <= '9')) {  /* numeric IP address */
+	 while (*f != '.')
+	   f--;
+	 strncpy(nw + i, q, f - q);
+	 i += (f - q);
+	 strcpy(nw + i, ".*");
+      } else { /* normal host >= 3 parts */
+	 /* ok, people whined at me...how about this? ..
+	  *    a.b.c  -> *.b.c
+	  *    a.b.c.d ->  *.b.c.d if tld is a country (2 chars)
+	  *             OR   *.c.d if tld is com/edu/etc (3 chars)
+	  *    a.b.c.d.e -> *.c.d.e   etc
+	  */
+	 char * x = strchr(e + 1, '.');
+	 
+	 if (!x) 
+	   x = p;
+	 else if (strchr(x + 1, '.'))
+	   x = e;
+	 else if (strlen(x) == 2)
+	   x = p;
+	 else 
+	   x = e;
+	 sprintf(nw + i, "*%s", x);
+      }
+   }
 }
 
 /* copy a file from one place to another (possibly erasing old copy) */

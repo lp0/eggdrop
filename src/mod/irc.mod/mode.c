@@ -583,7 +583,7 @@ static void got_unban (struct chanset_t * chan, char * nick, char * from,
 /* a pain in the ass: mode changes */
 static void gotmode (char * from, char * msg) {
    char * nick, *ch, *op, *chg;
-   char s[UHOSTLEN], ms[UHOSTLEN];
+   char s[UHOSTLEN];
    char ms2[3];
    int z;
    struct userrec * u;
@@ -622,7 +622,7 @@ static void gotmode (char * from, char * msg) {
 	 }
 	 ms2[0] = '+';
 	 ms2[2] = 0;
-	 while (*chg) {
+	 while ((ms2[1] = *chg)) {
 	    int todo =0;
 	    
 	    switch (*chg) {
@@ -658,7 +658,7 @@ static void gotmode (char * from, char * msg) {
 	       break;
 	     case 'l':
 	       if (ms2[0] == '-') {
-		  check_tcl_mode(nick, from, u, chan->name, "-l");
+		  check_tcl_mode(nick, from, u, chan->name, ms2, "");
 		  if ((reversing) && (chan->channel.maxmembers != (-1))) {
 		     simple_sprintf(s, "%d", chan->channel.maxmembers);
 		     add_mode(chan, '+', 'l', s);
@@ -672,8 +672,8 @@ static void gotmode (char * from, char * msg) {
 		  op = newsplit(&msg);
 		  fixcolon(op);
 		  chan->channel.maxmembers = atoi(op);
-		  simple_sprintf(ms, "+l %d", chan->channel.maxmembers);
-		  check_tcl_mode(nick, from, u, chan->name, ms);
+		  check_tcl_mode(nick, from, u, chan->name, ms2,
+				 int_to_base10(chan->channel.maxmembers));
 		  if ((reversing) ||
 		      ((chan->mode_mns_prot & CHANLIMIT) && !glob_master(user)
 		       && !chan_master(user))) {
@@ -692,8 +692,7 @@ static void gotmode (char * from, char * msg) {
 	      case 'k':
 	       op = newsplit(&msg);
 	       fixcolon(op);
-	       simple_sprintf(ms, "%ck %s", ms2[0], op);
-	       check_tcl_mode(nick, from, u, chan->name, ms);
+	       check_tcl_mode(nick, from, u, chan->name, ms2, op);
 	       if (ms2[0] == '+')
 		 got_key(chan, nick, from, op);
 	       else {
@@ -708,8 +707,7 @@ static void gotmode (char * from, char * msg) {
 	      case 'o':
 	       op = newsplit(&msg);
 	       fixcolon(op);
-	       simple_sprintf(ms, "%co %s", ms2[0], op);
-	       check_tcl_mode(nick, from, u, chan->name, ms);
+	       check_tcl_mode(nick, from, u, chan->name, ms2, op);
 	       if (ms2[0] == '+')
 		 got_op(chan, nick, from, op, &user);
 	       else
@@ -724,8 +722,7 @@ static void gotmode (char * from, char * msg) {
 			 CHAN_BADCHANMODE, CHAN_BADCHANMODE_ARGS2);
 		  dprintf(DP_MODE, "WHO %s\n", op);
 	       } else {
-		  simple_sprintf(ms, "%cv %s", ms2[0], op);
-		  check_tcl_mode(nick, from, u, chan->name, ms);
+		  check_tcl_mode(nick, from, u, chan->name, ms2, op);
 		  get_user_flagrec(m->user,&victim,chan->name);
 		  if (ms2[0] == '+') {
 		     m->flags &= ~SENTVOICE;
@@ -755,8 +752,7 @@ static void gotmode (char * from, char * msg) {
 	      case 'b':
 	       op = newsplit(&msg);
 	       fixcolon(op);
-	       simple_sprintf(ms, "%cb %s", ms2[0], op);
-	       check_tcl_mode(nick, from, u, chan->name, ms);
+	       check_tcl_mode(nick, from, u, chan->name, ms2, op);
 	       if (ms2[0] == '+')
 		 got_ban(chan, nick, from, op);
 	       else
@@ -764,8 +760,7 @@ static void gotmode (char * from, char * msg) {
 	       break;
 	    }
 	    if (todo) {
-	       ms2[1] = *chg; 
-	       check_tcl_mode(nick,from,u,chan->name,ms2);
+	       check_tcl_mode(nick,from,u,chan->name,ms2, "");
 	       if (ms2[0] == '+')
 		 chan->channel.mode |= todo;
 	       else
