@@ -1,7 +1,7 @@
 /* 
  * tclchan.c -- part of channels.mod
  * 
- * $Id: tclchan.c,v 1.39 2000/11/21 05:18:04 guppy Exp $
+ * $Id: tclchan.c,v 1.41 2000/12/19 21:56:40 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -923,10 +923,6 @@ static int tcl_channel_modify(Tcl_Interp * irp, struct chanset_t *chan,
   struct udef_struct *ul = udef;
   module_entry *me;
 
-  /* make revenge-mode default to 1
-   * not sure where else this can go -toot */
-  chan->revenge_mode = 1;
-
   for (i = 0; i < items; i++) {
     if (!strcmp(item[i], "need-op")) {
       i++;
@@ -1493,7 +1489,7 @@ static void init_masklist(masklist *m)
  */
 static void init_channel(struct chanset_t *chan, int reset)
 {
-  chan->channel.maxmembers = (-1);
+  chan->channel.maxmembers = 0;
   chan->channel.mode = 0;
   chan->channel.members = 0;
   if (!reset) {
@@ -1588,8 +1584,8 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
     /* Hells bells, why set *every* variable to 0 when we have bzero? */
     egg_bzero(chan, sizeof(struct chanset_t));
 
-    chan->limit_prot = (-1);
-    chan->limit = (-1);
+    chan->limit_prot = 0;
+    chan->limit = 0;
     chan->flood_pub_thr = gfld_chan_thr;
     chan->flood_pub_time = gfld_chan_time;
     chan->flood_ctcp_thr = gfld_ctcp_thr;
@@ -1603,6 +1599,7 @@ static int tcl_channel_add(Tcl_Interp *irp, char *newname, char *options)
     chan->flood_nick_thr = gfld_nick_thr;
     chan->flood_nick_time = gfld_nick_time;
     chan->stopnethack_mode = global_stopnethack_mode;
+    chan->revenge_mode = global_revenge_mode;
     chan->idle_kick = global_idle_kick;
     chan->aop_min = global_aop_min;
     chan->aop_max = global_aop_max;

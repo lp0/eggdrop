@@ -6,7 +6,7 @@
  *   user kickban, kick, op, deop
  *   idle kicking
  * 
- * $Id: chan.c,v 1.59 2000/11/21 05:06:45 guppy Exp $
+ * $Id: chan.c,v 1.62 2000/12/17 21:37:46 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -101,12 +101,12 @@ static char *getchanmode(struct chanset_t *chan)
     s[i++] = 'a';
   if (atr & CHANKEY)
     s[i++] = 'k';
-  if (chan->channel.maxmembers > -1)
+  if (chan->channel.maxmembers != 0)
     s[i++] = 'l';
   s[i] = 0;
   if (chan->channel.key[0])
     i += sprintf(s + i, " %s", chan->channel.key);
-  if (chan->channel.maxmembers > -1)
+  if (chan->channel.maxmembers != 0)
     sprintf(s + i, " %d", chan->channel.maxmembers);
   return s;
 }
@@ -659,12 +659,12 @@ static void recheck_channel_modes(struct chanset_t *chan)
       add_mode(chan, '+', 'q', "");
     else if ((mns & CHANQUIET) && (cur & CHANQUIET))
       add_mode(chan, '-', 'q', "");
-    if ((chan->limit_prot != -1) && (chan->channel.maxmembers == -1)) {
+    if ((chan->limit_prot != 0) && (chan->channel.maxmembers == 0)) {
       char s[50];
 
       sprintf(s, "%d", chan->limit_prot);
       add_mode(chan, '+', 'l', s);
-    } else if ((mns & CHANLIMIT) && (chan->channel.maxmembers >= 0))
+    } else if ((mns & CHANLIMIT) && (chan->channel.maxmembers != 0))
       add_mode(chan, '-', 'l', "");
     if (chan->key_prot[0]) {
       if (rfc_casecmp(chan->channel.key, chan->key_prot) != 0) {
@@ -1001,6 +1001,8 @@ static int got315(char *from, char *msg)
   }
   else if (me_op(chan))
     recheck_channel(chan, 1);
+  else if (chan->channel.members == 1)
+    chan->status |= CHAN_STOP_CYCLE;
   /* do not check for i-lines here. */
   return 0;
 }
@@ -1440,6 +1442,34 @@ static int got332(char *from, char *msg)
   return 0;
 }
 
+static void set_delay(struct chanset_t *chan, char *nick)
+{
+  time_t a_delay;
+  int aop_min = chan->aop_min, aop_max = chan->aop_max, count = 0;
+  memberlist *m, *m2;
+
+  m = ismember(chan, nick);
+  if (!m)
+    return;
+  if (aop_min >= aop_max)
+    a_delay = now + aop_min;
+  else
+    a_delay = now + (random() % (aop_max - aop_min)) + aop_min + 1;
+  for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
+    if (m2->delay && !(m2->flags & FULL_DELAY))
+      count++;
+  if (count)
+    for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
+      if (m2->delay && !(m2->flags & FULL_DELAY)) {
+ m2->delay = a_delay;
+ if (count + 1 >=  modesperline)
+   m2->flags |= FULL_DELAY;
+      }
+  if (count + 1 >=modesperline)
+    m->flags |= FULL_DELAY;
+  m->delay = a_delay;
+}
+
 /* Got a join
  */
 static int gotjoin(char *from, char *chname)
@@ -1499,6 +1529,7 @@ static int gotjoin(char *from, char *chname)
     putlog(LOG_MISC, "*", "joined %s but didn't want to!", chname);
     dprintf(DP_MODE, "PART %s\n", chname);
   } else if (!channel_pending(chan)) {
+    chan->status &= ~CHAN_STOP_CYCLE;
     strcpy(uhost, from);
     nick = splitnick(&uhost);
     detect_chan_flood(nick, uhost, from, chan, FLOOD_JOIN, NULL);
@@ -1668,29 +1699,19 @@ static int gotjoin(char *from, char *chname)
 	  if (!chan->aop_min)
 	    add_mode(chan, '+', 'o', nick);
 	  else {
-	    time_t a_delay;
-	    int aop_min = chan->aop_min, aop_max = chan->aop_max, count = 0;
-	    memberlist *m2;
-	    if (aop_min >= aop_max)
-	      a_delay = now + aop_min;
-	    else
-	      a_delay = now + (random() % (aop_max - aop_min)) + aop_min + 1;
-	    for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
-	      if (m2->delay && !(m2->flags & FULL_DELAY))
-		count++;
-	    if (count)
-	      for (m2 = chan->channel.member; m2 && m2->nick[0]; m2 = m2->next)
-		if (m2->delay && !(m2->flags & FULL_DELAY)) {
-		  m2->delay = a_delay;
-		  if (count + 1 >=  modesperline)
-		    m2->flags |= FULL_DELAY;
-		}
-	    m->delay = a_delay;
+            set_delay(chan, nick);
+            m->flags |= SENTOP;
 	  }
 	} else if ((channel_autovoice(chan) &&
 		    (chan_voice(fr) || (glob_voice(fr) && !chan_quiet(fr)))) ||
-		   ((glob_gvoice(fr) || chan_gvoice(fr)) && !chan_quiet(fr)))
-	  add_mode(chan, '+', 'v', nick);
+                   ((glob_gvoice(fr) || chan_gvoice(fr)) && !chan_quiet(fr))) {
+           if (!chan->aop_min)
+             add_mode(chan, '+', 'v', nick);
+           else {
+             set_delay(chan, nick);
+             m->flags |= SENTVOICE;
+           }
+         }
       }
     }
   }

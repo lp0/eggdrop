@@ -2,7 +2,7 @@
  * irc.c -- part of irc.mod
  *   support for channels within the bot 
  * 
- * $Id: irc.c,v 1.44 2000/11/21 05:18:05 guppy Exp $
+ * $Id: irc.c,v 1.46 2000/12/06 02:32:18 guppy Exp $
  */
 /* 
  * Copyright (C) 1997  Robey Pointer
@@ -538,7 +538,7 @@ static void check_lonely_channel(struct chanset_t *chan)
   for (m = chan->channel.member; m && m->nick[0]; m = m->next)
     if (!chan_issplit(m))
       i++;
-  if (i == 1 && channel_cycle(chan)) {
+  if (i == 1 && channel_cycle(chan) && !channel_stop_cycle(chan)) {
     if (chan->name[0] != '+') {	/* Its pointless to cycle + chans for ops */
       putlog(LOG_MISC, "*", "Trying to cycle %s to regain ops.", chan->dname);
       dprintf(DP_MODE, "PART %s\n", chan->name);
@@ -937,9 +937,16 @@ static void flush_modes()
     m = chan->channel.member;
     while (m && m->nick[0]) {
       if (m->delay && m->delay <= now) {
-	add_mode(chan, '+', 'o', m->nick);
 	m->delay = 0L;
 	m->flags &= ~FULL_DELAY;
+        if (chan_sentop(m)) {
+          m->flags &= ~SENTOP;
+          add_mode(chan, '+', 'o', m->nick);
+        }
+        if (chan_sentvoice(m)) {
+          m->flags &= ~SENTVOICE;
+          add_mode(chan, '+', 'v', m->nick);
+        }
       }
       m = m->next;
     }
