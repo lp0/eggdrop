@@ -363,7 +363,9 @@ else
 	echo "which you DONT seem to have... doh!"
 	echo ""
       fi
-      exit 1
+      echo "We'll keep going anyway, you may get away with it..."
+      echo "I *doubt* it tho.."
+      echo ""
     else
       AC_DEFINE(HAVE_DLOPEN)
     fi
@@ -407,5 +409,6 @@ make clean
 
 echo ""
 echo "Configure is done."
-echo "Type 'make' to create the bot."
+echo "Type 'make eggdrop' to create the non-module bot, and"
+echo " 'make eggmod' for the module bot."
 echo ""

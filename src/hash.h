@@ -82,12 +82,7 @@ int cmd_pls_ban(), cmd_pls_bot(), cmd_chat(), cmd_pls_host(), cmd_pls_ignore(),
   cmd_invite(), cmd_adduser(), cmd_deluser(), cmd_pls_chan(), cmd_mns_chan(),
   cmd_chaninfo(), cmd_chanset(), cmd_chansave(), cmd_chanload(),
 #endif
-#ifdef MODULES
-  cmd_modules(),
-#ifndef STATIC
-  cmd_pls_module(), cmd_mns_module(),
-#endif
-#endif
+  cmd_modulestat(), cmd_loadmodule(), cmd_unloadmodule(), cmd_nomodules(),
   cmd_su();
 
 /* DCC CHAT COMMANDS */
@@ -183,13 +178,17 @@ cmd_t C_dcc[]={
   { "kickban", 'O', cmd_kickban },
 #endif
   { "link", 'B', cmd_link },
-#if defined(MODULES) && !defined(STATIC)
-  { "loadmodule", 'n', cmd_pls_module },
+#ifdef MODULES
+  { "loadmodule", 'n', cmd_loadmodule },
+#else
+  { "loadmodule", 'n', cmd_nomodules },
 #endif
   { "match", 'O', cmd_match },
   { "me", '-', cmd_me },
 #ifdef MODULES
-  { "modules", 'm', cmd_modules },
+  { "modulestat", 'm', cmd_modulestat },
+#else
+  { "modulestat", 'm', cmd_nomodules },
 #endif
   { "motd", '-', cmd_motd },
 #ifndef NO_IRC
@@ -233,9 +232,11 @@ cmd_t C_dcc[]={
 #endif
   { "trace", '-', cmd_trace },
   { "unlink", 'B', cmd_unlink },
-#if defined(MODULES) && !defined(STATIC)
-  { "unloadmodule", 'n', cmd_mns_module },
-#endif  
+#ifdef MODULES
+  { "unloadmodule", 'n', cmd_unloadmodule },
+#else
+  { "unloadmodule", 'n', cmd_nomodules },
+#endif
   { "unstick", 'O', cmd_unstick },
   { "who", '-', cmd_who },
   { "whois", 'O', cmd_whois },

@@ -1,0 +1,4 @@
+%{+n}
+###  modules
+   Reports the names of currently loaded modules.  This is only 
+   available on bots compiled with module support.

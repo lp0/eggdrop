@@ -3,8 +3,6 @@ TO-DO:  LEAVE THIS HERE WHERE WE CAN SEE IT :)
 """""
 - files '.mv' move directories  [andrej]
 - '.sort' to sort files
-- fix .restart to reset tcl_interp right, recycle modules, do chon's again
-  (beldin is working on this one...:)
 
 BUG REPORTS:
 * DCC sends are causing memory leaks on some systems.  This affects shared
@@ -20,11 +18,41 @@ SUGGESTIONS:
 * Channel specific file ownerships (ie, only people on a certain channel
   can get certain files)
 * Move more things into NO_IRC such as bans and hostmasks
+* Move NO_IRC to irc.so
 * Make a chan/global +s for sharing, instead of the +shared option?
 
 Changes in eggdrop:
 """"""""""""""""""
 
+v1.1.5
+
+* putegg will now handle "Text file busy" conditions when trying to
+  copy eggdrop [BB]
+* putegg now has options of saving old binary as oeggdrop and
+  options to copy botchk and eggdrop.conf [Ghost/BB]
+* putegg now backs up modules aswell as eggdrop [beldin]
+* /msg whois now return slightly more usefull info [beldin]
+* configure & Makefile improvements -- Forces you to "make clean"
+  when remaking from non-module to module version, etc. [BB]
+* chattr was sending twice to sharebots [beldin]
+* bot's IRC nick can now be NICKLEN long [beldin]
+* .restart now kinda works right [beldin]
+* loadmodule/unloadmodule/modules now return non-fatal errors when
+  used on non-module executables (You can leave the loadmodule <module>
+  lines in the config file) [BB]
+* start of help file grammar cleanup [BB]
+* people are gunna hate me for it, but I ran the code through ident :P [beldin]
+* fixed large-file turbo-dcc send crashes [beldin]
+
+Modules only:
+
+* tweaking filesys module hooks [beldin]
+* .files/.help is fixed [beldin]
+* minutely/hourly/daily/userfile hooks added [beldin]
+* filesys is now transfer + filesys [beldin]
+* finally got the Makefiles working nicely so new modules need only
+  add a new directory [beldin]
+  
 v1.1.4 
 
 * WOOP modules seems to work on Linux, FreeBSD, SunOS, BSD3.0, now

@@ -121,23 +121,18 @@ users.o: users.c
 	${CC} ${CFLAGS} users.c
 
 # I orginially had this in another file, but some lame make's can't cope :/ 
-
-blowfish.o: \
-   blowfish.h \
-   bf_tab.h \
-   eggdrop.h \
-   proto.h
 botcmd.o: \
    eggdrop.h \
    tandem.h \
    users.h \
    chan.h \
-   tclegg.h
+   tclegg.h \
+   modules.h
 botnet.o: \
    eggdrop.h \
    tandem.h \
    proto.h \
-   mod/assoc.c
+   mod/assoc.mod/assoc.c
 chan.o: \
    eggdrop.h \
    users.h \
@@ -159,13 +154,13 @@ cmds.o: \
    users.h \
    chan.h \
    tclegg.h \
-   mod/filesys.c
+   mod/filesys.mod/filesys.c
 dcc.o: \
    eggdrop.h \
    chan.h \
    proto.h \
    modules.h \
-   mod/dccfiles.c
+   mod/filesys.mod/dccfiles.c
 dccutil.o: \
    eggdrop.h \
    chan.h \
@@ -178,6 +173,7 @@ gotdcc.o: \
    modules.h
 hash.o: \
    eggdrop.h \
+   proto.h \
    cmdt.h \
    hash.h \
    tclegg.h
@@ -188,19 +184,23 @@ main.o: \
    modules.h \
    ../lush.h \
    files.h \
-   mod/filedb.c \
-   mod/files.c \
-   mod/fileq.c
+   mod/transfer.mod/transfer.c \
+   mod/filesys.mod/filedb.c \
+   mod/filesys.mod/files.c
+mem.o: \
+   mod/modvals.h
 misc.o: \
    eggdrop.h \
-   proto.h
+   proto.h \
+   mod/blowfish.mod/blowfish.c
 mode.o: \
    eggdrop.h \
    users.h \
    chan.h \
    proto.h
 modules.o: \
-   modules.h
+   modules.h \
+   users.h
 msgcmds.o: \
    eggdrop.h \
    users.h \
@@ -233,17 +233,20 @@ tcldcc.o: \
    cmdt.h
 tclhash.o: \
    eggdrop.h \
+   proto.h \
    cmdt.h \
    tclegg.h
 tclmisc.o: \
    eggdrop.h \
+   proto.h \
    cmdt.h \
    tclegg.h \
    files.h \
-   mod/tclfiles.c
+   mod/filesys.mod/tclfiles.c
 tcluser.o: \
    eggdrop.h \
    users.h \
+   proto.h \
    cmdt.h \
    tclegg.h \
    chan.h
@@ -251,12 +254,12 @@ userrec.o: \
    eggdrop.h \
    users.h \
    chan.h \
-   proto.h
+   proto.h \
+   modules.h
 users.o: \
    eggdrop.h \
    users.h \
    chan.h \
    proto.h \
    modules.h
-
 #safety hash

@@ -290,9 +290,7 @@ FILE *filedb_open PROTO((char *));
 void filedb_close PROTO((FILE *));
 void filedb_add PROTO((FILE *,char *,char *));
 void filedb_ls PROTO((FILE *,int,int,char *,int));
-#if defined(MODULES) && !defined(MAKING_MODS)
-extern void (*remote_filereq) PROTO((int, char*, char*));
-#else
+#if !defined(MODULES) || defined(MAKING_MODS)
 void remote_filereq PROTO((int, char*, char*));
 #endif
 void filedb_getowner PROTO((char *,char *,char *));
@@ -333,9 +331,7 @@ void do_boot PROTO((int, char *, char *));
 int detect_dcc_flood PROTO((struct chat_info *,int));
 void wipe_tmp_filename PROTO((char *, int));
 void wipe_tmp_file PROTO((int));
-#if defined(MODULES) && !defined(MAKING_MODS)
-int (*raw_dcc_send) PROTO((char *,char *,char *,char *));
-#else
+#if !defined(MODULES) || defined(MAKING_MODS)
 int raw_dcc_send PROTO((char *,char *,char *,char *));
 #endif
 int do_dcc_send PROTO((int, char *, char *));
@@ -476,9 +472,7 @@ int findidx PROTO((int));
 void init_hash();
 int expmem_tclhash();
 void *tclcmd_alloc PROTO((int));
-#ifdef MODULES
 void tclcmd_free PROTO((void *));
-#endif
 int check_tcl_bind PROTO((Tcl_HashTable *,char *,int,char *,int));
 int get_bind_type PROTO((char *));
 int cmd_bind PROTO((int,int,char *,char *));
@@ -600,7 +594,7 @@ void touch_laston_handle PROTO((struct userrec *,char *,char *,time_t));
 /* users.c */
 int expmem_users();
 void addban PROTO((char *,char *,char *,time_t));
-void u_addban PROTO((struct userrec *,char *,char *,char *,time_t));
+int u_addban PROTO((struct userrec *,char *,char *,char *,time_t));
 int delban PROTO((char *));
 int u_delban PROTO((struct userrec *,char *));
 void tell_bans PROTO((int,int,char *));

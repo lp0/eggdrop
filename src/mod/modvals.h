@@ -11,7 +11,7 @@
 #define MOD_ADD_HOOK      8
 #define MOD_DEL_HOOK      9
 #define MOD_NEXT_HOOK    10
-#define MOD_CALL_HOOK    11
+#define MOD_CALL_HOOK_I  11
 
 #define MOD_LOADMOD      12
 #define MOD_UNLOADMOD    13
@@ -98,7 +98,7 @@
 #define MOD_BOTNAME      76
 #define MOD_SHOW_MOTD    77
 #define MOD_TELLTEXT     78
-#define MOD_SHOWHELP     79
+#define MOD_TELLHELP     79
 
 #define MOD_SPLITC       80
 #define MOD_NEXTBOT      81
@@ -113,47 +113,56 @@
 #define MOD_HASH_FIL     88
 #define MOD_HASH_RCVD    89
 #define MOD_HASH_SENT    90
+#define MOD_OPEN_TELNET  91
 
-#define MOD_MAX          88
-
-typedef int (*module_function)();
-
-typedef struct _tcl_strings {
-   char * name;
-   char * buf;
-   int length;
-   int flags;
-} tcl_strings;
-
-typedef struct _tcl_int {
-   char * name;
-   int * val;
-} tcl_ints;
-
-typedef struct _tcl_cmds {
-   char * name;
-   void * func;
-} tcl_cmds;
+#define MOD_FIX_COLON    92
+#define MOD_MAX          93
 
 #define HOOK_ACTIVITY            0
 #define HOOK_EOF                 1
 #define HOOK_TIMEOUT             2
 #define HOOK_CONNECT             3
 #define HOOK_GOT_DCC             4
-#define REAL_HOOKS               5
+#define HOOK_MINUTELY            5
+#define HOOK_DAILY               6
+#define HOOK_HOURLY              7
+#define HOOK_USERFILE            8
+#define REAL_HOOKS               9
 #define HOOK_GET_ASSOC_NAME      100
 #define HOOK_GET_ASSOC           101
 #define HOOK_DUMP_ASSOC_BOT      102
 #define HOOK_KILL_ASSOCS         103
 #define HOOK_BOT_ASSOC           104
-#define HOOK_REMOTE_FILEREQ      105
-#define HOOK_RAW_DCC             106
 #define HOOK_ENCRYPT_PASS        107
-#define STR_PROTECT  2
-#define STR_DIR      1
 
-
+/* these are FIXED once they are in a relase they STAY */
+/* well, unless im feeling grumpy ;) */
 #define MODCALL_START  0
 #define MODCALL_CLOSE  1
 #define MODCALL_EXPMEM 2
 #define MODCALL_REPORT 3
+/* transfer */
+#define TRANSFER_RAW_DCC     4
+#define TRANSFER_FILEQCANCEL 5
+#define TRANSFER_ATLIMIT     6
+#define TRANSFER_QUEUEFILE   7
+
+#define TRANSFER_SHOWQUEUED  8
+#define TRANSFER_COPYTOTMP   9
+#define TRANSFER_WIPETMPFILE 10
+/* filesys */
+#define FILESYS_REMOTE_REQ 4
+#define FILESYS_ADDFILE    5
+#define FILESYS_INCRGOTS   6
+
+typedef struct _module_entry {
+   char * name;           /* name of the module (without .so) */
+   int major;             /* major version number MUST match */
+   int minor;             /* minor version number MUST be >= */
+   void * hand;           /* module handle */
+   struct _module_entry * next;
+#ifdef EBUG_MEM
+   int mem_work;
+#endif
+   Function * funcs;
+} module_entry;

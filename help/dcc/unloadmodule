@@ -1,0 +1,4 @@
+%{+n}
+###  unloadmod <module>
+   Unloads a module.  This is only valid for bots compiled with module 
+   support.  

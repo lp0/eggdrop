@@ -31,27 +31,6 @@
 #include "cmdt.h"
 #include "mod/modvals.h"
 
-typedef struct _dependancy {
-   struct _module_entry * needed;
-   struct _module_entry * needing;
-   struct _dependancy * nexted;
-   struct _dependancy * nexting;
-} dependancy;
-
-typedef struct _module_entry {
-   char * name;           /* name of the module (without .so) */
-   int major;             /* major version number MUST match */
-   int minor;             /* minor version number MUST be >= */
-   void * hand;           /* module handle */
-   dependancy * needed;
-   dependancy * needing;
-   struct _module_entry * next;
-#ifdef EBUG_MEM
-   int mem_work;
-#endif
-   module_function * funcs;
-} module_entry;
-
 /* modules specific functions */
 /* functions called by eggdrop */
 void init_modules (); /* initialise it all */
@@ -68,29 +47,30 @@ int module_expmem PROTO(());
 void module_report PROTO((int sock));
 
 char * load_module PROTO((char * module_name));
-char * unload_module PROTO((char * module_name));
+char * unload_module PROTO((char * module_name,char * nick));
 module_entry * find_module PROTO((char * name, int, int));
 int depend PROTO((char *,char *, int major, int minor));
-int undepend PROTO((char *,char *));
+int undepend PROTO((char *));
 void * mod_malloc PROTO((int size,char * modname, char * filename, int line));
 void mod_free PROTO((void * ptr,char * modname, char * filename, int line));
 void add_hook PROTO((int hook_num, void * func));
 void del_hook PROTO((int hook_num, void * func));
 void * get_next_hook PROTO((int hook_num, void * func));
-int call_hook ();
-
-void add_builtins PROTO((int,cmd_t * ));
-void rem_builtins PROTO((int,cmd_t * ));
-void add_tcl_commands PROTO((tcl_cmds *));
-void rem_tcl_commands PROTO((tcl_cmds *));
-void add_tcl_strings PROTO((tcl_strings *));
-void rem_tcl_strings PROTO((tcl_strings *));
-void add_tcl_ints PROTO((tcl_ints *));
-void rem_tcl_ints PROTO((tcl_ints *));
+int call_hook PROTO((int));
+int call_hook_i PROTO((int,int));
+int call_hook_ici PROTO((int,int,char*,int));
+int call_hook_cccc PROTO((int,char *,char*,char*,char*));
 
 /* some hooks */
 int new_dcc PROTO((int));
 int new_fork PROTO((int));
 /* since some machines dont have the headers */
 void * dlsym PROTO((void *,char *));
+
+typedef struct _dependancy {
+   struct _module_entry * needed;
+   struct _module_entry * needing;
+   struct _dependancy * next;
+} dependancy;
+extern dependancy * dependancy_list;
 #endif /* _MODULE_H_ */

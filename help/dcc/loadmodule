@@ -1,0 +1,4 @@
+%{+n}
+###  loadmod <module>
+   Loads a module.  This is only valid for bots compiled with module 
+   support.  

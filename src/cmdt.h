@@ -10,11 +10,12 @@
 #define _H_CMDT
 
 #define CMD_LEAVE    (Function)(-1)
-typedef int (*Function)();
 typedef struct {
   char *name;
   char flag;
   Function func;
 } cmd_t;
 
+int add_builtins PROTO((int,cmd_t * ));
+int rem_builtins PROTO((int,cmd_t * ));
 #endif

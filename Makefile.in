@@ -50,24 +50,31 @@ TCLLIB = @TCLLIB@
 CFLAGS = -c @CFLAGS@ -I.. @DEFS@ ${CFLGS}
 @SET_MAKE@
 
-all: eggdrop
+all: 
+	@echo You must type \"make eggdrop\" for the non-module version, or
+	@echo type "make eggmod" for the module version.
 
 help:
 	@echo Makefile for Eggdrop.
-	@echo "To make eggdrop (the bot):"
+	@echo "To make eggdrop without modules:"
 	@echo "   % make eggdrop"
+	@echo "To make eggdrop WITH modules (bot only):"
+	@echo "   % make eggmod"
 
-clean:
-	@rm -f eggdrop egg core *.o *.a *.so *~
+clean: cleanmods
+	@rm -f eggdrop egg core *.o *.a *.so *~ *.stamp
 	@cd src ; rm -f eggdrop egg core *.o *.a *~
-	@cd src/mod ; rm -f *.o *.so *~
+	
+cleanmods:
+	@cd src/mod ; make clean
 
 dist: clean
 	@rm -f Makefile config.cache config.log config.status config.h lush.h
+	@rm -f doc/*~
 	@echo "all:" >Makefile
 	@echo "	@./configure; make" >>Makefile
 
-eggdrop: always
+eggdrop: eggtest always
 	@cd src ; ${GMAKE} eggdrop
 	@mv src/@EGGEXEC@ .
 	@echo ""
@@ -79,7 +86,7 @@ eggdrop: always
 	@echo "   putegg <my-bot's-directory>"
 	@echo ""
 
-debug: always
+debug: eggtest always
 	@cd src ; ${GMAKE} debug
 	@mv src/@EGGEXEC@ .
 
@@ -116,45 +123,57 @@ GMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS} modules.o'\
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
 DMAKE_SHLIB = ${MAKE} 'CC=${SHLIB_CC}' 'LD=${SHLIB_LD}' 'OBJS=${OBJS}'\
-'STRIP=touch' 'CFLAGS=${CFLAGS}' 'XLIBS=@TCL_LIBS@ @LIBS@'
+'STRIP=touch' 'CFLAGS=${CFLAGS} -DMODULES' 'XLIBS=@TCL_LIBS@ @LIBS@'
 
 DMAKE_MOD = ${MAKE} 'CC=${MOD_CC}' 'LD=${MOD_LD}' 'OBJS=${OBJS} modules.o'\
 'CFLAGS=${CFLAGS} -DMODULES' 'XREQ=${XREQ}' \
 'TCLLIB=${TCLLIB}' 'STRIP=touch' 'RANLIB=@RANLIB@' \
 'XLIBS=@TCL_LIBS@ @LIBS@'
 
-eggmod: always
+eggmod: modtest always modules
 	@cd src;${GMAKE_MOD} eggdrop
-	@mv src/@EGGEXEC@ .
-	@echo ""
-	@./eggdrop -v
-	@ls -la eggdrop
-	@echo ""
-	@echo "Now would be a good time to 'make modules' if you haven't already"
-	@echo ""
-	
-modules: always
-	@cd src/mod;${GMAKE_SHLIB} modules
-	@mv src/mod/*.so .
-	@echo ""
-	@echo "modules made:"
-	@ls -la *.so
-	@echo ""
-	@echo "Now would be a good time to 'make eggmod' if you haven't already"
-	@echo ""
-
-debugmod: always
-	@cd src;${DMAKE_MOD} eggdrop
 	@mv src/@EGGEXEC@ .
 	@echo
 	@./eggdrop -v
 	@ls -la eggdrop
 	
-moddebug: always
+modules: modtest always
+	@cd src/mod;${GMAKE_SHLIB} modules
+	@mv src/mod/*.so .
+	@echo
+	@echo "modules made:"
+	@ls -la *.so
+  
+debugmod: modtest always
+	@cd src;${DMAKE_MOD} eggdrop
+	@mv src/@EGGEXEC@ .
+	@echo
+	@./eggdrop -v
+	@ls -la eggdrop
+  	
+moddebug: modtest always
 	@cd src/mod;${DMAKE_SHLIB} modules
 	@mv src/mod/*.so .
 	@echo
 	@echo "modules made:"
 	@ls -la *.so
 
+eggtest: always
+	@if [ -f EGGMOD.stamp ]; then \
+		echo You previous made \"eggmod.\"  You must first type;\
+		echo \"make clean\" before you can compile the non-module;\
+		echo version.;\
+		exit 1;\
+	fi
+	@date >EGGDROP.stamp
+
+modtest: always
+	@if [ -f EGGDROP.stamp ]; then \
+		echo You previous made \"eggdrop.\"  You must first type;\
+		echo \"make clean\" before you can compile the module;\
+		echo version.;\
+		exit 1;\
+	fi
+	@date >EGGMOD.stamp
+	
 #safety hash

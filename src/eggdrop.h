@@ -32,6 +32,8 @@
    /* probably want this defined too, unless your bot is a proxy file */
    /* server.)  leaving out the file system shaves about 45k from the */
    /* executable on my linux system. */
+   /* it's pretty dumb to #define this if you have modules, since the */
+   /* module code removes more of the file system than the NO_FILE_SYS*/
 #undef NO_FILE_SYSTEM
 
    /* if you want the bot to die when it receives the TERM or HUP */
@@ -50,7 +52,7 @@
 
    /* add the 'simul' command (masters can manipulate other people on */
    /* the party line)? saves about 610 bytes :) */
-#undef ENABLE_SIMUL
+#define ENABLE_SIMUL
 
    /* add the 'dccsimul' tcl command (needed by certain scripts like */
    /* action.fix.tcl) */
@@ -65,7 +67,7 @@
 #define REMOTE_BOOTS
 
    /* restrict remote boots to share-bots only?  (REMOTE_BOOTS must be on) */
-#undef SHAREBOT_BOOTS
+#define SHAREBOT_BOOTS
 
    /* when sharing user lists, ignore +n modes from other bots?  this will */
    /* only work if you are NON-PASSIVE  (ie, only the master bot is able to */
@@ -76,12 +78,12 @@
    /* enable console mode 'r'?  this mode shows every raw message from the */
    /* server to people with console 'r' selected -- will take a bit more */
    /* cpu.  (the 'raw' binding no longer depends on this!) */
-#define USE_CONSOLE_R
+#undef USE_CONSOLE_R
 
    /* This enables the 'raw' binding for TCL scripts it takes a bit more */
    /* CPU than a regular binding because it checks everything from the   */
    /* server      */
-#define RAW_BINDS
+#undef RAW_BINDS
 
    /* squelch the error message when rejecting a dcc chat or send? */
    /* (normally it says something silly.  but sometimes irc opers detect */
@@ -139,7 +141,7 @@
 
 /* useless with no irc */
 #ifdef NO_IRC
-#define NO_FILE_SYSTEM
+/* #define NO_FILE_SYSTEM <- this *is* usefull with no_irc */
 #undef USE_CONSOLE_R
 #undef CHECK_STONED
 #undef BOUNCE_SERVER_BANS
@@ -164,6 +166,10 @@
 
 #if defined(MODULES) && !defined(MODULES_OK)
 #include "you/can't/compile/with/module/support/on/this/system"
+#endif
+
+#if defined(MODULES) && defined(NO_FILE_SYSTEM)
+#include "listen_doofus_I_said_it_was_pointless_to_do_modules_and_NO_FILE_SYSTEM"
 #endif
 
 /* almost every module needs some sort of time thingy, so... */
@@ -290,7 +296,7 @@ struct dcc_t {
   void *user;            /* really struct userrec but SHHH!! */
   char nick[NICKLEN];
   char host[UHOSTLEN];
-  unsigned char type;
+  unsigned int type;
   union {
     struct chat_info *chat;
     struct file_info *file;
@@ -371,7 +377,7 @@ struct xfer_info {
   unsigned long length;
   unsigned long sent;
   unsigned long acked;
-  char buf[121];            /* temporary storage for byte counts */
+  char buf[4];              /* you only need 5 bytes! */
   unsigned char sofar;      /* how much of the byte count received */
   time_t pending;           /* used to expire stale file offerings */
   char from[NICKLEN];       /* [GET] user who offered the file */
@@ -608,4 +614,9 @@ typedef struct {
 #define BUILTIN_DCC   1
 #define BUILTIN_MSG   2
 #define BUILTIN_FILES 3
+#define STR_PROTECT  2
+#define STR_DIR      1
+
+/* it's used in so many places, let's put it here */
+typedef int (*Function)();
 #endif

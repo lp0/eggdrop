@@ -16,6 +16,7 @@ extern Tcl_HashTable H_fil, H_sent, H_rcvd;
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+/* just include *all* the include files...it's slower but EASIER */
 #include "../eggdrop.h"
 
 #ifdef STDC_HEADERS
@@ -46,6 +47,8 @@ extern Tcl_HashTable H_fil, H_sent, H_rcvd;
 
 #include "modvals.h"
 #include "../tclegg.h"
+#include "../tandem.h"
+#include "../cmdt.h"
 
 #undef nmalloc
 #undef nfree
@@ -60,14 +63,14 @@ extern Tcl_HashTable H_fil, H_sent, H_rcvd;
 #define modprintf    (global[MOD_PRINTF])
 
 #define module_register(a,b,c,d)   (global[MOD_REGISTER])(a,b,c,d)
-#define module_find(a,b,c)       (global[MOD_FIND])(a,b,c)
+#define module_find(a,b,c)       ((module_entry *)(global[MOD_FIND])(a,b,c))
 #define module_depend(a,b,c,d)   (global[MOD_DEPEND])(a,b,c,d)
-#define module_undepend(a,b)     (global[MOD_UNDEPEND])(a,b)
+#define module_undepend(a)       (global[MOD_UNDEPEND])(a)
 
 #define add_hook(a,b)     (global[MOD_ADD_HOOK])(a,b)
 #define del_hook(a,b)     (global[MOD_DEL_HOOK])(a,b)
 #define next_hook(a,b)    (global[MOD_NEXT_HOOK])(a,b)
-#define call_hook         (global[MOD_CALL_HOOK])
+#define call_hook_i(a,b)  (global[MOD_CALL_HOOK_I])(a,b)
 
 #define module_load(a)    (global[MOD_LOADMOD])(a)
 #define module_unload(a)  (global[MOD_UNLOADMOD])(a)
@@ -135,7 +138,7 @@ extern Tcl_HashTable H_fil, H_sent, H_rcvd;
 
 #define tputs(a,b,c)  (global[MOD_TPUTS])(a,b,c)
 
-#define reserved_port ((int)(global[MOD_RESERVEDPORT]))
+#define reserved_port (*(int*)(global[MOD_RESERVEDPORT]))
 #define set_files(a) (global[MOD_SETFILES])(a)
 #define set_handle_uploads(a,b,c,d) (global[MOD_SET_UPLOADS])(a,b,c,d)
 #define set_handle_dnloads(a,b,c,d) (global[MOD_SET_DNLOADS])(a,b,c,d)
@@ -154,7 +157,7 @@ extern Tcl_HashTable H_fil, H_sent, H_rcvd;
 
 #define show_motd(a)          (global[MOD_SHOW_MOTD])(a)
 #define telltext(a,b,c)       (global[MOD_TELLTEXT])(a,b,c)
-#define tellhelp(a,b,c)       (global[MOD_SHOWHELP])(a,b,c)
+#define tellhelp(a,b,c)       (global[MOD_TELLHELP])(a,b,c)
 
 #define splitc(a,b,c)           (global[MOD_SPLITC])(a,b,c)
 #define nextbot(a)            (global[MOD_NEXTBOT])(a)
@@ -169,6 +172,9 @@ extern Tcl_HashTable H_fil, H_sent, H_rcvd;
 #define H_fil         (*(Tcl_HashTable *)(global[MOD_HASH_FIL]))
 #define H_rcvd         (*(Tcl_HashTable *)(global[MOD_HASH_RCVD]))
 #define H_sent         (*(Tcl_HashTable *)(global[MOD_HASH_SENT]))
-extern module_function * global;
+#define open_telnet(a,b)      (global[MOD_OPEN_TELNET])(a,b)
+
+#define fix_colon(a)           (global[MOD_FIX_COLON])(a)
+extern Function * global;
 
 #endif

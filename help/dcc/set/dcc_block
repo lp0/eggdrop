@@ -1,10 +1,10 @@
 %{+n}
 ###  set dcc-block <#>
-   specifies the block size to use in DCC file transfers.  the ircII
-   client defaults to 512, but admits that it may be too small.  most
+   Specifies the block size to use in DCC file transfers.  The ircII
+   client defaults to 512, but admits that it may be too small.  Most
    toolboxes set it to 1024.
 
-   you can set this to 0, which turns on "turbo dcc".  in turbo dcc
+   You can set this to 0, which turns on "turbo dcc".  In turbo dcc
    mode, the bot will dump transfers as fast as possible, only stopping
-   to count acks after it's finished.  this can dramatically improve
+   to count acks after it's finished.  This can dramatically improve
    the speed of file transfers, and is recommended.

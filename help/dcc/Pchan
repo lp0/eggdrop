@@ -1,8 +1,8 @@
 %{+n}
 ### +chan
-     lets you add another channel to the bot, this cause the bot to 
+     Lets you add another channel to the bot, this cause the bot to 
      join the channel, and for you to make changes to it's settings.
-     this channel is not permanent unless "channel-file" has been
+     This channel is not permanent unless "channel-file" has been
      defined in the config file, and is saved everytime the userfile
      is saved, or by using '.chansave'
-see also: +chan, -chan, chanload, chanset, chaninfo
+See also: +chan, -chan, chanload, chanset, chaninfo

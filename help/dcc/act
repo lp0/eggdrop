@@ -1,5 +1,5 @@
 %{+O}
 ###  act <text>
-   performs an action on the current console channel, as if the
-   bot did it, just like the /me command in IRC.
-see also: console
+   Performs an action on the current console channel, as if the
+   bot did it.  Just like the /me command in IRC.
+See also: console

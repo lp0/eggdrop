@@ -1,4 +1,5 @@
 %{+B}
 ###  -bot <bot>
-   is exactly the same as '-user', but is included for convenience.
-   it erases a user record.
+   Exactly the same as '-user', but is included for convenience.
+   It erases a user record.
+See also: +bot, +user, -user

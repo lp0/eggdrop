@@ -140,6 +140,14 @@ int do_got_dcc_hook (char *nick,char *from,char *code,char *msg)
 			 this is the hook to use, guess the 1/0 return
                          situation :)
 
+void minutely_hook();  - these 4 are called whenever a time event comes up
+#define HOOK_MINUTELY  - minutely every minute, hourly every hour (at the
+void hourly_hook();    - time the users are notified of notes), daily at 
+#define HOOK_HOURLY    - midnight every day, and userfile everytime the 
+void daily_hook();     - userfile is written, they are ALL called, whatever
+#define HOOK_DAILY     - they return
+void userfile_hook();
+#define HOOK_USERFILE
 
 The rest of these are situation specific hooks, which may be solved in another
 manner later, but for now they're hooks

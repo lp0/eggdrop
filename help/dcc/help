@@ -33,7 +33,8 @@ For masters:
 %{end}
 %{+n}
 For owners:
-  +chan        die          -chan        simul
+  +chan        die          -chan        simul        modules
+  loadmodule   unloadmodule
 %{end}
 All commands begin with '.' and all else goes to the party line.
 %{+m}Text starting with ',' is sent ONLY to bot-masters.%{end}

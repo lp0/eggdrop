@@ -139,6 +139,13 @@ X5(tcl_bots, tcl_dcclist, tcl_dccused, tcl_link, tcl_unlink);
 X5(tcl_filesend, tcl_assoc, tcl_killassoc, tcl_getdccidle, tcl_getdccaway);
 X5(tcl_setdccaway, tcl_connect, tcl_whom, tcl_valididx, tcl_listen);
 X5(tcl_putidx, tcl_page, tcl_boot, tcl_rehash, tcl_restart);
+#ifdef MODULES
+X(tcl_unloadmodule);
+X(tcl_modules);
+#else
+X(tcl_nomodules);
+#endif
+X(tcl_loadmodule);
 #ifdef ENABLE_TCL_DCCSIMUL
 X(tcl_dccsimul);
 #endif
@@ -156,14 +163,34 @@ X5(tcl_backup, tcl_die, tcl_strftime, tcl_mkdir, tcl_rmdir);
 X(tcl_getflags); X(tcl_setflags); X(tcl_mv); X(tcl_cp);
 #endif
 
-#ifdef MODULES
-X(tcl_loadmodule); X(tcl_unloadmodule);
-#endif
-#endif
-
 /* functions definitions moved here from proto.h */
 
 unsigned long add_timer PROTO((tcl_timer_t **,int, char *,unsigned long));
 int remove_timer PROTO((tcl_timer_t **,unsigned long));
 void list_timers PROTO((Tcl_Interp *, tcl_timer_t *));
 void wipe_timers PROTO((Tcl_Interp *, tcl_timer_t **));
+
+typedef struct _tcl_strings {
+   char * name;
+   char * buf;
+   int length;
+   int flags;
+} tcl_strings;
+
+typedef struct _tcl_int {
+   char * name;
+   int * val;
+} tcl_ints;
+
+typedef struct _tcl_cmds {
+   char * name;
+   void * func;
+} tcl_cmds;
+
+void add_tcl_commands PROTO((tcl_cmds *));
+void rem_tcl_commands PROTO((tcl_cmds *));
+void add_tcl_strings PROTO((tcl_strings *));
+void rem_tcl_strings PROTO((tcl_strings *));
+void add_tcl_ints PROTO((tcl_ints *));
+void rem_tcl_ints PROTO((tcl_ints *));
+#endif

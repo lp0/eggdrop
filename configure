@@ -2656,5 +2656,6 @@ make clean
 
 echo ""
 echo "Configure is done."
-echo "Type 'make' to create the bot."
+echo "Type 'make eggdrop' to create the non-module bot, and"
+echo " 'make eggmod' for the module bot."
 echo ""
