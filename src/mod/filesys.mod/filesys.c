@@ -371,8 +371,8 @@ static int do_dcc_send (int idx, char * dir, char * nick)
    context;
    /* nickname? */
    fn = newsplit(&nick);
-   if (strlen(nick) > HANDLEN)
-     nick[HANDLEN] = 0;
+   if (strlen(nick) > NICKMAX)
+     nick[NICKMAX] = 0;
    if (dccdir[0] == 0) {
       dprintf(idx, "DCC file transfers not supported.\n");
       putlog(LOG_FILES, "*", "Refused dcc get %s from [%s]", fn, dcc[idx].nick);

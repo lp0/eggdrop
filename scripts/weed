@@ -56,29 +56,6 @@ close $fd
 set CURRENT [file atime "/tmp/egg.timer."]
 exec rm -f /tmp/egg.timer.
 
-# the valid flags under FLAGS are:
-#   o   global op (bot will op this user on any channel)
-#   m   master (user is a bot master)
-#   n   owner (user is the bot owner)
-#   t   botnet master (user is a botnet master)
-#   x   xfer (user has file-area access)
-#   j   janitor (user is a file-area master)
-#   p   party-line (user has party-line access)
-#   c   common (user record is a common-access site)  [see 'help common']
-#   u   unshared (not sent to other share-bots)
-#   b   bot (user is another bot)
-#   d   global deop (user cannot get ops)
-#   k   global auto-kick (user kick & banned automatically)
-#   f   global friend
-#   v   global voice (user get +v automatically on +autovoice channels)
-#   a   global auto-op (always op this user on join)
-#   s   share (bot is sharing user records, aggressively)
-#   p   share (bot is sharing user records, passively)
-#   h   hub (bot is auto-linked at highest priority)
-#   a   alternate (bot is auto-linked if no hub bots can be linked)
-#   l   leaf (bot is not allowed to link in other bots)
-#   r   reject (bot will not be allowed on the net)
-
 if {$argc < 1} {
   puts stdout "\nUsage: weed <userfile> \[options\]"
   puts stdout "  (weeds out users from an eggdrop userlist)"
@@ -241,15 +218,22 @@ proc convertUserFile {fname} {
           set BotAddr($oldhandle) [string trim [string range $line 1 end]]
         }
       } elseif {$handle == "."} {
-        # xtra field
-        set xtraList [string trim [string range $line 1 end]]
-        for {set i 0} {$i < [llength $xtraList]} {incr i} {
-          lappend Xtra($oldhandle) [string trim [lindex $xtraList $i]]
+        # xtra field start
+        if {![info exists xtraList($oldhandle)]} {
+          set xtraList($oldhandle) [string trim [string range $line 1 end]]
+        } {
+          append xtraList($oldhandle) [string trim [string range $line 1 end]]
         }
       } elseif {$handle == "!!"} {
         # laston
         set LastOn($oldhandle) [lindex $line 1]
       } else {
+        # finish up xtra field first
+        if {[info exists xtraList($oldhandle)]} {
+          for {set i 0} {$i < [llength $xtraList($oldhandle)]} {incr i} {
+            lappend Xtra($oldhandle) [string trim [lindex $xtraList($oldhandle) $i] \{]
+          }
+        }
         # begin of new user
         scan $line "%s %s %s %s" handle pass attr ts
         if {$convert == 1 && $attr != ""} {
@@ -357,7 +341,9 @@ proc saveUserFile fname {
     puts $fd [format "%-9s %-20s %-24s" $i $plug $attr]
     for {} {$hmloop < [llength $Hostmask($i)]} {incr hmloop} {
       if {[string index $i 0] == "*" || [string range $i 0 1] == "::"} {
-        puts $fd "- [lindex $Hostmask($i) $hmloop]"
+        set hmask [lindex $Hostmask($i) $hmloop]
+        regsub -all {~} $hmask { } hmask
+        puts $fd "- [lrange $hmask 0 end]"
       } else {
         puts $fd "--HOSTS [lindex $Hostmask($i) $hmloop]"
       }
@@ -482,7 +468,7 @@ foreach i [array names User] {
   }
   flush stdout
 }
-if {$weeded == 0 && $convert == 0} { puts -nonewline stdout "uNF... Nothing to weed dude!" }
+if {$weeded == 0 && $convert == 0} { puts -nonewline stdout "uNF... Nothing to weed!" }
 puts stdout "\n"
 
 foreach i [array names User] {
@@ -520,7 +506,7 @@ puts stdout "\nFinished scan."
 puts stdout "Original total ($total), new total ([expr $total-$weeded]), zapped ($weeded)"
 
 if {![saveUserFile $filename.weed]} {
-  puts stdout "* Couldn't save new userfile!\n"
+  puts stdout "* uNF... Couldn't save new userfile!\n"
   exit
 }
 puts stdout "Wrote $filename.weed"

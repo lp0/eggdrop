@@ -46,13 +46,6 @@
 #	DOB     Birthday (Date Of Birth)
 #       EMAIL   Email address
 
-# This script is NOT for pre-1.3.0 versions.
-
-if {![info exists numversion] || $numversion < 01030000} {
-  putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
-  return 0
-}
-
 ################################
 # Set your desired fields here #
 ################################
@@ -61,7 +54,14 @@ set userinfo-fields "URL BF GF IRL EMAIL DOB"
 
 # This script's identification
 
-set userinfover "Userinfo v1.00"
+set userinfover "Userinfo v1.01"
+
+# This script is NOT for pre-1.3.0 versions.
+
+if {![info exists numversion] || $numversion < 01030000} {
+  putlog "*** Can't load $userinfover -- At least Eggdrop v1.3.0 required"
+  return 0
+}
 
 # Make sure we don't bail because whois-fields isn't set
 

@@ -290,8 +290,8 @@ die "Please edit your config file."
 
 # this is the directory to look for the modules in, if you run the
 # bot in the compilation directorys you will want to set this to ""
-# if you use putegg (like all good kiddies do ;) this is a fine default
-# otherwise, use yur head :)
+# if you use 'make install' (like all good kiddies do ;) this is a fine
+# default, otherwise, use yur head :)
 set mod-path "modules/"
 
 
