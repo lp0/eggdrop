@@ -1168,9 +1168,14 @@ static int gotjoin (char * from, char * chname) {
 	       }
 	       /* don't re-display greeting if they've been on the channel recently */
 	       if (u) {
+		  struct laston_info * li = 0;
+		  
 		  cr = get_chanrec(m->user,chan->name);
-		  if (channel_greet(chan) && use_info && cr && 
-		      (now -  cr->laston > wait_info)) {
+		  if (!cr && no_chanrec_info)
+		    li = get_user(&USERENTRY_LASTON,m->user);
+		  if (channel_greet(chan) && use_info && 
+		      ((cr && (now -  cr->laston > wait_info))
+		       || (no_chanrec_info && (now - li->laston > wait_info)))) {
 		     char s1[512], * s;
 		     
 		     if (!(u->flags & USER_BOT)) {

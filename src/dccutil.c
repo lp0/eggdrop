@@ -309,7 +309,7 @@ void not_away (int idx)
    dprintf(idx, "You're not away any more.\n");
    nfree(dcc[idx].u.chat->away);
    dcc[idx].u.chat->away = NULL;
-   check_tcl_away(botnetnick,idx,NULL);
+   check_tcl_away(botnetnick,dcc[idx].sock,NULL);
 }
 
 void set_away (int idx, char * s)
@@ -336,7 +336,7 @@ void set_away (int idx, char * s)
       }
    }
    dprintf(idx, "You are now away.\n");
-   check_tcl_away(botnetnick,idx,s);
+   check_tcl_away(botnetnick,dcc[idx].sock,s);
 }
 
 /* this helps the memory debugging */

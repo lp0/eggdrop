@@ -23,6 +23,7 @@ static int bounce_bans = 0;
 static int learn_users = 0;
 static int wait_info = 15;
 static int invite_key = 1;
+static int no_chanrec_info = 0;
 /* number of modes per line to send */
 static int modesperline = 3;
 /* maximum bytes to send in 1 mode */
@@ -536,8 +537,7 @@ static void check_tcl_kickmode (char * nick, char * uhost, struct userrec * u,
 }
 
 
-static int check_tcl_pub (char * nick, char * from, char * chname, char * msg)
-{
+static int check_tcl_pub (char * nick, char * from, char * chname, char * msg) {
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
    int x;
    char buf[512], *args = buf, *cmd, host[161], *hand;
@@ -600,6 +600,7 @@ static tcl_ints myints[] =
      {"kick-method", &kick_method, 0},
      {"invite-key", &invite_key, 0},
      {"allow-desync", &allow_desync, 0},
+     {"no-chanrec-info", &no_chanrec_info, 0},
      {0,0}
 };
 

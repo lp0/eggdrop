@@ -5,6 +5,7 @@
 
 prefix = @prefix@
 DEST=@DEST@
+NEWVERSION=1.3.20
 
 SHELL=/bin/sh
 
@@ -38,6 +39,9 @@ SHLIB_STRIP = @SHLIB_STRIP@
 CP1 = @CP1@
 CP2 = @CP2@
 CP3 = @CP3@
+
+# With any luck this won't burst into flames or cause sterility
+LN_S = ln -s
 
 # STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
 # - - - - - - - - do not edit anything below this line. - - - - - - - - #
@@ -193,26 +197,35 @@ ainstall:
 	@if test ! -r $(DEST)/motd; then \
 	        $(CP1) motd $(DEST)/; \
 	fi
+	@if test -L $(DEST)/modules; then \
+		echo Removing symlink to archival modules directory.; \
+		rm -f $(DEST)/modules; \
+	fi
 	@if test -d $(DEST)/modules/; then \
 		echo Moving old modules into \'modules.old\' directory.; \
 		rm -rf $(DEST)/modules.old; \
 		mv -f $(DEST)/modules $(DEST)/modules.old; \
 		mkdir $(DEST)/modules; \
 	fi
-	@if test ! -d $(DEST)/modules/; then \
-		echo Creating module subdirectory.; \
-		mkdir $(DEST)/modules; \
+	@if test ! -d $(DEST)/modules\-${NEWVERSION}/; then \
+		echo Creating modules\-${NEWVERSION} directory and symlink.; \
+		mkdir $(DEST)/modules\-${NEWVERSION}; \
+		$(LN_S) modules\-${NEWVERSION} $(DEST)/modules; \
 	fi
 	@if test -r assoc.so; then \
 		echo Copying new modules.; \
 		$(CP3) *.so $(DEST)/modules/; \
 	fi
+	@if test -L $(DEST)/eggdrop; then \
+		echo Removing symlink to archival eggdrop binary.; \
+	fi
 	@if test -r $(DEST)/eggdrop; then \
 		echo Renamed the old \'eggdrop\' executable to \'oeggdrop\'.; \
 		mv -f $(DEST)/eggdrop $(DEST)/oeggdrop; \
 	fi
-	@echo Copying new \'eggdrop\' executable.
-	@$(CP1) eggdrop $(DEST)/
+	@echo Copying new \'eggdrop\' executable and creating symlink.
+	@$(CP1) eggdrop $(DEST)/eggdrop\-${NEWVERSION}
+	@$(LN_S) eggdrop\-${NEWVERSION} $(DEST)/eggdrop
 	@if test ! -d $(DEST)/doc; then \
 		echo Creating \'doc\' subdirectory.; \
 		mkdir $(DEST)/doc; \

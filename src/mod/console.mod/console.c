@@ -220,8 +220,11 @@ static int console_chon (char * handle, int idx) {
       } else if (force_channel > -1)
 	   dcc[idx].u.chat->channel = force_channel;
       if ((dcc[idx].u.chat->channel >= 0) && 
-	  (dcc[idx].u.chat->channel < GLOBAL_CHANS))
-	botnet_send_join_idx(idx, -1);
+	  (dcc[idx].u.chat->channel < GLOBAL_CHANS)) {
+	 botnet_send_join_idx(idx, -1);
+	 check_tcl_chjn(botnetnick, dcc[idx].nick, dcc[idx].u.chat->channel,
+			geticon(idx), dcc[idx].sock, dcc[idx].host);
+      }
       if (info_party) {
 	 char * p = get_user(&USERENTRY_INFO,dcc[idx].user);
 	 if (p) {

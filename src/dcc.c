@@ -811,11 +811,12 @@ static void dcc_chat (int idx, char * buf,int i)
 	       }
 	       if (ok) {
 		  struct userrec * u = get_user_by_handle(userlist,dcc[i].nick);
-		  if (u && (u->flags & USER_MASTER)) 
-		    if (me)
-		      dprintf(i,"-> %s%s\n",dcc[idx].nick,buf+3);
-		  else
-		    dprintf(i,"-%s-> %s\n",dcc[idx].nick,buf+1);
+		  if (u && (u->flags & USER_MASTER)) {
+		     if (me)
+		       dprintf(i,"-> %s%s\n",dcc[idx].nick,buf+3);
+		     else
+		       dprintf(i,"-%s-> %s\n",dcc[idx].nick,buf+1);
+		  }
 	       }
 	    }
 	 } else if (buf[0] == '\'') {

@@ -651,6 +651,13 @@ set use-354 0
 # We now unbind this command by default to discourage them
 unbind msg - ident *msg:ident
 
+# If you are so lame you want the bot to display peoples info lines, even
+# when you are too lazy to add their chanrecs to a channel, set this to 1
+# *NOTE* This means *every* user with an info line will have their info
+# display on EVERY channel they join (provided they have been gone longer than
+# wait-info) 
+set no-chanrec-info 0
+
 ##### TRANSFER MODULE #####
 
 # uncomment this line to load the transfer module, this provides

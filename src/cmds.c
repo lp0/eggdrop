@@ -2205,8 +2205,8 @@ static void cmd_mns_host (struct userrec * u, int idx, char * par)
    }
    if (strcasecmp(handle, dcc[idx].nick)) {
       get_user_flagrec(u, &fr, NULL);
-      if (!(u2->flags & USER_BOT) && (u->flags & USER_BOTMAST) &&
-	  !(u->flags & USER_MASTER) && !chan_master(fr)) {
+      if (!(u2->flags & USER_BOT) && !(u->flags & USER_MASTER) 
+	  && !chan_master(fr)) {
 	 dprintf(idx, "You can't remove hostmasks from non-bots.\n");
 	 return;
       } else if ((u2->flags & USER_BOT) && (bot_flags(u2) & BOT_SHARE)
@@ -2216,6 +2216,9 @@ static void cmd_mns_host (struct userrec * u, int idx, char * par)
       } else if ((u2->flags & USER_OWNER) && !(u->flags & USER_OWNER)
 		 && (u2 != u)) {
 	 dprintf(idx, "Can't remove hostmasks from the bot owner.\n");
+	 return;
+      } else if (!(u->flags & USER_BOTMAST) && !chan_master(fr)) {
+	 dprintf(idx, "Permission denied.\n");
 	 return;
       }
    }
