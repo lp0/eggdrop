@@ -76,7 +76,6 @@ int expmem_dccutil()
   return tot;
 }
 
-/* FIXME: should this be here ? */
 static char SBUF[1024];
 
 /* replace \n with \r\n */
@@ -95,13 +94,14 @@ char *add_cr(char *buf)
 }
 
 extern void (*qserver) (int, char *, int);
-void dprintf VARARGS_DEF(int, arg1)
+
+void dprintf EGG_VARARGS_DEF(int, arg1)
 {
   char *format;
   int idx, len;
 
   va_list va;
-  idx = VARARGS_START(int, arg1, va);
+  idx = EGG_VARARGS_START(int, arg1, va);
   format = va_arg(va, char *);
 
 #ifdef HAVE_VSNPRINTF
@@ -148,14 +148,14 @@ void dprintf VARARGS_DEF(int, arg1)
   }
 }
 
-void chatout VARARGS_DEF(char *, arg1)
+void chatout EGG_VARARGS_DEF(char *, arg1)
 {
   int i;
   char *format;
   char s[601];
 
   va_list va;
-  format = VARARGS_START(char *, arg1, va);
+  format = EGG_VARARGS_START(char *, arg1, va);
 
 #ifdef HAVE_VSNPRINTF
   if (vsnprintf(s, 511, format, va) < 0)
@@ -171,14 +171,14 @@ void chatout VARARGS_DEF(char *, arg1)
 }
 
 /* print to all on this channel but one */
-void chanout_but VARARGS_DEF(int, arg1)
+void chanout_but EGG_VARARGS_DEF(int, arg1)
 {
   int i, x, chan;
   char *format;
   char s[601];
 
   va_list va;
-  x = VARARGS_START(int, arg1, va);
+  x = EGG_VARARGS_START(int, arg1, va);
   chan = va_arg(va, int);
   format = va_arg(va, char *);
 
@@ -362,16 +362,10 @@ void *_get_data_ptr(int size, char *file, int line)
 /* make a password, 10-15 random letters and digits */
 void makepass(char *s)
 {
-  int i, j;
+  int i;
 
   i = 10 + (random() % 6);
-  for (j = 0; j < i; j++) {
-    if (random() % 3 == 0)
-      s[j] = '0' + (random() % 10);
-    else
-      s[j] = 'a' + (random() % 26);
-  }
-  s[i] = 0;
+  make_rand_str(s, i);
 }
 
 void flush_lines(int idx, struct chat_info *ci)

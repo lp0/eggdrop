@@ -57,6 +57,9 @@ void rmspace(char *s)
 #define whitespace(c) ( ((c)==32) || ((c)==9) || ((c)==13) || ((c)==10) )
   char *p;
 
+  if (*s == '\0')
+	return;
+
   /* wipe end of string */
   for (p = s + strlen(s) - 1; ((whitespace(*p)) && (p >= s)); p--);
   if (p != s + strlen(s) - 1)
@@ -101,9 +104,9 @@ struct userrec *check_chanlist(char *host)
   memberlist *m;
   struct chanset_t *chan;
 
-  strncpy(buf, host, UHOSTLEN);
-  buf[UHOSTLEN - 1] = 0;	/* why is this case sanely done, when there
-				 * are so many others? */
+  strncpy(buf, host, UHOSTMAX);
+  buf[UHOSTMAX] = 0;	/* why is this case sanely done, when there
+			 * are so many others? */
   uhost = buf;
   nick = splitnick(&uhost);
   for (chan = chanset; chan; chan = chan->next) {
@@ -384,21 +387,8 @@ void chanprog()
   admin[0] = 0;
   helpdir[0] = 0;
   tempdir[0] = 0;
-  for (i = 0; i < max_logs; i++) {
-    if (logs[i].filename != NULL) {
-      nfree(logs[i].filename);
-      logs[i].filename = NULL;
-    }
-    if (logs[i].chname != NULL) {
-      nfree(logs[i].chname);
-      logs[i].chname = NULL;
-    }
-    if (logs[i].f != NULL) {
-      fclose(logs[i].f);
-      logs[i].f = NULL;
-    }
-    logs[i].mask = 0;
-  }
+  for (i = 0; i < max_logs; i++)
+    logs[i].flags |= LF_EXPIRING;
   conmask = 0;
   /* turn off read-only variables (make them write-able) for rehash */
   protect_readonly = 0;
@@ -406,6 +396,24 @@ void chanprog()
   context;
   if (!readtclprog(configfile))
     fatal(MISC_NOCONFIGFILE, 0);
+  for (i = 0; i < max_logs; i++) {
+    if (logs[i].flags & LF_EXPIRING) {
+      if (logs[i].filename != NULL) {
+        nfree(logs[i].filename);
+        logs[i].filename = NULL;
+      }
+      if (logs[i].chname != NULL) {
+        nfree(logs[i].chname);
+        logs[i].chname = NULL;
+      }
+      if (logs[i].f != NULL) {
+        fclose(logs[i].f);
+        logs[i].f = NULL;
+      }
+      logs[i].mask = 0;
+      logs[i].flags = 0;
+    }
+  }
   /* We should be safe now */
   call_hook(HOOK_REHASH);
   context;
@@ -426,8 +434,7 @@ void chanprog()
     printf("%s\n\n", MISC_USERFCREATE2);
   } else if (make_userfile) {
      make_userfile = 0;
-     printf(MISC_USERFEXISTS);
-     readuserfile(userfile, &userlist);
+     printf("%s\n", MISC_USERFEXISTS);
   }
   context;
   if (helpdir[0])
@@ -446,10 +453,12 @@ void chanprog()
   /* test tempdir: it's vital */
   {
     FILE *f;
-    char s[161];
+    char s[161], rands[8];
 
-/* FIXME: possible file race condition */
-    simple_sprintf(s, "%s.test.file", tempdir);
+    /* possible file race condition solved by using a random string 
+     * and the process id in the filename */
+    make_rand_str(rands, 7); /* create random string */
+    sprintf(s, "%s.test-%u-%s", tempdir, getpid(), rands);
     f = fopen(s, "w");
     if (f == NULL)
       fatal(MISC_CANTWRITETEMP, 0);
@@ -592,7 +601,7 @@ void list_timers(Tcl_Interp * irp, tcl_timer_t * stack)
     argv[2] = id;
     x = Tcl_Merge(3, argv);
     Tcl_AppendElement(irp, x);
-    n_free(x, "", 0);
+    Tcl_Free((char *) x);
     mark = mark->next;
   }
 }

@@ -1,8 +1,8 @@
-/* 
+/*
  * assoc.c - the assoc module, moved here mainly from botnet.c
  *           for module work
  */
-/* 
+/*
  * This file is part of the eggdrop source code
  * copyright (c) 1997 Robey Pointer
  * and is distributed according to the GNU general public license.
@@ -67,8 +67,8 @@ static void link_assoc(char *bot, char *via)
       context;
       while (a != NULL) {
 	if (a->name[0]) {
-	  simple_sprintf(x, "assoc %D %s %s", a->channel, botnetnick,
-			 a->name);
+          simple_sprintf(x, "assoc %D %s %s", (int) a->channel, botnetnick,
+           		a->name);
 	  botnet_send_zapf(idx, botnetnick, dcc[idx].nick, x);
 	}
 	a = a->next;
@@ -380,16 +380,19 @@ static void assoc_report(int idx, int details)
 static cmd_t mydcc[] =
 {
   {"assoc", "", cmd_assoc, NULL},
+  {0, 0, 0, 0}
 };
 
 static cmd_t mybot[] =
 {
   {"assoc", "", (Function) zapf_assoc, NULL},
+  {0, 0, 0, 0}
 };
 
 static cmd_t mylink[] =
 {
   {"*", "", (Function) link_assoc, "assoc"},
+  {0, 0, 0, 0}
 };
 
 static tcl_cmds mytcl[] =
@@ -402,9 +405,10 @@ static tcl_cmds mytcl[] =
 static char *assoc_close()
 {
   context;
-  rem_builtins(H_dcc, mydcc, 1);
-  rem_builtins(H_bot, mybot, 1);
-  rem_builtins(H_link, mylink, 1);
+  kill_all_assoc();
+  rem_builtins(H_dcc, mydcc);
+  rem_builtins(H_bot, mybot);
+  rem_builtins(H_link, mylink);
   module_undepend(MODULE_NAME);
   rem_tcl_commands(mytcl);
   rem_help_reference("assoc.help");
@@ -427,12 +431,12 @@ char *assoc_start(Function * global_funcs)
 
   context;
   module_register(MODULE_NAME, assoc_table, 2, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
-    return "This module requires eggdrop1.3.0 or later";
+  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
+    return "This module requires eggdrop1.4.0 or later";
   assoc = NULL;
-  add_builtins(H_dcc, mydcc, 1);
-  add_builtins(H_bot, mybot, 1);
-  add_builtins(H_link, mylink, 1);
+  add_builtins(H_dcc, mydcc);
+  add_builtins(H_bot, mybot);
+  add_builtins(H_link, mylink);
   add_tcl_commands(mytcl);
   add_help_reference("assoc.help");
   return NULL;

@@ -1,4 +1,4 @@
-/* 
+/*
  * console.c - part of console.mod
  * saved console settings based on console.tcl by
  * cmwagner/billyjoe/D. Senso
@@ -25,53 +25,55 @@ struct console_info {
 
 static int console_unpack(struct userrec *u, struct user_entry *e)
 {
+  struct console_info *ci = user_malloc(sizeof(struct console_info));
+  char *par, *arg;
+
+  ASSERT (e != NULL);
+  ASSERT (e->name != NULL);
   context;
-  if (e->name) {
-    char *p, *w, *o;
-    struct console_info *i;
-
-    p = e->u.list->extra;
-    e->u.list->extra = NULL;
-    list_type_kill(e->u.list);
-    e->u.extra = i = user_malloc(sizeof(struct console_info));
-
-    o = p;
-    w = newsplit(&p);
-    i->channel = user_malloc(strlen(w) + 1);
-    strcpy(i->channel, w);
-    w = newsplit(&p);
-    i->conflags = logmodes(w);
-    w = newsplit(&p);
-    i->stripflags = stripmodes(w);
-    w = newsplit(&p);
-    i->echoflags = (w[0] == '1') ? 1 : 0;
-    w = newsplit(&p);
-    i->page = atoi(w);
-    w = newsplit(&p);
-    i->conchan = atoi(w);
-    nfree(o);
-  }
+  par = e->u.list->extra;
+  arg = newsplit(&par);
+  ci->channel = user_malloc(strlen(arg) + 1);
+  strcpy(ci->channel, arg);
+  arg = newsplit(&par);
+  ci->conflags = logmodes(arg);
+  arg = newsplit(&par);
+  ci->stripflags = stripmodes(arg);
+  arg = newsplit(&par);
+  ci->echoflags = (arg[0] == '1') ? 1 : 0;
+  arg = newsplit(&par);
+  ci->page = atoi(arg);
+  arg = newsplit(&par);
+  ci->conchan = atoi(arg);
+  list_type_kill(e->u.list);
+  e->u.extra = ci;
   return 1;
 }
 
 static int console_pack(struct userrec *u, struct user_entry *e)
 {
-  if (!e->name) {
-    char work[1024];
-    struct console_info *i = e->u.extra;
-    int c = simple_sprintf(work, "%s %s %s %d %d %d",
-			   i->channel, masktype(i->conflags),
-			   stripmasktype(i->stripflags), i->echoflags,
-			   i->page, i->conchan);
+  char work[1024];
+  struct console_info *ci;
+  int l;
 
-    e->u.list = user_malloc(sizeof(struct list_type));
+  ASSERT (e != NULL);
+  ASSERT (e->u.extra != NULL);
+  ASSERT (e->name == NULL);
 
-    e->u.list->next = NULL;
-    e->u.list->extra = user_malloc(c + 1);
-    strcpy(e->u.list->extra, work);
-    nfree(i->channel);
-    nfree(i);
-  }
+  ci = (struct console_info *) e->u.extra;
+
+  l = simple_sprintf(work, "%s %s %s %d %d %d",
+		     ci->channel, masktype(ci->conflags),
+		     stripmasktype(ci->stripflags), ci->echoflags,
+		     ci->page, ci->conchan);
+
+  e->u.list = user_malloc(sizeof(struct list_type));
+  e->u.list->next = NULL;
+  e->u.list->extra = user_malloc(l + 1);
+  strcpy(e->u.list->extra, work);
+
+  nfree(ci->channel);
+  nfree(ci);
   return 1;
 }
 
@@ -101,8 +103,23 @@ static int console_write_userfile(FILE * f, struct userrec *u, struct user_entry
 
 static int console_set(struct userrec *u, struct user_entry *e, void *buf)
 {
-  e->u.extra = buf;
-  context;
+  struct console_info *ci = (struct console_info *) e->u.extra;
+
+  if (!ci && !buf)
+    return 1;
+
+  if (ci != buf) {
+    if (ci) {
+      ASSERT (ci->channel != NULL);
+      nfree (ci->channel);
+      nfree (ci);
+    }
+    context;
+
+    ci = e->u.extra = buf;
+  }
+
+  /* donut share console info */
   return 1;
 }
 
@@ -175,8 +192,8 @@ void console_display(int idx, struct user_entry *e)
     dprintf(idx, "    Console flags: %s, Strip flags: %s, Echo: %s\n",
 	    masktype(i->conflags), stripmasktype(i->stripflags),
 	    i->echoflags ? "yes" : "no");
-    dprintf(idx, "    Page setting: %d, Console channel: %d\n",
-	    i->page, i->conchan);
+    dprintf(idx, "    Page setting: %d, Console channel: %s%d\n",
+	    i->page, (i->conchan < 100000) ? "" : "*", i->conchan % 100000);
   }
 }
 
@@ -219,10 +236,8 @@ static int console_chon(char *handle, int idx)
     if (i) {
       if (i->channel && i->channel[0])
 	strcpy(dcc[idx].u.chat->con_chan, i->channel);
-      if (i->conflags)
-	dcc[idx].u.chat->con_flags = i->conflags;
-      if (i->stripflags)
-	dcc[idx].u.chat->strip_flags = i->stripflags;
+      dcc[idx].u.chat->con_flags = i->conflags;
+      dcc[idx].u.chat->strip_flags = i->stripflags;
       if (i->echoflags)
 	dcc[idx].status |= STAT_ECHO;
       else
@@ -293,7 +308,8 @@ static int console_store(struct userrec *u, int idx, char *par)
   return 0;
 }
 
-static int console_chof(char *handle, int idx)
+/* cmds.c:cmd_console calls this, better than chof bind - drummer,07/25/1999 */
+static int console_dostore(int idx)
 {
   if (console_autosave)
     console_store(dcc[idx].user, idx, NULL);
@@ -310,25 +326,21 @@ static tcl_ints myints[] =
 
 static cmd_t mychon[] =
 {
-  {"*", "", console_chon, "console:chon"}
-};
-
-static cmd_t mychof[] =
-{
-  {"*", "", console_chof, "console:chof"}
+  {"*", "", console_chon, "console:chon"},
+  {0, 0, 0, 0}
 };
 
 static cmd_t mydcc[] =
 {
-  {"store", "", console_store, NULL}
+  {"store", "", console_store, NULL},
+  {0, 0, 0, 0}
 };
 
 static char *console_close()
 {
   context;
-  rem_builtins(H_chon, mychon, 1);
-  rem_builtins(H_chof, mychof, 1);
-  rem_builtins(H_dcc, mydcc, 1);
+  rem_builtins(H_chon, mychon);
+  rem_builtins(H_dcc, mydcc);
   rem_tcl_ints(myints);
   rem_help_reference("console.help");
   del_entry_type(&USERENTRY_CONSOLE);
@@ -344,6 +356,7 @@ static Function console_table[] =
   (Function) console_close,
   (Function) 0,
   (Function) 0,
+  (Function) console_dostore,
 };
 
 char *console_start(Function * global_funcs)
@@ -351,12 +364,11 @@ char *console_start(Function * global_funcs)
   global = global_funcs;
 
   context;
-  module_register(MODULE_NAME, console_table, 1, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
-    return "This module requires eggdrop1.3.0 or later";
-  add_builtins(H_chon, mychon, 1);
-  add_builtins(H_chof, mychof, 1);
-  add_builtins(H_dcc, mydcc, 1);
+  module_register(MODULE_NAME, console_table, 1, 1);
+  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
+    return "This module requires eggdrop1.4.0 or later";
+  add_builtins(H_chon, mychon);
+  add_builtins(H_dcc, mydcc);
   add_tcl_ints(myints);
   add_help_reference("console.help");
   USERENTRY_CONSOLE.get = def_get;

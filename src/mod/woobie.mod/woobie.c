@@ -1,7 +1,7 @@
-/* 
+/*
  * woobie.c   - a nonsensical command to exemplify module programming
  *
- *                By ButchBub - 15 July 1997    
+ *                By ButchBub - 15 July 1997
  */
 
 #define MAKING_WOOBIE
@@ -41,12 +41,13 @@ static void woobie_report(int idx, int details)
 static cmd_t mydcc[] =
 {
   {"woobie", "", cmd_woobie, NULL},
+  {0, 0, 0, 0}
 };
 
 static char *woobie_close()
 {
   context;
-  rem_builtins(H_dcc, mydcc, 1);
+  rem_builtins(H_dcc, mydcc);
   module_undepend(MODULE_NAME);
   return NULL;
 }
@@ -66,8 +67,8 @@ char *woobie_start(Function * global_funcs)
   global = global_funcs;
   context;
   module_register(MODULE_NAME, woobie_table, 2, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
-    return "This module requires eggdrop1.3.0 or later";
-  add_builtins(H_dcc, mydcc, 1);
+  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
+    return "This module requires eggdrop1.4.0 or later";
+  add_builtins(H_dcc, mydcc);
   return NULL;
 }

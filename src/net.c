@@ -266,7 +266,7 @@ void killsock(int sock)
   int i;
 
   for (i = 0; i < MAXSOCKS; i++) {
-    if (socklist[i].sock == sock) {
+    if ((socklist[i].sock == sock) && !(socklist[i].flags & SOCK_UNUSED)) {
       close(socklist[i].sock);
       if (socklist[i].inbuf != NULL) {
 	nfree(socklist[i].inbuf);
@@ -359,10 +359,8 @@ int open_telnet_raw(int sock, char *server, int sport)
 
   name.sin_family = AF_INET;
   name.sin_addr.s_addr = (myip[0] ? getmyip() : INADDR_ANY);
-  if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0) {
-    killsock(sock);
+  if (bind(sock, (struct sockaddr *) &name, sizeof(name)) < 0)
     return -1;
-  }
   bzero((char *) &name, sizeof(struct sockaddr_in));
 
   name.sin_family = AF_INET;
@@ -379,10 +377,8 @@ int open_telnet_raw(int sock, char *server, int sport)
     } else {
       hp = NULL;
     }
-    if (hp == NULL) {
-      killsock(sock);
+    if (hp == NULL)
       return -2;
-    }
     my_memcpy((char *) &name.sin_addr, hp->h_addr, hp->h_length);
     name.sin_family = hp->h_addrtype;
   }
@@ -397,10 +393,8 @@ int open_telnet_raw(int sock, char *server, int sport)
       if (firewall[0])
 	return proxy_connect(sock, server, sport, proxy);
       return sock;		/* async success! */
-    } else {
-      killsock(sock);
+    } else
       return -1;
-    }
   }
   /* synchronous? :/ */
   if (firewall[0])
@@ -411,7 +405,12 @@ int open_telnet_raw(int sock, char *server, int sport)
 /* ordinary non-binary connection attempt */
 int open_telnet(char *server, int port)
 {
-  return open_telnet_raw(getsock(0), server, port);
+  int sock = getsock(0),
+      ret = open_telnet_raw(sock, server, port);
+
+  if (ret < 0)
+    killsock(sock);
+  return ret;
 }
 
 /* returns a socket number for a listening socket that will accept any
@@ -423,7 +422,7 @@ int open_listen(int *port)
 
   if (firewall[0]) {
     /* FIXME: can't do listen port thru firewall yet */
-    putlog(LOG_ALL, "*", "!! Cant open a listen port (you are using a firewall)\n");
+    putlog(LOG_MISC, "*", "!! Cant open a listen port (you are using a firewall)");
     return -1;
   }
   sock = getsock(SOCK_LISTEN);
@@ -786,23 +785,23 @@ int sockgets(char *s, int *len)
   context;
   /* prepend old data back */
   if (socklist[ret].inbuf != NULL) {
-    contextnote("dw's bug");
+    context;
     p = socklist[ret].inbuf;
     socklist[ret].inbuf = (char *) nmalloc(strlen(p) + strlen(xx) + 1);
     strcpy(socklist[ret].inbuf, xx);
     strcat(socklist[ret].inbuf, p);
     nfree(p);
   } else {
-    contextnote("dw's bug");
+    context;
     socklist[ret].inbuf = (char *) nmalloc(strlen(xx) + 1);
     strcpy(socklist[ret].inbuf, xx);
   }
-  contextnote("dw's bug");
+  context;
   if (data) {
-    contextnote("dw's bug");
+    context;
     return socklist[ret].sock;
   } else {
-    contextnote("dw's bug");
+    context;
     return -3;
   }
 }
@@ -957,8 +956,13 @@ int sanitycheck_dcc(char *nick, char *from, char *ipaddy, char *port)
   /* These should pad like crazy with zeros, since 120 bytes or so is
    * where the routines providing our data currently lose interest. I'm
    * using the n-variant in case someone changes that... */
-  strncpy(hostname, extracthostname(from), 256);
-  strncpy(dnsname, hostnamefromip(my_htonl(ip)), 256);
+  strncpy(hostname, extracthostname(from), 255);
+  hostname[255] = 0;
+  /* But if they are changed one day, this might crash 
+   * without [256] = 0; ++rtc
+   */
+  strncpy(dnsname, hostnamefromip(my_htonl(ip)), 255);
+  dnsname[255] = 0;
   if (!strcasecmp(hostname, dnsname)) {
     putlog(LOG_DEBUG, "*", "DNS information for submitted IP checks out.");
     return 1;

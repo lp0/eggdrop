@@ -1,4 +1,4 @@
-/* 
+/*
  * This file is part of the eggdrop source code copyright (c) 1997 Robey
  * Pointer and is distributed according to the GNU general public license.
  * For full details, read the top of 'main.c' or the file called COPYING
@@ -525,6 +525,7 @@ static void out_dcc_files(int idx, char *buf, void *x)
 static cmd_t mydcc[] =
 {
   {"files", "-", cmd_files, NULL},
+  {0, 0, 0, 0}
 };
 
 static tcl_strings mystrings[] =
@@ -634,6 +635,7 @@ static void filesys_dcc_send(char *nick, char *from, struct userrec *u,
 	strcpy(dcc[i].u.xfer->dir, dccin);
       dcc[i].u.xfer->length = atoi(msg);
       sprintf(s1, "%s%s", dcc[i].u.xfer->dir, param);
+      context;
       f = fopen(s1, "r");
       if (f) {
 	fclose(f);
@@ -698,10 +700,12 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
   } else if (glob_party(fr) || (!require_p && chan_op(fr)))
     return 0;			/* allow ctcp.so to pick up the chat */
   else if (!glob_xfer(fr)) {
-    dprintf(DP_HELP, "NOTICE %s :.\n", nick, DCC_REFUSED3);
+    if (!quiet_reject)
+      dprintf(DP_HELP, "NOTICE %s :.\n", nick, DCC_REFUSED3);
     putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED, nick, from);
   } else if (u_pass_match(u, "-")) {
-    dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
+    if (!quiet_reject)
+      dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
     putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
   } else if (!dccdir[0]) {
     putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED5, nick, from);
@@ -711,16 +715,18 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
     sock = getsock(0);
     if (open_telnet_dcc(sock, ip, prt) < 0) {
       neterror(buf);
-      dprintf(DP_HELP, "NOTICE %s :%s (%s)\n", nick,
-	      DCC_CONNECTFAILED1, buf);
+      if (!quiet_reject)
+        dprintf(DP_HELP, "NOTICE %s :%s (%s)\n", nick,
+	        DCC_CONNECTFAILED1, buf);
       putlog(LOG_MISC, "*", "%s: CHAT(file) (%s!%s)", DCC_CONNECTFAILED2,
 	     nick, from);
       putlog(LOG_MISC, "*", "    (%s)", buf);
       killsock(sock);
     } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
       /* invalid port range, do clients even use over 5000?? */
-      dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
-	      DCC_CONNECTFAILED1);
+      if (!quiet_reject)
+        dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
+	        DCC_CONNECTFAILED1);
       putlog(LOG_FILES, "*", "%s: %s!%s", DCC_REFUSED7, nick, from);
 
     } else {
@@ -748,6 +754,7 @@ static int filesys_DCC_CHAT(char *nick, char *from, char *handle,
 static cmd_t myctcp[] =
 {
   {"DCC", "", filesys_DCC_CHAT, "files:DCC"},
+  {0, 0, 0, 0}
 };
 
 static void init_server_ctcps(char *module)
@@ -755,12 +762,13 @@ static void init_server_ctcps(char *module)
   p_tcl_bind_list H_ctcp;
 
   if ((H_ctcp = find_bind_table("ctcp")))
-    add_builtins(H_ctcp, myctcp, 1);
+    add_builtins(H_ctcp, myctcp);
 }
 
 static cmd_t myload[] =
 {
-  {"server", "", (Function) init_server_ctcps, "filesys:server"}
+  {"server", "", (Function) init_server_ctcps, "filesys:server"},
+  {0, 0, 0, 0}
 };
 
 static int filesys_expmem()
@@ -807,11 +815,12 @@ static char *filesys_close()
   rem_tcl_commands(mytcls);
   rem_tcl_strings(mystrings);
   rem_tcl_ints(myints);
-  rem_builtins(H_dcc, mydcc, 1);
-  rem_builtins(H_load, myload, 1);
+  rem_builtins(H_dcc, mydcc);
+  rem_builtins(H_load, myload);
+  rem_builtins(H_fil, myfiles);
   rem_help_reference("filesys.help");
   if ((H_ctcp = find_bind_table("ctcp")))
-    rem_builtins(H_ctcp, myctcp, 1);
+    rem_builtins(H_ctcp, myctcp);
   del_bind_table(H_fil);
   del_entry_type(&USERENTRY_DCCDIR);
   module_undepend(MODULE_NAME);
@@ -847,15 +856,15 @@ char *filesys_start(Function * global_funcs)
   module_register(MODULE_NAME, filesys_table, 2, 0);
   if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0)))
     return "You need the transfer module to user the file system.";
-  if (!module_depend(MODULE_NAME, "eggdrop", 103, 15))
-    return "You need at least eggdrop1.3.15 to run this module.";
+  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
+    return "You need at least eggdrop1.4.0 to run this module.";
   add_tcl_commands(mytcls);
   add_tcl_strings(mystrings);
   add_tcl_ints(myints);
   H_fil = add_bind_table("fil", 0, builtin_fil);
-  add_builtins(H_dcc, mydcc, 1);
-  add_builtins(H_fil, myfiles, 25);
-  add_builtins(H_load, myload, 1);
+  add_builtins(H_dcc, mydcc);
+  add_builtins(H_fil, myfiles);
+  add_builtins(H_load, myload);
   add_help_reference("filesys.help");
   init_server_ctcps(0);
   my_memcpy(&USERENTRY_DCCDIR, &USERENTRY_INFO,
@@ -864,7 +873,7 @@ char *filesys_start(Function * global_funcs)
   USERENTRY_DCCDIR.got_share = 0;	/* we dont want it shared tho */
   add_entry_type(&USERENTRY_DCCDIR);
   DCC_FILES_PASS.timeout_val = &password_timeout;
-  cmd_loadlanguage(0, DP_LOG, "files.english");
+  add_lang_section("filesys");
   return NULL;
 }
 
@@ -875,32 +884,3 @@ static int is_valid()
 
 /* 2 stupid backward compatability functions */
 /* set upload/dnload stats for a user */
-static void set_handle_uploads(struct userrec *bu, char *hand,
-			       unsigned int ups, unsigned long upk)
-{
-  struct userrec *u = get_user_by_handle(bu, hand);
-  struct user_entry *ue = find_user_entry(&USERENTRY_FSTAT, u);
-
-  if (ue) {
-    register struct filesys_stats *fs = ue->u.extra;
-
-    fs->uploads = ups;
-    fs->upload_ks = upk;
-    set_user(&USERENTRY_FSTAT, u, fs);
-  }
-}
-
-static void set_handle_dnloads(struct userrec *bu, char *hand,
-			       unsigned int dns, unsigned long dnk)
-{
-  struct userrec *u = get_user_by_handle(bu, hand);
-  struct user_entry *ue = find_user_entry(&USERENTRY_FSTAT, u);
-
-  if (ue) {
-    register struct filesys_stats *fs = ue->u.extra;
-
-    fs->dnloads = dns;
-    fs->dnload_ks = dnk;
-    set_user(&USERENTRY_FSTAT, u, fs);
-  }
-}

@@ -21,10 +21,6 @@
 
 #undef NO_OLD_BOTNET
 
-/***********************************************************************/
-/***** the 'configure' script should make this next part automatic *****/
-/***********************************************************************/
-
 /*
  * define the maximum length a handle on the bot can be.
  * (standard is 9 characters long)
@@ -34,16 +30,32 @@
  * handle length)
  */
 
+/* handy string lengths */
+
 #define HANDLEN		9	/* valid values 9->NICKMAX */
-
-/* handy maximum string lengths */
+#define BADHANDCHARS  "-,+*=:!.@#;$%&"
 #define NICKMAX       15	/* valid values HANDLEN->32 */
-#define UHOSTLEN     161	/* reasonable, i think? */
-#define DIRLEN       256	/* paranoia */
-#define MAX_LOG_LINE (767)	/* for misc.c/putlog() <cybah> */
+#define UHOSTMAX     160        /* reasonable, i think? */
+#define DIRMAX       256	/* paranoia */
+#define MAX_LOG_LINE 767	/* for misc.c/putlog() <cybah> */
 
-#define NICKLEN		NICKMAX + 1
+/* language stuff */
+
+#define LANGDIR	"./language"	/* language file directory */
+#define BASELANG "english"	/* language which always gets loaded before
+				   all other languages. You don't want to
+				   change this. */
+
+/***********************************************************************/
+/***** the 'configure' script should make this next part automatic *****/
+/***********************************************************************/
+
+#define NICKLEN         NICKMAX + 1
+#define UHOSTLEN        UHOSTMAX + 1
+#define DIRLEN          DIRMAX + 1
 #define NOTENAMELEN     ((HANDLEN * 2) + 1)
+#define BADNICKCHARS "-,+*=:!.@#;$%&"
+
 /* have to use a weird way to make the compiler error out cos not all
  * compilers support #error or error */
 #if !HAVE_VSPRINTF
@@ -65,7 +77,7 @@
 #endif
 
 #if (NICKMAX < 9) || (NICKMAX > 32)
-#include "invalid NIXMAX value"
+#include "invalid NICKMAX value"
 #endif
 
 #if (HANDLEN < 9) || (HANDLEN > 32)
@@ -86,10 +98,6 @@
 #else
 #include <time.h>
 #endif
-#endif
-
-#if !HAVE_RENAME
-#define rename movefile
 #endif
 
 #if !HAVE_SRANDOM
@@ -131,6 +139,8 @@
                               cx_line[cx_ptr]=__LINE__; \
                               strncpy(cx_note[cx_ptr],string,255); \
                               cx_note[cx_ptr][255] = 0; }
+#define ASSERT(expr) { if (!(expr)) assert_failed (NULL, __FILE__, __LINE__); }
+
 /* move these here, makes more sense to me :) */
 extern int cx_line[16];
 extern char cx_file[16][30];
@@ -143,11 +153,11 @@ extern int cx_ptr;
 #define free(x) dont_use_old_free(x)
 
 /* IP type */
-#if SIZEOF_INT==4
+#if (SIZEOF_INT == 4)
 typedef unsigned int IP;
 
 #else
-#if SIZEOF_LONG==4
+#if (SIZEOF_LONG == 4)
 typedef unsigned long IP;
 
 #else
@@ -201,7 +211,7 @@ struct dcc_t {
   unsigned int port;
   struct userrec *user;
   char nick[NICKLEN];
-  char host[UHOSTLEN + 1];	/* extra safety char ;) */
+  char host[UHOSTLEN];
   struct dcc_table *type;
   time_t timeval;		/* use for any timing stuff 
 				 * - this is used for timeout checking */
@@ -347,6 +357,7 @@ typedef struct {
   char szLast[MAX_LOG_LINE + 1];	/* for 'Last message repeated n times'
 					 * stuff in misc.c/putlog() <cybah> */
   int Repeats;			/* number of times szLast has been repeated */
+  unsigned int flags;		/* other flags <rtc> */
   FILE *f;			/* existing file */
 } log_t;
 
@@ -375,6 +386,8 @@ typedef struct {
 #define LOG_BOTNET 0x200000	/* t   botnet traffic */
 #define LOG_BOTSHARE 0x400000	/* h   share traffic */
 #define LOG_ALL    0x7fffff	/* (dump to all logfiles) */
+/* internal logfile flags */
+#define LF_EXPIRING 0x000001	/* Logfile will be closed soon */
 
 #define FILEDB_HIDE     1
 #define FILEDB_UNHIDE   2
@@ -410,6 +423,7 @@ typedef struct {
 #define NOTE_TCL        4	/* tcl binding caught it */
 #define NOTE_AWAY       5	/* away; stored */
 #define NOTE_FWD        6	/* away; forwarded */
+#define NOTE_REJECT     7	/* ignore mask matched */
 
 #define STR_PROTECT     2
 #define STR_DIR         1

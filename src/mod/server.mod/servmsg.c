@@ -12,13 +12,12 @@ static int count_ctcp = 0;
 /* shrug (guppy:24Feb1999) */
 static int gotfake433(char *from)
 {
-  char c, *oknicks = "^-_\\[]`", *p;
+  char c, *oknicks = "^-_\\[]`", *p, *alt = get_altbotnick();
 
-  /* alternate nickname defined? */
   context;
-  if ((altnick[0]) && (rfc_casecmp(altnick, botname))) {
-    strcpy(botname, altnick);
-  }
+  /* alternate nickname defined? */
+  if ((alt[0]) && (rfc_casecmp(alt, botname)))
+    strcpy(botname, alt);
   /* if alt nickname failed, drop thru to here */
   else {
     int l = strlen(botname) - 1;
@@ -373,8 +372,8 @@ static int gotmsg(char *from, char *msg)
   int ctcp_count = 0;
   int ignoring;
 
- if ((strchr(CHANMETA, *msg) != NULL) ||
-     (*msg == '@'))           /* notice to a channel, not handled here */
+  if (msg[0] && ((strchr(CHANMETA, *msg) != NULL) ||
+     (*msg == '@')))           /* notice to a channel, not handled here */
     return 0;
   ignoring = match_ignore(from);
   to = newsplit(&msg);
@@ -492,6 +491,7 @@ static int gotmsg(char *from, char *msg)
 	detect_flood(nick, uhost, from, FLOOD_PRIVMSG);
       u = get_user_by_host(from);
       code = newsplit(&msg);
+      rmspace(msg);
       if (!ignoring || trigger_on_ignore)
 	check_tcl_msgm(code, nick, uhost, u, msg);
       if (!ignoring)
@@ -509,8 +509,8 @@ static int gotnotice(char *from, char *msg)
   struct userrec *u;
   int ignoring;
 
-  if ((strchr(CHANMETA, *msg) != NULL) ||
-      (*msg == '@'))           /* notice to a channel, not handled here */
+  if (msg[0] && ((strchr(CHANMETA, *msg) != NULL) ||
+      (*msg == '@')))           /* notice to a channel, not handled here */
     return 0;
   ignoring = match_ignore(from);
   to = newsplit(&msg);
@@ -636,6 +636,7 @@ static void minutely_checks()
 {
   /* called once a minute... but if we're the only one on the
    * channel, we only wanna send out "lusers" once every 5 mins */
+  char *alt;
   static int count = 4;
   int ok = 0;
   struct chanset_t *chan;
@@ -645,10 +646,14 @@ static void minutely_checks()
      * check that it's not just a truncation of the full nick */
     if (strncmp(botname, origbotname, strlen(botname))) {
       /* see if my nickname is in use and if if my nick is right */
-      if (use_ison)
+      if (use_ison) {
 	/* save space and use the same ISON :P */
-	dprintf(DP_MODE, "ISON :%s %s\n", origbotname, altnick);
-      else
+	alt = get_altbotnick();
+	if (alt[0] && strcasecmp (botname, alt))
+	  dprintf(DP_MODE, "ISON :%s %s %s\n", botname, origbotname, alt);
+	else
+          dprintf(DP_MODE, "ISON :%s %s\n", botname, origbotname);
+      } else
 	dprintf(DP_MODE, "TRACE %s\n", origbotname);
       /* will return 206(undernet), 401(other), or 402(efnet) numeric if
        * not online */
@@ -686,22 +691,35 @@ static int gotpong(char *from, char *msg)
 }
 
 /* cleaned up the ison reply code .. (guppy) */
+/* .. yep, but buggy ++rtc */
 static void got303(char *from, char *msg)
 {
-  char *tmp;
+  char *tmp, *alt;
+  int ison_orig = 0, ison_alt = 0;
 
-  if (keepnick) {
-    newsplit(&msg);
-    fixcolon(msg);
-    tmp = newsplit(&msg);
-    if (strncmp(botname, origbotname, strlen(botname))) {
-      if (!tmp[0] || (altnick[0] && !rfc_casecmp(tmp, altnick))) {
-	putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-	dprintf(DP_MODE, "NICK %s\n", origbotname);
-      } else if (altnick[0] && !msg[0] && strcasecmp(botname, altnick)) {
-	putlog(LOG_MISC, "*", IRC_GETALTNICK, altnick);
-	dprintf(DP_MODE, "NICK %s\n", altnick);
-      }
+  /* This is a reply on ISON :<current> <orig> [<alt>] */
+
+  if (!use_ison || !keepnick || 
+      !strncmp(botname, origbotname, strlen(botname))) {
+    return;
+  }
+  newsplit(&msg);
+  fixcolon(msg);
+  alt = get_altbotnick();
+  tmp = newsplit(&msg);
+  if (tmp[0] && !rfc_casecmp(botname, tmp)) {
+    while ((tmp = newsplit(&msg))[0]) { /* no, it's NOT == */
+      if (!rfc_casecmp(tmp, origbotname))
+        ison_orig = 1;
+      else if (alt[0] && !rfc_casecmp(tmp, alt))
+        ison_alt = 1;
+    }
+    if (!ison_orig) {
+      putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
+      dprintf(DP_MODE, "NICK %s\n", origbotname);
+    } else if (alt[0] && !ison_alt && rfc_casecmp(botname, alt)) {
+      putlog(LOG_MISC, "*", IRC_GETALTNICK, alt);
+      dprintf(DP_MODE, "NICK %s\n", alt);
     }
   }
 }
@@ -710,11 +728,9 @@ static void got303(char *from, char *msg)
  * 401 (other non-efnet) 402 (Efnet) */
 static void trace_fail(char *from, char *msg)
 {
-  if (!use_ison) {
-    if (!strcasecmp(botname, origbotname)) {
-      putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
-      dprintf(DP_MODE, "NICK %s\n", origbotname);
-    }
+  if (keepnick && !use_ison  && !strcasecmp (botname, origbotname)) {
+    putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
+    dprintf(DP_MODE, "NICK %s\n", origbotname);
   }
 }
 
@@ -749,7 +765,7 @@ static int got433(char *from, char *msg)
     /* we are online and have a nickname, we'll keep it */
 	newsplit(&msg);
     tmp = newsplit(&msg);
-    putlog(LOG_MISC, "*", "NICK IN USE: %s (keeping '%s').\n", tmp, botname);
+    putlog(LOG_MISC, "*", "NICK IN USE: %s (keeping '%s').", tmp, botname);
     return 0;
   }
   context;
@@ -757,7 +773,7 @@ static int got433(char *from, char *msg)
   return 0;
 }
 
-/* 437 : nickname juped (Euronet) */
+/* 437 : nickname juped (IRCnet) */
 static int got437(char *from, char *msg)
 {
   char *s;
@@ -765,7 +781,7 @@ static int got437(char *from, char *msg)
 
   newsplit(&msg);
   s = newsplit(&msg);
-  if (strchr(CHANMETA, s[0]) != NULL) {
+  if (s[0] && (strchr(CHANMETA, s[0]) != NULL)) {
     chan = findchan(s);
     if (chan) {
       if (chan->status & CHAN_ACTIVE) {
@@ -775,7 +791,7 @@ static int got437(char *from, char *msg)
       }
     }
   } else if (server_online) {
-    putlog(LOG_MISC, "*", "NICK IS JUPED: %s (keeping '%s').\n", s, botname);
+    putlog(LOG_MISC, "*", "NICK IS JUPED: %s (keeping '%s').", s, botname);
   } else {
     putlog(LOG_MISC, "*", "%s: %s", IRC_BOTNICKJUPED, s);
     gotfake433(from);
@@ -815,7 +831,7 @@ static int goterror(char *from, char *msg)
   fixcolon(msg);
   putlog(LOG_SERV | LOG_MSGS, "*", "-ERROR from server- %s", msg);
   if (serverror_quit) {
-    putlog(LOG_BOTS, "*", "Disconnecting from server.");
+    putlog(LOG_SERV, "*", "Disconnecting from server.");
     nuke_server("Bah, stupid error messages.");
   }
   return 1;
@@ -845,7 +861,7 @@ static void fixfrom(char *s)
 /* nick change */
 static int gotnick(char *from, char *msg)
 {
-  char *nick;
+  char *nick, *alt = get_altbotnick();
   struct userrec *u;
 
   u = get_user_by_host(from);
@@ -858,19 +874,18 @@ static int gotnick(char *from, char *msg)
     waiting_for_awake = 0;
     if (!strcmp(msg, origbotname))
       putlog(LOG_SERV | LOG_MISC, "*", "Regained nickname '%s'.", msg);
-    else if (altnick[0] && !strcmp(msg, altnick))
+    else if (alt[0] && !strcmp(msg, alt))
       putlog(LOG_SERV | LOG_MISC, "*", "Regained alternate nickname '%s'.", msg);
     else if (keepnick && strcmp(nick, msg)) {
       putlog(LOG_SERV | LOG_MISC, "*", "Nickname changed to '%s'???", msg);
-	  if (!rfc_casecmp(nick, origbotname)) {
+      if (!rfc_casecmp(nick, origbotname)) {
         putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
         dprintf(DP_MODE, "NICK %s\n", origbotname);
-      } else if (altnick[0] && !rfc_casecmp(nick, altnick) &&
-  	    strcasecmp(botname, origbotname)) {
-        putlog(LOG_MISC, "*", IRC_GETALTNICK, altnick);
-        dprintf(DP_MODE, "NICK %s\n", altnick);
-      } else {
-	  }
+      } else if (alt[0] && !rfc_casecmp(nick, alt)
+		 && strcasecmp(botname, origbotname)) {
+        putlog(LOG_MISC, "*", IRC_GETALTNICK, alt);
+        dprintf(DP_MODE, "NICK %s\n", alt);
+      }
     } else
       putlog(LOG_SERV | LOG_MISC, "*", "Nickname changed to '%s'???", msg);
   } else if ((keepnick) && (rfc_casecmp(nick, msg))) {
@@ -878,11 +893,11 @@ static int gotnick(char *from, char *msg)
     if (!rfc_casecmp(nick, origbotname)) {
       putlog(LOG_MISC, "*", IRC_GETORIGNICK, origbotname);
       dprintf(DP_MODE, "NICK %s\n", origbotname);
-    } else if (altnick[0] && !rfc_casecmp(nick, altnick) &&
+    } else if (alt[0] && !rfc_casecmp(nick, alt) &&
 	    strcasecmp(botname, origbotname)) {
       putlog(LOG_MISC, "*", IRC_GETALTNICK, altnick);
       dprintf(DP_MODE, "NICK %s\n", altnick);
-	} else { }
+    }
   }
   return 0;
 }
@@ -933,7 +948,7 @@ static void kill_server(int idx, void *x)
     struct chanset_t *chan;
 
     for (chan = chanset; chan; chan = chan->next)
-      (me->funcs[15]) (chan, 1);
+      (me->funcs[CHANNEL_CLEAR]) (chan, 1);
   }
   connect_server();
 }
@@ -1001,7 +1016,7 @@ static int gotping(char *from, char *msg)
 }
 
 /* update the add/rem_builtins in server.c if you add to this list!! */
-static cmd_t my_raw_binds[19] =
+static cmd_t my_raw_binds[] =
 {
   {"PRIVMSG", "", (Function) gotmsg, NULL},
   {"NOTICE", "", (Function) gotnotice, NULL},
@@ -1022,13 +1037,14 @@ static cmd_t my_raw_binds[19] =
   {"451", "", (Function) got451, NULL},
   {"NICK", "", (Function) gotnick, NULL},
   {"ERROR", "", (Function) goterror, NULL},
+  {0, 0, 0, 0}
 };
 
 /* hook up to a server */
 /* works a little differently now... async i/o is your friend */
 static void connect_server(void)
 {
-  char s[121], pass[121], botserver[UHOSTLEN + 1];
+  char s[121], pass[121], botserver[UHOSTLEN];
   static int oldserv = -1;
   int servidx, botserverport;
 
@@ -1068,8 +1084,8 @@ static void connect_server(void)
       dcc[servidx].sock = serv;
       dcc[servidx].port = botserverport;
       strcpy(dcc[servidx].nick, "(server)");
-      strncpy(dcc[servidx].host, botserver, UHOSTLEN);
-      dcc[servidx].host[UHOSTLEN] = 0;
+      strncpy(dcc[servidx].host, botserver, UHOSTMAX);
+      dcc[servidx].host[UHOSTMAX] = 0;
       dcc[servidx].timeval = now;
       SERVER_SOCKET.timeout_val = &server_timeout;
       strcpy(botname, origbotname);

@@ -141,8 +141,8 @@ static int resolve_dir(char *current, char *change, char *real, int idx)
   long i = 0;
 
   context;
-  strncpy(real, current, DIRLEN);
-  real[DIRLEN] = 0;
+  strncpy(real, current, DIRMAX);
+  real[DIRMAX] = 0;
   strcpy(new, change);
   if (!new[0])
     return 1;			/* no change? */
@@ -166,8 +166,8 @@ static int resolve_dir(char *current, char *change, char *real, int idx)
       if (p == NULL) {
 	/* can't go back from here? */
 	if (!real[0]) {
-	  strncpy(real, current, DIRLEN);
-	  real[DIRLEN] = 0;
+	  strncpy(real, current, DIRMAX);
+	  real[DIRMAX] = 0;
 	  return 0;
 	}
 	real[0] = 0;
@@ -178,22 +178,22 @@ static int resolve_dir(char *current, char *change, char *real, int idx)
       f = filedb_open(real, 0);
       if (f == NULL) {
 	/* non-existent starting point! */
-	strncpy(real, current, DIRLEN);
-	real[DIRLEN] = 0;
+	strncpy(real, current, DIRMAX);
+	real[DIRMAX] = 0;
 	return 0;
       }
       ret = findmatch(f, elem, &i, &fdb);
       filedb_close(f);
       if (!ret) {
 	/* non-existent */
-	strncpy(real, current, DIRLEN);
-	real[DIRLEN] = 0;
+	strncpy(real, current, DIRMAX);
+	real[DIRMAX] = 0;
 	return 0;
       }
       if (!(fdb.stat & FILE_DIR) || fdb.sharelink[0]) {
 	/* not a dir */
-	strncpy(real, current, DIRLEN);
-	real[DIRLEN] = 0;
+	strncpy(real, current, DIRMAX);
+	real[DIRMAX] = 0;
 	return 0;
       }
       if (idx >= 0)
@@ -204,8 +204,8 @@ static int resolve_dir(char *current, char *change, char *real, int idx)
 
       break_down_flags(fdb.flags_req, &req, NULL);
       if (!flagrec_ok(&req, &user)) {
-	strncpy(real, current, DIRLEN);
-	real[DIRLEN] = 0;
+	strncpy(real, current, DIRMAX);
+	real[DIRMAX] = 0;
 	return 0;
       }
       strcpy(s, real);
@@ -213,8 +213,8 @@ static int resolve_dir(char *current, char *change, char *real, int idx)
 	if (s[strlen(s) - 1] != '/')
 	  strcat(s, "/");
       sprintf(work, "%s%s", s, elem);
-      strncpy(real, work, DIRLEN);
-      real[DIRLEN] = 0;
+      strncpy(real, work, DIRMAX);
+      real[DIRMAX] = 0;
       sprintf(s, "%s%s", dccdir, real);
     }
     p = strchr(new, '/');
@@ -291,7 +291,7 @@ static void cmd_cancel(int idx, char *par)
 
 static void cmd_chdir(int idx, char *msg)
 {
-  char s[DIRLEN + 1];
+  char s[DIRLEN];
 
   if (!msg[0]) {
     dprintf(idx, "%s: cd <new-dir>\n", USAGE);
@@ -312,7 +312,7 @@ static void cmd_chdir(int idx, char *msg)
 
 static void files_ls(int idx, char *par, int showall)
 {
-  char *p, s[DIRLEN + 1], destdir[DIRLEN + 1], mask[81];
+  char *p, s[DIRLEN], destdir[DIRLEN], mask[81];
   FILE *f;
 
   context;
@@ -321,8 +321,8 @@ static void files_ls(int idx, char *par, int showall)
     p = strrchr(par, '/');
     if (p != NULL) {
       *p = 0;
-      strncpy(s, par, DIRLEN);
-      s[DIRLEN - 1] = 0;
+      strncpy(s, par, DIRMAX);
+      s[DIRMAX] = 0;
       strncpy(mask, p + 1, 80);
       mask[80] = 0;
       if (!resolve_dir(dcc[idx].u.file->dir, s, destdir, idx)) {
@@ -365,7 +365,7 @@ static void cmd_lsa(int idx, char *par)
 static void cmd_get(int idx, char *par)
 {
   int ok = 0, ok2 = 1, i;
-  char *p, *what, destdir[DIRLEN + 1], s[DIRLEN + 1];
+  char *p, *what, destdir[DIRLEN], s[DIRLEN];
   filedb fdb;
   FILE *f;
   long where = 0;
@@ -631,7 +631,7 @@ static void cmd_unshare(int idx, char *par)
 /* link a file from another bot */
 static void cmd_ln(int idx, char *par)
 {
-  char *share, newpath[DIRLEN + 1], newfn[81], *p;
+  char *share, newpath[DIRLEN], newfn[81], *p;
   FILE *f;
   filedb fdb;
   long where = 0;
@@ -858,7 +858,7 @@ static void cmd_mkdir(int idx, char *par)
   else {
     flags = newsplit(&par);
     chan = newsplit(&par);
-    if (!chan[0] && (strchr(CHANMETA, flags[0]) != NULL)) {
+    if (!chan[0] && flags[0] && (strchr(CHANMETA, flags[0]) != NULL)) {
       /* Need some extra checking here to makesure we dont mix up
        * the flags with a +channel. <cybah> */
       if(!findchan(flags) && flags[0] != '+') {
@@ -976,8 +976,8 @@ static void cmd_rmdir(int idx, char *par)
 
 static void cmd_mv_cp(int idx, char *par, int copy)
 {
-  char *p, *fn, oldpath[DIRLEN + 1], s[161], s1[161], newfn[161];
-  char newpath[DIRLEN + 1];
+  char *p, *fn, oldpath[DIRLEN], s[161], s1[161], newfn[161];
+  char newpath[DIRLEN];
   int ok, only_first, skip_this, ret, ret2;
   FILE *f, *g;
   filedb fdb, z;
@@ -1172,6 +1172,7 @@ static int cmd_stats(int idx, char *par)
 static int cmd_filestats(int idx, char *par)
 {
   char *nick;
+  struct userrec *u;
 
   context;
   if (!par[0]) {
@@ -1182,26 +1183,34 @@ static int cmd_filestats(int idx, char *par)
   putlog(LOG_FILES, "*", "#%s# filestats %s", dcc[idx].nick, nick);
   if (nick[0] == 0)
     tell_file_stats(idx, dcc[idx].nick);
-  else if (!get_user_by_handle(userlist, nick))
+  else if (!(u = get_user_by_handle(userlist, nick)))
     dprintf(idx, "No such user.\n");
   else if (!strcmp(par, "clear") && dcc[idx].user &&
 	   (dcc[idx].user->flags & USER_JANITOR)) {
-    set_handle_uploads(userlist, nick, 0, 0);
-    set_handle_dnloads(userlist, nick, 0, 0);
+    set_user (&USERENTRY_FSTAT, u, NULL);
     dprintf(idx, "Cleared filestats for %s.\n", nick);
   } else
     tell_file_stats(idx, nick);
   return 0;
 }
 
-static int filesys_note(int idx, char *par)
+/* this function relays the dcc call to cmd_note() in the notes module,
+ * if loaded */
+static void filesys_note(int idx, char *par)
 {
   struct userrec *u = get_user_by_handle(userlist, dcc[idx].nick);
+  module_entry *me = module_find("notes", 2, 1);
 
-  return cmd_note(u, idx, par);
+  if (me && me->funcs) {
+    Function f = me->funcs[NOTES_CMD_NOTE];
+
+    (f) (u, idx, par);
+  } else {
+    dprintf(idx, "Sending of notes is not supported.\n");
+  }
 }
 
-static cmd_t myfiles[25] =
+static cmd_t myfiles[] =
 {
   {"cancel", "", (Function) cmd_cancel, NULL},
   {"cd", "", (Function) cmd_chdir, NULL},
@@ -1228,6 +1237,7 @@ static cmd_t myfiles[25] =
   {"stats", "", cmd_stats, NULL},
   {"unhide", "j", (Function) cmd_unhide, NULL},
   {"unshare", "j", (Function) cmd_unshare, NULL},
+  {0, 0, 0, 0}
 };
 
 /***** Tcl stub functions *****/
@@ -1235,7 +1245,7 @@ static cmd_t myfiles[25] =
 static int files_get(int idx, char *fn, char *nick)
 {
   int i;
-  char *p, what[512], destdir[DIRLEN + 1], s[256];
+  char *p, what[512], destdir[DIRLEN], s[256];
   filedb fdb;
   FILE *f;
   long where = 0;
@@ -1306,7 +1316,7 @@ static int files_get(int idx, char *fn, char *nick)
 
 static void files_setpwd(int idx, char *where)
 {
-  char s[DIRLEN + 1];
+  char s[DIRLEN];
 
   if (!resolve_dir(dcc[idx].u.file->dir, where, s, idx))
     return;

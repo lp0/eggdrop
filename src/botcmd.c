@@ -62,7 +62,7 @@ int base64_to_int(char *buf)
     buf++;
   }
   return i;
-};
+}
 
 /* used for 1.0 compatibility: if a join message arrives with no sock#, */
 /* i'll just grab the next "fakesock" # (incrementing to assure uniqueness) */
@@ -255,6 +255,10 @@ static void bot_priv(int idx, char *par)
 	  botnet_send_priv(idx, botnetnick, from, NULL,
 			   "%s %s", "Not online; note forwarded to:", to);
 	  break;
+	case NOTE_REJECT:
+	  botnet_send_priv(idx, botnetnick, from, NULL,
+			   "%s %s", to, "rejected your note.");
+          break;
 	case NOTE_TCL:
 	  break;		/* do nothing */
 	case NOTE_OK:
@@ -912,12 +916,12 @@ static void bot_handshake(int idx, char *par)
 
   /* only set a new password if no old one exists */
   context;
-  if (u_pass_match(u, "-")) {
-    noshare = 1;		/* we *don't* want botnet passwords
-				 * migrating */
-    set_user(&USERENTRY_PASS, u, par);
-    noshare = 0;
-  }
+  /* if (u_pass_match(u, "-")) { */
+  noshare = 1;		/* we *don't* want botnet passwords
+			 * migrating */
+  set_user(&USERENTRY_PASS, u, par);
+  noshare = 0;
+  /* } */
 }
 
 /* used to send a direct msg from Tcl on one bot to Tcl on another 
@@ -1285,7 +1289,8 @@ static void bot_part(int idx, char *par)
     touch_laston(u, TBUF, now);
   }
   if ((partyidx = getparty(bot, sock)) != -1) {
-    check_tcl_chpt(bot, nick, sock, party[partyidx].chan);
+    if (party[partyidx].chan >= 0)
+      check_tcl_chpt(bot, nick, sock, party[partyidx].chan);
     if ((b_numver(idx) >= NEAT_BOTNET) && !silent) {
       register int chan = party[partyidx].chan;
 

@@ -19,10 +19,10 @@
 %{help=help}
 DCC COMMANDS for %B, %V:
 %b  who          away         quit         whom         me%b
-%b  whois        note         match        motd         bots%b
+%b  whois        page         match        motd         bots%b
 %b  addlog       newpass      bottree      console      chat%b
 %b  nick         echo         botinfo      strip        su%b
-%b  trace        fixcodes     page%b
+%b  trace        fixcodes%b
 %{+t}
 For botnet masters:
 %b  +bot         chattr       chnick       chpass       +host%b
@@ -38,7 +38,8 @@ For masters:
 %{+n}
 For owners:
 %b  die          simul        module       loadmod      unloadmod%b
-%b  set          tcl          rehelp       modules%b
+%b  set          tcl          rehelp       modules      +lang%b
+%b  -lang        +lsec        -lsec        lstat        relang%b
 %{-}
 All commands begin with '.' and all else goes to the party line.
 %{+m}Text starting with ',' is sent ONLY to bot-masters.%{end}
@@ -48,7 +49,47 @@ Extra help relating to loaded modules may be obtained by typing
   %bassoc%b  %bchannels%b  %bconsole%b  %bctcp%b    %btransfer%b
   %birc%b    %bnotes%b     %bseen%b     %bserver%b  %bshare%b
 These are distributed with the bot, and they may be loaded, others can
-be added also.
+be added also. You may receive a list of cmds in all loaded modules by
+using %b'.help all'%b.
+If you only remember a part of the command's name you are searching
+for, just use wildcards (e.g. %b'.help *bot*'%b) and all matching help
+texts will be displayed.
+%{help=+lang}%{+n}
+###  %b+lang%b <language>
+   Adds a new language to the top of the language list. All sections
+   are rechecked to test if there are language files supporting the language.
+
+See also: -lang, +lsec, -lsec, lstat, relang
+%{help=-lang}%{+n}
+###  %b-lang%b <language>
+   Removes a language from the language list. All sections are checked if
+   they are using the language and if so, try to load the next available
+   language instead.
+ 
+See also: +lang, +lsec, -lsec, lstat, relang
+%{help=+lsec}%{+n}
+###  %b+lsec%b <section>
+   Adds a new section. The bot tries to load the section with the preferred
+   language if possible.
+
+See also: +lang, -lang, -lsec, lstat, relang
+%{help=-lsec}%{+n}
+###  %b-lsec%b <section>
+   Removes a section. The language bindings are not removed though.
+
+See also: +lang, -lang, +lsec, lstat, relang
+%{help=lstat}%{+n}
+###  %blstat%b
+   Shows the language statistics, all selected languages and a list of all
+   language sections.
+
+See also: +lang, -lang, +lsec, -lsec, relang
+%{help=relang}%{+n}
+###  %brelang%b
+   Try to find language files with a more preferred language than right now.
+
+See also: +lang, -lang, +lsec, -lsec, lstat
+
 %{help=helpparty}
 %B party-line commands:
   %b.quit%b              leave the party line
@@ -123,3 +164,28 @@ telnet-flood
 %{end}
    use %b'.help set <variable>'%b for more info on each variable.
 %{+n}
+%{help=all}
+###  %bcore%b commands
+%b  who          away         quit         whom         me%b
+%b  whois        page         match        motd         bots%b
+%b  addlog       newpass      bottree      console      chat%b
+%b  nick         echo         botinfo      strip        su%b
+%b  trace        fixcodes%b
+%{+t}
+For botnet masters:
+%b  +bot         chattr       chnick       chpass       +host%b
+%b  -bot         link         chaddr       relay        -host%b
+%b  unlink       boot%b
+%{+m|m}
+For masters:
+%b  chattr       save         backup       reload       status%b
+%{+m}
+%b  +user        +ignore      comment      binds        ignores%b
+%b  -user        -ignore      dccstat      debug        banner%b
+%b  rehash       restart      uptime       clearqueue%b
+%{+n}
+For owners:
+%b  die          simul        module       loadmod      unloadmod%b
+%b  set          tcl          rehelp       modules      +lang%b
+%b  -lang        +lsec        -lsec        lstat        relang%b
+%{-}

@@ -22,7 +22,14 @@
 #undef nfree
 #undef nrealloc
 #undef context
+#undef contextnote
 #undef feof
+#undef user_malloc
+#undef dprintf
+#undef get_data_ptr
+#undef wild_match
+#undef user_realloc
+#undef ASSERT
 
 /* redefine for module-relevance */
 /* 0 - 3 */
@@ -41,8 +48,8 @@
 #define find_bind_table ((p_tcl_bind_list(*)(char *))global[10])
 #define check_tcl_bind ((int (*) (p_tcl_bind_list,char *,struct flag_record *,char *, int))global[11])
 /* 12 - 15 */
-#define add_builtins ((int (*) (p_tcl_bind_list, cmd_t *,int))global[12])
-#define rem_builtins ((int (*) (p_tcl_bind_list, cmd_t *,int))global[13])
+#define add_builtins ((int (*) (p_tcl_bind_list, cmd_t *))global[12])
+#define rem_builtins ((int (*) (p_tcl_bind_list, cmd_t *))global[13])
 #define add_tcl_commands ((void (*) (tcl_cmds *))global[14])
 #define rem_tcl_commands ((void (*) (tcl_cmds *))global[15])
 /* 16 - 19 */
@@ -148,7 +155,7 @@
 #define userlist (*(struct userrec **)global[94])
 #define lastuser (*(struct userrec **)(global[95]))
 /* 96 - 99 */
-#define global_bans (*(struct banrec **)(global[96]))
+#define global_bans (*(maskrec **)(global[96]))
 #define global_ign (*(struct igrec **)(global[97]))
 #define password_timeout (*(int *)(global[98]))
 #define share_greet (*(int *)global[99])
@@ -234,7 +241,7 @@
 #define in_chain ((int (*)(char *))global[163])
 /* 164 - 167 */
 #define add_note ((int (*)(char *,char*,char*,int,int))global[164])
-#define cmd_note (global[165])
+/* global[165] is empty now, was cmd_note() */
 #define detect_dcc_flood ((int (*) (time_t *,struct chat_info *,int))global[166])
 #define flush_lines ((void(*)(int,struct chat_info*))global[167])
 /* 168 - 171 */
@@ -300,11 +307,11 @@
 /* 216 - 219 */
 #define min_dcc_port (*(int *)(global[216]))	/* dcc-portrange dw/guppy */
 #define max_dcc_port (*(int *)(global[217]))
-#define rfc_casecmp ((int(*)(char *, char *))global[218])
-#define rfc_ncasecmp ((int(*)(char *, char *, int *))global[219])
+#define rfc_casecmp ((int(*)(char *, char *))(*(Function**)(global[218])))
+#define rfc_ncasecmp ((int(*)(char *, char *, int *))(*(Function**)(global[219])))
 /* 220 - 223 */
-#define global_exempts (*(struct exemptrec **)(global[220]))
-#define global_invites (*(struct inviterec **)(global[221]))
+#define global_exempts (*(maskrec **)(global[220]))
+#define global_invites (*(maskrec **)(global[221]))
 #define ginvite_total (*(int*)global[222])
 #define gexempt_total (*(int*)global[223])
 /* 224 - 227 */
@@ -312,6 +319,18 @@
 #define use_exempts (*(int *)(global[225]))	/* drummer/Jason */
 #define use_invites (*(int *)(global[226]))	/* drummer/Jason */
 #define force_expire (*(int *)(global[227]))	/* Rufus */
+/* 228 - 231 */
+#define add_lang_section ((void(*)(char *))global[228])
+#define user_realloc(x,y) ((void *(*)(void *,int,char *,int))global[229])((x),(y),__FILE__,__LINE__)
+#define nrealloc(x,y) ((void *)(global[230]((x),(y),MODULE_NAME,__FILE__,__LINE__)))
+#define xtra_set ((int(*)(struct userrec *,struct user_entry *, void *))global[231])
+/* 232 - 235 */
+#define contextnote(note) (global[232](MODULE_NAME, __FILE__, __LINE__, note))
+#define assert_failed (global[233])
+#define protect_readonly (*(int *)(global[234]))
+
+#define ASSERT(expr) { if (!(expr)) assert_failed (MODULE_NAME, __FILE__, __LINE__); }
+
 /* this is for blowfish module, couldnt be bothereed making a whole new .h
  * file for it ;) */
 #ifndef MAKING_BLOWFISH

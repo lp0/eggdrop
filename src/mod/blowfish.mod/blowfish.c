@@ -1,8 +1,8 @@
-/* 
+/*
  * blowfish.c - part of blowfish.mod
  * handles: encryption and decryption of passwords
  */
-/* 
+/*
  * The first half of this is very lightly edited from public domain
  * sourcecode.  For simplicity, this entire module will remain public
  * domain.
@@ -136,7 +136,7 @@ static void blowfish_report(int idx, int details)
   }
 }
 
-static void blowfish_init(UBYTE_08bits * key, short keybytes)
+static void blowfish_init(UBYTE_08bits * key, int keybytes)
 {
   int i, j, bx;
   time_t lowest;
@@ -144,6 +144,12 @@ static void blowfish_init(UBYTE_08bits * key, short keybytes)
   UWORD_32bits datal;
   UWORD_32bits datar;
   union aword temp;
+
+  /* drummer: fixes crash if key is longer than 80 char */
+  if (keybytes > 80)
+    keybytes = 80;
+  /* this may cause key wont end with \00 but it isnt problem */
+  /* strNcpy(), strNcmp()... */
 
   /* is buffer already allocated for this? */
   for (i = 0; i < BOXES; i++)
@@ -189,6 +195,7 @@ static void blowfish_init(UBYTE_08bits * key, short keybytes)
   bf_S = box[bx].S;
   box[bx].keybytes = keybytes;
   strncpy(box[bx].key, key, keybytes);
+  box[bx].key[keybytes] = 0;
   box[bx].lastuse = now;
   /* robey: reset blowfish boxes to initial state */
   /* (i guess normally it just keeps scrambling them, but here it's
@@ -200,15 +207,17 @@ static void blowfish_init(UBYTE_08bits * key, short keybytes)
       bf_S[i][j] = initbf_S[i][j];
 
   j = 0;
-  for (i = 0; i < bf_N + 2; ++i) {
-    temp.word = 0;
-    temp.w.byte0 = key[j];
-    temp.w.byte1 = key[(j + 1) % keybytes];
-    temp.w.byte2 = key[(j + 2) % keybytes];
-    temp.w.byte3 = key[(j + 3) % keybytes];
-    data = temp.word;
-    bf_P[i] = bf_P[i] ^ data;
-    j = (j + 4) % keybytes;
+  if (keybytes > 0) { /* drummer: fixes crash if key=="" */
+    for (i = 0; i < bf_N + 2; ++i) {
+      temp.word = 0;
+      temp.w.byte0 = key[j];
+      temp.w.byte1 = key[(j + 1) % keybytes];
+      temp.w.byte2 = key[(j + 2) % keybytes];
+      temp.w.byte3 = key[(j + 3) % keybytes];
+      data = temp.word;
+      bf_P[i] = bf_P[i] ^ data;
+      j = (j + 4) % keybytes;
+    }
   }
   datal = 0x00000000;
   datar = 0x00000000;
@@ -358,13 +367,9 @@ static int tcl_encrypt STDVAR
   char *p;
 
   BADARGS(3, 3, " key string");
-  if (strlen(argv[1]) > 0) {
-    p = encrypt_string(argv[1], argv[2]);
-    Tcl_AppendResult(irp, p, NULL);
-    nfree(p);
-  } else {
-    Tcl_AppendResult(irp, argv[2], NULL);
-  }
+  p = encrypt_string(argv[1], argv[2]);
+  Tcl_AppendResult(irp, p, NULL);
+  nfree(p);
   return TCL_OK;
 }
 
@@ -373,27 +378,21 @@ static int tcl_decrypt STDVAR
   char *p;
 
   BADARGS(3, 3, " key string");
-  if (strlen(argv[1]) > 0) {
-    p = decrypt_string(argv[1], argv[2]);
-    Tcl_AppendResult(irp, p, NULL);
-    nfree(p);
-  } else {
-    Tcl_AppendResult(irp, argv[2], NULL);
-  }
+  p = decrypt_string(argv[1], argv[2]);
+  Tcl_AppendResult(irp, p, NULL);
+  nfree(p);
   return TCL_OK;
 }
 
 static int tcl_encpass STDVAR
 {
-  char p[512];
-
   BADARGS(2, 2, " string");
-  if (strlen(argv[1])>0) {
+  if (strlen(argv[1]) > 0) {
+    char p[16];
     blowfish_encrypt_pass(argv[1], p);
     Tcl_AppendResult(irp, p, NULL);
-  } else {
+  } else
     Tcl_AppendResult(irp, "", NULL);
-  }
   return TCL_OK;
 }
 
@@ -443,8 +442,8 @@ char *blowfish_start(Function * global_funcs)
     }
     context;
     module_register(MODULE_NAME, blowfish_table, 2, 0);
-    if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
-      return "This module requires eggdrop1.3.0 or later";
+    if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
+      return "This module requires eggdrop1.4.0 or later";
     add_hook(HOOK_ENCRYPT_PASS, blowfish_encrypt_pass);
   }
   add_tcl_commands(mytcls);

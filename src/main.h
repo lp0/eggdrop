@@ -2,27 +2,36 @@
  * main.h - include file to include most other include files
  * 
  */
+
 #ifndef MAKING_MODS
-#ifdef HAVE_CONFIG_H
-#include "../config.h"
-#endif
+#  ifdef HAVE_CONFIG_H
+#    include "../config.h"
+#  endif
 #endif
 
-#ifdef HAVE_STDARG_H		/* do we have stdarg.h ? */
-#ifndef _STDARG_H		/* is stdarg.h already included ? */
-#include <stdarg.h>
-#endif				/* _STDARG_H */
-#define VARARGS(type, name) (type name, ...)
-#define VARARGS_DEF(type, name) (type name, ...)
-#define VARARGS_START(type, name, list) (va_start(list, name), name)
-#else				/* guess not, fall back on varargs.h */
-#ifndef _VARARGS_H		/* is varargs.h already included ? */
-#include <varargs.h>
-#endif				/* _VARARGS_H */
-#define VARARGS(type, name) ()
-#define VARARGS_DEF(type, name) (va_alist) va_dcl
-#define VARARGS_START(type, name, list) (va_start(list), va_arg(list,type))
-#endif				/* HAVE_STDARG_H */
+/* UGH! Why couldn't Tcl pick a standard? */
+#if !defined(HAVE_PRE7_5_TCL) && defined(__STDC__)
+#  ifdef HAVE_STDARG_H
+#    include <stdarg.h>
+#  else
+#    ifdef HAVE_STD_ARGS_H
+#      include <std_args.h>
+#    endif
+#  endif
+#  define EGG_VARARGS(type, name) (type name, ...)
+#  define EGG_VARARGS_DEF(type, name) (type name, ...)
+#  define EGG_VARARGS_START(type, name, list) (va_start(list, name), name)
+#else
+#  include <varargs.h>
+#  define EGG_VARARGS(type, name) ()
+#  define EGG_VARARGS_DEF(type, name) (va_alist) va_dcl
+#  define EGG_VARARGS_START(type, name, list) (va_start(list), va_arg(list,type))
+#endif
+
+/* For pre Tcl7.5p1 versions */
+#ifndef HAVE_TCL_FREE
+#  define Tcl_Free(x) n_free(x, "", 0)
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +48,6 @@
 #include "tclhash.h"
 #include "chan.h"
 #include "users.h"
-#include "rfc1459.h"
 
 #ifndef MAKING_MODS
 extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,

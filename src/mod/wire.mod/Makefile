@@ -1,9 +1,32 @@
-# Source-make
-FILENAME=wire
-include ../Makefile.generic
+# Makefile for src/mod/wire.mod/
 
-install:
-	@echo Installing wire language file.
-	@$(CP1) wire.english.lang $(REALDEST)/language
+doofus:
+	@echo ""
+	@echo "Let's try this from the right directory..."
+	@echo ""
+	@cd ../../../; make
 
-wire.o: wire.h ../module.h ../../users.h ../../chan.h 
+static: ../wire.o
+
+modules: ../../../wire.so
+
+../wire.o:
+	$(CC) $(CFLAGS) $(CPPFLAGS) -DMAKING_MODS -c wire.c
+	rm -f ../wire.o
+	mv wire.o ../
+
+../../../wire.so: ../wire.o
+	$(LD) -o ../../../wire.so ../wire.o
+	$(STRIP) ../../../wire.so
+
+depend:
+	$(CC) $(CFLAGS) $(CPPFLAGS) -MM *.c > .depend
+
+clean:
+	@rm -f .depend *.o *.so *~
+
+#safety hash
+../wire.o: wire.c ../module.h ../../../config.h ../../main.h ../../lang.h \
+ ../../eggdrop.h ../../flags.h ../../proto.h ../../../lush.h \
+ ../../cmdt.h ../../tclegg.h ../../tclhash.h ../../chan.h \
+ ../../users.h ../modvals.h ../../tandem.h wire.h

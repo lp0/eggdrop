@@ -100,6 +100,8 @@ void init_misc()
     /*        Added by cybah  */
     logs[last].szLast[0] = 0;
     logs[last].Repeats = 0;
+    /*        Added by rtc  */
+    logs[last].flags = 0;
   }
 }
 
@@ -236,6 +238,7 @@ void maskhost(char *s, char *nw)
       while (*f != '.')
 	f--;
       strncpy(nw, q, f - q);
+      /* No need to nw[f-q]=0 here. */
       nw += (f - q);
       strcpy(nw, ".*");
     } else {			/* normal host >= 3 parts */
@@ -298,11 +301,19 @@ int copyfile(char *oldpath, char *newpath)
 
 int movefile(char *oldpath, char *newpath)
 {
-  int x = copyfile(oldpath, newpath);
+  int ret;
+  
+#ifdef HAVE_RENAME
+  /* try to use rename first */
+  if (rename(oldpath, newpath) == 0)
+    return 0;
+#endif /* HAVE_RENAME */
 
-  if (x == 0)
+  /* if that fails, fall back to copying the file */
+  ret = copyfile(oldpath, newpath);
+  if (ret == 0)
     unlink(oldpath);
-  return x;
+  return ret;
 }
 
 /* dump a potentially super-long string of text */
@@ -412,7 +423,7 @@ void daysdur(time_t now, time_t then, char *out)
 
 /* log something */
 /* putlog(level,channel_name,format,...);  */
-void putlog VARARGS_DEF(int, arg1)
+void putlog EGG_VARARGS_DEF(int, arg1)
 {
   int i, type;
   char *format, *chname, s[MAX_LOG_LINE + 1], s1[256], *out;
@@ -421,7 +432,7 @@ void putlog VARARGS_DEF(int, arg1)
   struct tm *T = localtime(&now);
 
   va_list va;
-  type = VARARGS_START(int, arg1, va);
+  type = EGG_VARARGS_START(int, arg1, va);
   chname = va_arg(va, char *);
   format = va_arg(va, char *);
 
@@ -503,15 +514,15 @@ void putlog VARARGS_DEF(int, arg1)
       }
     }
   }
-  if ((!backgrd) && (!con_chan) && (!term_z))
-    printf("%s", out);
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->con_flags & type)) {
       if ((chname[0] == '*') || (dcc[i].u.chat->con_chan[0] == '*') ||
 	  (!rfc_casecmp(chname, dcc[i].u.chat->con_chan)))
 	dprintf(i, "%s", out);
     }
-  if ((type & LOG_MISC) && use_stderr) {
+  if ((!backgrd) && (!con_chan) && (!term_z))
+    printf("%s", out);
+  else if ((type & LOG_MISC) && use_stderr) {
     if (shtime)
       out += 8;
     dprintf(DP_STDERR, "%s", s);
@@ -563,11 +574,7 @@ void check_logsize()
  * if (stat(buf,&ss) == -1) { 
  * * file doesnt exist, lets use it *
  */
-#ifdef RENAME
-	  rename(logs[i].filename, buf);
-#else
 	  movefile(logs[i].filename, buf);
-#endif
 /* x=0;
  * }
  * } */
@@ -585,6 +592,9 @@ void flushlogs()
   struct tm *T = localtime(&now);
 
   context;
+  /* logs may not be initialised yet.  (Fabian) */
+  if (!logs)
+    return;
   /* Now also checks to see if there's a repeat message and
    * displays the 'last message repeated...' stuff too <cybah> */
   for (i = 0; i < max_logs; i++) {
@@ -858,6 +868,7 @@ void help_subst(char *s, char *nick, struct flag_record *flags,
 	    blind &= ~1;
 	    subwidth = 70;
 	    if (cols) {
+	      sub[0] = 0;
 	      subst_addcol(sub, "\377");
 	      nfree(colstr);
 	      colstr = NULL;
@@ -1124,12 +1135,11 @@ void showhelp(char *who, char *file, struct flag_record *flags, int fl)
     dprintf(DP_HELP, "NOTICE %s :%s\n", who, IRC_NOHELP2);
 }
 
-void tellhelp(int idx, char *file, struct flag_record *flags, int fl)
+static int display_tellhelp(int idx, char *file, FILE *f, struct flag_record *flags)
 {
   char s[HELP_BUF_LEN + 1];
   int lines = 0;
-  FILE *f = resolve_help(HELP_DCC | fl, file);
-
+  
   if (f) {
     help_subst(NULL, NULL, 0,
 	       (dcc[idx].status & STAT_TELNET) ? 0 : HELP_IRC, NULL);
@@ -1149,7 +1159,64 @@ void tellhelp(int idx, char *file, struct flag_record *flags, int fl)
     }
     fclose(f);
   }
+  return lines;
+}
+
+void tellhelp(int idx, char *file, struct flag_record *flags, int fl)
+{
+  int lines = 0;
+  FILE *f = resolve_help(HELP_DCC | fl, file);
+
+  if (f)
+    lines = display_tellhelp(idx, file, f, flags);
   if (!lines && !(fl & HELP_TEXT))
+    dprintf(idx, "%s\n", IRC_NOHELP2);
+}
+
+/* same as tellallhelp, just using wild_match instead of strcmp */
+void tellwildhelp(int idx, char *match, struct flag_record *flags)
+{
+  struct help_ref *current;
+  struct help_list *item;
+  FILE *f;
+  char s[1024];
+
+  s[0] = '\0';
+  for (current = help_list; current; current = current->next)
+    for (item = current->first; item; item = item->next)
+      if (wild_match(match, item->name) && item->type) {
+	if (item->type == 1)
+	  simple_sprintf(s, "%s%s", helpdir, current->name);
+	else
+	  simple_sprintf(s, "%sset/%s", helpdir, current->name);
+	if ((f = fopen(s, "r")))
+	  display_tellhelp(idx, item->name, f, flags);
+      }
+  if (!s[0])
+    dprintf(idx, "%s\n", IRC_NOHELP2);
+}
+
+/* same as tellwildhelp, just using strcmp instead of wild_match */
+void tellallhelp(int idx, char *match, struct flag_record *flags)
+{
+  struct help_ref *current;
+  struct help_list *item;
+  FILE *f;
+  char s[1024];
+
+  s[0] = '\0';
+  for (current = help_list; current; current = current->next)
+    for (item = current->first; item; item = item->next)
+      if (!strcmp(match, item->name) && item->type) {
+
+	if (item->type == 1)
+	  simple_sprintf(s, "%s%s", helpdir, current->name);
+	else
+	  simple_sprintf(s, "%sset/%s", helpdir, current->name);
+	if ((f = fopen(s, "r")))
+	  display_tellhelp(idx, item->name, f, flags);
+      }
+  if (!s[0])
     dprintf(idx, "%s\n", IRC_NOHELP2);
 }
 
@@ -1163,7 +1230,8 @@ void sub_lang(int idx, char *text)
   get_user_flagrec(dcc[idx].user, &fr, dcc[idx].u.chat->con_chan);
   help_subst(NULL, NULL, 0,
 	     (dcc[idx].status & STAT_TELNET) ? 0 : HELP_IRC, NULL);
-  strncpy(s, text, 1024);
+  strncpy(s, text, 1023);
+  s[1023] = 0;
   if (s[strlen(s) - 1] == '\n')
     s[strlen(s) - 1] = 0;
   if (!s[0])
@@ -1212,8 +1280,7 @@ void show_motd(int idx)
 /* remove :'s from ignores and bans */
 void remove_gunk(char *par)
 {
-  char *q, *p;
-  char WBUF[strlen(par) + 1];
+  char *q, *p, *WBUF = nmalloc(strlen(par) + 1);
 
   for (p = par, q = WBUF; *p; p++, q++) {
     if (*p == ':')
@@ -1223,6 +1290,7 @@ void remove_gunk(char *par)
   }
   *q = *p;
   strcpy(par, WBUF);
+  nfree(WBUF);
 }
 
 /* This will return a pointer to the first character after the @ in the
@@ -1260,3 +1328,16 @@ void show_banner(int idx) {
    }
 }
 
+/* create a string with random letters and digits */
+void make_rand_str(char *s, int len)
+{
+  int j;
+
+  for (j = 0; j < len; j++) {
+    if (random() % 3 == 0)
+      s[j] = '0' + (random() % 10);
+    else
+      s[j] = 'a' + (random() % 26);
+  }
+  s[len] = 0;
+}

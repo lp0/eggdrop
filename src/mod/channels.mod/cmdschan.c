@@ -24,7 +24,7 @@ static struct flag_record victim =
 
 static void cmd_pls_ban(struct userrec *u, int idx, char *par)
 {
-  char *chname, *who, s[UHOSTLEN + 1], s1[UHOSTLEN + 1], *p;
+  char *chname, *who, s[UHOSTLEN], s1[UHOSTLEN], *p;
   struct chanset_t *chan = 0;
   int bogus = 0;
   module_entry *me;
@@ -101,8 +101,8 @@ static void cmd_pls_ban(struct userrec *u, int idx, char *par)
       par = "requested";
     else if (strlen(par) > 65)
       par[65] = 0;
-    if (strlen(who) > UHOSTLEN - 4)
-      who[UHOSTLEN - 4] = 0;
+    if (strlen(who) > UHOSTMAX - 4)
+      who[UHOSTMAX - 4] = 0;
     /* fix missing ! or @ BEFORE checking against myself */
     if (!strchr(who, '!')) {
       if (!strchr(who, '@'))
@@ -114,7 +114,8 @@ static void cmd_pls_ban(struct userrec *u, int idx, char *par)
     else
       strcpy(s, who);
     if ((me = module_find("server", 0, 0)) && me->funcs)
-      simple_sprintf(s1, "%s!%s", me->funcs[4], me->funcs[5]);
+      simple_sprintf(s1, "%s!%s", me->funcs[SERVER_BOTNAME],
+	            me->funcs[SERVER_BOTUSERHOST]);
     else
       simple_sprintf(s1, "%s!%s@%s", origbotname, botuser, hostname);
     if (wild_match(s, s1)) {
@@ -165,15 +166,15 @@ static void cmd_pls_ban(struct userrec *u, int idx, char *par)
 
 static void cmd_pls_exempt (struct userrec * u, int idx, char * par)
 {
-  char * chname, * who, s[UHOSTLEN + 1], s1[UHOSTLEN + 1], *p;
+  char * chname, * who, s[UHOSTLEN], s1[UHOSTLEN], *p;
   struct chanset_t *chan = 0;
   int bogus = 0;
   module_entry * me;   
   /* The two lines below added for bantime */
   unsigned long int expire_time = 0, expire_foo;
   char * p_expire;
-  if (use_exempts == 0) {
-    dprintf(idx, "This command can only be used on IRCnet or hybrid EFnet.\n");
+  if (!use_exempts) {
+    dprintf(idx, "This command can only be used on IRCnet.\n");
     return;
   }
   if (!par[0]) {
@@ -244,8 +245,8 @@ static void cmd_pls_exempt (struct userrec * u, int idx, char * par)
       par = "requested";
     else if (strlen(par) > 65)
       par[65] = 0;
-    if (strlen(who) > UHOSTLEN - 4)
-      who[UHOSTLEN - 4] = 0;
+    if (strlen(who) > UHOSTMAX - 4)
+      who[UHOSTMAX - 4] = 0;
     /* fix missing ! or @ BEFORE checking against myself */
     if (!strchr(who, '!')) {
       if (!strchr(who, '@')) 
@@ -257,7 +258,8 @@ static void cmd_pls_exempt (struct userrec * u, int idx, char * par)
     else
       strcpy(s, who);
     if ((me = module_find("server",0,0)) && me->funcs)
-      simple_sprintf(s1, "%s!%s", me->funcs[4], me->funcs[5]);
+      simple_sprintf(s1, "%s!%s", me->funcs[SERVER_BOTNAME],
+		     me->funcs[SERVER_BOTUSERHOST]);
     else
       simple_sprintf(s1, "%s!%s@%s", origbotname, botuser, hostname);
     
@@ -304,7 +306,7 @@ static void cmd_pls_exempt (struct userrec * u, int idx, char * par)
 
 static void cmd_pls_invite (struct userrec * u, int idx, char * par)
 {
-  char * chname, * who, s[UHOSTLEN + 1], s1[UHOSTLEN + 1], *p;
+  char * chname, * who, s[UHOSTLEN], s1[UHOSTLEN], *p;
   struct chanset_t *chan = 0;
   int bogus = 0;
   module_entry * me;   
@@ -312,8 +314,8 @@ static void cmd_pls_invite (struct userrec * u, int idx, char * par)
   /* The two lines below added for bantime */
   unsigned long int expire_time = 0, expire_foo;
   char * p_expire;
-  if (use_invites == 0) {
-    dprintf(idx, "This command can only be used on IRCnet or hybrid EFnet. \n");
+  if (!use_invites) {
+    dprintf(idx, "This command can only be used on IRCnet. \n");
     return;
   }
   
@@ -385,8 +387,8 @@ static void cmd_pls_invite (struct userrec * u, int idx, char * par)
       par = "requested";
     else if (strlen(par) > 65)
       par[65] = 0;
-    if (strlen(who) > UHOSTLEN - 4)
-      who[UHOSTLEN - 4] = 0;
+    if (strlen(who) > UHOSTMAX - 4)
+      who[UHOSTMAX - 4] = 0;
     /* fix missing ! or @ BEFORE checking against myself */
     if (!strchr(who, '!')) {
       if (!strchr(who, '@')) 
@@ -398,7 +400,8 @@ static void cmd_pls_invite (struct userrec * u, int idx, char * par)
     else
       strcpy(s, who);
     if ((me = module_find("server",0,0)) && me->funcs)
-      simple_sprintf(s1, "%s!%s", me->funcs[4], me->funcs[5]);
+      simple_sprintf(s1, "%s!%s", me->funcs[SERVER_BOTNAME],
+		     me->funcs[SERVER_BOTUSERHOST]);
     else
       simple_sprintf(s1, "%s!%s@%s", origbotname, botuser, hostname);
     
@@ -447,8 +450,8 @@ static void cmd_mns_ban(struct userrec *u, int idx, char *par)
 {
   int i = 0, j;
   struct chanset_t *chan = 0;
-  char s[UHOSTLEN + 1], *ban, *chname;
-  banlist *b;
+  char s[UHOSTLEN], *ban, *chname;
+  masklist *b;
 
   if (!par[0]) {
     dprintf(idx, "Usage: -ban <hostmask|ban #> [channel]\n");
@@ -466,8 +469,8 @@ static void cmd_mns_ban(struct userrec *u, int idx, char *par)
     if (!((glob_op(user) && !chan_deop(user)) || chan_op(user)))
       return;
   }
-  strncpy(s, ban, UHOSTLEN);
-  s[UHOSTLEN] = 0;
+  strncpy(s, ban, UHOSTMAX);
+  s[UHOSTMAX] = 0;
   i = u_delban(NULL, s, (u->flags & USER_MASTER));
   if (i > 0) {
     putlog(LOG_CMDS, "*", "#%s# -ban %s", dcc[idx].nick, s);
@@ -494,14 +497,14 @@ static void cmd_mns_ban(struct userrec *u, int idx, char *par)
 	return;
       }
       i = 0;
-      for (b = chan->channel.ban; b->ban[0]; b = b->next) {
-	if ((!u_equals_ban(global_bans, b->ban)) &&
-	    (!u_equals_ban(chan->bans, b->ban))) {
+      for (b = chan->channel.ban; b->mask[0]; b = b->next) {
+	if ((!u_equals_mask(global_bans, b->mask)) &&
+	    (!u_equals_mask(chan->bans, b->mask))) {
 	  i++;
 	  if (i == -j) {
-	    add_mode(chan, '-', 'b', b->ban);
+	    add_mode(chan, '-', 'b', b->mask);
 	    dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDBAN,
-		    b->ban, chan->name);
+		    b->mask, chan->name);
 	    putlog(LOG_CMDS, "*", "#%s# (%s) -ban %s [on channel]",
 		   dcc[idx].nick, dcc[idx].u.chat->con_chan, ban);
 	    return;
@@ -517,11 +520,11 @@ static void cmd_mns_ban(struct userrec *u, int idx, char *par)
 	add_mode(chan, '-', 'b', ban);
 	return;
       }
-      for (b = chan->channel.ban; b->ban[0]; b = b->next) {
-	if (!rfc_casecmp(b->ban, ban)) {
-	  add_mode(chan, '-', 'b', b->ban);
+      for (b = chan->channel.ban; b->mask[0]; b = b->next) {
+	if (!rfc_casecmp(b->mask, ban)) {
+	  add_mode(chan, '-', 'b', b->mask);
 	  dprintf(idx, "%s '%s' on %s.\n",
-		  IRC_REMOVEDBAN, b->ban, chan->name);
+		  IRC_REMOVEDBAN, b->mask, chan->name);
 	  putlog(LOG_CMDS, "*", "#%s# (%s) -ban %s [on channel]",
 		 dcc[idx].nick, dcc[idx].u.chat->con_chan, ban);
 	  return;
@@ -536,10 +539,10 @@ static void cmd_mns_exempt (struct userrec * u, int idx, char * par)
 {
   int i = 0, j;
   struct chanset_t *chan = 0;
-  char s[UHOSTLEN + 1], *exempt, *chname;
-  exemptlist *e;
-  if (use_exempts == 0) {
-    dprintf(idx, "This command can only be used on IRCnet or hybrid EFnet.\n");
+  char s[UHOSTLEN], *exempt, *chname;
+  masklist *e;
+  if (!use_exempts) {
+    dprintf(idx, "This command can only be used on IRCnet.\n");
     return;
   }   
   if (!par[0]) {
@@ -558,8 +561,8 @@ static void cmd_mns_exempt (struct userrec * u, int idx, char * par)
     if (!((glob_op(user) && !chan_deop(user)) || chan_op(user)))
       return;
   }
-  strncpy(s,exempt, UHOSTLEN);
-  s[UHOSTLEN] = 0;
+  strncpy(s,exempt, UHOSTMAX);
+  s[UHOSTMAX] = 0;
   i = u_delexempt(NULL,s,(u->flags & USER_MASTER));
   if (i > 0) {
     putlog(LOG_CMDS, "*", "#%s# -exempt %s", dcc[idx].nick, s);
@@ -586,14 +589,14 @@ static void cmd_mns_exempt (struct userrec * u, int idx, char * par)
 	return;
       }	 
       i = 0;
-      for (e = chan->channel.exempt;e->exempt[0];e=e->next) {
-	if ((!u_equals_exempt(global_exempts,e->exempt)) 
-	    && (!u_equals_exempt(chan->exempts, e->exempt))) {
+      for (e = chan->channel.exempt;e->mask[0];e=e->next) {
+	if (!u_equals_mask(global_exempts, e->mask) && 
+	    !u_equals_mask(chan->exempts, e->mask)) {
 	  i++;
 	  if (i == -j) {
-	    add_mode(chan, '-', 'e', e->exempt);
+	    add_mode(chan, '-', 'e', e->mask);
 	    dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDEXEMPT,
-		    e->exempt, chan->name);
+		    e->mask, chan->name);
 	    putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s [on channel]",
 		   dcc[idx].nick, dcc[idx].u.chat->con_chan, exempt);
 	    return;
@@ -609,11 +612,11 @@ static void cmd_mns_exempt (struct userrec * u, int idx, char * par)
 	add_mode(chan, '-', 'e', exempt);
 	return;
       }
-      for (e = chan->channel.exempt;e->exempt[0];e=e->next) {
-	if (!rfc_casecmp(e->exempt, exempt)) {
-	  add_mode(chan, '-', 'e', e->exempt);
+      for (e = chan->channel.exempt;e->mask[0];e=e->next) {
+	if (!rfc_casecmp(e->mask, exempt)) {
+	  add_mode(chan, '-', 'e', e->mask);
 	  dprintf(idx, "%s '%s' on %s.\n", 
-		  IRC_REMOVEDEXEMPT, e->exempt, chan->name);
+		  IRC_REMOVEDEXEMPT, e->mask, chan->name);
 	  putlog(LOG_CMDS, "*", "#%s# (%s) -exempt %s [on channel]",
 		 dcc[idx].nick, dcc[idx].u.chat->con_chan, exempt);
 	  return;
@@ -628,11 +631,11 @@ static void cmd_mns_invite (struct userrec * u, int idx, char * par)
 {
   int i = 0, j;
   struct chanset_t *chan = 0;
-  char s[UHOSTLEN + 1], *invite, *chname;
-  invitelist *inv;
+  char s[UHOSTLEN], *invite, *chname;
+  masklist *inv;
   
-  if (use_invites == 0) {
-    dprintf(idx, "This command can only be used on IRCnet or hybrid EFnet.\n");
+  if (!use_invites) {
+    dprintf(idx, "This command can only be used on IRCnet.\n");
     return;
   }
   if (!par[0]) {
@@ -651,8 +654,8 @@ static void cmd_mns_invite (struct userrec * u, int idx, char * par)
     if (!((glob_op(user) && !chan_deop(user)) || chan_op(user)))
       return;
   }
-  strncpy(s,invite, UHOSTLEN);
-  s[UHOSTLEN] = 0;
+  strncpy(s,invite, UHOSTMAX);
+  s[UHOSTMAX] = 0;
   i = u_delinvite(NULL,s,(u->flags & USER_MASTER));
   if (i > 0) {
     putlog(LOG_CMDS, "*", "#%s# -invite %s", dcc[idx].nick, s);
@@ -679,14 +682,14 @@ static void cmd_mns_invite (struct userrec * u, int idx, char * par)
 	return;
       }	 
       i = 0;
-      for (inv = chan->channel.invite;inv->invite[0];inv=inv->next) {
-	if ((!u_equals_invite(global_invites,inv->invite)) 
-	    && (!u_equals_invite(chan->invites, inv->invite))) {
+      for (inv = chan->channel.invite;inv->mask[0];inv=inv->next) {
+	if (!u_equals_mask(global_invites, inv->mask) && 
+	    !u_equals_mask(chan->invites, inv->mask)) {
 	  i++;
 	  if (i == -j) {
-	    add_mode(chan, '-', 'I', inv->invite);
+	    add_mode(chan, '-', 'I', inv->mask);
 	    dprintf(idx, "%s '%s' on %s.\n", IRC_REMOVEDINVITE,
-		    inv->invite, chan->name);
+		    inv->mask, chan->name);
 	    putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s [on channel]",
 		   dcc[idx].nick, dcc[idx].u.chat->con_chan, invite);
 	    return;
@@ -702,11 +705,11 @@ static void cmd_mns_invite (struct userrec * u, int idx, char * par)
 	add_mode(chan, '-', 'I', invite);
 	return;
       }
-      for (inv = chan->channel.invite;inv->invite[0];inv=inv->next) {
-	if (!rfc_casecmp(inv->invite, invite)) {
-	  add_mode(chan, '-', 'I', inv->invite);
+      for (inv = chan->channel.invite;inv->mask[0];inv=inv->next) {
+	if (!rfc_casecmp(inv->mask, invite)) {
+	  add_mode(chan, '-', 'I', inv->mask);
 	  dprintf(idx, "%s '%s' on %s.\n", 
-		  IRC_REMOVEDINVITE, inv->invite, chan->name);
+		  IRC_REMOVEDINVITE, inv->mask, chan->name);
 	  putlog(LOG_CMDS, "*", "#%s# (%s) -invite %s [on channel]",
 		 dcc[idx].nick, dcc[idx].u.chat->con_chan, invite);
 	  return;
@@ -730,8 +733,8 @@ static void cmd_bans(struct userrec *u, int idx, char *par)
 
 static void cmd_exempts (struct userrec * u, int idx, char * par)
 {
-  if (use_exempts == 0) {
-    dprintf(idx, "This command can only be used on IRCnet or hybrid EFnet.\n");
+  if (!use_exempts) {
+    dprintf(idx, "This command can only be used on IRCnet.\n");
     return;
   }
   if (!strcasecmp(par, "all")) {
@@ -745,8 +748,8 @@ static void cmd_exempts (struct userrec * u, int idx, char * par)
 
 static void cmd_invites (struct userrec * u, int idx, char * par)
 {
-  if (use_invites == 0) {
-    dprintf(idx, "This command can only be used on IRCnet or hybrid EFnet.\n");
+  if (!use_invites) {
+    dprintf(idx, "This command can only be used on IRCnet.\n");
     return;
   }
   if (!strcasecmp(par, "all")) {
@@ -899,43 +902,13 @@ static void cmd_stick_yn(int idx, char *par, int yn)
 {
   int i, j;
   struct chanset_t *chan;
-  char s[UHOSTLEN + 1], * stick_type;
+  char s[UHOSTLEN], * stick_type;
   stick_type=newsplit(&par);
-  if (!par[0] || (!strcasecmp(stick_type,"ban") &&
-		  !strcasecmp(stick_type,"invite") &&
-		  !strcasecmp(stick_type,"exempt") )) {
-    dprintf(idx, "Usage: %sstick [ban/exempt/invite] <num or mask>\n", yn ? "" : "un");
-    return;
-  }
-  strncpy(s, par, UHOSTLEN);
-  s[UHOSTLEN] = 0;
-  if (!strcasecmp(stick_type,"ban")) {
-    i = u_setsticky_ban(NULL, s,
-			(dcc[idx].user->flags & USER_MASTER) ? yn : -1);
-    if (i > 0) {
-      putlog(LOG_CMDS, "*", "#%s# %sstick ban %s", 
-	     dcc[idx].nick, yn ? "" : "un", s);
-      dprintf(idx, "%stuck ban: %s\n", yn ? "S" : "Uns", s);
-      return;
-    }
-    /* channel-specific ban? */
-    chan = findchan(dcc[idx].u.chat->con_chan);
-    if (!chan) {
-      dprintf(idx, "Invalid console channel.\n");
-      return;
-    }
-    if (i)
-      simple_sprintf(s, "%d", -i);
-    j = u_setsticky_ban(chan, s, yn);
-    if (j > 0) {
-      putlog(LOG_CMDS, "*", "#%s# %sstick ban %s", dcc[idx].nick,
-	     yn ? "" : "un", s);
-      dprintf(idx, "%stuck ban: %s\n", yn ? "S" : "Uns", s);
-      return;
-    }
-    dprintf(idx, "No such ban.\n");     
+  strncpy(s, par, UHOSTMAX);
+  s[UHOSTMAX] = 0;
+       
     /* now deal with exemptions */
-  } else if (!strcasecmp(stick_type,"exempt")) {
+  if (!strcasecmp(stick_type,"exempt")) {
     i = u_setsticky_exempt(NULL, s,
 			   (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
     if (i > 0) {
@@ -960,7 +933,7 @@ static void cmd_stick_yn(int idx, char *par, int yn)
       return;
     }
     dprintf(idx, "No such exempt.\n");
-    
+    return;
     /* now the invites */
   } else if (!strcasecmp(stick_type,"invite")) {
     i = u_setsticky_invite(NULL, s,
@@ -987,10 +960,40 @@ static void cmd_stick_yn(int idx, char *par, int yn)
       return;
     }
     dprintf(idx, "No such invite.\n");
+    return;
   }
+  if (strcasecmp(stick_type,"ban")) {
+    strncpy(s, stick_type, UHOSTMAX);
+    s[UHOSTMAX] = 0;    
+  }
+  i = u_setsticky_ban(NULL, s,
+		      (dcc[idx].user->flags & USER_MASTER) ? yn : -1);
+  if (i > 0) {
+    putlog(LOG_CMDS, "*", "#%s# %sstick ban %s", 
+	   dcc[idx].nick, yn ? "" : "un", s);
+    dprintf(idx, "%stuck ban: %s\n", yn ? "S" : "Uns", s);
+    return;
+  }
+  /* channel-specific ban? */
+  chan = findchan(dcc[idx].u.chat->con_chan);
+  if (!chan) {
+    dprintf(idx, "Invalid console channel.\n");
+    return;
+  }
+  if (i)
+    simple_sprintf(s, "%d", -i);
+  j = u_setsticky_ban(chan, s, yn);
+  if (j > 0) {
+    putlog(LOG_CMDS, "*", "#%s# %sstick ban %s", dcc[idx].nick,
+	   yn ? "" : "un", s);
+    dprintf(idx, "%stuck ban: %s\n", yn ? "S" : "Uns", s);
+    return;
+  }
+  dprintf(idx, "No such ban.\n");
+  dprintf(idx, "Usage: %sstick [ban/exempt/invite] <num or mask>\n", yn ? "" : "un");
 }
 
-  
+
 static void cmd_stick(struct userrec *u, int idx, char *par)
 {
   cmd_stick_yn(idx, par, 1);
@@ -1030,9 +1033,11 @@ static void cmd_pls_chrec(struct userrec *u, int idx, char *par)
     return;
   }
   get_user_flagrec(u, &user, chan->name);
-  if (!glob_master(user) && !chan_master(user)) {
-    dprintf(idx, "You have no permission to do that on %s.\n",
-	    chan->name);
+  get_user_flagrec(u1, &victim, chan->name);
+  if ((!glob_master(user) && !chan_master(user)) ||  /* drummer */
+      (chan_owner(victim) && !chan_owner(user) && !glob_owner(user)) ||
+      (glob_owner(victim) && !glob_owner(user))) {
+    dprintf(idx, "You have no permission to do that.\n");
     return;
   }
   chanrec = get_chanrec(u1, chan->name);
@@ -1137,12 +1142,12 @@ static void cmd_mns_chan(struct userrec *u, int idx, char *par)
   clear_channel(chan, 0);
   noshare = 1;
   while (chan->bans)
-    u_delban(chan, chan->bans->banmask, 1);
+    u_delban(chan, chan->bans->mask, 1);
   /* trash any invites and exemptions as well */
   while (chan->exempts)
-    u_delexempt(chan,chan->exempts->exemptmask,1);
+    u_delexempt(chan,chan->exempts->mask,1);
   while (chan->invites)
-    u_delinvite(chan,chan->invites->invitemask,1);
+    u_delinvite(chan,chan->invites->mask,1);
   noshare = 0;
   if (!channel_inactive(chan))  
     dprintf(DP_SERVER, "PART %s\n", chname);
@@ -1233,8 +1238,9 @@ static void cmd_chaninfo(struct userrec *u, int idx, char *par)
     dprintf(idx, "     %cdynamicinvites           %cuserinvites\n",
 	    (chan->ircnet_status & CHAN_DYNAMICINVITES) ? '+' : '-',
 	    (chan->ircnet_status & CHAN_NOUSERINVITES) ? '-' : '+');
-    dprintf(idx, "     %cprotectfriends\n",
-            (chan->status & CHAN_PROTECTFRIENDS) ? '+' : '-');
+    dprintf(idx, "     %cprotectfriends           %crevengebot\n",
+            (chan->status & CHAN_PROTECTFRIENDS) ? '+' : '-',
+	    (chan->status & CHAN_REVENGEBOT) ? '+' : '-');
     dprintf(idx, "flood settings: chan ctcp join kick deop\n");
     dprintf(idx, "number:          %3d  %3d  %3d  %3d  %3d\n",
 	    chan->flood_pub_thr, chan->flood_ctcp_thr,
@@ -1250,7 +1256,7 @@ static void cmd_chaninfo(struct userrec *u, int idx, char *par)
 
 static void cmd_chanset(struct userrec *u, int idx, char *par)
 {
-  char *chname = NULL, answers[512];
+  char *chname = NULL, answers[512], *parcpy;
   char *list[2];
   struct chanset_t *chan = NULL;
 
@@ -1300,14 +1306,19 @@ static void cmd_chanset(struct userrec *u, int idx, char *par)
 	    return;
 	  }
 	  list[1] = par;
-	  if (tcl_channel_modify(0, chan, 2, list) == TCL_OK) {
+	  /* par gets modified in tcl_channel_modify under some
+  	   * circumstances, so save it now */
+	  parcpy = nmalloc(strlen(par) + 1);
+	  strcpy(parcpy, par);
+          if (tcl_channel_modify(0, chan, 2, list) == TCL_OK) {
 	    strcat(answers, list[0]);
 	    strcat(answers, " { ");
-	    strcat(answers, par);
+	    strcat(answers, parcpy);
 	    strcat(answers, " }");
 	  } else
 	    dprintf(idx, "Error trying to set %s for %s, invalid option\n",
 		    list[0], chname);
+        nfree(parcpy);
 	}
 	break;
       }
@@ -1327,7 +1338,7 @@ static void cmd_chansave(struct userrec *u, int idx, char *par)
     dprintf(idx, "No channel saving file defined.\n");
   else {
     dprintf(idx, "Saving all dynamic channel settings.\n");
-    putlog(LOG_MISC, "*", "#%s# chansave", dcc[idx].nick);
+    putlog(LOG_CMDS, "*", "#%s# chansave", dcc[idx].nick);
     write_channels();
   }
 }
@@ -1338,7 +1349,7 @@ static void cmd_chanload(struct userrec *u, int idx, char *par)
     dprintf(idx, "No channel saving file defined.\n");
   else {
     dprintf(idx, "Reloading all dynamic channel settings.\n");
-    putlog(LOG_MISC, "*", "#%s# chanload", dcc[idx].nick);
+    putlog(LOG_CMDS, "*", "#%s# chanload", dcc[idx].nick);
     setstatic = 0;
     read_channels(1);
   }
@@ -1349,7 +1360,7 @@ static void cmd_chanload(struct userrec *u, int idx, char *par)
  * int cmd_whatever(idx,"parameters");
  * as with msg commands, function is responsible for any logging */
 /* update the add/rem_builtins in channels.c if you add to this list!! */
-static cmd_t C_dcc_irc[21] =
+static cmd_t C_dcc_irc[] =
 {
   {"+ban", "o|o", (Function) cmd_pls_ban, NULL},
   {"+exempt", "o|o", (Function)cmd_pls_exempt, NULL },
@@ -1372,4 +1383,5 @@ static cmd_t C_dcc_irc[21] =
   {"info", "", (Function) cmd_info, NULL},
   {"stick", "o|o", (Function) cmd_stick, NULL},
   {"unstick", "o|o", (Function) cmd_unstick, NULL},
+  {0, 0, 0, 0}
 };

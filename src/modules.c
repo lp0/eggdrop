@@ -13,6 +13,7 @@
 #include "main.h"
 #include "modules.h"
 #include "tandem.h"
+#include <ctype.h>
 #ifndef STATIC
 #ifdef HPUX_HACKS
 #include <dl.h>
@@ -20,7 +21,7 @@
 #ifdef OSF1_HACKS
 #include <loader.h>
 #else
-#if DLOPEN_1
+#ifdef DLOPEN_1
 char *dlerror();
 void *dlopen(const char *, int);
 int dlclose(void *);
@@ -48,7 +49,6 @@ void *dlsym(void *, char *);
 extern struct dcc_t *dcc;
 
 #include "users.h"
-int cmd_note();
 
 /* from other areas */
 extern Tcl_Interp *interp;
@@ -66,7 +66,8 @@ extern int force_expire; /* Rufus */
 extern int do_restart;
 extern time_t now, online_since;
 extern struct chanset_t *chanset;
-int cmd_die(), xtra_kill(), xtra_unpack();	/* wtf ??? */
+extern int protect_readonly;
+int cmd_die(), xtra_kill(), xtra_unpack();
 static int module_rename(char *name, char *newname);
 
 #ifndef STATIC
@@ -97,7 +98,6 @@ void check_static(char *name, char *(*func) ())
 void null_func()
 {
 }
-
 char *charp_func()
 {
   return NULL;
@@ -105,6 +105,10 @@ char *charp_func()
 int minus_func()
 {
   return -1;
+}
+int false_func()
+{
+  return 0;
 }
 
 /* various hooks & things */
@@ -131,6 +135,11 @@ void (*shareout) () = null_func;
 void (*sharein) (int, char *) = null_share;
 void (*qserver) (int, char *, int) = null_func;
 void (*add_mode) () = null_func;
+int (*match_noterej) (struct userrec*, char *) = false_func;
+int (*rfc_casecmp) (const char *, const char *) = _rfc_casecmp;
+int (*rfc_ncasecmp) (const char *, const char *, int) = _rfc_ncasecmp;
+int (*rfc_toupper) (int) = _rfc_toupper;
+int (*rfc_tolower) (int) = _rfc_tolower;
 
 module_entry *module_list;
 dependancy *dependancy_list = NULL;
@@ -146,9 +155,23 @@ void mod_context(char *module, char *file, int line)
   cx_line[cx_ptr] = line;
 }
 
-/* the horrible global lookup table for functions */
-/* BUT it makes the whole thing *much* more portable than letting each
- * OS screw up the symbols their own special way :/ */
+void mod_contextnote(char *module, char *file, int line, char *note)
+{
+  cx_ptr=((cx_ptr + 1) & 15);
+#ifdef HAVE_SNPRINTF
+  snprintf(cx_file[cx_ptr], 30, "%s:%s", module, file);
+#else
+  sprintf(cx_file[cx_ptr], "%s:%s", module, file);
+#endif
+  cx_line[cx_ptr] = line;
+  strncpy(cx_note[cx_ptr], note, 255);
+  cx_note[cx_ptr][255] = 0;
+}
+
+/* the horrible global lookup table for functions
+ * BUT it makes the whole thing *much* more portable than letting each
+ * OS screw up the symbols their own special way :/
+ */
 
 Function global_table[] =
 {
@@ -363,7 +386,7 @@ Function global_table[] =
   (Function) in_chain,
   /* 164 - 167 */
   (Function) add_note,
-  (Function) cmd_note,
+  (Function) NULL,
   (Function) detect_dcc_flood,
   (Function) flush_lines,
   /* 168 - 171 */
@@ -429,18 +452,27 @@ Function global_table[] =
   /* 216 - 219 */
   (Function) & min_dcc_port,	/* dw */
   (Function) & max_dcc_port,
-  (Function) rfc_casecmp,
-  (Function) rfc_ncasecmp,
- /* 220 - 223 */
-  (Function) &global_exempts,	/* struct exemptrec * */
-  (Function) &global_invites,	/* struct inviterec * */
-  (Function) &gexempt_total,	/* int */
-  (Function) &ginvite_total,	/* int */
+  (Function) & rfc_casecmp,	/* Function * */
+  (Function) & rfc_ncasecmp,	/* Function * */
+  /* 220 - 223 */
+  (Function) & global_exempts,	/* struct exemptrec * */
+  (Function) & global_invites,	/* struct inviterec * */
+  (Function) & gexempt_total,	/* int */
+  (Function) & ginvite_total,	/* int */
   /* 224 - 227 */
   (Function) & H_event,
   (Function) & use_exempts,	/* int - drummer/Jason */
   (Function) & use_invites,	/* int - drummer/Jason */
   (Function) & force_expire,	/* int - Rufus */
+  /* 228 - 231 */
+  (Function) add_lang_section,
+  (Function) _user_realloc,
+  (Function) mod_realloc,
+  (Function) xtra_set,
+  /* 232 - 235 */
+  (Function) mod_contextnote,
+  (Function) assert_failed,
+  (Function) & protect_readonly, /* int */
 };
 
 void init_modules(void)
@@ -567,9 +599,11 @@ const char *module_load(char *name)
     return "Can't load module.";
 #else
 #ifdef OSF1_HACKS
+#ifndef HAVE_PRE7_5_TCL
   hand = (Tcl_PackageInitProc *) load(workbuf, LDR_NOFLAGS);
   if (hand == LDR_NULL_MODULE)
     return "Can't load module.";
+#endif
 #else
   context;
   hand = dlopen(workbuf, DLFLAGS);
@@ -803,6 +837,15 @@ void *mod_malloc(int size, char *modname, char *filename, int line)
   return n_malloc(size, x, line);
 }
 
+void *mod_realloc(void *ptr, int size, char *modname, char *filename, int line)
+{
+  char x[100];
+
+  sprintf(x, "%s:%s", modname, filename);
+  x[19] = 0;
+  return n_realloc(ptr, size, x, line);
+}
+
 void mod_free(void *ptr, char *modname, char *filename, int line)
 {
   char x[100];
@@ -846,6 +889,24 @@ void add_hook(int hook_num, void *func)
       if (add_mode == null_func)
 	add_mode = func;
       break;
+    /* special hook <drummer> */
+    case HOOK_RFC_CASECMP:
+      if (func == 0) {
+	rfc_casecmp = (void *) strcasecmp;
+	rfc_ncasecmp = (void *) strncasecmp;
+	rfc_tolower = (void *) tolower;
+	rfc_toupper = (void *) toupper;
+      } else {
+	rfc_casecmp = _rfc_casecmp;
+	rfc_ncasecmp = _rfc_ncasecmp;
+	rfc_tolower = _rfc_tolower;
+	rfc_toupper = _rfc_toupper;
+      }
+      break;
+    case HOOK_MATCH_NOTEREJ:
+      if (match_noterej == false_func)
+	match_noterej = func;
+      break;
     }
 }
 
@@ -888,6 +949,10 @@ void del_hook(int hook_num, void *func)
     case HOOK_ADD_MODE:
       if (add_mode == func)
 	add_mode = null_func;
+      break;
+    case HOOK_MATCH_NOTEREJ:
+      if (match_noterej == func)
+	match_noterej = false_func;
       break;
     }
 }

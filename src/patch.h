@@ -169,4 +169,4 @@
  *
  *
  */
-/* if that's not enough, maybe you should release a new version :) */
+/* if this isn't enough -- *shrug* make more <g> */

@@ -586,7 +586,7 @@ int flagrec_eq(struct flag_record *req, struct flag_record *have)
 void set_user_flagrec(struct userrec *u, struct flag_record *fr,
 		      char *chname)
 {
-  struct chanuserrec *cr;
+  struct chanuserrec *cr = NULL;
   int oldflags = fr->match;
   char buffer[100];
   struct chanset_t *ch;
@@ -636,7 +636,7 @@ void set_user_flagrec(struct userrec *u, struct flag_record *fr,
 void get_user_flagrec(struct userrec *u, struct flag_record *fr,
 		      char *chname)
 {
-  struct chanuserrec *cr;
+  struct chanuserrec *cr = NULL;
 
   if (!u) {
     fr->global = fr->udef_global = fr->chan = fr->udef_chan = fr->bot = 0;
@@ -683,44 +683,28 @@ void get_user_flagrec(struct userrec *u, struct flag_record *fr,
 
 static int botfl_unpack(struct userrec *u, struct user_entry *e)
 {
-  struct flag_record fr =
-  {FR_BOT, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_BOT, 0, 0, 0, 0, 0};
+ 
+  ASSERT (e != NULL);
+  ASSERT (e->name != NULL);
 
   context;
-  if (e->name) {
-    char *p;
-
-    p = e->u.list->extra;
-    e->u.list->extra = NULL;
-    list_type_kill(e->u.list);
-    break_down_flags(p, &fr, NULL);
-    e->u.ulong = fr.bot;
-    nfree(p);
-  }
+  break_down_flags(e->u.list->extra, &fr, NULL);
+  list_type_kill(e->u.list);
+  e->u.ulong = fr.bot;
   return 1;
 }
 
 static int botfl_pack(struct userrec *u, struct user_entry *e)
 {
   char x[100];
-  struct flag_record fr =
-  {FR_BOT, 0, 0, 0, 0, 0};
-  int l;
+  struct flag_record fr = {FR_BOT, 0, 0, 0, 0, 0};
 
-  if (!e->name) {
-    char *p;
-
-    e->name = user_malloc(strlen(e->type->name) + 1);
-    strcpy(e->name, e->type->name);
-    fr.bot = e->u.ulong;
-    l = build_flags(x, &fr, NULL);
-    p = user_malloc(l + 1);
-    e->u.list = user_malloc(sizeof(struct list_type));
-
-    e->u.list->next = NULL;
-    e->u.list->extra = p;
-    strcpy(p, x);
-  }
+  fr.bot = e->u.ulong;
+  e->u.list = user_malloc(sizeof(struct list_type));
+  e->u.list->next = NULL;
+  e->u.list->extra = user_malloc (build_flags (x, &fr, NULL) + 1);
+  strcpy(e->u.list->extra, x);
   return 1;
 }
 
@@ -785,14 +769,13 @@ static int botfl_tcl_get(Tcl_Interp * interp, struct userrec *u,
 static int botfl_tcl_set(Tcl_Interp * irp, struct userrec *u,
 			 struct user_entry *e, int argc, char **argv)
 {
-  struct flag_record fr =
-  {FR_BOT, 0, 0, 0, 0, 0};
+  struct flag_record fr = {FR_BOT, 0, 0, 0, 0, 0};
 
   BADARGS(4, 4, " handle BOTFL flags");
   if (u->flags & USER_BOT) {
     /* silently ignore for users */
     break_down_flags(argv[3], &fr, NULL);
-    def_set(u, e, (void *) fr.bot);
+    botfl_set(u, e, (void *) fr.bot);
   }
   return TCL_OK;
 }

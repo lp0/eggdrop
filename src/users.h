@@ -88,9 +88,11 @@ struct filesys_stats {
 };
 
 void *_user_malloc(int, char *, int);
+void *_user_realloc(void *, int, char *, int);
 
 #ifndef MAKING_MODS
 #define user_malloc(x) _user_malloc(x,__FILE__,__LINE__)
+#define user_realloc(x,y) _user_realloc(x,y,__FILE__,__LINE__)
 #endif
 int add_entry_type(struct user_entry_type *);
 int del_entry_type(struct user_entry_type *);
@@ -130,22 +132,6 @@ struct userrec {
   struct user_entry *entries;
 };
 
-/* let's get neat, a struct for each */
-struct banrec {
-  struct banrec *next;
-  char *banmask;
-  time_t expire;
-  time_t added;
-  time_t lastactive;
-  char *user;
-  char *desc;
-  int flags;
-};
-extern struct banrec *global_bans;
-
-#define BANREC_STICKY 1
-#define BANREC_PERM   2
-
 struct igrec {
   struct igrec *next;
   char *igmask;
@@ -159,41 +145,12 @@ extern struct igrec *global_ign;
 
 #define IGREC_PERM   2
 
-struct exemptrec {
-   struct exemptrec * next;
-   char * exemptmask;
-   time_t expire;
-   time_t added;
-   time_t lastactive;
-   char * user;
-   char * desc;  
-   int flags;
-};
-extern struct exemptrec * global_exempts;
-   
-#define EXEMPTREC_STICKY 1
-#define EXEMPTREC_PERM   2
-
-struct inviterec {
-   struct inviterec * next;
-   char * invitemask;
-   time_t expire;
-   time_t added;
-   time_t lastactive;
-   char * user;
-   char * desc;
-   int flags;
-};
-extern struct inviterec * global_invites;
-   
-#define INVITEREC_STICKY 1
-#define INVITEREC_PERM   2
-
 /* flags are in eggdrop.h */
 
 struct userrec *adduser();
 struct userrec *get_user_by_handle(struct userrec *, char *);
 struct userrec *get_user_by_host(char *);
+struct userrec *get_user_by_nick(char *);
 struct userrec *check_chanlist();
 struct userrec *check_chanlist_hand();
 

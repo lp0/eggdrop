@@ -21,7 +21,7 @@
 #endif
 
 #if HAVE_CONFIG_H
-#include <config.h>
+#  include <config.h>
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -51,7 +51,7 @@ struct {
 #define DP_HELP         0x7FF4
 
 /* prototypes */
-#ifdef HAVE_STDARG_H
+#if !defined(HAVE_PRE7_5_TCL) && defined(__STDC__)
 void dprintf(int arg1, ...);
 void putlog(int arg1, ...);
 #else
@@ -325,6 +325,10 @@ void *n_realloc(void *ptr, int size, char *file, int line)
 {
   void *x;
   int i = 0;
+
+  /* ptr == NULL is valid. Avoiding duplicate code further down */
+  if (!ptr)
+    return n_malloc(size, file, line);
 
   x = (void *) realloc(ptr, size);
   if (x == NULL) {

@@ -1,5 +1,5 @@
-#!/path/to/eggdrop
-# ^- set that to the directory eggdrop is in ie "#!/users/lamest/egg/eggdrop"
+#! /path/to/eggdrop
+# ^- set that to the directory eggdrop is in ie "#! /users/lamest/egg/eggdrop"
 #
 # This is a sample configuration file for your bot.  You will definitely
 # want to edit this, to set up your bot.  Right now it creates a bot called
@@ -15,6 +15,10 @@
 # complain if it doesn't match. Things are changing rapidly with eggdrop
 # now, and you need to redo the config file every time, using your last
 # config file as a model.
+
+# IMPORTANT: Remember to make install and cd to the directory it created
+# (~/eggdrop by default) before you continue, running the bot from
+# eggdrop1.4.xx/ will not work.
 
 ##### GENERAL STUFF #####
 
@@ -40,10 +44,13 @@ set timezone "EST"
 #set my-hostname "virtual.host.com"
 #set my-ip "99.99.0.0"
 
+# if you want to have your eggdrop messages displayed in another language
+# change the below command to match your preferences. An alternative would
+# be to set the environment variabel EGG_LANG to that value.
+#addlang "english"
 
 
-#####  LOG FILES  #####
-
+##### LOG FILES #####
 
 # you can specify how many log files you can have upto.  at midnight every
 # day, the old log files are renamed and a new log file begins.  by default,
@@ -61,7 +68,7 @@ set timezone "EST"
 #   b  information about bot linking and userfile sharing
 #   c  commands people use (via msg or dcc)
 #   x  file transfers and file-area commands
-#   r  (if user-console-r defined) EVERYTHING sent to the bot by the server
+#   r  (if use-console-r defined) EVERYTHING sent to the bot by the server
 #   o  other: misc info, errors -- IMPORTANT STUFF
 #   w  wallops: msgs between IRCops (be sure to set the bot +w in init-server)
 # There are others, but you probably shouldnt log them, it'd be rather
@@ -92,9 +99,10 @@ set quick-logs 0
 # belong to all channels by assigning it to channel "*".  there are also
 # five user-defined levels ('1'..'5') which are used by Tcl scripts.
 
-# in 'eggdrop.log' put msgs, commands, and errors from any channel:
+# in 'eggdrop.log' put private msgs/ctcps, commands, misc info, and
+# errors from any channel:
 logfile mco * "eggdrop.log"
-# in 'lame.log' put joins, parts, and mode changes from #lame:
+# in 'lame.log' put joins, parts, kicks, bans, and mode changes from #lamest:
 logfile jk #lamest "lamest.log"
 
 # [0/1] timestamp entries in the log file? (generally a good idea)
@@ -112,6 +120,10 @@ set keep-all-logs 0
 # something you probably don't want.]
 set switch-logfiles-at 300
 
+# [0/1] enable quiet saves? "Writing user file..." and "Writing channel file ..."
+# will not be logged if this option is enabled.
+set quiet-save 0
+
 # this is the default console mode -- what masters will see automatically
 # when they dcc chat with the bot (masters can alter their own console
 # flags once they connect, though) -- it uses the same event flags as
@@ -122,8 +134,7 @@ set switch-logfiles-at 300
 set console "mkcobxs"
 
 
-
-#####  FILES AND DIRECTORIES  #####
+##### FILES AND DIRECTORIES #####
 
 # the userfile: where user records are stored
 set userfile "LamestBot.user"
@@ -145,7 +156,7 @@ set motd "motd"
 set telnet-banner "telnet-banner"
 
 
-#####  BOTNET  #####
+##### BOTNET #####
 
 # you probably shouldn't deal with this until reading 'botnet.doc' or
 # something.  you need to know what you're doing.
@@ -213,10 +224,11 @@ set telnet-flood 5:60
 set paranoid-telnet-flood 1
 
 # how long should I wait (seconds) before giving up on hostname/address
-# lookup?
+# lookup? (you might want to increase this if you are on a slow network).
 set resolve-timeout 15
 
-#####  MORE ADVANCED STUFF  #####
+
+##### MORE ADVANCED STUFF #####
 
 # are you behind a firewall?  uncomment this and specify your socks host
 #set firewall "proxy:178"
@@ -228,9 +240,8 @@ set resolve-timeout 15
 # ranges: 192.168.0.0-192.168.255.255, 172.16.0.0-172.31.255.255,
 # 10.0.0.0-10.255.255.255 and your firewall transparently changes your
 # address to a unique address for your box.) or you have IP masquerading
-# between you and the rest of the word, and /dcc chat,/ctcp chat or
-# userfile shareing aren't working. Enter your outside IP here, and
-# #define HAVE_NAT in eggdrop.h
+# between you and the rest of the world, and /dcc chat,/ctcp chat or
+# userfile shareing aren't working. Enter your outside IP here.
 # Do not enter anything for my-ip or my-hostname.
 #set nat-ip "127.0.0.1"
 
@@ -242,11 +253,6 @@ set resolve-timeout 15
 
 # temporary ignores will last how many minutes?
 set ignore-time 15
-
-# [0/1] enable logging of all information sent *to* a server, via console mode 'v'
-# NOTE: This is a large security hole, allowing people to see passwords.
-# This is now restricted to +n users only. Please choose your owners with care.
-set debug-output 0
 
 # this setting affects what part of the hour the 'hourly' calls occur
 # on the bot, this includes such things as note notifying,
@@ -318,7 +324,7 @@ set max-dcc 50
 # this setting is so that people can't send fake ports to your bot when
 # they try to dcc it. irc clients should never use a port below 1024 and
 # well 65535 is the highest port possible. this setting is used for telnet
-# too. 
+# too.
 set dcc-portrange 1024:65535
 
 # [0/1] add the 'dccsimul' tcl command (needed by certain scripts like
@@ -341,7 +347,7 @@ die "Please edit your config file."
 
 
 
-############## MODULES #################
+########## MODULES ##########
 
 # below are various settings for the modules available with eggdrop,
 # PLEASE EDIT THEM CAREFULLY, READ THEM, even if you're an old hand
@@ -354,8 +360,7 @@ die "Please edit your config file."
 set mod-path "modules/"
 
 
-
-#### CHANNELS MODULE #####
+##### CHANNELS MODULE #####
 
 # this next module provides channel related support for the bot, without
 # it, it will just sit on irc, it can respond to msg & ctcp commands, but
@@ -372,14 +377,14 @@ set ban-time 120
 # temporary exemptions (+e modes) will last how many minutes? if set to 0,
 # bot never removes them. This is an IRCNET feature. The bot will check the
 # exempts every X minutes, but will not remove the exempt if a ban is set on
-# the channel that matches that exempt. Once the ban is removed then the 
-# exempt will be removed the next time the bot checks. 
+# the channel that matches that exempt. Once the ban is removed then the
+# exempt will be removed the next time the bot checks.
 set exempt-time 60
 
 # temporary invitations (+I modes) will last how many minutes? if set to
 # 0, bot never removes them. This is an IRCNET feature. The bot will check the
 # invites every X minutes, but will not remove them if the channel is +i. Once
-# the channel is -i then the bot will remove then invite mode next time it 
+# the channel is -i then the bot will remove then invite mode next time it
 # checks this counter
 set invite-time 60
 
@@ -404,12 +409,12 @@ set global-flood-ctcp 3:60
 
 set global-chanset {
         -clearbans      -enforcebans
-        +dynamicbans    +userbans   
-        -autoop         -bitch      
-        +greet          +protectops 
+        +dynamicbans    +userbans
+        -autoop         -bitch
+        +greet          +protectops
         +statuslog      +stopnethack
         -revenge        -secret
-        -autovoice      +cycle 
+        -autovoice      +cycle
         +dontkickops    -wasoptest
         -inactive       -protectfriends
         +shared         -seen
@@ -477,7 +482,6 @@ channel add #lamest {
 #   how many joins/nick changes in how many seconds is a join flood?
 #   not specifying or using number = 0 will not check join floods!
 
-
 # note that "need-op", "need-invite", etc, are limited to 120 characters,
 # so if you want to so something more complicated, just write a proc,
 # and make them call your proc.
@@ -508,7 +512,7 @@ channel set #lamest +dynamicbans
 channel set #lamest +userbans
 
 #   only activate exempts on the channel when necessary?  (this keeps the
-#   channel's exempt list from getting excessively long.  the bot still 
+#   channel's exempt list from getting excessively long.  the bot still
 #   remembers every exempt, but it only activates a exempt on the channel
 #   when it sees a ban set matching the exempt. The exempt remains active
 #   on the channel for as long as the ban is still active.
@@ -519,9 +523,9 @@ channel set #lamest +dynamicexempts
 channel set #lamest +userexempts
 
 #   only activate invites on the channel when necessary?  (this keeps the
-#   channel's invite list from getting excessively long.  the bot still 
-#   remembers every invite, but the invites are only activated when the 
-#   channel is set to invite only and a user joins aftre requesting an 
+#   channel's invite list from getting excessively long.  the bot still
+#   remembers every invite, but the invites are only activated when the
+#   channel is set to invite only and a user joins aftre requesting an
 #   invite. Once set the invite remains until the channel goes to -i
 channel set #lamest +dynamicinvites
 
@@ -597,6 +601,7 @@ channel add #botcentral {
 }
 channel set #botcentral +bitch +clearbans +enforcebans -greet +revenge
 
+
 ##### SERVER MODULE #####
 
 # this provides the core server support (removing this is equivalent to
@@ -614,7 +619,7 @@ set net-type 0
 set nick "Lamestbot"
 
 # an alternative nick to use if the nick specified by 'set nick' is
-# unavailable
+# unavailable. All '?' characters will be replaced by a random number.
 set altnick "Llamabot"
 
 # what to display in the real-name field for the bot
@@ -654,8 +659,6 @@ set lowercase-ctcp 0
 # answer HOW MANY stacked ctcp's at once
 set answer-ctcp 3
 
-# *NOTE* due to lazyness on beldin's behalf, these must be set *after*
-# server.so is loaded
 # setting any of the following with howmany == 0 will turn them off
 # how many msgs in how many seconds from the same host constitutes a flood?
 set flood-msg 5:60
@@ -702,6 +705,11 @@ set check-stoned 1
 # This is now restricted to +n users only. Please choose your owners with care.
 set use-console-r 0
 
+# [0/1] enable logging of all information sent *to* a server, via console mode 'v'
+# NOTE: This is a large security hole, allowing people to see passwords.
+# This is now restricted to +n users only. Please choose your owners with care.
+set debug-output 0
+
 # [0/1] exit if the server sends a ERROR message?
 set serverror-quit 1
 
@@ -727,11 +735,11 @@ set double-help 0
 #set use-silence 1
 
 # [0/1] some nets use umode +r to mean a restricted connection. If this is your
-# case, then set it to 1
+# case, and you want your bot to leave restricted servers and jump to the
+# next one on his server list, then set it to 1.
 # Automatically set to 0 for net-type 0/2/3/4, set to 1 for net-type 1.
 # Only use this if you set net-type 5
 #set check-mode-r 1
-
 
 
 ##### CTCP MODULE #####
@@ -748,6 +756,7 @@ loadmodule ctcp
 # than C CTCPs in S seconds. C/S are defined by the set flood-ctcp C:S (cf
 # server module)
 set ctcp-mode 0
+
 
 ##### IRC MODULE #####
 
@@ -777,6 +786,7 @@ set max-bans 20
 set max-modes 30
 
 # [0/1] define this to allow modes from non-op users (ChanServ)
+# or if you use services like X/W to avoid fake op messages
 set allow-desync 0
 
 # [0/1] Do you want the bot to kick bogus usernames?
@@ -803,7 +813,7 @@ set ban-fun 0
 set learn-users 0
 
 # time (in seconds) to wait for someone to return from a netsplit
-set wait-split 300
+set wait-split 600
 
 # time (in seconds) that someone must have been off-channel before
 # re-displaying their info
@@ -841,6 +851,11 @@ unbind msg - addhost *msg:addhost
 # display on EVERY channel they join (provided they have been gone longer than
 # wait-info)
 set no-chanrec-info 0
+
+# [0/1/2/3] Defines how the bot should punish bad users when revenging.
+# 0 for deop - 1 for deop and +d - 2 for deop, +d and kick - 3 for deop,
+# chattr +d, kick and ban. Default is 1.
+set revenge-mode 1
 
 ##### IRC MODULE - net-type 1 specific features (IRCnet) #####
 
@@ -891,6 +906,13 @@ set kick-bogus-invites 0
 # [0/1] Do you want to use invites?
 # set use-invites 0
 
+# [0/1] Prevent mixing normal modes and +I/+e invite modes?
+# At the moment (Sep/1999), IRCnet servers do not allow mixing those modes,
+# so leave this flag set to 1. The servers will probably change their
+# behaviour in the future, so you should first check before accepting the
+# default.
+set prevent-mixing 1
+
 ##### IRC MODULE - net-type 5 specific features (other networks) #####
 
 # kick-method defines how kicks (when enforcing bans) should be made:
@@ -907,10 +929,10 @@ set kick-bogus-invites 0
 # some networks allow you to stack lots of channel modes into one
 # line.
 # they're all guaranteed to support at least 3, so that's the default,
-# but if you know your network supports more, you may want to adjust  
+# but if you know your network supports more, you may want to adjust
 # this value. this value must be less than or equal to 6.
 # Automatically set to 4 for net-type 0/4, set to 3 for net-type 1, set to
-# 6 for net-type 2/3. 
+# 6 for net-type 2/3.
 # Only use this if you set net-type 5
 #set modes-per-line 3
 
@@ -920,6 +942,10 @@ set kick-bogus-invites 0
 # Only use this if you set net-type 5
 #set use-354 0
 
+# [0/1] use rfc 1459 compliant string matching routines?
+# All networks apart from Dalnet comply with rfc 1459, so you should only
+# disable it on Dalnet or networks which use Dalnet's code.
+#set rfc-compliant 1
 
 
 ##### TRANSFER MODULE #####
@@ -935,7 +961,7 @@ set max-dloads 3
 # set the block size for dcc transfers (ircII uses 512 bytes, but admits
 # that may be too small -- 1024 is standard these days)
 # set this to 0 to use turbo-dcc (recommended)
-set dcc-block 0
+set dcc-block 1024
 
 # [0/1] copy files into the /tmp directory before sending them?  this is
 # useful on most systems for file stability.  (someone could move a file
@@ -949,7 +975,6 @@ set copy-to-tmp 1
 set xfer-timeout 30
 
 
-
 ##### SHARE MODULE #####
 
 # this provides the userfile sharing support
@@ -957,11 +982,12 @@ set xfer-timeout 30
 #loadmodule share
 
 ##### variables:
-# [0/1] there are situations where sharebot userfile resynchronization
-# can fail to work correctly.  because of this, it is no longer
-# advised to turn this feature on.  i've lost the mail from the
-# person that spelled out the flaw, so i can't give him/her credit
-# right now or explain it (sorry).
+# [0/1] When two bots get disconnected this flag allows them to create
+# a resync buffer which saves all changes done to the userfile during
+# the disconnect. So, when they reconnect, they will not have to transfer
+# the complete user file, but instead, just send the resync buffer.
+# If you have problems with this feature please tell us. Take a look at
+# doc/BUG-REPORT first though.
 #set allow-resync 0
 
 # this specifies how long to hold another bots resync data for before
@@ -994,7 +1020,6 @@ set xfer-timeout 30
 # NOTE: paranoid people should use this feature on their hub bot - this
 # will force all +host/+user/chpass/etc. changes to be made via the hub
 #set private-user 0
-
 
 
 ##### FILESYSTEM MODULE #####
@@ -1031,7 +1056,6 @@ set max-file-users 20
 set max-filesize 1024
 
 
-
 ##### NOTES MODULE #####
 
 # this provides support for storing of notes for users from each other
@@ -1066,7 +1090,6 @@ set notify-onjoin 1
 die "You didn't edit your config file like you were told, did you?"
 
 
-
 ##### CONSOLE MODULE #####
 
 # this module provides storage of console settings when you exit the bot
@@ -1086,13 +1109,11 @@ set force-channel 0
 set info-party 0
 
 
-
 ##### WOOBIE MODULE #####
 
 # this serves absolutely no purpose and is for demonstrative
 # purposes only
 #loadmodule woobie
-
 
 
 ##### SEEN MODULE #####
@@ -1118,13 +1139,11 @@ set info-party 0
 #checkmodule blowfish
 
 
-
 ##### ASSOC MODULE #####
 
 # uncomment this line to load assoc support, i.e naming channels on
 # the botnet
 #loadmodule assoc
-
 
 
 ##### WIRE MODULE #####
@@ -1135,17 +1154,15 @@ set info-party 0
 #loadmodule wire
 
 
-
-#####  SCRIPTS  #####
+##### SCRIPTS #####
 
 # these are some commonly loaded (and needed) scripts.
 source scripts/alltools.tcl
 source scripts/action.fix.tcl
 
-#this script provides many usefull minor informational commands
-# (like setting users url's, email address, etc) you can modify
+# This script provides many usefull minor informational commands
+# (like setting users url's, email address, etc). You can modify
 # it to add extra entries, you might also want to modify help/userinfo.help
-# and help/msg/userinfo.help to change the help files
+# and help/msg/userinfo.help to change the help files.
 source scripts/userinfo1.0.tcl
 loadhelp userinfo.help
-

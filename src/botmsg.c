@@ -26,14 +26,14 @@ static char OBUF[1024];
 
 #ifndef NO_OLD_BOTNET
 /* ditto for tandem bots */
-void tandout_but VARARGS_DEF(int, arg1)
+void tandout_but EGG_VARARGS_DEF(int, arg1)
 {
   int i, x, l;
   char *format;
   char s[601];
 
   va_list va;
-  x = VARARGS_START(int, arg1, va);
+  x = EGG_VARARGS_START(int, arg1, va);
   format = va_arg(va, char *);
 
 #ifdef HAVE_VSNPRINTF
@@ -79,7 +79,34 @@ char *int_to_base64(unsigned int val)
   return buf_base64 + i;
 }
 
-char *int_to_base10(unsigned int val)
+char *int_to_base10(int val)
+{
+  static char buf_base10[17];
+  int p = 0;
+  int i = 16;
+
+  buf_base10[16] = 0;
+  if (!val) {
+    buf_base10[15] = '0';
+    return buf_base10 + 15;
+  }
+  if (val < 0) {
+    p = 1;
+    val *= -1;
+  }
+  while (val) {
+    i--;
+    buf_base10[i] = '0' + (val % 10);
+    val /= 10;
+  }
+  if (p) {
+    i--;
+    buf_base10[i] = '-';
+  }
+  return buf_base10 + i;
+}
+
+char *unsigned_int_to_base10(unsigned int val)
 {
   static char buf_base10[16];
   int i = 15;
@@ -97,13 +124,13 @@ char *int_to_base10(unsigned int val)
   return buf_base10 + i;
 }
 
-int simple_sprintf VARARGS_DEF(char *,arg1)
+int simple_sprintf EGG_VARARGS_DEF(char *,arg1)
 {
   char *buf, *format, *s;
   int c = 0, i;
 
   va_list va;
-  buf = VARARGS_START(char *, arg1, va);
+  buf = EGG_VARARGS_START(char *, arg1, va);
   format = va_arg(va, char *);
 
   while (*format && (c < 1023)) {
@@ -115,14 +142,20 @@ int simple_sprintf VARARGS_DEF(char *,arg1)
 
 	break;
       case 'd':
-	i = va_arg(va, unsigned int);
+      case 'i':
+	i = va_arg(va, int);
 
 	s = int_to_base10(i);
 	break;
       case 'D':
+	i = va_arg(va, int);
+
+	s = int_to_base64((unsigned int) i);
+	break;
+      case 'u':
 	i = va_arg(va, unsigned int);
 
-	s = int_to_base64(i);
+        s = unsigned_int_to_base10(i);
 	break;
       case '%':
 	buf[c++] = *format++;
@@ -136,8 +169,8 @@ int simple_sprintf VARARGS_DEF(char *,arg1)
 	continue;
       }
       if (s)
-	while (*s)
-	  buf[c++] = *s++;
+      while (*s && (c < 1023))
+        buf[c++] = *s++;
       format++;
     } else
       buf[c++] = *format++;
@@ -244,14 +277,14 @@ void botnet_send_pong(int idx)
     tputs(dcc[idx].sock, "po\n", 3);
 }
 
-void botnet_send_priv VARARGS_DEF(int, arg1)
+void botnet_send_priv EGG_VARARGS_DEF(int, arg1)
 {
   int idx, l;
   char *from, *to, *tobot, *format;
   char tbuf[1024];
 
   va_list va;
-  idx = VARARGS_START(int, arg1, va);
+  idx = EGG_VARARGS_START(int, arg1, va);
   from = va_arg(va, char *);
   to = va_arg(va, char *);
   tobot = va_arg(va, char *);
@@ -744,7 +777,7 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
     *p = '@';
     p++;
     if (!strcasecmp(p, botnetnick))	/* to me?? */
-      return add_note(x, from, msg, idx, echo);		/* start over, dimwit. */
+      return add_note(x, from, msg, idx, echo); /* start over, dimwit. */
     if (strcasecmp(from, botnetnick)) {
       if (strlen(from) > 40)
 	from[40] = 0;
@@ -796,6 +829,11 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
       dprintf(idx, BOT_NONOTES);
     return NOTE_ERROR;
   }
+  if (match_noterej(u, from)) {
+    if (idx >= 0)
+       dprintf(idx, "%s %s\n", u->handle, "rejected your note.");
+    return NOTE_REJECT;
+  }
   status = NOTE_STORED;
   iaway = 0;
   /* online right now? */
@@ -845,9 +883,8 @@ int add_note(char *to, char *from, char *msg, int idx, int echo)
   Tcl_SetVar(interp, "_from", from, 0);
   Tcl_SetVar(interp, "_to", to, 0);
   Tcl_SetVar(interp, "_data", msg, 0);
-  simple_sprintf(ss, "%d", dcc[idx].sock);
+  simple_sprintf(ss, "%d", idx);
   Tcl_SetVar(interp, "_idx", ss, 0);
-  set_tcl_vars();
   if (Tcl_VarEval(interp, "storenote", " $_from $_to $_data $_idx", NULL) == TCL_OK) {
     if (interp->result && interp->result[0]) {
       /* strncpy(to, interp->result, NOTENAMELEN);

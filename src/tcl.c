@@ -35,7 +35,7 @@ Tcl_Interp *interp;		/* eggdrop always uses the same interpreter */
 
 extern int backgrd, flood_telnet_thr, flood_telnet_time;
 extern int shtime, share_greet, require_p, keep_all_logs;
-extern int use_stderr, allow_new_telnets, stealth_telnets, use_telnet_banner;
+extern int allow_new_telnets, stealth_telnets, use_telnet_banner;
 extern int default_flags, conmask, switch_logfiles_at, connect_timeout;
 extern int firewallport, reserved_port, notify_users_at;
 extern int flood_thr, ignore_time;
@@ -73,6 +73,7 @@ int max_dcc_port = 65535;	/* dcc-portrange, max port - dw/guppy */
 int quick_logs = 0;		/* quick write logs?
 				 * flush em every min instead of every 5 */
 int par_telnet_flood = 1;       /* trigger telnet flood for +f ppl? - dw */
+int quiet_save = 0;             /* quiet-save patch by Lucas */
 
 /* prototypes for tcl */
 Tcl_Interp *Tcl_CreateInterp();
@@ -116,6 +117,7 @@ static int tcl_logfile STDVAR
   BADARGS(4, 4, " ?logModes channel logFile?");
   for (i = 0; i < max_logs; i++)
     if ((logs[i].filename != NULL) && (!strcmp(logs[i].filename, argv[3]))) {
+      logs[i].flags &= ~LF_EXPIRING;
       logs[i].mask = logmodes(argv[1]);
       nfree(logs[i].chname);
       logs[i].chname = NULL;
@@ -127,6 +129,7 @@ static int tcl_logfile STDVAR
 	  fclose(logs[i].f);
 	  logs[i].f = NULL;
 	}
+        logs[i].flags = 0;
       } else {
 	logs[i].chname = (char *) nmalloc(strlen(argv[2]) + 1);
 	strcpy(logs[i].chname, argv[2]);
@@ -134,8 +137,15 @@ static int tcl_logfile STDVAR
       Tcl_AppendResult(interp, argv[3], NULL);
       return TCL_OK;
     }
+  /* do not add logfiles without any flags to log ++rtc */
+  if (!logmodes (argv [1])) {
+    Tcl_AppendResult (interp, "can't remove \"", argv[3], 
+                     "\" from list: no such logfile", NULL);
+    return TCL_ERROR;
+  }
   for (i = 0; i < max_logs; i++)
     if (logs[i].filename == NULL) {
+      logs[i].flags = 0;
       logs[i].mask = logmodes(argv[1]);
       logs[i].filename = (char *) nmalloc(strlen(argv[3]) + 1);
       strcpy(logs[i].filename, argv[3]);
@@ -415,6 +425,7 @@ static tcl_ints def_tcl_ints[] =
   {"paranoid-telnet-flood", &par_telnet_flood, 0},
   {"use-exempts", &use_exempts, 0}, /* Jason/drummer */
   {"use-invites", &use_invites, 0}, /* Jason/drummer */
+  {"quiet-save", &quiet_save, 0}, /* Lucas */
   {"force-expire", &force_expire, 0}, /* Rufus */
   {0, 0, 0}			/* arthur2 */
 };
@@ -437,6 +448,7 @@ static void init_traces()
 
 void kill_tcl()
 {
+  context;
   rem_tcl_coups(def_tcl_coups);
   rem_tcl_strings(def_tcl_strings);
   rem_tcl_ints(def_tcl_ints);
@@ -448,26 +460,53 @@ extern tcl_cmds tcluser_cmds[], tcldcc_cmds[], tclmisc_cmds[];
 
 /* not going through Tcl's crazy main() system (what on earth was he
  * smoking?!) so we gotta initialize the Tcl interpreter */
-void init_tcl()
+void init_tcl(int argc, char **argv)
 {
-  char pver[25];
+#ifndef HAVE_PRE7_5_TCL
+  int i;
+  char pver[1024] = "";
+#endif
+
+  context;
+#ifndef HAVE_PRE7_5_TCL
+  /* This is used for 'info nameofexecutable'.
+   * The filename in argv[0] must exist in a directory listed in
+   * the environment variable PATH for it to register anything. */
+  Tcl_FindExecutable(argv[0]);
+#endif
 
   /* initialize the interpreter */
-  context;
   interp = Tcl_CreateInterp();
   Tcl_Init(interp);
+
+#ifdef EBUG_MEM
+  /* initialize Tcl's memory debugging if we have it */
+  Tcl_InitMemory(interp);
+#endif
+
+  /* set Tcl variable tcl_interactive to 0 */
+  Tcl_SetVar(interp, "tcl_interactive", "0", TCL_GLOBAL_ONLY);
+
+  /* initialize binds and traces */
   init_bind();
   init_traces();
+
   /* add new commands */
+  Tcl_CreateCommand(interp, "logfile", tcl_logfile, NULL, NULL);
   /* isnt this much neater :) */
   add_tcl_commands(tcluser_cmds);
   add_tcl_commands(tcldcc_cmds);
   add_tcl_commands(tclmisc_cmds);
 
-#define Q(A,B) Tcl_CreateCommand(interp,A,B,NULL,NULL)
-  Q("logfile", tcl_logfile);
-  sscanf(egg_version, "%s", pver);
+#ifndef HAVE_PRE7_5_TCL
+  /* add eggdrop to Tcl's package list */
+  for (i = 0; i <= strlen(egg_version); i++) {
+    if ((egg_version[i] == ' ') || (egg_version[i] == '+'))
+      break;
+    pver[strlen(pver)] = egg_version[i];
+  }
   Tcl_PkgProvide(interp, "eggdrop", pver);
+#endif
 }
 
 /**********************************************************************/
@@ -482,7 +521,6 @@ void do_tcl(char *whatzit, char *script)
     if (f != NULL)
       fprintf(f, "eval: %s\n", script);
   }
-  set_tcl_vars();
   context;
   code = Tcl_Eval(interp, script);
   if (debug_tcl && (f != NULL)) {
@@ -502,7 +540,6 @@ int readtclprog(char *fname)
   int code;
   FILE *f;
 
-  set_tcl_vars();
   f = fopen(fname, "r");
   if (f == NULL)
     return 0;
@@ -516,15 +553,9 @@ int readtclprog(char *fname)
   }
   code = Tcl_EvalFile(interp, fname);
   if (code != TCL_OK) {
-    if (use_stderr) {
-      dprintf(DP_STDERR, "Tcl error in file '%s':\n", fname);
-      dprintf(DP_STDERR, "%s\n",
-	      Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY));
-    } else {
-      putlog(LOG_MISC, "*", "Tcl error in file '%s':", fname);
-      putlog(LOG_MISC, "*", "%s\n",
-	     Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY));
-    }
+    putlog(LOG_MISC, "*", "Tcl error in file '%s':", fname);
+    putlog(LOG_MISC, "*", "%s",
+          Tcl_GetVar(interp, "errorInfo", TCL_GLOBAL_ONLY));
     /* try to go on anyway (shrug) */
     /* no dont it's to risky now */
     return 0;
@@ -539,23 +570,6 @@ void add_tcl_strings(tcl_strings * list)
   strinfo *st;
 
   for (i = 0; list[i].name; i++) {
-    if (list[i].length > 0) {
-      char *p = Tcl_GetVar(interp, list[i].name, TCL_GLOBAL_ONLY);
-
-      if (p != NULL) {
-	strncpy(list[i].buf, p, list[i].length);
-	list[i].buf[list[i].length] = 0;
-	if (list[i].flags & STR_DIR) {
-	  int x = strlen(list[i].buf);
-
-	  if ((x > 0) && (x < (list[i].length - 1)) &&
-	      (list[i].buf[x - 1] != '/')) {
-	    list[i].buf[x++] = '/';
-	    list[i].buf[x] = 0;
-	  }
-	}
-      }
-    }
     st = (strinfo *) nmalloc(sizeof(strinfo));
     strtot += sizeof(strinfo);
     st->max = list[i].length - (list[i].flags & STR_DIR);
@@ -563,6 +577,8 @@ void add_tcl_strings(tcl_strings * list)
       st->max = -st->max;
     st->str = list[i].buf;
     st->flags = (list[i].flags & STR_DIR);
+    tcl_eggstr((ClientData) st, interp, list[i].name, NULL, TCL_TRACE_WRITES);
+    tcl_eggstr((ClientData) st, interp, list[i].name, NULL, TCL_TRACE_READS);
     Tcl_TraceVar(interp, list[i].name, TCL_TRACE_READS | TCL_TRACE_WRITES |
 		 TCL_TRACE_UNSETS, tcl_eggstr, (ClientData) st);
   }
@@ -595,14 +611,12 @@ void add_tcl_ints(tcl_ints * list)
   intinfo *ii;
 
   for (i = 0; list[i].name; i++) {
-    char *p = Tcl_GetVar(interp, list[i].name, TCL_GLOBAL_ONLY);
-
-    if (p != NULL)
-      *(list[i].val) = atoi(p);
     ii = nmalloc(sizeof(intinfo));
     strtot += sizeof(intinfo);
     ii->var = list[i].val;
     ii->ro = list[i].readonly;
+    tcl_eggint((ClientData) ii, interp, list[i].name, NULL, TCL_TRACE_WRITES);
+    tcl_eggint((ClientData) ii, interp, list[i].name, NULL, TCL_TRACE_READS);
     Tcl_TraceVar(interp, list[i].name,
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		 tcl_eggint, (ClientData) ii);
@@ -642,6 +656,8 @@ void add_tcl_coups(tcl_coups * list)
     strtot += sizeof(coupletinfo);
     cp->left = list[i].lptr;
     cp->right = list[i].rptr;
+    tcl_eggcouplet((ClientData) cp, interp, list[i].name, NULL, TCL_TRACE_WRITES);
+    tcl_eggcouplet((ClientData) cp, interp, list[i].name, NULL, TCL_TRACE_READS);
     Tcl_TraceVar(interp, list[i].name,
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		 tcl_eggcouplet, (ClientData) cp);

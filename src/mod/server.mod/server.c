@@ -1,4 +1,4 @@
-/* 
+/*
  * server.c - part of server.mod
  * basic irc server support
  */
@@ -18,6 +18,7 @@ static char newserverpass[121];	/* new server password? */
 static time_t trying_server;	/* trying to connect to a server right now? */
 static int server_lag;		/* how lagged (in seconds) is the server? */
 static char altnick[NICKLEN];	/* possible alternate nickname to use */
+static char raltnick[NICKLEN];	/* random nick created from altnick */
 static int curserv;		/* current position in server list: */
 static int flud_thr;		/* msg flood threshold */
 static int flud_time;		/* msg flood time */
@@ -76,7 +77,8 @@ static p_tcl_bind_list H_wall, H_raw, H_notc, H_msgm, H_msg, H_flud,
  H_ctcr, H_ctcp;
 
 static void empty_msgq(void);
-static void next_server(int *, char *, int *, char *);
+static void next_server(int *, char *, unsigned int *, char *);
+static char *get_altbotnick(void);
 
 #include "servmsg.c"
 
@@ -233,23 +235,23 @@ static void queue_server(int which, char *buf, int len)
     return;
   }
   if (h->tot < maxqmsg) {
-       if (!doublemsg) {   /* Don't queue msg if it's already queued */
-           tq = tempq.head;
-           while (tq) {
-               tqq = tq->next;
-               if (!strcasecmp(tq->msg, buf)) {
-                   if (!double_warned) {
-                     putlog(LOG_MISC, "*", "msg already queued. skipping...");
-                     double_warned = 1;
-                     }
-                   return;
-                   }
-               tq = tqq;
-               }
-           } 
- 
+    if (!doublemsg) {   /* Don't queue msg if it's already queued */
+      tq = tempq.head;
+      while (tq) {
+	tqq = tq->next;
+	if (!strcasecmp(tq->msg, buf)) {
+	  if (!double_warned) {
+	    if (buf[len - 1] == '\n')
+	      buf[len - 1] = 0;
+	    debug1("msg already queued. skipping: %s", buf);
+	    double_warned = 1;
+	  }
+	  return;
+	}
+	tq = tqq;
+      }
+    }
     q = nmalloc(sizeof(struct msgq));
-
     q->next = NULL;
     if (h->head)
       h->last->next = q;
@@ -355,7 +357,7 @@ static void clearq(struct server_list *xx)
 
 /* set botserver to the next available server
  * -> if (*ptr == -1) then jump to that particular server */
-static void next_server(int *ptr, char *serv, int *port, char *pass)
+static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
 {
   struct server_list *x = serverlist;
   int i = 0;
@@ -491,6 +493,41 @@ static char *nick_change(ClientData cdata, Tcl_Interp * irp, char *name1,
   return NULL;
 }
 
+/* replace all '?'s in s with a random number */
+static void rand_nick(char *nick)
+{
+  char *p = nick;
+  while ((p = strchr(p, '?')) != NULL) {
+    *p = '0' + rand() % 10;
+    p++;
+  }
+}
+
+/* return the alternative bot nick */
+static char *get_altbotnick(void)
+{
+  context;
+  /* a random-number nick? */
+  if (strchr(altnick, '?')) {
+    if (!raltnick[0]) {
+      strncpy(raltnick, altnick, NICKMAX);
+      raltnick[NICKMAX] = 0;
+      rand_nick(raltnick);
+    }
+    return raltnick;
+  } else
+    return altnick;
+}
+
+static char *altnick_change(ClientData cdata, Tcl_Interp * irp, char *name1,
+			    char *name2, int flags)
+{
+  context;
+  /* always unset raltnick. Will be regenerated when needed. */
+  raltnick[0] = 0;
+  return NULL;
+}
+
 static char *traced_server(ClientData cdata, Tcl_Interp * irp, char *name1,
 			   char *name2, int flags)
 {
@@ -498,7 +535,7 @@ static char *traced_server(ClientData cdata, Tcl_Interp * irp, char *name1,
 
   if (server_online) {
     int servidx = findanyidx(serv);
-    simple_sprintf(s, "%s:%d", dcc[servidx].host, dcc[servidx].port);
+    simple_sprintf(s, "%s:%u", dcc[servidx].host, dcc[servidx].port);
   } else
     s[0] = 0;
   Tcl_SetVar2(interp, name1, name2, s, TCL_GLOBAL_ONLY);
@@ -647,7 +684,7 @@ static char *tcl_eggserver(ClientData cdata, Tcl_Interp * irp, char *name1,
 	curserv = (-1);
 	next_server(&curserv, dcc[servidx].host, &dcc[servidx].port, "");
       }
-      n_free(list, "", 0);
+      Tcl_Free((char *) list);
     }
   }
   context;
@@ -778,8 +815,8 @@ static void server_postrehash()
     fatal("NO BOT NAME.", 0);
   if (serverlist == NULL)
     fatal("NO SERVER.", 0);
-  if (!rfc_casecmp(oldnick, botname) && !rfc_casecmp(oldnick, altnick) &&
-      oldnick[0]) {
+    if (oldnick[0] && !rfc_casecmp(oldnick, botname)
+       && !rfc_casecmp(oldnick, get_altbotnick())) {
     /* change botname back, don't be premature */
     strcpy(botname, oldnick);
     dprintf(DP_MODE, "NICK %s\n", origbotname);
@@ -909,9 +946,10 @@ static void getmyhostname(char *s)
 }
 
 /* update the add/rem_builtins in server.c if you add to this list!! */
-static cmd_t my_ctcps[1] =
+static cmd_t my_ctcps[] =
 {
-  {"DCC", "", ctcp_DCC_CHAT, "server:DCC"}
+  {"DCC", "", ctcp_DCC_CHAT, "server:DCC"},
+  {0, 0, 0, 0}
 };
 
 static int tcl_isbotnick STDVAR {
@@ -997,7 +1035,7 @@ static int tcl_jump STDVAR {
   return TCL_OK;
 }
 
-static int tcl_clearqueue STDVAR  
+static int tcl_clearqueue STDVAR
 {
  struct msgq *q, *qq;
  int msgs;
@@ -1006,8 +1044,8 @@ static int tcl_clearqueue STDVAR
  BADARGS(2,2, " queue");
  if (strcmp(argv[1],"all") == 0) {
      msgs = (int) (modeq.tot + mq.tot + hq.tot);
-     q = modeq.head;   
-     while (q) {  
+     q = modeq.head;
+     while (q) {
          qq = q->next;
          nfree(q->msg);
          nfree(q);
@@ -1015,7 +1053,7 @@ static int tcl_clearqueue STDVAR
          }
      q = mq.head;
      while (q) {
-         qq = q->next; 
+         qq = q->next;
          nfree(q->msg);
          nfree(q);
          q = qq;
@@ -1024,8 +1062,8 @@ static int tcl_clearqueue STDVAR
      while (q) {
          qq = q->next;
          nfree(q->msg);
-         nfree(q);     
-         q = qq;  
+         nfree(q);
+         q = qq;
          }
      modeq.tot = mq.tot = hq.tot = modeq.warned = mq.warned = hq.warned = 0;
      mq.head = hq.head = modeq.head = mq.last = hq.last = modeq.last = 0;
@@ -1033,16 +1071,16 @@ static int tcl_clearqueue STDVAR
      burst = 0;
      simple_sprintf(s, "%d", msgs);
      Tcl_AppendResult(irp, s, NULL);
-     return TCL_OK;    
+     return TCL_OK;
      }
  if (strcmp(argv[1],"server") == 0) {
      msgs = mq.tot;
      q = mq.head;
-     while (q) { 
+     while (q) {
          qq = q->next;
          nfree(q->msg);
          nfree(q);
-         q = qq;       
+         q = qq;
          mq.tot = mq.warned = 0;
          mq.head = mq.last = 0;
          if (modeq.tot == 0) {
@@ -1053,14 +1091,14 @@ static int tcl_clearqueue STDVAR
      mq.tot = mq.warned = 0;
      mq.head = mq.last = 0;
      simple_sprintf(s, "%d", msgs);
-     Tcl_AppendResult(irp, s, NULL); 
+     Tcl_AppendResult(irp, s, NULL);
      return TCL_OK;
      }
  if (strcmp(argv[1],"mode") == 0) {
      msgs = modeq.tot;
-     q = modeq.head;   
-     while (q) {  
-         qq = q->next; 
+     q = modeq.head;
+     while (q) {
+         qq = q->next;
          nfree(q->msg);
          nfree(q);
          q = qq;
@@ -1070,16 +1108,16 @@ static int tcl_clearqueue STDVAR
          }
      double_warned = 0;
      modeq.tot = modeq.warned = 0;
-     modeq.head = modeq.last = 0;  
-     simple_sprintf(s, "%d", msgs);  
+     modeq.head = modeq.last = 0;
+     simple_sprintf(s, "%d", msgs);
      Tcl_AppendResult(irp, s, NULL);
      return TCL_OK;
      }
  if (strcmp(argv[1],"help") == 0) {
-     msgs = hq.tot;    
-     q = hq.head; 
+     msgs = hq.tot;
+     q = hq.head;
      while (q) {
-         qq = q->next; 
+         qq = q->next;
          nfree(q->msg);
          nfree(q);
          q = qq;
@@ -1092,17 +1130,17 @@ static int tcl_clearqueue STDVAR
      return TCL_OK;
      }
  Tcl_AppendResult(irp, "unknown clearqueue option: should be one of: ",
- "mode serv help all", NULL);
+ "mode server help all", NULL);
  return TCL_ERROR;
  }
-     
+
  static int tcl_queuesize STDVAR
  {
     char s[20];
     int x;
-         
+
      BADARGS(1, 2, " ?queue?");
-    if (argc == 1) {   
+    if (argc == 1) {
        x = (int) (modeq.tot + hq.tot + mq.tot);
        simple_sprintf(s, "%d", x);
        Tcl_AppendResult(irp, s, NULL);
@@ -1136,7 +1174,7 @@ static int tcl_clearqueue STDVAR
              "mode serv help", NULL);
     return TCL_ERROR;
  }
-       
+
 static tcl_cmds my_tcl_cmds[] =
 {
   {"jump", tcl_jump},
@@ -1151,22 +1189,22 @@ static tcl_cmds my_tcl_cmds[] =
 
 static char *server_close()
 {
-  cmd_t C_t[1];
+  cmd_t C_t[] =
+  {
+    {"die", "m", (Function) cmd_die, NULL},
+    {0, 0, 0, 0}
+  };
 
   context;
   cycle_time = 100;
   nuke_server("Connection reset by phear");
   clearq(serverlist);
   context;
-  rem_builtins(H_dcc, C_dcc_serv, 5);
-  rem_builtins(H_raw, my_raw_binds, 19);
-  rem_builtins(H_ctcp, my_ctcps, 1);
+  rem_builtins(H_dcc, C_dcc_serv);
+  rem_builtins(H_raw, my_raw_binds);
+  rem_builtins(H_ctcp, my_ctcps);
   context;
-  C_t[0].name = "die";
-  C_t[0].flags = "m";
-  C_t[0].func = (Function) cmd_die;
-  C_t[0].funcname = NULL;
-  add_builtins(H_dcc, C_t, 1);
+  add_builtins(H_dcc, C_t);
   context;
   del_bind_table(H_wall);
   del_bind_table(H_raw);
@@ -1186,6 +1224,8 @@ static char *server_close()
   Tcl_UntraceVar(interp, "nick",
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		 nick_change, NULL);
+  Tcl_UntraceVar(interp, "altnick",
+		 TCL_TRACE_WRITES | TCL_TRACE_UNSETS, altnick_change, NULL);
   Tcl_UntraceVar(interp, "botname",
 		 TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		 traced_botname, NULL);
@@ -1219,7 +1259,7 @@ static Function server_table[] =
   (Function) server_expmem,
   (Function) server_report,
   /* 4 - 7 */
-  (Function) 0,			/* char * */
+  (Function) 0,			/* char * (points to botname later on) */
   (Function) botuserhost,	/* char * */
   (Function) & quiet_reject,	/* int */
   (Function) & serv,
@@ -1259,6 +1299,7 @@ static Function server_table[] =
   (Function) & H_ctcr,
   /* 36 - 39 */
   (Function) ctcp_reply,
+  (Function) get_altbotnick,	/* char * */
 };
 
 char *server_start(Function * global_funcs)
@@ -1274,6 +1315,7 @@ char *server_start(Function * global_funcs)
   trying_server = 0L;
   server_lag = 0;
   altnick[0] = 0;
+  raltnick[0] = 0;
   curserv = 0;
   flud_thr = 5;
   flud_time = 60;
@@ -1313,8 +1355,8 @@ char *server_start(Function * global_funcs)
   context;
   server_table[4] = (Function) botname;
   module_register(MODULE_NAME, server_table, 1, 0);
-  if (!module_depend(MODULE_NAME, "eggdrop", 103, 13))
-    return "This module requires eggdrop1.3.13 or later";
+  if (!module_depend(MODULE_NAME, "eggdrop", 104, 0))
+    return "This module requires eggdrop1.4.0 or later";
   /* weird ones */
   context;
   /* fool bot in reading the values */
@@ -1328,6 +1370,8 @@ char *server_start(Function * global_funcs)
   Tcl_TraceVar(interp, "nick",
 	       TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 	       nick_change, NULL);
+  Tcl_TraceVar(interp, "altnick",
+	       TCL_TRACE_WRITES | TCL_TRACE_UNSETS, altnick_change, NULL);
   Tcl_TraceVar(interp, "botname",
 	       TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 	       traced_botname, NULL);
@@ -1347,9 +1391,9 @@ char *server_start(Function * global_funcs)
   H_ctcr = add_bind_table("ctcr", HT_STACKABLE, server_6char);
   H_ctcp = add_bind_table("ctcp", HT_STACKABLE, server_6char);
   context;
-  add_builtins(H_raw, my_raw_binds, 19);
-  add_builtins(H_dcc, C_dcc_serv, 5);
-  add_builtins(H_ctcp, my_ctcps, 1);
+  add_builtins(H_raw, my_raw_binds);
+  add_builtins(H_dcc, C_dcc_serv);
+  add_builtins(H_ctcp, my_ctcps);
   add_help_reference("server.help");
   context;
   my_tcl_strings[0].buf = botname;
@@ -1399,6 +1443,6 @@ char *server_start(Function * global_funcs)
     use_silence = 0;
     check_mode_r = 0;
   }
-  putlog(LOG_ALL, "*", "=== SERVER SUPPORT LOADED");
+  putlog(LOG_MISC, "*", "=== SERVER SUPPORT LOADED");
   return NULL;
 }

@@ -1,17 +1,17 @@
-/* 
+/*
  * main.c -- handles:
  * changing nicknames when the desired nick is in use
  * flood detection
  * signal handling
  * command line arguments
- * 
+ *
  * dprintf'ized, 15nov1995
  */
 /*
  * This file is part of the eggdrop source code
  * copyright (c) 1997 Robey Pointer
  * and is distributed according to the GNU general public license.
- * 
+ *
  * Parts of this eggdrop source code are copyright (c)1999 Eggheads
  * and is distributed according to the GNU general public license.
  *
@@ -19,7 +19,7 @@
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -50,6 +50,10 @@
 #include "chan.h"
 #include "modules.h"
 #include "tandem.h"
+#ifdef CYGWIN_HACKS
+#include <windows.h>
+BOOL FreeConsole(VOID);
+#endif
 
 #ifndef _POSIX_SOURCE
 /* solaris needs this */
@@ -79,8 +83,8 @@ extern int quick_logs;		/* dw */
  * modified versions of this bot.
  */
 
-char egg_version[1024] = "1.3.28";
-int egg_numver = 1032800;
+char egg_version[1024] = "1.4.0";
+int egg_numver = 1040000;
 
 char notify_new[121] = "";	/* person to send a note to for new users */
 int default_flags = 0;		/* default user flags and */
@@ -205,7 +209,10 @@ void write_debug()
     nested_debug = 1;
   putlog(LOG_MISC, "*", "* Last context: %s/%d [%s]", cx_file[cx_ptr],
 	 cx_line[cx_ptr], cx_note[cx_ptr][0] ? cx_note[cx_ptr] : "");
-  x = creat("DEBUG", 0644);
+  putlog(LOG_MISC, "*", "* Please REPORT this BUG!");
+  putlog(LOG_MISC, "*", "* Check doc/BUG-REPORT on how to do so.");
+
+x = creat("DEBUG", 0644);
   setsock(x, SOCK_NONSOCK);
   if (x < 0) {
     putlog(LOG_MISC, "*", "* Failed to write DEBUG");
@@ -237,6 +244,18 @@ void write_debug()
     close(x);
     putlog(LOG_MISC, "*", "* Wrote DEBUG");
   }
+}
+
+void assert_failed (const char *module, const char *file, const int line)
+{
+  write_debug();
+  if (!module) {
+    putlog(LOG_MISC, "*", "* In file %s, line %u", file, line);
+  } else {
+    putlog(LOG_MISC, "*", "* In file %s:%s, line %u", module, file, line);
+  }
+  fatal ("ASSERT FAILED -- CRASHING!", 1);
+  exit (1);
 }
 
 static void got_bus(int z)
@@ -310,8 +329,15 @@ static void got_alarm(int z)
 static void got_ill(int z)
 {
   check_tcl_event("sigill");
+  write_debug();
   putlog(LOG_MISC, "*", "* Context: %s/%d [%s]", cx_file[cx_ptr],
 	 cx_line[cx_ptr], (cx_note[cx_ptr][0]) ? cx_note[cx_ptr] : "");
+  fatal ("GOT ILL SIGNAL -- CRASHING!", 1);
+#ifdef SA_RESETHAND
+  kill(getpid(), SIGILL);
+#else
+  exit(1);
+#endif
 }
 
 static void do_arg(char *s)
@@ -424,7 +450,7 @@ static void core_secondly()
 	int j;
 
 	s[my_strcpy(s, ctime(&now)) - 1] = 0;
-	putlog(LOG_MISC, "*", "--- %.11s%s", s, s + 20);
+	putlog(LOG_ALL, "*", "--- %.11s%s", s, s + 20);
 	backup_userfile();
 	for (j = 0; j < max_logs; j++) {
 	  if (logs[j].filename != NULL && logs[j].f != NULL) {
@@ -454,11 +480,7 @@ static void core_secondly()
 	    }
 	    simple_sprintf(s, "%s.yesterday", logs[i].filename);
 	    unlink(s);
-#ifdef RENAME
-	    rename(logs[i].filename, s);
-#else
 	    movefile(logs[i].filename, s);
-#endif
 	  }
       }
     }
@@ -517,7 +539,8 @@ void check_static(char *, char *(*)());
 #include "mod/static.h"
 #endif
 int init_mem(), init_dcc_max(), init_userent(), init_misc(), init_bots(),
- init_net(), init_modules(), init_tcl(), init_language(char *);
+ init_net(), init_modules(), init_tcl(int, char **),
+ init_language(int);
 
 int main(int argc, char **argv)
 {
@@ -536,7 +559,7 @@ int main(int argc, char **argv)
   sprintf(ver, "eggdrop v%s", egg_version);
   sprintf(version, "Eggdrop v%s  (c)1997 Robey Pointer (c)1999 Eggheads", egg_version);
   /* now add on the patchlevel (for Tcl) */
-  sprintf(&egg_version[strlen(egg_version)], " %08u", egg_numver);
+  sprintf(&egg_version[strlen(egg_version)], " %u", egg_numver);
   strcat(egg_version, egg_xtra);
   context;
 #ifdef STOP_UAC
@@ -583,7 +606,7 @@ int main(int argc, char **argv)
   lastmin = nowtm->tm_min;
   srandom(now);
   init_mem();
-  init_language("core.english");
+  init_language(1);
   if (argc > 1)
     for (i = 1; i < argc; i++)
       do_arg(argv[i]);
@@ -594,8 +617,8 @@ int main(int argc, char **argv)
   init_bots();
   init_net();
   init_modules();
-  init_tcl();
-  init_language(NULL);
+  init_tcl(argc, argv);
+  init_language(0);
 #ifdef STATIC
   link_statics();
 #endif
@@ -613,7 +636,7 @@ int main(int argc, char **argv)
   i = 0;
   for (chan = chanset; chan; chan = chan->next)
     i++;
-  putlog(LOG_ALL, "*", "=== %s: %d channels, %d users.\n",
+  putlog(LOG_MISC, "*", "=== %s: %d channels, %d users.",
 	 botnetnick, i, count_users(userlist));
   cache_miss = 0;
   cache_hit = 0;
@@ -634,6 +657,7 @@ int main(int argc, char **argv)
     }
   }
   context;
+#ifndef CYGWIN_HACKS
   /* move into background? */
   if (backgrd) {
     xx = fork();
@@ -665,6 +689,7 @@ int main(int argc, char **argv)
       exit(0);
     }
   }
+#endif
   use_stderr = 0;		/* stop writing to stderr now */
   xx = getpid();
   if ((xx != 0) && (!backgrd)) {
@@ -688,13 +713,16 @@ int main(int argc, char **argv)
   if (backgrd) {
     /* ok, try to disassociate from controlling terminal */
     /* (finger cross) */
-#if HAVE_SETPGID
+#if HAVE_SETPGID && !defined(CYGWIN_HACKS)
     setpgid(0, 0);
 #endif
     /* close out stdin/out/err */
     freopen("/dev/null", "r", stdin);
     freopen("/dev/null", "w", stdout);
     freopen("/dev/null", "w", stderr);
+#ifdef CYGWIN_HACKS
+    FreeConsole();
+#endif
     /* tcl wants those file handles kept open */
 /*    close(0); close(1); close(2);  */
   }
@@ -739,8 +767,10 @@ int main(int argc, char **argv)
     int socket_cleanup = 0;
 
     context;
+#if !defined(HAVE_PRE7_5_TCL) && !defined(HAVE_TCL_THREADS)
     /* process a single tcl event */
     Tcl_DoOneEvent(TCL_ALL_EVENTS | TCL_DONT_WAIT);
+#endif
     /* lets move some of this here, reducing the numer of actual
      * calls to periodic_timers */
     now = time(NULL);
@@ -794,18 +824,17 @@ int main(int argc, char **argv)
 	  else {
 	    putlog(LOG_MISC, "*",
 		   "*** ATTENTION: DEAD SOCKET (%d) OF TYPE %s UNTRAPPED",
-		   xx, dcc[idx].type ? dcc[idx].type->name : "*UNKNOWN*");
-	    killsock(xx);
+		   i, dcc[idx].type ? dcc[idx].type->name : "*UNKNOWN*");
+	    killsock(i);
 	    lostdcc(idx);
 	  }
 	  idx = dcc_total + 1;
 	}
       if (idx == dcc_total) {
 	putlog(LOG_MISC, "*",
-	       "(@) EOF socket %d, not a dcc socket, not anything.",
-	       xx);
-	close(xx);
-	killsock(xx);
+	       "(@) EOF socket %d, not a dcc socket, not anything.", i);
+	close(i);
+	killsock(i);
       }
     } else if ((xx == -2) && (errno != EINTR)) {	/* select() error */
       context;
@@ -864,21 +893,9 @@ int main(int argc, char **argv)
 	context;
 	flushlogs();
 	context;
-	for (i = 0; i < max_logs; i++) {
-	  if (logs[i].f != NULL) {
-	    fclose(logs[i].f);
-	    nfree(logs[i].filename);
-	    nfree(logs[i].chname);
-	    logs[i].filename = NULL;
-	    logs[i].chname = NULL;
-	    logs[i].mask = 0;
-	    logs[i].f = NULL;
-	  }
-	}
-	context;
 	kill_tcl();
-	init_tcl();
-	init_language(NULL);
+	init_tcl(argc, argv);
+	init_language(0);
 	x = p->funcs[MODCALL_START];
 	x(0);
 	rehash();

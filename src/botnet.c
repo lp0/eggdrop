@@ -339,7 +339,8 @@ void rempartybot(char *bot)
 
   for (i = 0; i < parties; i++)
     if (!strcasecmp(party[i].bot, bot)) {
-      check_tcl_chpt(bot, party[i].nick, party[i].sock, party[i].chan);
+      if (party[i].chan >= 0)
+        check_tcl_chpt(bot, party[i].nick, party[i].sock, party[i].chan);
       remparty(bot, party[i].sock);
       i--;
     }
@@ -861,8 +862,10 @@ int botunlink(int idx, char *nick, char *reason)
       rembot(tandbot->bot);
     while (parties) {
       parties--;
-      check_tcl_chpt(party[i].bot, party[i].nick, party[i].sock,
-		     party[i].chan);
+      /* ASSERT? */
+      if (party[i].chan >= 0) 
+        check_tcl_chpt(party[i].bot, party[i].nick, party[i].sock,
+		       party[i].chan);
     }
     strcpy(s, "killassoc &");
     Tcl_Eval(interp, s);
@@ -899,7 +902,7 @@ int botlink(char *linker, int idx, char *nick)
       }
     /* address to connect to is in 'info' */
     bi = (struct bot_addr *) get_user(&USERENTRY_BOTADDR, u);
-    if (!bi) {
+    if (!bi || !strlen(bi->address) || !bi->telnet_port) {
       if (idx >= 0) {
 	dprintf(idx, "%s '%s'.\n", BOT_NOTELNETADDY, nick);
 	dprintf(idx, "%s .chaddr %s %s\n",
@@ -1091,11 +1094,9 @@ static void failed_pre_relay(int idx)
     lostdcc(i);
     return;
   }
-  putlog(LOG_MISC, "*", "%s [%s]%s/%d",
-	 BOT_LOSTDCCUSER, dcc[idx].nick,
+  putlog(LOG_MISC, "*", "%s [%s]%s/%d", BOT_LOSTDCCUSER, dcc[idx].nick,
 	 dcc[idx].host, dcc[idx].port);
-  putlog(LOG_MISC, "*", "(%s %s)",
-	 BOT_DROPPINGRELAY, dcc[tidx].nick);
+  putlog(LOG_MISC, "*", "(%s %s)", BOT_DROPPINGRELAY, dcc[tidx].nick);
   if ((dcc[tidx].sock != STDOUT) || backgrd) {
     if (idx > tidx) {
       int t = tidx;
