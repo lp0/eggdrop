@@ -1,7 +1,7 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.47 2001/06/24 20:49:24 poptix Exp $
+ * $Id: module.h,v 1.50 2001/07/18 06:03:29 tothwolf Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -77,9 +77,9 @@
 #endif
 
 #if defined (__CYGWIN__) && !defined(STATIC)
-    #  define EXPORT_TYPE(type)	__declspec(dllexport) type __cdecl
-    #else
-    #  define EXPORT_TYPE(type)	type
+#  define EXPORT_SCOPE	__declspec(dllexport)
+#else
+#  define EXPORT_SCOPE
 #endif
 
 /* Version checks for modules. */
@@ -358,7 +358,7 @@
 #define rem_tcl_coups ((void (*) (tcl_coups *))global[210])
 #define botname ((char *)(global[211]))
 /* 212 - 215 */
-#define remove_gunk ((void(*)(char *))global[212])
+/* 212: remove_gunk() -- UNUSED (drummer) */
 #define check_tcl_chjn ((void (*) (const char *,const char *,int,char,int,const char *))global[213])
 #define sanitycheck_dcc ((int (*)(char *, char *, char *, char *))global[214])
 #define isowner ((int (*)(char *))global[215])

@@ -3,7 +3,7 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.58 2001/07/03 16:46:08 guppy Exp $
+ * $Id: cmds.c,v 1.59 2001/07/14 12:37:08 poptix Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -2186,7 +2186,7 @@ static void cmd_tcl(struct userrec *u, int idx, char *msg)
   debug1("tcl: evaluate (.tcl): %s", msg);
   code = Tcl_GlobalEval(interp, msg);
   if (code == TCL_OK)
-    dumplots(idx, "Tcl: ", interp->result);
+    dumplots(idx, "TCL: ", interp->result);
   else
     dumplots(idx, "TCL error: ", interp->result);
 }
@@ -2722,7 +2722,6 @@ cmd_t C_dcc[] =
   {"echo",		"",	(Function) cmd_echo,		NULL},
   {"fixcodes",		"",	(Function) cmd_fixcodes,	NULL},
   {"help",		"",	(Function) cmd_help,		NULL},
-  {"rtfm",		"",	(Function) cmd_help,		NULL},
   {"ignores",		"m",	(Function) cmd_ignores,		NULL},
   {"link",		"t",	(Function) cmd_link,		NULL},
   {"loadmod",		"n",	(Function) cmd_loadmod,		NULL},
