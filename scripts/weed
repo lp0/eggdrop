@@ -23,22 +23,17 @@
 #                                         5 march 96
 #
 # <robey, 23jul96>:
-#   upgrade for v2 userfiles
-#
+#     upgrade for v2 userfiles
 # <bruce s, 4sep96>:
-#   fixed xtra field from getting truncated
-#
+#     fixed xtra field from getting truncated
 # <robey, 20sep96>:
-#   stopped it from mangling channel ban lists
-#
+#     stopped it from mangling channel ban lists
 # <Ec|ipse & dtM, 10jun97>:
-#   upgrade for v3 userfiles
-#
+#     upgrade for v3 userfiles
 # <Ec|ipse 18jun97>:
-#   added an option to remove users from unwanted channels
-#
+#     added an option to remove users from unwanted channels
 # <Ec|ipse 28oct97>:
-#   upgrade for v4 userfiles, with v3 converter
+#     upgrade for v4 userfiles, with v3 converter
 
 set exempt {*ban *ignore}
 set exemptops 0 ; set exemptmasters 0 ; set exemptfriends 0
@@ -237,6 +232,7 @@ proc convertUserFile {fname} {
         # begin of new user
         scan $line "%s %s %s %s" handle pass attr ts
         if {$convert == 1 && $attr != ""} {
+          regsub -all {B} $attr {t} attr
           set botflags "s h a l r" ; set Botflag($handle) ""
           set nattr [split [string trim $attr 0123456789] ""] ; set attr ""
           foreach flag $botflags {
@@ -407,7 +403,7 @@ foreach i [array names User] {
     (([string first f $attr] == -1) || (!$exemptfriends)) &&
     (([string first p $attr] == -1) || (!$exemptparty)) &&
     (([string first x $attr] == -1) || (!$exemptfile)) &&
-    (([string first B $attr] == -1) || (!$exemptbotm)) &&
+    (([string first t $attr] == -1) || (!$exemptbotm)) &&
     (([string first f $chanattr] == -1) || (!$exemptchanf)) &&
     (([string first m $chanattr] == -1) || (!$exemptchanm)) &&
     (([string first n $chanattr] == -1) || (!$exemptchann)) &&

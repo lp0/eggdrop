@@ -335,25 +335,43 @@ static int laston_set (struct userrec * u, struct user_entry * e, void * buf) {
    return 1;
 }
 
-static int laston_tcl_get (Tcl_Interp * interp, struct userrec * u,
+static int laston_tcl_get (Tcl_Interp * irp, struct userrec * u,
 			struct user_entry * e, int argc, char ** argv) {
    struct laston_info * li = (struct laston_info *)e->u.list;
    char number[20];
+   struct chanuserrec * cr;
    
-   sprintf(number,"%lu ",li->laston);
-   Tcl_AppendResult(interp, number, li->lastonplace, NULL);
+   BADARGS(4,5," handle LASTON time ?channel?");
+   if (argc == 5) {
+      for (cr = u->chanrec; cr; cr = cr->next) 
+	if (!strcasecmp(cr->channel, argv[4])) {
+	   Tcl_AppendResult(irp, int_to_base10(cr->laston),NULL);
+	   break;
+	}
+      if (!cr)
+	Tcl_AppendResult(irp, "0", NULL);
+   } else {
+      sprintf(number,"%lu ",li->laston);
+      Tcl_AppendResult(irp, number, li->lastonplace, NULL);
+   }
    return TCL_OK;
 }
 
 static int laston_tcl_set (Tcl_Interp * irp, struct userrec * u,
 			struct user_entry * e, int argc, char ** argv) {
    struct laston_info * li;
+   struct chanuserrec * cr;
    
-   BADARGS(5,5," handle type time place");
-   li = user_malloc(sizeof(struct laston_info));
-   li->lastonplace = user_malloc(strlen(argv[4])+1);
-   li->laston = atoi(argv[3]);
-   strcpy(li->lastonplace,argv[4]);
+   BADARGS(5,6," handle LASTON time place ?*?");
+   if (argc == 5) {
+      li = user_malloc(sizeof(struct laston_info));
+      li->lastonplace = user_malloc(strlen(argv[4])+1);
+      li->laston = atoi(argv[3]);
+      strcpy(li->lastonplace,argv[4]);
+   }
+   for (cr = u->chanrec; cr; cr = cr->next) 
+     if (!strcasecmp(cr->channel, argv[4]))
+       cr->laston = atoi(argv[3]);
    return TCL_OK;
 }
 
@@ -924,6 +942,24 @@ static int hosts_set (struct userrec * u, struct user_entry * e, void * buf) {
    return 1;
 }
 
+static int hosts_tcl_get (Tcl_Interp * irp, struct userrec * u,
+			 struct user_entry * e, int argc, char ** argv) {
+   struct list_type * x;
+   
+   BADARGS(3,3," handle HOSTS");
+   for (x = e->u.list;x;x=x->next)
+     Tcl_AppendElement(irp,x->extra);
+   return TCL_OK;
+}
+   
+
+static int hosts_tcl_set (Tcl_Interp * irp, struct userrec * u,
+			 struct user_entry * e, int argc, char ** argv) {
+   BADARGS(3,4," handle HOSTS ?host?");
+   hosts_set(u,e,argv[3]);
+   return TCL_OK;
+}
+
 struct user_entry_type USERENTRY_HOSTS = {
    0,
    0,
@@ -934,12 +970,9 @@ struct user_entry_type USERENTRY_HOSTS = {
    hosts_kill,
    def_get,
    hosts_set,
-/*   hosts_tcl_get,
+   hosts_tcl_get,
    hosts_tcl_set,
-  */
-     0,
-     0,
-     hosts_expmem,
+   hosts_expmem,
    hosts_display,
    "HOSTS"
 };

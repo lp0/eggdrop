@@ -506,24 +506,28 @@ void botnet_send_away (int idx, char * bot, int sock,
       if (msg) {
 	 
 	 if (idx < 0) {
-	    tandout_but(idx,"chat %s %s is now away: %s.\n",
-			bot, dcc[linking].nick, msg);
+	    tandout_but(idx,"chan %s %d %s is now away: %s.\n", bot,
+			dcc[linking].u.chat->con_chan, dcc[linking].nick,
+			msg);
 	 } else if ((b_numver(idx) >= NEAT_BOTNET))  {
 	    int partyidx = getparty(bot, sock);
 	    if (partyidx >= 0)
-	      tandout_but(idx,"chat %s %s %s: %s.\n",
-			  bot, party[partyidx].nick, NET_AWAY, msg);
+	      tandout_but(idx,"chan %s %d %s %s: %s.\n", bot,
+			  party[partyidx].chan,  party[partyidx].nick,
+			  NET_AWAY, msg);
 	 }
 	 tandout_but(idx,"away %s %d %s\n", bot, sock, msg);
       } else {
 	 if (idx < 0) {
-	    tandout_but(idx,"chat %s %s %s.\n",
-			bot, dcc[linking].nick, NET_UNAWAY);
+	    tandout_but(idx,"chan %s %d %s %s.\n", bot,
+			dcc[linking].u.chat->con_chan, dcc[linking].nick,
+			NET_UNAWAY);
 	 } else if (b_numver(idx) >= NEAT_BOTNET) {
 	    int partyidx = getparty(bot, sock);
 	    if (partyidx >= 0)
-	      tandout_but(idx,"chat %s %s %s.\n",
-			  bot, party[partyidx].nick, NET_UNAWAY);
+	      tandout_but(idx,"chan %s %d %s %s.\n", bot, 
+			  party[partyidx].chan, party[partyidx].nick, 
+			  NET_UNAWAY);
 	 }
 	 tandout_but(idx,"unaway %s %d\n", bot, sock);
       }

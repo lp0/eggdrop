@@ -60,6 +60,7 @@ SHLIB_STRIP="${STRIP}"
 AC_MSG_CHECKING(your OS)
 system=`$UNAME`
 DLOPEN_1=1
+BORGCUBES=0
 case $system in
   Linux)
     CFLAGS="${CFLAGS} -Wall"
@@ -152,16 +153,16 @@ case $system in
     STRIP=
     DEFAULT_MAKE=static
     ;;
-  CYGWIN32/NT)
-    AC_MSG_RESULT(Windows NT -- enjoy the ride! Don't come asking us for help.)
-    NT=yes
-    STRIP=
-    EGGEXEC=eggdrop.exe
-    DEFAULT_MAKE=static
-    ;;
   *)
-    AC_MSG_RESULT(Something unknown!!)
-    AC_MSG_RESULT(If you get dynamic modules to work, be sure to let the devel team know HOW :)
+    if test -r /mach; then
+      AC_MSG_RESULT(NeXT...We are borg, you will be assimilated)
+      AC_MSG_RESULT(break out the static modules, it's all you'll ever get :P)
+      AC_MSG_RESULT(Hiya DK :P)
+      BORGCUBES=1
+    else
+      AC_MSG_RESULT(Something unknown!!)
+      AC_MSG_RESULT(If you get dynamic modules to work, be sure to let the devel team know HOW :)
+    fi
     DEFAULT_MAKE=static
     ;;
 esac

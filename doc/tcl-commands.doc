@@ -84,8 +84,10 @@ specific commands, see later.
 |     BOTADDR - (another bot-only thing :) returns a list containing
 |             the bots address, the bots telnet port, and it's relay port.
 |     HOSTS - returns a list of the host for the user
-|     LASTON - returns a list containing the unixtime last seen, 
+|     LASTON - returns a list containing the unixtime last seen,
 |             and the last seen place.
+|            OR LASTON #channel returns the time last seen on the channel
+|               or 0 if no info
 |     INFO   - returns the user's global info line
 |     XTRA   - returns the old xtra info
 |     COMMENT - returns the master-visible only comment for the user
@@ -96,6 +98,12 @@ specific commands, see later.
 |   this is the counterpart of getuser, it lets you set the various values
 |   extra ones not supported about :
 |     PASS - use this to set a users password (no 3rd arg will clear it)
+|     HOSTS - for setting hosts, no extra info = clear, otherwise
+|             *1* hostmask is added :P
+|     LASTON - sets global laston time, will also set laston time for
+|              any channel the user has a chanrec for (if it matches)
+|              to prevent setting a channel time ALSO setting the global
+|              time use LASTON time #channel *
 
   chnick <old-handle> <new-handle>
     changes a user's handle
@@ -158,32 +166,12 @@ specific commands, see later.
     returns: "1" on success, "0" if the user does not exist or if there
       isn't such a channel
 
-  gethosts <handle>
-    returns: the hostmask list for that user if there are any, "none" if
-      the user exists but there are no hostmasks, "" if the user doesn't
-      exist
-
   getchaninfo <handle> <channel>
     returns: info line for a specific channel (behaves just like 'getinfo')
 
   setchaninfo <handle> <channel> <info>
    sets the info line on a specific channel for a user
    returns: nothing
-
-  getchanlaston <handle>
-    returns: last channel the user was seen in.  returns an empty
-      string if the user has never been on any channel or if there is no
-      such user
-
-  getlaston <handle> <channel>
-    returns: last time that user was on that channel (in unixtime format);
-      may return 0 if the user has never been on that channel or if there
-      is no such user
-
-  setlaston <handle> <channel> [timestamp]
-    sets the last time the user was on the channel to the current time (or
-      the time you specify, in unixtime)
-    returns: nothing
 
   newchanban <channel> <ban> <creator> <comment> [lifetime] [options]
     adds a ban to the enforced ban list of a channel; creator is given

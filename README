@@ -199,6 +199,13 @@ before. PLEASE! READ IT!
        modules by typing 'make static'. You can also try to compile
        dynamic modules on a  static-only system by typing 'make eggdrop'.
        
+       7.1 DO I STILL NEED TO 'loadmodule modules' ???
+       
+       YES, when you compile statically, all the modules are linked into
+       the main executable *but* they are not enabled until you use
+       loadmodule to enable then, hence you get nearly the same 
+       functionality with static modules as dynamic modules.
+       
     8. WHERE CAN I GET A PRECOMPILED EGGDROP FOR MY COMPUTER?
 
        It is HIGHLY recommended AGAINST using precompiled Eggdrops
@@ -224,7 +231,21 @@ before. PLEASE! READ IT!
        find all the lines that begin with '.   ', when you find
        several for 1 user, merge them into 1 giant line, removing
        the '.     ' at the start.
+       
+    11. I get a whole pile of "Unresolved symbol 'Tcl_AppendResult'"
+        (or some other symbol) when I try to load a modules.
 	
+	Some of the standard libraries have been compiled for static
+	linking only on your machine, you have 3 options:
+	(1) if it's your own machine, recompile TCL using dynamic linking
+	    by using './configure --enable-shared' when you configure
+	    TCL (not the bot) and then remake, & reinstall
+	(2) if it's not you machine, you make have to resort to 
+	    'make static' and 'make sinstall DESTDIR=<dir>' to make
+	    and install your bot.
+	(3) if you are of a more aggressive sense of mind, go beat the
+            stuffing out of your admin for have lame static libraries :)
+	    
 (6) SETTING UP A CRONTAB
 
     Eggdrop has become more stable with time, thanks mostly to people detail-

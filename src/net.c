@@ -15,9 +15,6 @@
 #include <sys/select.h>
 #endif
 #include <netinet/in.h>
-#ifndef __CYGWIN32__		/* Cygnus Win32 doesn't like you! */
-#include <netinet/tcp.h>
-#endif
 #include <arpa/inet.h>		/* is this really necessary? */
 #include <varargs.h>
 #include <errno.h>
@@ -32,18 +29,6 @@
 #else
 #define getdtablesize() 200
 #endif
-#endif
-
-#ifdef __CYGWIN32__		/* Extra defines for Cygnus gnu-win32 stuff */
-#define WSABASEERR              10000
-#define EADDRNOTAVAIL        (WSABASEERR+49)
-#define EALREADY             (WSABASEERR+37)
-#define EINPROGRESS          (WSABASEERR+36)
-#define EISCONN              (WSABASEERR+56)
-#define ENETUNREACH          (WSABASEERR+51)
-#define ETIMEDOUT            (WSABASEERR+60)
-#define ENOTCONN             (WSABASEERR+57)
-#define EHOSTUNREACH         (WSABASEERR+65)
 #endif
 
 extern int backgrd;

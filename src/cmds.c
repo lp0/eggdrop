@@ -60,7 +60,7 @@ static int add_bot_hostmask (int idx, char * nick)
 static void tell_who (struct userrec * u,int idx, int chan)
 {
    int i, k, ok = 0, atr = u ? u->flags : 0, len;
-   char s[121];
+   char s[1024]; /* temp fix - 1.4 has a better one */
 
    if (chan == 0)
      dprintf(idx, "Party line members:  (* = owner, + = master, @ = op)\n");
@@ -1136,7 +1136,7 @@ static void cmd_banner (struct userrec * u, int idx, char * par)
    simple_sprintf(s, "\007\007### Botwide:[%s] %s\n", dcc[idx].nick, par);
    for (i = 0; i < dcc_total; i++)
      if (dcc[i].type->flags & DCT_MASTER)
-       dprintf(i, s);
+       dprintf(i, "%s", s);
 }
 
 /* after messing with someone's user flags, make sure the dcc-chat flags
@@ -1336,7 +1336,7 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
    struct flag_record pls = {0,0,0,0,0,0}, mns = {0,0,0,0,0,0},
      user = {0,0,0,0,0,0};
    module_entry * me;
-   int fl = -1;
+   int fl = -1, of = 0, ocf = 0;
    
    if (!par[0]) {
       dprintf(idx, "Usage: chattr <handle> [changes] [channel]\n");
@@ -1410,10 +1410,14 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
 	 }
       }	   
       get_user_flagrec(u2,&user,par);
-      user.global = sanity_check((user.global | pls.global) & ~mns.global);
-      user.udef_global = (user.udef_global | pls.udef_global) 
-	& ~mns.udef_global;
+      if (user.match & FR_GLOBAL) {
+	 of = user.global;
+	 user.global = sanity_check((user.global | pls.global) & ~mns.global);
+	 user.udef_global = (user.udef_global | pls.udef_global) 
+	   & ~mns.udef_global;
+      }
       if (chan) {
+	 ocf = user.chan;
 	 user.chan = chan_sanity_check((user.chan | pls.chan) & ~mns.chan,
 				       user.global);
 	 user.udef_chan = (user.udef_chan | pls.udef_chan) & ~mns.udef_chan;
@@ -1429,17 +1433,21 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
      putlog(LOG_CMDS, "*", "#%s# chattr %s", dcc[idx].nick, hand);
 
    /* get current flags and display them */
-   user.match = FR_GLOBAL;
-   get_user_flagrec(u2, &user,NULL);
-   build_flags(work, &user, NULL);
-   if (work[0] != '-') 
-     dprintf(idx, "Global flags for %s are now +%s\n", hand, work);
-   else
-     dprintf(idx, "No global flags for %s.\n", hand);
-   if (chan) {      
+   if (user.match & FR_GLOBAL) {
+      user.match = FR_GLOBAL;
+      check_dcc_attrs(u2, of);
+      get_user_flagrec(u2, &user,NULL);
+      build_flags(work, &user, NULL);
+      if (work[0] != '-') 
+	dprintf(idx, "Global flags for %s are now +%s\n", hand, work);
+      else
+	dprintf(idx, "No global flags for %s.\n", hand);
+   }
+   if (chan) {
       user.match = FR_CHAN;
       get_user_flagrec(u2, &user, par);
       user.chan &= ~BOT_SHARE;
+      check_dcc_chanattrs(u2, chan->name, user.chan, ocf);
       build_flags(work, &user, NULL);
       if (work[0] != '-') 
 	dprintf(idx, "Channel flags for %s on %s are now +%s\n", hand, 

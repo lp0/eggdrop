@@ -741,6 +741,9 @@ set note-life 60
 # to another bot
 set allow-fwd 0
 
+# set this to 1 if you want the bot to let people know hourly if they
+# have any notes
+set notify-users 1
 
 # comment out this next line, otherwise your bot won't start
 die "You didn't edit your config file like you were told, did you?"
@@ -763,7 +766,7 @@ set console-autosave 1
 set force-channel 0
 
 # display a user's global info line when they join a botnet channel?
-set info-party 1
+set info-party 0
 
 
 

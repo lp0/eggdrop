@@ -29,6 +29,8 @@ static char notefile [121];
 static int allow_fwd = 0;
 /* DAMN fcntl.h */
 static Function * global = NULL;
+/* notify users they have notes every hour? */
+static int notify_users = 0;
 
 static void fwd_display (int idx, struct user_entry * e) {
    context;
@@ -686,34 +688,36 @@ static void notes_hourly() {
    struct userrec * u;
    
    expire_notes();
-   chan = chanset;
-   while (chan != NULL) {
-      m = chan->channel.member;
-      while (m->nick[0]) {
-	 sprintf(s1, "%s!%s", m->nick, m->userhost);
-	 u = get_user_by_host(s1);
-	 if (u) {
+   if (notify_users) {
+      chan = chanset;
+      while (chan != NULL) {
+	 m = chan->channel.member;
+	 while (m->nick[0]) {
+	    sprintf(s1, "%s!%s", m->nick, m->userhost);
+	    u = get_user_by_host(s1);
+	    if (u) {
 	    k = num_notes(u->handle);
-	    for (l = 0; l < dcc_total; l++) {
-	       if ((dcc[l].type->flags & DCT_CHAT) 
-		   && (strcasecmp(dcc[l].nick, u->handle) == 0))
-		 k = 0;	/* they already know they have notes */
+	       for (l = 0; l < dcc_total; l++) {
+		  if ((dcc[l].type->flags & DCT_CHAT) 
+		      && (strcasecmp(dcc[l].nick, u->handle) == 0))
+		    k = 0;	/* they already know they have notes */
+	       }
+	       if (k) {
+		  dprintf(DP_HELP, BOT_NOTESWAIT1, BOT_NOTESWAIT1_ARGS);
+		  dprintf(DP_HELP, "NOTICE %s :%s /MSG %s NOTES [pass] INDEX\n",
+			  m->nick, BOT_NOTESWAIT2, origbotname);
+	       }
 	    }
-	    if (k) {
-	       dprintf(DP_HELP, BOT_NOTESWAIT1, BOT_NOTESWAIT1_ARGS);
-	       dprintf(DP_HELP, "NOTICE %s :%s /MSG %s NOTES [pass] INDEX\n",
-		       m->nick, BOT_NOTESWAIT2, origbotname);
-	    }
+	    m = m->next;
 	 }
-	 m = m->next;
+	 chan = chan->next;
       }
-      chan = chan->next;
-   }
-   for (l = 0; l < dcc_total; l++) {
-      k = num_notes(dcc[l].nick);
-      if ((k > 0) && (dcc[l].type->flags & DCT_CHAT)) {
-	 dprintf(l, BOT_NOTESWAIT3, BOT_NOTESWAIT3_ARGS);
-	 dprintf(l, BOT_NOTESWAIT4);
+      for (l = 0; l < dcc_total; l++) {
+	 k = num_notes(dcc[l].nick);
+	 if ((k > 0) && (dcc[l].type->flags & DCT_CHAT)) {
+	    dprintf(l, BOT_NOTESWAIT3, BOT_NOTESWAIT3_ARGS);
+	    dprintf(l, BOT_NOTESWAIT4);
+	 }
       }
    }
 }
@@ -776,6 +780,7 @@ static tcl_ints notes_ints [] = {
      {"note-life", &note_life},
      {"max-notes", &maxnotes},
      {"allow-fwd", &allow_fwd},
+     {"notify-users", &notify_users},
      { 0, 0 }
 };
 

@@ -76,19 +76,15 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.2";
-int egg_numver = 1030200;
+char egg_version[1024] = "1.3.3";
+int egg_numver = 1030300;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
 /* default user flags for people who say 'hello' */
 int default_flags = 0;
 /* run in the background? */
-#ifdef __CYGWIN32__
-int backgrd = 0;
-#else
 int backgrd = 1;
-#endif
 /* foreground: constantly display channel stats? */
 int con_chan = 0;
 /* foreground: use the terminal as a party line? */

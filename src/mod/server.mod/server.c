@@ -864,8 +864,28 @@ static cmd_t my_ctcps[1] =
    { "DCC", "", ctcp_DCC_CHAT, "server:DCC" }
 };
 
-static char *server_close()
-{
+
+static int tcl_jump STDVAR {
+   BADARGS(1, 4, " ?server? ?port? ?pass?");
+   if (argc >= 2) {
+      strcpy(newserver, argv[1]);
+      if (argc >= 3)
+	newserverport = atoi(argv[2]);
+      else
+	newserverport = default_port;
+      if (argc == 4)
+	strcpy(newserverpass, argv[3]);
+   }
+   cycle_time = 0;
+   nuke_server("QUIT :changing servers\n");
+   return TCL_OK;
+}
+
+static tcl_cmds my_tcl_cmds [] = {
+      {"jump" , tcl_jump},
+      {0,0},
+};
+static char *server_close() {
    cmd_t C_t[1];
    
    context;
@@ -895,6 +915,7 @@ static char *server_close()
    rem_tcl_strings(my_tcl_strings);
    rem_tcl_ints(my_tcl_ints);
    rem_help_reference("server.help");
+   rem_tcl_commands(my_tcl_cmds);
    context;
    Tcl_UntraceVar(interp, "nick", 
 		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
@@ -1061,6 +1082,7 @@ char *server_start (Function * global_funcs)
    my_tcl_ints[0].val = &use_silence;
    my_tcl_ints[1].val = &use_console_r;
    add_tcl_ints(my_tcl_ints);
+   add_tcl_commands(my_tcl_cmds);
    context;
    add_hook(HOOK_SECONDLY,server_secondly);
    add_hook(HOOK_5MINUTELY,server_5minutely);

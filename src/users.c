@@ -198,7 +198,6 @@ void check_expired_ignores()
       if (!((*u)->flags & IGREC_PERM) && (now >= (*u)->expire)) {
 	 putlog(LOG_MISC, "*", "%s %s (%s)", IGN_NOLONGER, (*u)->igmask,
 		MISC_EXPIRED);
-	 delignore((*u)->igmask);
 	 if (use_silence) {
 	    char *p;
 	    /* possibly an ircu silence was added for this user */
@@ -209,6 +208,7 @@ void check_expired_ignores()
 	      p++;
 	    dprintf(DP_SERVER, "SILENCE -%s\n", p);
 	 }
+	 delignore((*u)->igmask);
       } else {
 	 u = &((*u)->next);
       }
@@ -603,13 +603,15 @@ int readuserfile (char * file, struct userrec ** ret, int private_owner)
 	    rmspace(s);
 	    if (strcasecmp(code, "-") == 0) {
 	       if (lasthand[0]) {
-		  p = strchr(s, ',');
-		  while (p != NULL) {
-		     splitc(s1, s, ',');
-		     rmspace(s1);
-		     if (s1[0])
-		       set_user(&USERENTRY_HOSTS,u,s1);
+		  if (u) { /* only break it down if there a real users */
 		     p = strchr(s, ',');
+		     while (p != NULL) {
+			splitc(s1, s, ',');
+			rmspace(s1);
+			if (s1[0])
+			  set_user(&USERENTRY_HOSTS,u,s1);
+			p = strchr(s, ',');
+		     }
 		  }
 		  /* channel bans are never stacked with , */
 		  if (s[0]) {

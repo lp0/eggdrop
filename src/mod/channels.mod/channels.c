@@ -85,7 +85,7 @@ static void set_mode_protect (struct chanset_t * chan, char * set)
        case 'k':
 	 i = CHANKEY;
 	 chan->key_prot[0] = 0;
-	 if (!pos) {
+	 if (pos) {
 	    s1 = newsplit(&set);
 	    if (s1[0])
 	      strcpy(chan->key_prot, s1);
@@ -127,26 +127,26 @@ static void get_mode_protect (struct chanset_t * chan, char * s)
 	 tst = chan->mode_mns_prot;
 	 if (tst)
 	    *p++ = '-';
+	 if (tst & CHANKEY)
+	   *p++ = 'k';
+	 else if (tst & CHANLIMIT)
+	   *p++ = 'p';
       }
       if (tst & CHANINV)
 	 *p++ = 'i';
-      if (tst & CHANPRIV)
+      else if (tst & CHANPRIV)
 	 *p++ = 'p';
-      if (tst & CHANSEC)
+      else if (tst & CHANSEC)
 	 *p++ = 's';
-      if (tst & CHANMODER)
+      else if (tst & CHANMODER)
 	 *p++ = 'm';
-      if (tst & CHANTOPIC)
+      else if (tst & CHANTOPIC)
 	 *p++ = 't';
-      if (tst & CHANNOMSG)
+      else if (tst & CHANNOMSG)
 	 *p++ = 'n';
-      if (tst & CHANLIMIT)
-	 *p++ = 'l';
-      if (tst & CHANKEY)
-	 *p++ = 'k';
-      if (tst & CHANANON)
+      else if (tst & CHANANON)
 	 *p++ = 'a';
-      if (tst & CHANQUIET)
+      else if (tst & CHANQUIET)
 	 *p++ = 'q';
    }
    *p = 0;
@@ -212,7 +212,7 @@ static void channels_chon (char * handle, int idx) {
 	find = USER_OP;
       fr.match = FR_CHAN;
       while (chan && !found) {
-	 get_user_flagrec(dcc[idx].user,&fr,NULL);
+	 get_user_flagrec(dcc[idx].user,&fr,chan->name);
 	 if (fr.chan & find)
 	   found = 1;
 	 else

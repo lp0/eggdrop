@@ -1558,7 +1558,7 @@ void dcc_telnet_got_ident(int i, char * host) {
 	 (dcc[idx].sock == dcc[i].u.ident_sock))
        break;
    dcc[i].u.other = 0;
-   if (i == idx) 
+   if (dcc_total == idx) 
      putlog(LOG_MISC,"*","Lost ident wait telnet socket!!");
    strncpy(dcc[i].host,host,UHOSTLEN);
    dcc[i].host[UHOSTLEN] = 0;
@@ -1593,7 +1593,7 @@ void dcc_telnet_got_ident(int i, char * host) {
       return;
    }
     /* script? */
-   if (strcmp(dcc[i].nick, "(script)") == 0) {
+   if (strcmp(dcc[idx].nick, "(script)") == 0) {
       dcc[i].type = &DCC_SOCKET;
       dcc[i].u.other = NULL;
       strcpy(dcc[i].nick, "*");

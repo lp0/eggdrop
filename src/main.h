@@ -43,3 +43,16 @@ DCC_TELNET,DCC_IDENT,DCC_IDENTWAIT;
 #endif
 #define iptolong(a) swap_long((unsigned long)a)
 #define fixcolon(x) if (x[0]==':') {x++;} else {x=newsplit(&x);}
+
+/* Stupid Borg Cube crap ;p */
+#if BORGCUBES==1
+
+/* net.h needs this */
+#define O_NONBLOCK      00000004        /* POSIX non-blocking I/O       */
+
+/* mod/filesys.mod/filedb.c needs this */
+#define _S_IFMT         0170000         /* type of file */
+#define   _S_IFDIR      0040000         /*   directory */
+#define S_ISDIR(m)      (((m)&(_S_IFMT)) == (_S_IFDIR))
+
+#endif

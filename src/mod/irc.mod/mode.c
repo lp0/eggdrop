@@ -551,7 +551,7 @@ static void got_unban (struct chanset_t * chan, char * nick, char * from,
 	 dprintf(DP_MODE, "KICK %s %s :%s\n", chan->name, nick, CHAN_BADBAN);
       }
       return;
-   }
+   } 
    if (u_sticky_ban(chan->bans, who) || u_sticky_ban(global_bans,who)) {
       /* that's a sticky ban! No point in being */
       /* sticky unless we enforce it!! */

@@ -9,14 +9,7 @@
 #   -DEBUG_MEM       to be able to debug memory allocation (.debug)
 #   -DEBUG           logs random debugging comments to +d level (annoying
 #                      and useless to most people)
-#   -DREDHATSUX      if you get dprintf already defined errors in redhat
-#
-# *note* -DEBUG_TCL made so little code addition, I moved it into tcl
-#    try set debug-tcl 1
-#        -DEBUG_OUTPUT is now a tcl variable (debug-output)
-#
-# ok, Im a linux weenie, these settings with work for linux
-#
+# these can now be set by using 'make debug' & 'make debugmem'
 CFLGS = 
 
 # configure SHOULD set these...you may need to tweak them to get modules
@@ -36,6 +29,9 @@ DLFLAGS= @DLFLAGS@
 SHLIB_CC = @SHLIB_CC@
 SHLIB_LD  = @SHLIB_LD@
 SHLIB_STRIP = @SHLIB_STRIP@
+
+# this is the directory we will try to install the bot files into...
+DESTDIR=../bot
 
 # STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
 # - - - - - - - - do not edit anything below this line. - - - - - - - - #
@@ -66,7 +62,7 @@ dist: clean
 	@rm -f Makefile config.cache config.log config.status config.h lush.h
 	@rm -f doc/*~
 	@echo "all:" >Makefile
-	@echo "	@./configure; make" >>Makefile
+	@echo "	@./configure; make install" >>Makefile
 
 eggdrop: modegg modules
 
@@ -199,14 +195,19 @@ ainstall:
 		echo Creating directory: $(DEST).; \
 		mkdir $(DEST); \
 	fi
-	@cp -f README $(DEST)
+	@rm -f $(DEST)/README
+	@cp README $(DEST)
 	@if test ! -d $(DEST)/language; then \
 		echo Creating language subdirectory.; \
 		mkdir $(DEST)/language; \
 	fi
-	@cp -f language/* $(DEST)/language/
+	@rm -f $(DEST)/language/* 
+	@cp language/* $(DEST)/language/
 	@if test -r $(DEST)/eggdrop; then \
 		rm -f $(DEST)/oeggdrop; \
+	fi
+	@if test ! -r $(DEST)/motd; then \
+	@cp motd $(DEST)
 	fi
 	@if test -d $(DEST)/modules/; then \
 		echo Moving old modules into \'modules.old\' directory.; \
