@@ -5,7 +5,7 @@
  *   command line arguments
  *   context and assert debugging
  *
- * $Id: main.c,v 1.57 2001/04/13 19:26:35 guppy Exp $
+ * $Id: main.c,v 1.64 2001/07/05 22:19:51 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -28,7 +28,7 @@
 /*
  * The author (Robey Pointer) can be reached at:  robey@netcom.com
  * NOTE: Robey is no long working on this code, there is a discussion
- * list avaliable at eggheads@eggheads.org.
+ * list available at eggheads@eggheads.org.
  */
 
 #include "main.h"
@@ -51,6 +51,10 @@
 #include "modules.h"
 #include "tandem.h"
 #include "bg.h"
+
+#ifdef CYGWIN_HACKS
+#include <windows.h>
+#endif
 
 #ifndef _POSIX_SOURCE
 /* Solaris needs this */
@@ -77,8 +81,8 @@ extern jmp_buf		 alarmret;
  * modified versions of this bot.
  */
 
-char	egg_version[1024] = "1.6.4";
-int	egg_numver = 1060400;
+char	egg_version[1024] = "1.6.5";
+int	egg_numver = 1060500;
 
 char	notify_new[121] = "";	/* Person to send a note to for new users */
 int	default_flags = 0;	/* Default user flags and */
@@ -223,7 +227,7 @@ void write_debug()
     if (x >= 0) {
       strncpyz(s, ctime(&now), sizeof s);
       dprintf(-x, "Debug (%s) written %s\n", ver, s);
-      dprintf(-x, "Please report problem to eggheads@eggheads.org\n");
+      dprintf(-x, "Please report problem to bugs@eggheads.org\n");
       dprintf(-x, "after a visit to http://www.eggheads.org/bugzilla/\n");
       dprintf(-x, "Full Patch List: %s\n", egg_xtra);
       dprintf(-x, "Context: ");
@@ -275,10 +279,10 @@ void write_debug()
     dprintf(-x, "Compile flags: %s\n", CCFLAGS);
 #endif
 #ifdef LDFLAGS
-    dprintf(-x, "Link flags   : %s\n", LDFLAGS);
+    dprintf(-x, "Link flags: %s\n", LDFLAGS);
 #endif
 #ifdef STRIPFLAGS
-    dprintf(-x, "Strip flags  : %s\n", STRIPFLAGS);
+    dprintf(-x, "Strip flags: %s\n", STRIPFLAGS);
 #endif
 
     dprintf(-x, "Context: ");
@@ -639,6 +643,11 @@ static void event_resettraffic()
   itraffic_trans_today = otraffic_trans_today = 0;
 }
 
+static void event_loaded()
+{
+  check_tcl_event("loaded");
+}
+
 void kill_tcl();
 extern module_entry *module_list;
 void restart_chons();
@@ -751,7 +760,7 @@ int main(int argc, char **argv)
   chanset = NULL;
   egg_memcpy(&nowtm, localtime(&now), sizeof(struct tm));
   lastmin = nowtm.tm_min;
-  srandom(now);
+  srandom(now % (getpid() + getppid()));
   init_mem();
   init_language(1);
   if (argc > 1)
@@ -849,6 +858,9 @@ int main(int argc, char **argv)
     freopen("/dev/null", "r", stdin);
     freopen("/dev/null", "w", stdout);
     freopen("/dev/null", "w", stderr);
+#ifdef CYGWIN_HACKS
+    FreeConsole();
+#endif
   }
 
   /* Terminal emulating dcc chat */
@@ -888,6 +900,9 @@ int main(int argc, char **argv)
   add_hook(HOOK_USERFILE, (Function) event_save);
   add_hook(HOOK_DAILY, (Function) event_logfile);
   add_hook(HOOK_DAILY, (Function) event_resettraffic);
+  add_hook(HOOK_LOADED, (Function) event_loaded);
+
+  call_hook(HOOK_LOADED);
 
   debug0("main: entering loop");
   while (1) {
@@ -1005,6 +1020,9 @@ int main(int argc, char **argv)
 	Function x;
 	char xx[256];
 
+ 	/* oops, I guess we should call this event before tcl is restarted */
+   	check_tcl_event("prerestart");
+
 	while (f) {
 	  f = 0;
 	  for (p = module_list; p != NULL; p = p->next) {
@@ -1044,6 +1062,7 @@ int main(int argc, char **argv)
 	x(NULL);
 	rehash();
 	restart_chons();
+	call_hook(HOOK_LOADED);
       }
       do_restart = 0;
     }

@@ -1,7 +1,7 @@
 /*
  * share.c -- part of share.mod
  *
- * $Id: share.c,v 1.49 2001/04/12 02:39:47 guppy Exp $
+ * $Id: share.c,v 1.54 2001/07/06 16:38:01 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -54,6 +54,18 @@ static int resync_time = 900;
 static int overr_local_bots = 0;	/* Override local bots?		    */
 
 
+struct delay_mode {
+  struct delay_mode *next;
+  struct chanset_t *chan;
+  int plsmns;
+  int mode;
+  char *mask;
+  int seconds;
+};
+
+static struct delay_mode *start_delay = NULL;
+
+
 /* Store info for sharebots */
 struct share_msgq {
   struct chanset_t *chan;
@@ -61,12 +73,14 @@ struct share_msgq {
   struct share_msgq *next;
 };
 
-static struct tandbuf {
+typedef struct tandbuf_t {
   char bot[HANDLEN + 1];
   time_t timer;
   struct share_msgq *q;
-} tbuf[5];
+  struct tandbuf_t *next;
+} tandbuf;
 
+tandbuf *tbuf;
 
 /* Prototypes */
 static void start_sending_users(int);
@@ -82,6 +96,87 @@ static int private_globals_bitmask();
 
 #include "uf_features.c"
 
+/*
+ *   Sup's delay code
+ */
+
+static void add_delay(struct chanset_t *chan, int plsmns, int mode, char *mask)
+{
+  struct delay_mode *d = NULL;
+
+  d = (struct delay_mode *) nmalloc(sizeof(struct delay_mode));
+  if (!d)
+    return;
+  d->chan = chan;
+  d->plsmns = plsmns;
+  d->mode = mode;
+  d->mask = (char *) nmalloc(strlen(mask) + 1);
+  if (!d->mask) {
+    nfree(d);
+    return;
+  }
+  strncpyz(d->mask, mask, strlen(mask) + 1);
+  d->seconds = (int) (now + (random() % 20));
+  d->next = start_delay;
+  start_delay = d;
+}
+
+static void del_delay(struct delay_mode *delay)
+{
+  struct delay_mode *d = NULL, *old = NULL;
+
+  for (d = start_delay; d; old = d, d = d->next) {
+    if (d == delay) {
+     if (old)
+        old->next = d->next;
+      else
+        start_delay = d->next;
+      if (d->mask)
+        nfree(d->mask);
+      nfree(d);
+      break;
+    }
+  }
+}
+
+static void check_delay()
+{
+  struct delay_mode *d = NULL, *dnext = NULL;
+
+  for (d = start_delay; d; d = dnext) {
+    dnext = d->next;
+    if (d->seconds <= now) {
+      add_mode(d->chan, d->plsmns, d->mode, d->mask);
+      del_delay(d);
+    }
+  }
+}
+
+static void delay_free_mem()
+{
+  struct delay_mode *d = NULL, *dnext = NULL;
+
+  for (d = start_delay; d; d = dnext) {
+    dnext = d->next;
+    if (d->mask)
+      nfree(d->mask);
+    nfree(d);
+  }
+  start_delay = NULL;
+}
+
+static int delay_expmem()
+{
+  int size = 0;
+  struct delay_mode *d = NULL;
+
+  for (d = start_delay; d; d = d->next) {
+    if (d->mask)
+      size += strlen(d->mask) + 1;
+    size += sizeof(struct delay_mode);
+  }
+  return size;
+}
 
 /*
  *   Botnet commands
@@ -570,18 +665,16 @@ static void share_chchinfo(int idx, char *par)
 
 static void share_mns_ban(int idx, char *par)
 {
-  struct chanset_t *chan;
+  struct chanset_t *chan = NULL;
+
   if (dcc[idx].status & STAT_SHARE) {
     shareout_but(NULL, idx, "-b %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel ban %s", dcc[idx].nick, par);
     str_unescape(par, '\\');
     noshare = 1;
-    if (u_delban(NULL, par, 1)>0) {
-      chan = chanset;
-      while (chan != NULL) {
-	add_mode(chan, '-', 'b', par);
-	chan = chan->next;
-      }
+    if (u_delban(NULL, par, 1) > 0) {
+      for (chan = chanset; chan; chan = chan->next)
+	add_delay(chan, '-', 'b', par);
     }
     noshare = 0;
   }
@@ -589,18 +682,16 @@ static void share_mns_ban(int idx, char *par)
 
 static void share_mns_exempt(int idx, char *par)
 {
-  struct chanset_t *chan;
+  struct chanset_t *chan = NULL;
+
   if (dcc[idx].status & STAT_SHARE) {
     shareout_but(NULL, idx, "-e %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel exempt %s", dcc[idx].nick, par);
     str_unescape(par, '\\');
     noshare = 1;
-    if (u_delexempt(NULL, par, 1)>0) {
-      chan = chanset;
-      while (chan != NULL) {
-	add_mode(chan, '-', 'e', par);
-	chan = chan->next;
-      }
+    if (u_delexempt(NULL, par, 1) > 0) {
+      for (chan = chanset; chan; chan = chan->next)
+	add_delay(chan, '-', 'e', par);
     }
     noshare = 0;
   }
@@ -608,18 +699,16 @@ static void share_mns_exempt(int idx, char *par)
 
 static void share_mns_invite(int idx, char *par)
 {
-  struct chanset_t *chan;
+  struct chanset_t *chan = NULL;
+
   if (dcc[idx].status & STAT_SHARE) {
     shareout_but(NULL, idx, "-inv %s\n", par);
     putlog(LOG_CMDS, "*", "%s: cancel invite %s", dcc[idx].nick, par);
     str_unescape(par, '\\');
     noshare = 1;
-    if (u_delinvite(NULL, par, 1)>0) {
-      chan = chanset;
-      while (chan != NULL) {
-	add_mode(chan, '-', 'I', par);
-	chan = chan->next;
-      }
+    if (u_delinvite(NULL, par, 1) > 0) {
+      for (chan = chanset; chan; chan = chan->next)
+	add_delay(chan, '-', 'I', par);
     }
     noshare = 0;
   }
@@ -646,8 +735,8 @@ static void share_mns_banchan(int idx, char *par)
 	     par, chname);
       str_unescape(par, '\\');
       noshare = 1;
-      if (u_delban(chan, par, 1)>0)
-	add_mode(chan, '-', 'b', par);
+      if (u_delban(chan, par, 1) > 0)
+	add_delay(chan, '-', 'b', par);
       noshare = 0;
     }
   }
@@ -674,8 +763,8 @@ static void share_mns_exemptchan(int idx, char *par)
 	     par, chname);
       str_unescape(par, '\\');
       noshare = 1;
-      if (u_delexempt(chan, par,1))
-	add_mode(chan, '-', 'e', par);
+      if (u_delexempt(chan, par, 1) > 0)
+	add_delay(chan, '-', 'e', par);
       noshare = 0;
     }
   }
@@ -702,8 +791,8 @@ static void share_mns_invitechan (int idx, char *par)
 	     par, chname);
       str_unescape(par, '\\');
       noshare = 1;
-      if (u_delinvite(chan, par,1)>0)
-	add_mode(chan, '-', 'I', par);
+      if (u_delinvite(chan, par, 1) > 0)
+	add_delay(chan, '-', 'I', par);
       noshare = 0;
     }
   }
@@ -1304,37 +1393,52 @@ static void shareout_but EGG_VARARGS_DEF(struct chanset_t *, arg1)
  */
 static void new_tbuf(char *bot)
 {
-  int i;
+  tandbuf **old = &tbuf, *new;
 
-  for (i = 0; i < 5; i++)
-    if (!tbuf[i].bot[0]) {
-      /* This one is empty */
-      strcpy(tbuf[i].bot, bot);
-      tbuf[i].q = NULL;
-      tbuf[i].timer = now;
+  new = nmalloc(sizeof(tandbuf));
+  strcpy(new->bot, bot);
+  new->q = NULL;
+  new->timer = now;
+  new->next = *old;
+  *old = new;
       putlog(LOG_BOTS, "*", "Creating resync buffer for %s", bot);
+}
+
+static void del_tbuf(tandbuf *goner)
+{
+  struct share_msgq *q, *r;
+  tandbuf *t = NULL, *old = NULL;
+
+  for (t = tbuf; t; old = t, t = t->next) {
+    if (t == goner) {
+      if (old)
+        old->next = t->next;
+      else
+        tbuf = t->next;
+      for (q = t->q; q && q->msg[0]; q = r) {
+	r = q->next;
+	nfree(q->msg);
+	nfree(q);
+      }
+      nfree(t);
       break;
     }
+  }
 }
 
 /* Flush a certain bot's tbuf.
  */
 static int flush_tbuf(char *bot)
 {
-  int i;
-  struct share_msgq *q;
+  tandbuf *t, *tnext = NULL;
 
-  for (i = 0; i < 5; i++)
-    if (!egg_strcasecmp(tbuf[i].bot, bot)) {
-      while (tbuf[i].q) {
-	q = tbuf[i].q;
-	tbuf[i].q = tbuf[i].q->next;
-	nfree(q->msg);
-	nfree(q);
-      }
-      tbuf[i].bot[0] = 0;
+  for (t = tbuf; t; t = tnext) {
+    tnext = t->next;
+    if (!egg_strcasecmp(t->bot, bot)) {
+      del_tbuf(t);
       return 1;
     }
+  }
   return 0;
 }
 
@@ -1343,23 +1447,16 @@ static int flush_tbuf(char *bot)
 static void check_expired_tbufs()
 {
   int i;
-  struct share_msgq *q;
+  tandbuf *t, *tnext = NULL;
 
-  for (i = 0; i < 5; i++)
-    if (tbuf[i].bot[0]) {
-      if (now - tbuf[i].timer > resync_time) {
-	/* EXPIRED */
-	while (tbuf[i].q) {
-	  q = tbuf[i].q;
-	  tbuf[i].q = tbuf[i].q->next;
-	  nfree(q->msg);
-	  nfree(q);
-	}
+  for (t = tbuf; t; t = tnext) {
+    tnext = t->next;
+    if ((now - t->timer) > resync_time) {
 	putlog(LOG_BOTS, "*", "Flushing resync buffer for clonebot %s.",
-	       tbuf[i].bot);
-	tbuf[i].bot[0] = 0;
-      }
+	t->bot);
+      del_tbuf(t);
     }
+  }
   /* Resend userfile requests */
   for (i = 0; i < dcc_total; i++)
     if (dcc[i].type->flags & DCT_BOT) {
@@ -1412,18 +1509,19 @@ static struct share_msgq *q_addmsg(struct share_msgq *qq,
  */
 static void q_tbuf(char *bot, char *s, struct chanset_t *chan)
 {
-  int i;
   struct share_msgq *q;
+  tandbuf *t;
 
-  for (i = 0; i < 5; i++)
-    if (!egg_strcasecmp(tbuf[i].bot, bot)) {
+  for (t = tbuf; t && t->bot[0]; t = t->next)
+    if (!egg_strcasecmp(t->bot, bot)) {
       if (chan) {
 	fr.match = (FR_CHAN | FR_BOT);
 	get_user_flagrec(get_user_by_handle(userlist, bot), &fr, chan->dname);
       }
       if ((!chan || bot_chan(fr) || bot_global(fr))
-	  && (q = q_addmsg(tbuf[i].q, chan, s)))
-	tbuf[i].q = q;
+	  && (q = q_addmsg(t->q, chan, s)))
+	t->q = q;
+      break;
     }
 }
 
@@ -1431,19 +1529,18 @@ static void q_tbuf(char *bot, char *s, struct chanset_t *chan)
  */
 static void q_resync(char *s, struct chanset_t *chan)
 {
-  int i;
   struct share_msgq *q;
+  tandbuf *t;
 
-  for (i = 0; i < 5; i++)
-    if (tbuf[i].bot[0]) {
+  for (t = tbuf; t && t->bot[0]; t = t->next) {
       if (chan) {
 	fr.match = (FR_CHAN | FR_BOT);
-	get_user_flagrec(get_user_by_handle(userlist, tbuf[i].bot),
-			 &fr, chan->dname);
+      get_user_flagrec(get_user_by_handle(userlist, t->bot), &fr,
+	chan->dname);
       }
       if ((!chan || bot_chan(fr) || bot_global(fr))
-	  && (q = q_addmsg(tbuf[i].q, chan, s)))
-	tbuf[i].q = q;
+	  && (q = q_addmsg(t->q, chan, s)))
+      t->q = q;
     }
 }
 
@@ -1451,10 +1548,10 @@ static void q_resync(char *s, struct chanset_t *chan)
  */
 static int can_resync(char *bot)
 {
-  int i;
+  tandbuf *t;
 
-  for (i = 0; i < 5; i++)
-    if (!egg_strcasecmp(bot, tbuf[i].bot))
+  for (t = tbuf; t && t->bot[0]; t = t->next)
+    if (!egg_strcasecmp(bot, t->bot))
       return 1;
   return 0;
 }
@@ -1463,19 +1560,15 @@ static int can_resync(char *bot)
  */
 static void dump_resync(int idx)
 {
-  int i;
   struct share_msgq *q;
+  tandbuf *t;
 
-  for (i = 0; i < 5; i++)
-    if (!egg_strcasecmp(dcc[idx].nick, tbuf[i].bot)) {
-      while (tbuf[i].q) {
-	q = tbuf[i].q;
-	tbuf[i].q = tbuf[i].q->next;
+  for (t = tbuf; t && t->bot[0]; t = t->next)
+    if (!egg_strcasecmp(dcc[idx].nick, t->bot)) {
+      for (q = t->q; q && q->msg[0]; q = q->next) {
 	dprintf(idx, "%s", q->msg);
-	nfree(q->msg);
-	nfree(q);
       }
-      tbuf[i].bot[0] = 0;
+      flush_tbuf(dcc[idx].nick);
       break;
     }
 }
@@ -1484,16 +1577,17 @@ static void dump_resync(int idx)
  */
 static void status_tbufs(int idx)
 {
-  int i, count, off = 0;
+  int count, off = 0;
   struct share_msgq *q;
   char s[121];
+  tandbuf *t;
 
   off = 0;
-  for (i = 0; i < 5; i++)
-    if (tbuf[i].bot[0] && (off < (110 - HANDLEN))) {
-      off += my_strcpy(s + off, tbuf[i].bot);
+  for (t = tbuf; t && t->bot[0]; t = t->next) 
+    if (off < (110 - HANDLEN)) {
+      off += my_strcpy(s + off, t->bot);
       count = 0;
-      for (q = tbuf[i].q; q; q = q->next)
+      for (q = t->q; q; q = q->next)
 	count++;
       off += simple_sprintf(s + off, " (%d), ", count);
     }
@@ -1975,12 +2069,9 @@ static cmd_t my_cmds[] =
 static char *share_close()
 {
   int i;
+  tandbuf *t, *tnext = NULL;
 
   module_undepend(MODULE_NAME);
-  putlog(LOG_MISC | LOG_BOTS, "*", "Unloaded sharing module, flushing tbuf's...");
-  for (i = 0; i < 5; i++)
-    if (tbuf[i].bot[0])
-      flush_tbuf(tbuf[i].bot);
   putlog(LOG_MISC | LOG_BOTS, "*", "Sending 'share end' to all sharebots...");
   for (i = 0; i < dcc_total; i++)
     if ((dcc[i].type->flags & DCT_BOT) && (dcc[i].status & STAT_SHARE)) {
@@ -1991,12 +2082,19 @@ static char *share_close()
 			 STAT_OFFERED | STAT_AGGRESSIVE);
       dcc[i].u.bot->uff_flags = 0;
     }
+  putlog(LOG_MISC | LOG_BOTS, "*", "Unloaded sharing module, flushing tbuf's...");
+  for (t = tbuf; t; t = tnext) {
+    tnext = t->next; 
+    del_tbuf(t);                                  
+  }  
   del_hook(HOOK_SHAREOUT, (Function) shareout_mod);
   del_hook(HOOK_SHAREIN, (Function) sharein_mod);
   del_hook(HOOK_MINUTELY, (Function) check_expired_tbufs);
   del_hook(HOOK_READ_USERFILE, (Function) hook_read_userfile);
+  del_hook(HOOK_SECONDLY, (Function) check_delay);
   DCC_BOT.kill = def_dcc_bot_kill;
   uff_deltable(internal_uff_table);
+  delay_free_mem();
   rem_tcl_ints(my_ints);
   rem_tcl_strings(my_strings);
   rem_builtins(H_dcc, my_cmds);
@@ -2006,17 +2104,19 @@ static char *share_close()
 
 static int share_expmem()
 {
-  int i, tot = 0;
+  int tot = 0;
   struct share_msgq *q;
+  tandbuf *t;
 
-  for (i = 0; i < 5; i++)
-    if (tbuf[i].bot[0])
-      for (q = tbuf[i].q; q; q = q->next) {
+  for (t = tbuf; t && t->bot[0]; t = t->next) {
+    tot += sizeof(tandbuf);
+    for (q = t->q; q; q = q->next) {
 	tot += sizeof(struct share_msgq);
-
 	tot += strlen(q->msg) + 1;
       }
+  }
   tot += uff_expmem();
+  tot += delay_expmem();
   return tot;
 }
 
@@ -2074,7 +2174,7 @@ static void share_report(int idx, int details)
   }
 }
 
-char *share_start();
+EXPORT_TYPE(char *) share_start();
 
 static Function share_table[] =
 {
@@ -2093,7 +2193,6 @@ static Function share_table[] =
 
 char *share_start(Function *global_funcs)
 {
-  int i;
 
   global = global_funcs;
 
@@ -2114,11 +2213,8 @@ char *share_start(Function *global_funcs)
   add_hook(HOOK_SHAREIN, (Function) sharein_mod);
   add_hook(HOOK_MINUTELY, (Function) check_expired_tbufs);
   add_hook(HOOK_READ_USERFILE, (Function) hook_read_userfile);
+  add_hook(HOOK_SECONDLY, (Function) check_delay);
   add_help_reference("share.help");
-  for (i = 0; i < 5; i++) {
-    tbuf[i].q = NULL;
-    tbuf[i].bot[0] = 0;
-  }
   def_dcc_bot_kill = DCC_BOT.kill;
   DCC_BOT.kill = cancel_user_xfer;
   add_tcl_ints(my_ints);
@@ -2136,3 +2232,4 @@ int private_globals_bitmask()
   break_down_flags(private_globals, &fr, 0);
   return fr.global;
 }
+

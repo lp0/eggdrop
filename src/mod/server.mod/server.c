@@ -2,7 +2,7 @@
  * server.c -- part of server.mod
  *   basic irc server support
  *
- * $Id: server.c,v 1.61 2001/04/12 02:39:47 guppy Exp $
+ * $Id: server.c,v 1.67 2001/06/30 06:29:57 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -80,7 +80,6 @@ static int answer_ctcp;		/* answer how many stacked ctcp's ? */
 static int lowercase_ctcp;	/* answer lowercase CTCP's (non-standard) */
 static char bothost[81];	/* dont mind me, Im stupid */
 static int check_mode_r;	/* check for IRCNET +r modes */
-static int use_ison;		/* arthur2 static */
 static int net_type;
 static char connectserver[121];	/* what, if anything, to do before connect
 				   to the server */
@@ -177,8 +176,10 @@ static void deq_msg()
         continue;
       }
       tputs(serv, modeq.head->msg, modeq.head->len);
-      if (debug_output)
+      if (debug_output) {
+	modeq.head->msg[strlen(modeq.head->msg) - 1] = 0; /* delete the "\n" */
         putlog(LOG_SRVOUT, "*", "[m->] %s", modeq.head->msg);
+      }
       modeq.tot--;
       last_time += calc_penalty(modeq.head->msg);
       q = modeq.head->next;
@@ -201,8 +202,10 @@ static void deq_msg()
     if (fast_deq(DP_SERVER))
       return;
     tputs(serv, mq.head->msg, mq.head->len);
-    if (debug_output)
+    if (debug_output) {
+      mq.head->msg[strlen(mq.head->msg) - 1] = 0; /* delete the "\n" */
       putlog(LOG_SRVOUT, "*", "[s->] %s", mq.head->msg);
+    }
     mq.tot--;
     last_time += calc_penalty(mq.head->msg);
     q = mq.head->next;
@@ -223,8 +226,10 @@ static void deq_msg()
   if (fast_deq(DP_HELP))
     return;
   tputs(serv, hq.head->msg, hq.head->len);
-  if (debug_output)
+  if (debug_output) {
+    hq.head->msg[strlen(hq.head->msg) - 1] = 0; /* delete the "\n" */
     putlog(LOG_SRVOUT, "*", "[h->] %s", hq.head->msg);
+  }
   hq.tot--;
   last_time += calc_penalty(hq.head->msg);
   q = hq.head->next;
@@ -352,10 +357,8 @@ static int calc_penalty(char * msg)
     penalty += 2;
   } else if (!egg_strcasecmp(cmd, "DNS")) {
     penalty += 2;
-  } else {
-    debug1("Unknown command %s, adding 1sec standard-penalty", cmd);
-    penalty++;
-  }
+  } else
+    penalty++; /* just add standard-penalty */
   /* Shouldn't happen, but you never know... */
   if (penalty > 99)
     penalty = 99;
@@ -863,8 +866,27 @@ static void queue_server(int which, char *buf, int len)
     h->warned = 0;
     double_warned = 0;
   } else {
-    if (!h->warned)
+    if (!h->warned) {
+      switch (which) {   
+	case DP_MODE_NEXT:
+ 	/* Fallthrough */
+	case DP_MODE:
       putlog(LOG_MISC, "*", "!!! OVER MAXIMUM MODE QUEUE");
+ 	break;
+    
+	case DP_SERVER_NEXT:
+ 	/* Fallthrough */
+ 	case DP_SERVER:
+	putlog(LOG_MISC, "*", "!!! OVER MAXIMUM SERVER QUEUE");
+	break;
+            
+	case DP_HELP_NEXT:
+	/* Fallthrough */
+	case DP_HELP:
+	putlog(LOG_MISC, "*", "!!! OVER MAXIMUM HELP QUEUE");
+	break;
+      }
+    }
     h->warned = 1;
   }
 
@@ -902,11 +924,10 @@ static void queue_server(int which, char *buf, int len)
  */
 static void add_server(char *ss)
 {
-  struct server_list *x, *z = serverlist;
+  struct server_list *x, *z;
   char *p, *q;
 
-  while (z && z->next)
-    z = z->next;
+  for (z = serverlist; z && z->next; z = z->next);
   while (ss) {
     p = strchr(ss, ',');
     if (p)
@@ -977,7 +998,7 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
     return;
   /* -1  -->  Go to specified server */
   if (*ptr == (-1)) {
-    while (x) {
+    for (; x; x = x->next) {
       if (x->port == *port) {
 	if (!egg_strcasecmp(x->name, serv)) {
 	  *ptr = i;
@@ -988,7 +1009,6 @@ static void next_server(int *ptr, char *serv, unsigned int *port, char *pass)
 	  return;
 	}
       }
-      x = x->next;
       i++;
     }
     /* Gotta add it: */
@@ -1277,7 +1297,6 @@ static tcl_ints my_tcl_ints[] =
   {"server-cycle-wait",		(int *) &server_cycle_wait,	0},
   {"default-port",		&default_port,			0},
   {"check-mode-r",		&check_mode_r,			0},
-  {"use-ison",			&use_ison,			0},
   {"net-type",			&net_type,			0},
   {"ctcp-mode",			&ctcp_mode,			0},
   {"double-mode",		&double_mode,			0},/* G`Quann */
@@ -1712,7 +1731,7 @@ static char *server_close()
   return NULL;
 }
 
-char *server_start();
+EXPORT_TYPE(char *) server_start();
 
 static Function server_table[] =
 {
@@ -1814,7 +1833,6 @@ char *server_start(Function *global_funcs)
   check_mode_r = 0;
   maxqmsg = 300;
   burst = 0;
-  use_ison = 1;
   net_type = NETT_EFNET;
   double_mode = 0;
   double_server = 0;
@@ -1863,7 +1881,7 @@ char *server_start(Function *global_funcs)
   H_wall = add_bind_table("wall", HT_STACKABLE, server_2char);
   H_raw = add_bind_table("raw", HT_STACKABLE, server_raw);
   H_notc = add_bind_table("notc", HT_STACKABLE, server_6char);
-  H_msgm = add_bind_table("msgm", HT_STACKABLE, server_5char);
+  H_msgm = add_bind_table("msgm", HT_STACKABLE, server_msg);
   H_msg = add_bind_table("msg", 0, server_msg);
   H_flud = add_bind_table("flud", HT_STACKABLE, server_5char);
   H_ctcr = add_bind_table("ctcr", HT_STACKABLE, server_6char);

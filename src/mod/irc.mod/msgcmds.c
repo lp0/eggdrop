@@ -2,7 +2,7 @@
  * msgcmds.c -- part of irc.mod
  *   all commands entered via /MSG
  *
- * $Id: msgcmds.c,v 1.21 2001/04/12 02:39:46 guppy Exp $
+ * $Id: msgcmds.c,v 1.23 2001/07/06 04:48:08 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -299,6 +299,11 @@ static int msg_info(char *nick, char *host, struct userrec *u, char *par)
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed INFO", nick, host, u->handle);
       return 1;
     }
+  } else {
+    putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed INFO", nick, host, u->handle);
+    if (!quiet_reject)
+      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_NOPASS);
+    return 1;
   }
   if (par[0] && (strchr(CHANMETA, par[0]) != NULL)) {
     if (!findchan_by_dname(chname = newsplit(&par))) {
@@ -653,7 +658,8 @@ static int msg_key(char *nick, char *host, struct userrec *u, char *par)
       }
     }
   }
-  putlog(LOG_CMDS, "*", "(%s!%s) !*! failed KEY", nick, host);
+  putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed KEY %s", nick, host,
+	 (u ? u->handle : "*"), par);
   return 1;
 }
 
@@ -709,10 +715,8 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
 
   if (match_my_nick(nick))
     return 1;
-  if (!u)
-    return 0;
   pass = newsplit(&par);
-  if (u_pass_match(u, pass)) {
+  if (u_pass_match(u, pass) && !u_pass_match(u, "-")) {
     if (par[0] == '*') {
       for (chan = chanset; chan; chan = chan->next) {
 	get_user_flagrec(u, &fr, chan->dname);
@@ -743,7 +747,7 @@ static int msg_invite(char *nick, char *host, struct userrec *u, char *par)
     }
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed INVITE %s", nick, host,
-	 u->handle, par);
+	 (u ? u->handle : "*"), par);
   return 1;
 }
 
@@ -777,6 +781,11 @@ static int msg_status(char *nick, char *host, struct userrec *u, char *par)
 	     u->handle);
       return 1;
     }
+  } else {
+    putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed STATUS", nick, host, u->handle);
+    if (!quiet_reject)
+      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_NOPASS);
+    return 1;
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! STATUS", nick, host, u->handle);
   dprintf(DP_HELP, "NOTICE %s :I am %s, running %s.\n", nick, botnetnick,
@@ -833,6 +842,11 @@ static int msg_memory(char *nick, char *host, struct userrec *u, char *par)
 	     u->handle);
       return 1;
     }
+  } else {
+    putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed MEMORY", nick, host, u->handle);
+    if (!quiet_reject)
+      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, IRC_NOPASS);
+    return 1;
   }
   putlog(LOG_CMDS, "*", "(%s!%s) !%s! MEMORY", nick, host, u->handle);
   tell_mem_status(nick);

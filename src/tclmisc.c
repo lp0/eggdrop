@@ -3,7 +3,7 @@
  *   Tcl stubs for file system commands
  *   Tcl stubs for everything else
  *
- * $Id: tclmisc.c,v 1.18 2001/04/12 02:39:43 guppy Exp $
+ * $Id: tclmisc.c,v 1.20 2001/05/19 22:19:02 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -257,7 +257,7 @@ static int tcl_duration STDVAR
 
 static int tcl_unixtime STDVAR
 {
-  char s[10];
+  char s[11];
 
   BADARGS(1, 1, "");
   egg_snprintf(s, sizeof s, "%lu", (unsigned long) now);
@@ -487,6 +487,13 @@ static int tcl_reloadhelp STDVAR
   return TCL_OK;
 }
 
+static int tcl_callevent STDVAR
+{
+  BADARGS(2, 2, " event");
+  check_tcl_event(argv[1]);
+  return TCL_OK;
+}
+
 static int tcl_md5 STDVAR
 {
   MD5_CTX       md5context;
@@ -538,5 +545,6 @@ tcl_cmds tclmisc_cmds[] =
   {"duration",		tcl_duration},
   {"md5",		tcl_md5},
   {"binds",		tcl_binds},
+  {"callevent",		tcl_callevent},
   {NULL,		NULL}
 };

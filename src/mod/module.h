@@ -1,7 +1,7 @@
 /*
  * module.h
  *
- * $Id: module.h,v 1.45 2001/04/12 02:39:44 guppy Exp $
+ * $Id: module.h,v 1.47 2001/06/24 20:49:24 poptix Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -74,6 +74,12 @@
 #endif
 #ifdef egg_strncasecmp
 #  undef egg_strncasecmp
+#endif
+
+#if defined (__CYGWIN__) && !defined(STATIC)
+    #  define EXPORT_TYPE(type)	__declspec(dllexport) type __cdecl
+    #else
+    #  define EXPORT_TYPE(type)	type
 #endif
 
 /* Version checks for modules. */
@@ -434,6 +440,14 @@
 #if (TCL_MAJOR_VERSION >= 8 && TCL_MINOR_VERSION >= 1) || (TCL_MAJOR_VERSION >= 9)
 #define str_nutf8tounicode ((int (*)(char *str, int len))global[267])
 #endif
+/* 168 - 270 */
+/* Please don't modify socklist directly, unless there's no other way.
+ * Its structure might be changed, or it might be completely removed,
+ * so you can't rely on it without a version-check.
+ */
+#define socklist (*(struct sock_list **)global[268])
+#define sockoptions ((int (*)(int, int, int))global[269])
+#define flush_inbuf ((int (*)(int))global[270])
 
 /* This is for blowfish module, couldnt be bothered making a whole new .h
  * file for it ;)

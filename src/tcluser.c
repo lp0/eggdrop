@@ -2,7 +2,7 @@
  * tcluser.c -- handles:
  *   Tcl stubs for the user-record-oriented commands
  *
- * $Id: tcluser.c,v 1.19 2001/04/12 02:39:44 guppy Exp $
+ * $Id: tcluser.c,v 1.22 2001/06/30 06:29:55 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -323,7 +323,7 @@ static int tcl_delhost STDVAR
 
 static int tcl_userlist STDVAR
 {
-  struct userrec *u = userlist;
+  struct userrec *u;
   struct flag_record user, plus, minus;
   int ok = 1, f = 0;
 
@@ -339,7 +339,7 @@ static int tcl_userlist STDVAR
 	 minus.udef_chan || minus.bot);
   }
   minus.match = plus.match ^ (FR_AND | FR_OR);
-  while (u) {
+  for (u = userlist; u; u = u->next) {
     if (argc >= 2) {
       user.match = FR_GLOBAL | FR_CHAN | FR_BOT | (argc == 3 ? 0 : FR_ANYWH);
       get_user_flagrec(u, &user, argv[2]);	/* argv[2] == NULL for argc = 2 ;) */
@@ -350,7 +350,6 @@ static int tcl_userlist STDVAR
     }
     if (ok)
       Tcl_AppendElement(interp, u->handle);
-    u = u->next;
   }
   return TCL_OK;
 }
@@ -455,16 +454,16 @@ static int tcl_killignore STDVAR
 static int tcl_ignorelist STDVAR
 {
   struct igrec *i;
-  char ts[10], *list[5], *p;
+  char expire[11], added[11], *list[5], *p;
 
   BADARGS(1, 1, "");
   for (i = global_ign; i; i = i->next) {
     list[0] = i->igmask;
     list[1] = i->msg;
-    egg_snprintf(ts, sizeof ts, "%lu", i->expire);
-    list[2] = ts;
-    egg_snprintf(ts, sizeof ts, "%lu", i->added);
-    list[3] = ts;
+    egg_snprintf(expire, sizeof expire, "%lu", i->expire);
+    list[2] = expire;
+    egg_snprintf(added, sizeof added, "%lu", i->added);
+    list[3] = added;
     list[4] = i->user;
     p = Tcl_Merge(5, list);
     Tcl_AppendElement(irp, p);

@@ -86,7 +86,7 @@ set never-give-up 1
     Valid settings are 0 for OFF and 1 ON.
 
 
-set server-timeout 15
+set server-timeout 60
     Set here the timeout how long eggdrop should wait for a response when
     connecting to a server before giving up and moving on to next server
     in list.
@@ -111,13 +111,6 @@ set check-stoned 1
 set serverror-quit 1
     If you want your bot to exit the server if it receives a error msg set
     this to 1
-    Valid settings are 0 for OFF and 1 ON.
-
-
-set use-ison 1
-    This setting makes the bot not u se /trace but /ison to check if our
-    botnick is free or being used.
-    Please note: some irc admins, look for excessive use of /trace
     Valid settings are 0 for OFF and 1 ON.
 
 

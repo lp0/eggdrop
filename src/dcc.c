@@ -4,7 +4,7 @@
  *   disconnect on a dcc socket
  *   ...and that's it!  (but it's a LOT)
  *
- * $Id: dcc.c,v 1.44 2001/04/12 02:39:43 guppy Exp $
+ * $Id: dcc.c,v 1.47 2001/06/30 06:29:55 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -665,13 +665,12 @@ static void kill_dcc_general(int idx, void *x)
 
   if (p) {
     if (p->buffer) {
-      struct msgq *r = dcc[idx].u.chat->buffer, *q;
+      struct msgq *r, *q;
 
-      while (r) {
+      for (r = dcc[idx].u.chat->buffer; r; r = q) {
 	q = r->next;
 	nfree(r->msg);
 	nfree(r);
-	r = q;
       }
     }
     if (p->away) {
@@ -760,13 +759,11 @@ static void append_line(int idx, char *line)
   dcc[idx].u.file->chat;
 
   if (c->current_lines > 1000) {
-    p = c->buffer;
     /* They're probably trying to fill up the bot nuke the sods :) */
-    while (p) {			/* Flush their queue */
+    for (p = c->buffer; p; p = q) {
       q = p->next;
       nfree(p->msg);
       nfree(p);
-      p = q;
     }
     c->buffer = 0;
     dcc[idx].status &= ~STAT_PAGE;
@@ -780,11 +777,9 @@ static void append_line(int idx, char *line)
     c->current_lines++;
     if (c->buffer == NULL)
       q = NULL;
-    else {
-      q = c->buffer;
-      while (q->next != NULL)
-	q = q->next;
-    }
+    else
+      for (q = c->buffer; q->next; q = q->next);
+
     p = get_data_ptr(sizeof(struct msgq));
 
     p->len = l;
@@ -1257,10 +1252,13 @@ static void dcc_dupwait(int idx, char *buf, int i)
  */
 static void timeout_dupwait(int idx)
 {
+  char x[100];
+
   /* Still duplicate? */
   if (in_chain(dcc[idx].nick)) {
+    egg_snprintf(x, sizeof x, "%s!%s", dcc[idx].nick, dcc[idx].host);
     dprintf(idx, "error Already connected.\n");
-    putlog(LOG_BOTS, "*", DCC_DUPLICATE, dcc[idx].host);
+    putlog(LOG_BOTS, "*", DCC_DUPLICATE, x);
     killsock(dcc[idx].sock);
     lostdcc(idx);
   } else {
@@ -1558,7 +1556,7 @@ static void dcc_telnet_new(int idx, char *buf, int x)
     dprintf(idx, "\nSorry, that nickname is taken already.\n");
     dprintf(idx, "Try another one please:\n");
     return;
-  } else if (!egg_strcasecmp(buf, origbotname) || !egg_strcasecmp(buf, botnetnick)) {
+  } else if (!egg_strcasecmp(buf, botnetnick)) {
     dprintf(idx, "Sorry, can't use my name for a nick.\n");
   } else {
     if (make_userfile)

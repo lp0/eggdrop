@@ -6,7 +6,7 @@
  *   user kickban, kick, op, deop
  *   idle kicking
  *
- * $Id: chan.c,v 1.64 2001/04/12 02:39:46 guppy Exp $
+ * $Id: chan.c,v 1.67 2001/06/30 06:29:56 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -43,9 +43,7 @@ static memberlist *newmember(struct chanset_t *chan)
 {
   memberlist *x;
 
-  x = chan->channel.member;
-  while (x && x->nick[0])
-    x = x->next;
+  for (x = chan->channel.member; x && x->nick[0]; x = x->next); 
   x->next = (memberlist *) channel_malloc(sizeof(memberlist));
   x->next->next = NULL;
   x->next->nick[0] = 0;
@@ -135,11 +133,9 @@ static void check_exemptlist(struct chanset_t *chan, char *from)
  */
 static void do_mask(struct chanset_t *chan, masklist *m, char *mask, char Mode)
 {
-  while(m && m->mask[0]) {
+  for (; m && m->mask[0]; m = m->next)
     if (wild_match(mask, m->mask) && rfc_casecmp(mask, m->mask))
       add_mode(chan, '-', Mode, m->mask);
-    m = m->next;
-  }
   add_mode(chan, '+', Mode, mask);
   flush_mode(chan, QUICK);
 }
@@ -290,9 +286,7 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
       u_addban(chan, h, origbotname, ftype, now + (60 * ban_time), 0);
       if (!channel_enforcebans(chan) && me_op(chan)) {
 	  char s[UHOSTLEN];
-	  m = chan->channel.member;
-
-	  while (m && m->nick[0]) {
+	  for (m = chan->channel.member; m && m->nick[0]; m = m->next) {	  
 	    sprintf(s, "%s!%s", m->nick, m->userhost);
 	    if (wild_match(h, s) &&
 		(m->joined >= chan->floodtime[which]) &&
@@ -305,7 +299,6 @@ static int detect_chan_flood(char *floodnick, char *floodhost, char *from,
 	        dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick,
 		      IRC_NICK_FLOOD);
 	    }
-	    m = m->next;
 	  }
 	}
       return 1;
@@ -359,8 +352,7 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment, int 
   k = 0;
   flushed = 0;
   kicknick[0] = 0;
-  m = chan->channel.member;
-  while (m && m->nick[0]) {
+  for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
     sprintf(s, "%s!%s", m->nick, m->userhost);
     get_user_flagrec(m->user ? m->user : get_user_by_host(s), &fr, chan->dname);
     if (wild_match(hostmask, s) && !chan_sentkick(m) &&
@@ -389,7 +381,6 @@ static void kick_all(struct chanset_t *chan, char *hostmask, char *comment, int 
 	kicknick[0] = 0;
       }
     }
-    m = m->next;
   }
   if (k > 0)
     dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, kicknick, comment);
@@ -603,6 +594,25 @@ static void resetmasks(struct chanset_t *chan, masklist *m, maskrec *mrec,
       break;
   }
 }
+static void check_this_ban(struct chanset_t *chan, char *banmask, int sticky)
+{
+  memberlist *m;
+  char user[UHOSTLEN];
+
+  if (!me_op(chan))
+    return;
+  for (m = chan->channel.member; m && m->nick[0]; m = m->next) {
+    sprintf(user, "%s!%s", m->nick, m->userhost);
+    if (wild_match(banmask, user) &&
+        !(use_exempts &&
+          (u_match_mask(global_exempts, user) ||
+           u_match_mask(chan->exempts, user))))
+      refresh_ban_kick(chan, user, m->nick);
+  }
+  if (!isbanned(chan, banmask) &&
+      (!channel_dynamicbans(chan) || sticky))
+    add_mode(chan, '+', 'b', banmask);
+}
 
 static void recheck_channel_modes(struct chanset_t *chan)
 {
@@ -685,8 +695,7 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
     return;                     /* ... it's better not to deop everybody */
   stacking++;
   /* Okay, sort through who needs to be deopped. */
-  m = chan->channel.member;
-  while (m && m->nick[0]) {
+  for (m = chan->channel.member; m && m->nick[0]; m = m->next) { 
     sprintf(s, "%s!%s", m->nick, m->userhost);
     if (!m->user)
       m->user = get_user_by_host(s);
@@ -762,7 +771,6 @@ static void recheck_channel(struct chanset_t *chan, int dobans)
 	}
       }
     }
-    m = m->next;
   }
   if (dobans) {
     if (channel_nouserbans(chan) && !stop_reset)
@@ -1737,8 +1745,10 @@ static int gotpart(char *from, char *msg)
       chan->status &= ~CHAN_PEND;
       reset_chan_info(chan);
     }
-    check_tcl_part(nick, from, u, chan->dname, msg);
     set_handle_laston(chan->dname, u, now);
+    check_tcl_part(nick, from, u, chan->dname, msg); /* This must be directly above the killmember, in case
+    							we're doing anything to the record that would affect
+							the above */
     killmember(chan, nick);
     if (msg[0])
       putlog(LOG_JOIN, chan->dname, "%s (%s) left %s (%s).", nick, from, chan->dname, msg);
@@ -1785,8 +1795,9 @@ static int gotkick(char *from, char *origmsg)
     if (m)
       m->last = now;
     /* This _needs_ to use chan->dname <cybah> */
-    check_tcl_kick(whodid, uhost, u, chan->dname, nick, msg);
     get_user_flagrec(u, &fr, chan->dname);
+    set_handle_laston(chan->dname, u, now);
+    check_tcl_kick(whodid, uhost, u, chan->dname, nick, msg);
     m = ismember(chan, nick);
     if (m) {
       struct userrec *u2;
@@ -1826,8 +1837,7 @@ static int gotnick(char *from, char *msg)
   strcpy(uhost, from);
   nick = splitnick(&uhost);
   fixcolon(msg);
-  chan = chanset;
-  while (chan) {
+  for (chan = chanset; chan; chan = chan->next) { 
     m = ismember(chan, nick);
     if (m) {
       putlog(LOG_JOIN, chan->dname, "Nick change: %s -> %s", nick, msg);
@@ -1866,7 +1876,6 @@ static int gotnick(char *from, char *msg)
 	m->flags &= ~SENTKICK;
       check_tcl_nick(nick, uhost, u, chan->dname, msg);
     }
-    chan = chan->next;
   }
   clear_chanlist_member(msg);	/* Cache for nick 'msg' is meaningless now. */
   return 0;
@@ -1908,7 +1917,12 @@ static int gotquit(char *from, char *msg)
   for (chan = chanset; chan; chan = chan->next) {
     m = ismember(chan, nick);
     if (m) {
-      set_handle_laston(chan->dname, u, now);
+      u = get_user_by_host(from);
+      if (u) {
+        set_handle_laston(chan->dname, u, now); /* If you remove this, the bot will crash when the user record in question
+						   is removed/modified during the tcl binds below, and the users was on more
+						   than one monitored channel */
+      }
       if (split) {
 	m->split = now;
 	check_tcl_splt(nick, from, u, chan->dname);

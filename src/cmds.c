@@ -3,7 +3,7 @@
  *   commands from a user via dcc
  *   (split in 2, this portion contains no-irc commands)
  *
- * $Id: cmds.c,v 1.49 2001/04/12 02:39:43 guppy Exp $
+ * $Id: cmds.c,v 1.58 2001/07/03 16:46:08 guppy Exp $
  */
 /*
  * Copyright (C) 1997 Robey Pointer
@@ -236,7 +236,6 @@ static void cmd_botinfo(struct userrec *u, int idx, char *par)
   time_t now2;
   int hr, min;
 
-  chan = chanset;
   now2 = now - online_since;
   s2[0] = 0;
   if (now2 > 86400) {
@@ -258,7 +257,7 @@ static void cmd_botinfo(struct userrec *u, int idx, char *par)
   botnet_send_infoq(-1, s);
   s[0] = 0;
   if (module_find("server", 0, 0)) {
-    while (chan != NULL) {
+    for (chan = chanset; chan; chan = chan->next) { 
       if (!channel_secret(chan)) {
 	if ((strlen(s) + strlen(chan->dname) + strlen(network)
                    + strlen(botnetnick) + strlen(ver) + 1) >= 490) {
@@ -268,7 +267,6 @@ static void cmd_botinfo(struct userrec *u, int idx, char *par)
 	strcat(s, chan->dname);
 	strcat(s, ", ");
       }
-      chan = chan->next;
     }
 
     if (s[0]) {
@@ -931,12 +929,13 @@ static void cmd_chpass(struct userrec *u, int idx, char *par)
 
 static void cmd_chaddr(struct userrec *u, int idx, char *par)
 {
+  int telnet_port = 3333, relay_port = 3333;
   char *handle, *addr, *p, *q;
   struct bot_addr *bi;
   struct userrec *u1;
 
   if (!par[0]) {
-    dprintf(idx, "Usage: chaddr <botname> <address:botport#/userport#>\n");
+    dprintf(idx, "Usage: chaddr <botname> <address[:telnet-port[/relay-port]]>\n");
     return;
   }
   handle = newsplit(&par);
@@ -954,14 +953,21 @@ static void cmd_chaddr(struct userrec *u, int idx, char *par)
   }
   putlog(LOG_CMDS, "*", "#%s# chaddr %s %s", dcc[idx].nick, handle, addr);
   dprintf(idx, "Changed bot's address.\n");
+
+  bi = (struct bot_addr *) get_user(&USERENTRY_BOTADDR, u1);
+  if (bi) {
+    telnet_port = bi->telnet_port;
+    relay_port = bi->relay_port;
+  }
+
   bi = user_malloc(sizeof(struct bot_addr));
 
   q = strchr(addr, ':');
   if (!q) {
     bi->address = user_malloc(strlen(addr) + 1);
     strcpy(bi->address, addr);
-    bi->telnet_port = 3333;
-    bi->relay_port = 3333;
+    bi->telnet_port = telnet_port;
+    bi->relay_port = relay_port;
   } else {
     bi->address = user_malloc(q - addr + 1);
     strncpyz(bi->address, addr, q - addr + 1);
@@ -1226,7 +1232,7 @@ static void cmd_banner(struct userrec *u, int idx, char *par)
     dprintf(idx, "Usage: banner <message>\n");
     return;
   }
-  simple_sprintf(s, "\007\007### Botwide:[%s] %s\n", dcc[idx].nick, par);
+  simple_sprintf(s, "\007### Botwide: [%s] %s\n", dcc[idx].nick, par);
   for (i = 0; i < dcc_total; i++)
     if (dcc[i].type->flags & DCT_MASTER)
       dprintf(i, "%s", s);
@@ -1238,27 +1244,12 @@ static void cmd_banner(struct userrec *u, int idx, char *par)
 int check_dcc_attrs(struct userrec *u, int oatr)
 {
   int i, stat;
-  char *p, *q, s[121];
 
-  /* If it matches someone in the owner list, make sure he/she has +n */
   if (!u)
     return 0;
   /* Make sure default owners are +n */
-  if (owner[0]) {
-    q = owner;
-    p = strchr(q, ',');
-    while (p) {
-      strncpyz(s, q, p - q);
-      rmspace(s);
-      if (!egg_strcasecmp(u->handle, s))
-	u->flags = sanity_check(u->flags | USER_OWNER);
-      q = p + 1;
-      p = strchr(q, ',');
-    }
-    strcpy(s, q);
-    rmspace(s);
-    if (!egg_strcasecmp(u->handle, s))
-      u->flags = sanity_check(u->flags | USER_OWNER);
+  if (isowner(u->handle)) {
+    u->flags = sanity_check(u->flags | USER_OWNER);
   }
   for (i = 0; i < dcc_total; i++) {
     if ((dcc[i].type->flags & DCT_MASTER) &&
@@ -1369,7 +1360,6 @@ int check_dcc_chanattrs(struct userrec *u, char *chname, int chflags,
 
   if (!u)
     return 0;
-  chan = chanset;
   for (i = 0; i < dcc_total; i++) {
     if ((dcc[i].type->flags & DCT_MASTER) &&
 	!egg_strcasecmp(u->handle, dcc[i].nick)) {
@@ -1407,12 +1397,10 @@ int check_dcc_chanattrs(struct userrec *u, char *chname, int chflags,
 	   (!(ochatr & (USER_OP | USER_MASTER | USER_OWNER))))) {
 	struct flag_record fr = {FR_CHAN, 0, 0, 0, 0, 0};
 
-	while (chan && !found) {
+	for (chan = chanset; chan && !found; chan = chan->next) {
 	  get_user_flagrec(u, &fr, chan->dname);
 	  if (fr.chan & (USER_OP | USER_MASTER | USER_OWNER))
 	    found = 1;
-	  else
-	    chan = chan->next;
 	}
 	if (!chan)
 	  chan = chanset;
@@ -2290,7 +2278,7 @@ static void cmd_pls_ignore(struct userrec *u, int idx, char *par)
 
   if (!par[0]) {
     dprintf(idx,
-	    "Usage: +ignore <hostmask> [%%ignoretime <XdXhXm>] [comment]\n");
+	    "Usage: +ignore <hostmask> [%%<XdXhXm>] [comment]\n");
     return;
   }
 
@@ -2399,7 +2387,7 @@ static void cmd_pls_user(struct userrec *u, int idx, char *par)
   else {
     putlog(LOG_CMDS, "*", "#%s# +user %s %s", dcc[idx].nick, handle, host);
     userlist = adduser(userlist, handle, host, "-", 0);
-    dprintf(idx, "Added %s (%s) with no password or flags.\n", handle, host);
+    dprintf(idx, "Added %s (%s) with no password and no flags.\n", handle, host);
   }
 }
 
@@ -2687,6 +2675,12 @@ static char *btos(unsigned long  bytes)
   return traffictxt;
 }
 
+static void cmd_whoami(struct userrec *u, int idx, char *par)
+{
+  dprintf(idx, "You are %s@%s\n", dcc[idx].nick, botnetnick);
+  putlog(LOG_CMDS, "*", "#%s# whoami", dcc[idx].nick);
+}
+
 /* DCC CHAT COMMANDS
  */
 /* Function call should be:
@@ -2728,6 +2722,7 @@ cmd_t C_dcc[] =
   {"echo",		"",	(Function) cmd_echo,		NULL},
   {"fixcodes",		"",	(Function) cmd_fixcodes,	NULL},
   {"help",		"",	(Function) cmd_help,		NULL},
+  {"rtfm",		"",	(Function) cmd_help,		NULL},
   {"ignores",		"m",	(Function) cmd_ignores,		NULL},
   {"link",		"t",	(Function) cmd_link,		NULL},
   {"loadmod",		"n",	(Function) cmd_loadmod,		NULL},
@@ -2762,5 +2757,6 @@ cmd_t C_dcc[] =
   {"whois",		"to|o",	(Function) cmd_whois,		NULL},
   {"whom",		"",	(Function) cmd_whom,		NULL},
   {"traffic",		"m|m",	(Function) cmd_traffic,		NULL},
+  {"whoami",		"",	(Function) cmd_whoami,		NULL},
   {NULL,		NULL,	NULL,				NULL}
 };
