@@ -72,10 +72,19 @@ set timezone "EST"
 set max-logs 5
 
 # maximum size of your logfiles, set this to 0 to disable.
-# this only works if you have keep-all-logs OFF (must be > 500K)
+# this only works if you have keep-all-logs 0 (OFF)
 # this value is in KiloBytes, so '550' would mean cycle logs when
 # it reaches the size of 550 KiloBytes.
 set max-logsize 0
+
+# write the logfiles and check the size every minute
+# (if max-logsize is enabled) instead of every 5minutes as before.
+# This could be good if you have had problem with the
+# logfile filling your quota or hdd or if you log +p
+# and publish it on the web and wants more uptodate info.
+# If you are concerned with resources keep the default setting 0.
+# (although I haven't noticed anything)
+set quick-logs 0
 
 # each logfile also belongs to a certain channel.  events of type 'k', 'j',
 # and 'p' are logged to whatever channel they happened on.  most other
@@ -446,7 +455,7 @@ channel set #lamest +userbans
 
 #   op users with the +o (op) flag as soon as they join the channel?
 #   (hint: this is a BAD IDEA)
-channel set #lamest +autoop
+channel set #lamest -autoop
 
 #   only let users with +o (op) flag be channel ops?
 channel set #lamest -bitch
@@ -480,7 +489,7 @@ channel set #lamest -secret
 channel set #lamest -shared
 
 #   cycle the channel when it becomes op-less?
-channel set #lamest -cycle
+channel set #lamest +cycle
 
 #   do you want the bot not to be able to kick +o flag users ?
 #   letting them kick-flood for instance, to protect the channel agaisnt
@@ -488,7 +497,7 @@ channel set #lamest -cycle
 channel set #lamest +dontkickops
 
 #   respond to seen requests in the channel?  (seen module must be loaded)
-channel set #lamest +seen
+channel set #lamest -seen
 
 # here's a shorter example:
 channel add #botcentral {

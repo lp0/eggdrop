@@ -125,13 +125,13 @@ proc testip {address} {
   if {[string length [lindex $testhost 0]]<4 &&
    [string length [lindex $testhost 1]]<4 &&
    [string length [lindex $testhost 2]]<4 &&
-   [string length [lindex $testhost 4]]<4} {
+   [string length [lindex $testhost 3]]<4} {
     if {[lindex $testhost 0] < 256 &&
      [lindex $testhost 1] < 256 &&
      [lindex $testhost 2] < 256 &&
      [lindex $testhost 3] < 256} {
       return 1
-    }
+    } { return 0 }
   }
  } {
   return 0

@@ -1,6 +1,20 @@
 Changes in eggdrop: (since v1.3.0)
 ----------------------------------
 
+1.3.26
+Foundby   Fixedby   What....
+          dw        added set quick-logs, if enabled flush logs
+                    every minute instead of every 5 and check log
+                    size to if enabled (read eggdrop.conf.dist)
+TheUnknown arthur2  chanmode +l with no specified limit was buggy (stupid
+                    +l mode flood).
+          dw        max-logsize wasnt working 0 didnt disable it
+                    and it tryed to write to the logfile after
+                    closing it and before moving it..
+                    minimum max-logsize removed.
+MC_8      dw        testip(alltools) didnt return 0 in every case when
+                    checking an invalid ip.
+
 1.3.25
 Foundby   Fixedby   What....
           poptix    Added max-logsize, allows you to set a maximum logfile

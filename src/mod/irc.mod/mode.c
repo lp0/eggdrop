@@ -927,6 +927,7 @@ static void gotmode (char * from, char * msg) {
 		  }
 		  if ((chan->limit_prot != chan->channel.maxmembers) &&
 		      (chan->mode_pls_prot & CHANLIMIT) &&
+                      (chan->limit_prot != (-1)) && /* arthur2 */
 		      !glob_master(user) && !chan_master(user)) {
 		     simple_sprintf(s, "%d", chan->limit_prot);
 		     add_mode(chan, '+', 'l', s);

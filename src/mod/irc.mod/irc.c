@@ -448,7 +448,6 @@ static void check_expired_chanstuff()
    for (chan = chanset; chan; chan = chan->next) {
       if (server_online && !(chan->status & (CHAN_ACTIVE | CHAN_PEND))) {
 	dprintf(DP_MODE, "JOIN %s\n", chan->name);
-        dprintf(DP_MODE, "WHO %s\n", chan->name); /* drummer's bug fix? */
       }
       if (channel_dynamicbans(chan) && me_op(chan)) {
 	 for (b = chan->channel.ban; b->ban[0]; b = b->next) {

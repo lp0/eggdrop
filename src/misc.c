@@ -520,21 +520,24 @@ void check_logsize()
 /*	int x=1; */
 	char buf[1024]; /* should be plenty */
 	context;
-	if (!keep_all_logs && (max_logsize < 512000))
+	if ((keep_all_logs == 0) && (max_logsize != 0)) {
         for (i = 0; i < max_logs; i++) {
                 if (logs[i].filename) {
 			if (stat(logs[i].filename,&ss) != 0) {
 				break;
 			}
-			if (ss.st_size > (max_logsize*1024)) {
+			if ((ss.st_size >> 10) > max_logsize) {
 				context;
 				if (logs[i].f) {
+				/* write to the log before closing it huh.. */
+				putlog(LOG_MISC,"*",MISC_CLOGS,logs[i].filename,ss.st_size);
+				fflush(logs[i].f);
 					fclose(logs[i].f);
 					logs[i].f = NULL;
 					context;
 				}
 				context;
-				putlog(LOG_MISC,"*",MISC_CLOGS,logs[i].filename,ss.st_size);
+				
 				buf[0]='\0';
 				snprintf(buf,1024,"%s.yesterday",logs[i].filename);
 				unlink(buf);
@@ -564,6 +567,7 @@ void check_logsize()
 			}
 		}
 	}
+   }
 	context;
 }
 

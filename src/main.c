@@ -71,6 +71,7 @@ extern char hostname[];
 extern int max_logs;
 extern tcl_timer_t *timer, *utimer;
 extern jmp_buf alarmret;
+extern int quick_logs; /* dw */
 
 /*
    Please use the PATCH macro instead of directly altering the version
@@ -79,8 +80,8 @@ extern jmp_buf alarmret;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.25";
-int egg_numver = 1032500;
+char egg_version[1024] = "1.3.26";
+int egg_numver = 1032600;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -440,8 +441,11 @@ static void core_secondly () {
       if (((int) (nowtm->tm_min / 5) * 5) == (nowtm->tm_min)) {	/* 5 min */
 	 call_hook(HOOK_5MINUTELY);
 	 check_botnet_pings();
-	 flushlogs();
-	 check_logsize();
+	 context;
+	 if (quick_logs == 0) {
+	   flushlogs();
+	   check_logsize();
+	   }
 	 if (miltime == 0) {		/* at midnight */
 	    char s[128];
 	    int j;
@@ -492,6 +496,11 @@ static void core_minutely () {
    context;
    check_tcl_time(nowtm);
    do_check_timers(&timer);
+   context;
+   if (quick_logs != 0) {
+	   flushlogs();
+	   check_logsize();
+	   }
 }
 
 static void core_hourly () {

@@ -75,6 +75,9 @@ int min_dcc_port = 1024;
 int max_dcc_port = 65535;
 int global_flood_ctcp_thr = 5;
 int global_flood_ctcp_time = 30;
+/* quick write logs?
+flush em every min instead of every 5  */
+int quick_logs = 0;
 
 /* prototypes for tcl */
 Tcl_Interp *Tcl_CreateInterp();
@@ -383,6 +386,7 @@ static tcl_ints def_tcl_ints[] =
    {"max-dcc", &max_dcc, 0},
    {"max-logs", &max_logs, 0},
    {"max-logsize", &max_logsize, 0},
+   {"quick-logs", &quick_logs, 0},
    {"enable-simul", &enable_simul, 1},
    {"debug-output", &debug_output, 1},
    {"protect-telnet", &protect_telnet, 0},
