@@ -225,13 +225,12 @@ before. PLEASE! READ IT!
     10. WHEN I 'tclsh scripts/weed <userfile> c' IT BARFS CHUNKS AT ME
         AND DIES :(
 	
-       You're userfile contains multiple 'xtra' lines, it's rather tricky
-       handling them in tcl, so we've all copped out and done nothing
-       about them :) To fix it, just edit your userfile manually, and
-       find all the lines that begin with '.   ', when you find
-       several for 1 user, merge them into 1 giant line, removing
-       the '.     ' at the start.
-       
+	UPGRADE YOUR TCL, you are probably using tcl 7.5 or earlier,
+	some of the commands in weed require tcl7.6 to run, so either
+	upgrade it, or removing the offending lines from you
+	userfile (those strating with '.' generally) and accept the
+	loss of that data.
+	
     11. I get a whole pile of "Unresolved symbol 'Tcl_AppendResult'"
         (or some other symbol) when I try to load a modules.
 	

@@ -341,8 +341,8 @@ static int laston_tcl_get (Tcl_Interp * irp, struct userrec * u,
    char number[20];
    struct chanuserrec * cr;
    
-   BADARGS(4,5," handle LASTON time ?channel?");
-   if (argc == 5) {
+   BADARGS(3,4," handle LASTON ?channel?");
+   if (argc == 4) {
       for (cr = u->chanrec; cr; cr = cr->next) 
 	if (!strcasecmp(cr->channel, argv[4])) {
 	   Tcl_AppendResult(irp, int_to_base10(cr->laston),NULL);

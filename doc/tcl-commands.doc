@@ -146,10 +146,6 @@ specific commands, see later.
     attempts to erase a user record with that handle
     returns: "1" if successful, "0" if no such user exists
 
-  addhost <handle> <hostmask>
-    adds a hostmask to the hostmask list for a user
-    returns: nothing
-
   delhost <handle> <hostmask>
     deletes a hostmask from a user's hostmask list
     returns: "1" on success, "0" if that hostmask wasn't in the list or the

@@ -131,3 +131,6 @@
 
 /* have vsnpritf to use */
 #undef HAVE_VSNPRINTF
+
+/* running on NeXT Step */
+#undef BORGCUBES

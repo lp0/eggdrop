@@ -83,8 +83,7 @@ static void take_revenge (struct chanset_t * chan, char * who, char * reason)
       /* this is out of control: BAN THEM */
       putlog(LOG_MISC, "*", "Now banning %s (%s)", who, reason);
       nick = splitnick(&who);
-      maskhost(who, s);
-      simple_sprintf(s1,"*!*%s",s);
+      maskhost(who, s1);
       simple_sprintf(s, "(%s) %s", ct, reason);
       u_addban(chan, s1, origbotname, s, now + (60 * ban_time),0);
       if (me_op(chan))

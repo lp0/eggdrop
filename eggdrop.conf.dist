@@ -61,9 +61,11 @@ set timezone "EST"
 #   b  information about bot linking and userfile sharing
 #   c  commands people use (via msg or dcc)
 #   x  file transfers and file-area commands
-#   r  (if defined in eggdrop.h) EVERYTHING sent to the bot by the server
+#   r  (if user-console-r defined) EVERYTHING sent to the bot by the server
 #   o  other: misc info, errors -- IMPORTANT STUFF
 #   w  wallops: msgs between IRCops (be sure to set the bot +w in init-server)
+# There are others, but you probably shouldnt log them, it'd be rather
+# unethical ;)
 
 # maximum number of logfiles to allow - this can be increased if needed
 # (don't decrease this)
@@ -262,10 +264,6 @@ unbind dcc n simul *dcc:simul
 # maximum number of dcc connections you will allow - you can increase this
 # later, but never decrease it, 50 seems to be enough for everybody
 set max-dcc 50
-
-# maximum number of logfiles to allow - this can be increased if needed
-# (don't decrease this)
-set max-logs 5
 
 # add the 'dccsimul' tcl command (needed by certain scripts like
 # action.fix.tcl)

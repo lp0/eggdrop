@@ -265,7 +265,7 @@ static void share_pls_host (int idx, char * par)
    CHKSHARE;
    hand = newsplit(&par);
    u = get_user_by_handle(userlist,hand);
-   if (u->flags & USER_UNSHARED)
+   if (!u || (u->flags & USER_UNSHARED))
      return;   
    shareout_but(NULL,idx, "+h %s %s\n", hand, par);
    set_user(&USERENTRY_HOSTS,u,par);
@@ -1193,7 +1193,7 @@ static void finish_share (int idx)
    for (u = userlist; u; u = u->next) {
       struct userrec * u2 = get_user_by_handle(ou,u->handle);
       
-      if (u2) {
+      if (u2 && !(u2->flags & (USER_UNSHARED|USER_BOT))) {
 	 struct chanuserrec * cr, *cr2, *cr_old = NULL;
 	 
 	 for (cr = u2->chanrec; cr; cr = cr2) {

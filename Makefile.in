@@ -3,6 +3,9 @@
 #  You should never need to edit this.
 #
 
+prefix = @prefix@
+DEST=@DEST@
+
 # things you can put here:
 #   -Wall            if you're using gcc and it supports it (configure
 #                      usually detects this anyway now)
@@ -30,8 +33,11 @@ SHLIB_CC = @SHLIB_CC@
 SHLIB_LD  = @SHLIB_LD@
 SHLIB_STRIP = @SHLIB_STRIP@
 
-# this is the directory we will try to install the bot files into...
-DESTDIR=../bot
+# configure SHOULD set these properly if not, modify them appropriately
+# these are the cp commands that make install uses
+CP1 = @CP1@
+CP2 = @CP2@
+CP3 = @CP3@
 
 # STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
 # - - - - - - - - do not edit anything below this line. - - - - - - - - #
@@ -195,19 +201,17 @@ ainstall:
 		echo Creating directory: $(DEST).; \
 		mkdir $(DEST); \
 	fi
-	@rm -f $(DEST)/README
-	@cp README $(DEST)
+	@$(CP1) README $(DEST)/
 	@if test ! -d $(DEST)/language; then \
 		echo Creating language subdirectory.; \
 		mkdir $(DEST)/language; \
 	fi
-	@rm -f $(DEST)/language/* 
-	@cp language/* $(DEST)/language/
+	@$(CP2) language/* $(DEST)/language/
 	@if test -r $(DEST)/eggdrop; then \
 		rm -f $(DEST)/oeggdrop; \
 	fi
 	@if test ! -r $(DEST)/motd; then \
-	@cp motd $(DEST)
+	        $(CP1) motd $(DEST)/; \
 	fi
 	@if test -d $(DEST)/modules/; then \
 		echo Moving old modules into \'modules.old\' directory.; \
@@ -221,45 +225,43 @@ ainstall:
 	fi
 	@if test -r assoc.so; then \
 		echo Copying new modules.; \
-		cp -p *.so $(DEST)/modules/; \
+		$(CP3) *.so $(DEST)/modules/; \
 	fi
 	@if test -r $(DEST)/eggdrop; then \
 		echo Renamed the old \'eggdrop\' executable to \'oeggdrop\'.; \
 		mv -f $(DEST)/eggdrop $(DEST)/oeggdrop; \
 	fi
 	@echo Copying new \'eggdrop\' executable.
-	@cp eggdrop $(DEST)
-
+	@$(CP1) eggdrop $(DEST)/
 	@if test ! -d $(DEST)/doc; then \
 		echo Creating \'doc\' subdirectory.; \
 		mkdir $(DEST)/doc; \
 	fi
 	@echo Copying \'doc\' files.
-	@cp -r doc/* $(DEST)/doc/
+	@$(CP2) doc/* $(DEST)/doc/
 	@if test ! -d $(DEST)/help; then \
 		echo Creating \'help\' subdirectory.; \
 		mkdir $(DEST)/help; \
 	fi
-	@cp -r help/* $(DEST)/help/
-
-	@if test ! -d $(DEST)/filesys/; then \
+	@$(CP2) help/* $(DEST)/help/
+	@if test ! -d $(DEST)/filesys; then \
 		echo Creating a skeletal \'filesys\' subdirectory.; \
 		mkdir $(DEST)/filesys; \
 		mkdir $(DEST)/filesys/incoming; \
 	fi
-
-	@if test ! -d $(DEST)/scripts/; then \
+	@if test ! -d $(DEST)/scripts; then \
 		echo Creating a \'scripts\' subdirectory.; \
 		mkdir $(DEST)/scripts; \
 	fi
 	@echo Copying scripts.
-	@cp scripts/* $(DEST)/scripts
+	@$(CP2) scripts/* $(DEST)/scripts
 	@echo
 	@${MAKE} REALDEST=`cd $(DEST);pwd` install2
 	@echo
 	@echo Installation completed.
 	@echo You MUST ensure that you edit/verify your configuration file.
 	@echo \'eggdrop.conf.dist\' lists current options.
+
 
 install2:
 	@echo Installing mods -- DEST = $(REALDEST)

@@ -387,11 +387,11 @@ static void cmd_rehelp (struct userrec * u, int idx, char * par) {
    reload_help_data();
 }
 
-static void cmd_help (struct userrec * u, int idx, char * par)
-{
+static void cmd_help (struct userrec * u, int idx, char * par) {
    struct flag_record fr = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
-   
+
    get_user_flagrec(u,&fr,dcc[idx].u.chat->con_chan);
+   rmspace(par); /* maintain some sanity */
    if (par[0]) {
       putlog(LOG_CMDS, "*", "#%s# help %s", dcc[idx].nick, par);
       tellhelp(idx, par, &fr,0);
@@ -462,7 +462,7 @@ static void cmd_match (struct userrec * u, int idx, char * par)
    int start = 1, limit = 20;
    char * s, * s1, * chname;
    if (!par[0]) {
-      dprintf(idx, "Usage: match <nick/host>\n");
+      dprintf(idx, "Usage: match <nick/host> [[skip] count]\n");
       return;
    }
    putlog(LOG_CMDS, "*", "#%s# match %s", dcc[idx].nick, par);
@@ -473,9 +473,11 @@ static void cmd_match (struct userrec * u, int idx, char * par)
       chname = "";
    if (atoi(par) > 0) {
       s1 = newsplit(&par);
-      if (atoi(s1) > 0)
+      if (atoi(par) > 0) {
 	 start = atoi(s1);
-      limit = atoi(par);
+	 limit = atoi(par);
+      } else
+	limit = atoi(s1);
    }
    tell_users_match(idx, s, start, limit, u ? (u->flags & USER_MASTER) : 0,
 		    chname);

@@ -60,7 +60,6 @@ SHLIB_STRIP="${STRIP}"
 AC_MSG_CHECKING(your OS)
 system=`$UNAME`
 DLOPEN_1=1
-BORGCUBES=0
 case $system in
   Linux)
     CFLAGS="${CFLAGS} -Wall"
@@ -158,7 +157,7 @@ case $system in
       AC_MSG_RESULT(NeXT...We are borg, you will be assimilated)
       AC_MSG_RESULT(break out the static modules, it's all you'll ever get :P)
       AC_MSG_RESULT(Hiya DK :P)
-      BORGCUBES=1
+      AC_DEFINE(BORGCUBES)
     else
       AC_MSG_RESULT(Something unknown!!)
       AC_MSG_RESULT(If you get dynamic modules to work, be sure to let the devel team know HOW :)
@@ -442,6 +441,12 @@ if test ! "x$GMAKE" = "x"; then
   SET_MAKE="MAKE=gmake"
 fi
 
+if test -z "$DEST"; then DEST=\${prefix}; fi
+
+AC_SUBST(DEST)
+AC_SUBST(CP1)
+AC_SUBST(CP2)
+AC_SUBST(CP3)
 AC_SUBST(EGGEXEC)
 AC_SUBST(CC)
 AC_SUBST(SHLIB_LD)

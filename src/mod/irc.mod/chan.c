@@ -1307,7 +1307,7 @@ static int gotquit (char * from, char * msg)
    /* Fred1: instead of expensive wild_match on signoff, quicker method */
    /* determine if signoff string matches "%.% %.%", and only one space */
    p = strchr(msg, ' ');
-   if (p && (p == strrchr(from,' '))) {
+   if (p && (p == strrchr(msg,' '))) {
       char *z1, *z2;
       *p = 0;
       z1 = strchr(p + 1, '.');

@@ -129,24 +129,24 @@ static void get_mode_protect (struct chanset_t * chan, char * s)
 	    *p++ = '-';
 	 if (tst & CHANKEY)
 	   *p++ = 'k';
-	 else if (tst & CHANLIMIT)
+	 if (tst & CHANLIMIT)
 	   *p++ = 'p';
       }
       if (tst & CHANINV)
 	 *p++ = 'i';
-      else if (tst & CHANPRIV)
+      if (tst & CHANPRIV)
 	 *p++ = 'p';
-      else if (tst & CHANSEC)
+      if (tst & CHANSEC)
 	 *p++ = 's';
-      else if (tst & CHANMODER)
+      if (tst & CHANMODER)
 	 *p++ = 'm';
-      else if (tst & CHANTOPIC)
+      if (tst & CHANTOPIC)
 	 *p++ = 't';
-      else if (tst & CHANNOMSG)
+      if (tst & CHANNOMSG)
 	 *p++ = 'n';
-      else if (tst & CHANANON)
+      if (tst & CHANANON)
 	 *p++ = 'a';
-      else if (tst & CHANQUIET)
+      if (tst & CHANQUIET)
 	 *p++ = 'q';
    }
    *p = 0;

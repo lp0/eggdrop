@@ -45,7 +45,7 @@ DCC_TELNET,DCC_IDENT,DCC_IDENTWAIT;
 #define fixcolon(x) if (x[0]==':') {x++;} else {x=newsplit(&x);}
 
 /* Stupid Borg Cube crap ;p */
-#if BORGCUBES==1
+#ifdef BORGCUBES
 
 /* net.h needs this */
 #define O_NONBLOCK      00000004        /* POSIX non-blocking I/O       */
