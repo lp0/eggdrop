@@ -145,6 +145,8 @@ static void cmd_kickban (struct userrec * u, int idx, char * par)
 	 if (m->flags & CHANOP)
 	   add_mode(chan, '-', 'o', m->nick);
 	 s1 = quickban(chan, m->userhost);
+	 if (!par[0])
+	   par = "requested";
 	 dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick, par);
 	 u_addban(chan, s1, dcc[idx].nick, par, now + (60 * ban_time),0);
 	 dprintf(idx, "Okay, done.\n");
@@ -363,14 +365,15 @@ static void cmd_invite (struct userrec * u, int idx, char * par)
 {
    struct chanset_t *chan;
    memberlist *m;
-   
-   if (!(chan = has_op(idx, NULL)))
-      return;
+   char * nick;
+     
    if (!par[0]) 
      par=dcc[idx].nick; /* doh, it's been without this since .9 ! */
                         /* (1.2.0+pop3) - poptix */
-   putlog(LOG_CMDS, "*", "#%s# (%s) invite %s", dcc[idx].nick, chan->name,
-	  par);
+   nick = newsplit(&par);
+   if (!(chan = has_op(idx, par)))
+      return;
+   putlog(LOG_CMDS, "*", "#%s# (%s) invite %s",dcc[idx].nick,chan->name,nick);
    if (!me_op(chan)) {
       if (chan->channel.mode & CHANINV) {
 	 dprintf(idx, "I'm not chop on %s, so I can't invite anyone.\n",
@@ -382,13 +385,13 @@ static void cmd_invite (struct userrec * u, int idx, char * par)
 	 return;
       }
    } 
-   m = ismember(chan, par);
+   m = ismember(chan, nick);
    if (m && !chan_issplit(m)) {
-      dprintf(idx, "%s is already on %s!\n", par, chan->name);
+      dprintf(idx, "%s is already on %s!\n", nick, chan->name);
       return;
    }
-   dprintf(DP_SERVER, "INVITE %s %s\n", par, chan->name);
-   dprintf(idx, "Inviting %s to %s.\n", par, chan->name);
+   dprintf(DP_SERVER, "INVITE %s %s\n", nick, chan->name);
+   dprintf(idx, "Inviting %s to %s.\n", nick, chan->name);
 }
 
 static void cmd_channel (struct userrec * u, int idx, char * par)
@@ -405,7 +408,7 @@ static void cmd_channel (struct userrec * u, int idx, char * par)
      return;
    chname = newsplit(&par);
    putlog(LOG_CMDS, "*", "#%s# (%s) channel %s", dcc[idx].nick,
-	  dcc[idx].u.chat->con_chan, par);
+	  dcc[idx].u.chat->con_chan, chname);
    if (!chname[0])
       chan = findchan(dcc[idx].u.chat->con_chan);
    else

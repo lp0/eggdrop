@@ -342,6 +342,7 @@
 #define BOT_NOTESERASED	get_language(0xb13)
 #define BOT_NOTESWAIT1	get_language(0xb14)
 #define BOT_NOTESWAIT1_ARGS	m->nick, k, k == 1 ? "" : "s", origbotname
+#define BOT_NOTESWAIT1_ARGS2	nick, k, k == 1 ? "" : "s", origbotname
 #define BOT_NOTESWAIT2	get_language(0xb15)
 #define BOT_NOTESWAIT3	get_language(0xb16)
 #define BOT_NOTESWAIT3_ARGS k, k == 1 ? "" : "s"

@@ -85,11 +85,13 @@ static int num_notes (char * user)
 }
 
 /* change someone's handle */
-static void notes_change (char * oldnick, char * newnick)
-{
+static void notes_change (char * oldnick, char * newnick) {
    FILE *f, *g;
    char s[513], *to, *s1;
    int tot = 0;
+   
+   if (!strcasecmp(oldnick, newnick))
+     return;
    if (!notefile[0])
       return;
    f = fopen(notefile, "r");
@@ -323,6 +325,96 @@ static int notes_in (int dl[], int in)
   return 0;
 }
 
+static int tcl_erasenotes STDVAR
+{
+  FILE *f, *g;
+  char s[601], *to, *s1;
+  int read, erased;
+  int nl[128]; /* is it enough ? */
+  context;
+  BADARGS(3, 3, " handle noteslist#");
+  if (!get_user_by_handle(userlist,argv[1])) {
+    Tcl_AppendResult(irp, "-1", NULL);
+    return TCL_OK;
+  }
+  if (!notefile[0]) {
+    Tcl_AppendResult(irp, "-2", NULL);
+    return TCL_OK;
+  }
+  f = fopen(notefile, "r");
+  if (f == NULL) {
+    Tcl_AppendResult(irp, "-2", NULL);
+    return TCL_OK;
+  }
+  sprintf(s, "%s~new", notefile);
+  g = fopen(s, "w");
+  if (g == NULL) {
+    fclose(f);
+    Tcl_AppendResult(irp, "-2", NULL);
+    return TCL_OK;
+  }
+  read 	 = 0;
+  erased = 0;
+  notes_parse(nl, (argv[2][0] == 0) ? "-" : argv[2]);
+  while (!feof(f)) {
+    fgets(s, 600, f);
+    if (s[strlen(s) - 1] == '\n')
+      s[strlen(s) - 1] = 0;
+    if (!feof(f)) {
+      rmspace(s);
+      if ((s[0]) && (s[0] != '#') & (s[0] != ';')) {		/* not comment */
+	s1 = s;
+	to = newsplit(&s1);
+	if (strcasecmp(to, argv[1]) == 0) {
+	  read++;
+	  if (!notes_in(nl, read)) {
+	    fprintf(g, "%s %s\n", to, s1);
+	  } else {
+	    erased++;
+	  }
+	} else {
+	  fprintf(g, "%s %s\n", to, s1);
+	}
+      }
+    }
+  }
+  sprintf(s, "%d", erased);
+  Tcl_AppendResult(irp, s, NULL);
+  fclose(f);
+  fclose(g);
+  unlink(notefile);
+  sprintf(s, "%s~new", notefile);
+#ifdef RENAME
+  rename(s, notefile);
+#else
+  movefile(s, notefile);
+#endif
+  return TCL_OK;
+}
+
+static int tcl_listnotes STDVAR
+{
+  int i, numnotes;
+  int ln[128]; /* is it enough ? */
+  char s[8];
+  context;
+  BADARGS(3, 3, " handle noteslist#");
+  if (!get_user_by_handle(userlist,argv[1])) {
+    Tcl_AppendResult(irp, "-1", NULL);
+    return TCL_OK;
+  }
+  numnotes = num_notes(argv[1]);
+  notes_parse(ln, argv[2]);
+  for (i=1; i<=numnotes; i++) {
+    if (notes_in(ln, i)) {
+      sprintf(s, "%d", i);
+      Tcl_AppendElement(irp, s);
+    }
+  }
+  return TCL_OK;
+}
+
+
 /* srd="+" : index
    srd="-" : read all msgs
    else    : read msg in list : (ex: .notes read 5-9;12;13;18-)
@@ -533,10 +625,10 @@ static int tcl_notes STDVAR
 {
    FILE *f;
    char s[601], *to, *from, *dt, *s1;
-   int count;
+   int count, read, nl[128]; /* is it enough */
    char *list[3], *p;
     context;
-    BADARGS(2, 3, " handle ?note#?");
+    BADARGS(2, 3, " handle ?noteslist#?");
    if (!get_user_by_handle(userlist,argv[1])) {
       Tcl_AppendResult(irp, "-1", NULL);
       return TCL_OK;
@@ -546,7 +638,6 @@ static int tcl_notes STDVAR
       Tcl_AppendResult(irp, s, NULL);
       return TCL_OK;
    }
-   count = atoi(argv[2]);
    if (!notefile[0]) {
       Tcl_AppendResult(irp, "-2", NULL);
       return TCL_OK;
@@ -556,6 +647,9 @@ static int tcl_notes STDVAR
       Tcl_AppendResult(irp, "-2", NULL);
       return TCL_OK;
    }
+   count = 0;
+   read = 0;
+   notes_parse(nl, (argv[2][0] == 0) ? "-" : argv[2]);
    while (!feof(f)) {
       fgets(s, 600, f);
       if (s[strlen(s) - 1] == '\n')
@@ -566,8 +660,9 @@ static int tcl_notes STDVAR
 	    s1 = s;
 	    to = newsplit(&s1);
 	    if (strcasecmp(to, argv[1]) == 0) {
-	       count--;
-	       if (!count) {
+	       read++;
+	       if (notes_in(nl, read)) {
+		  count++;
 		  from = newsplit(&s1);
 		  dt = newsplit(&s1);
 		  list[0] = from;
@@ -576,14 +671,12 @@ static int tcl_notes STDVAR
 		  p = Tcl_Merge(3, list);
 		  Tcl_AppendElement(irp, p);
 		  n_free(p, "", 0);
-		  fclose(f);
-		  return TCL_OK;
 	       }
 	    }
 	 }
       }
    }
-   Tcl_AppendResult(irp, "0", NULL);
+   if (count == 0) Tcl_AppendResult(irp, "0", NULL);
    fclose(f);
    return TCL_OK;
 }
@@ -772,7 +865,7 @@ static void notes_hourly() {
 	       if (k) {
 		  dprintf(DP_HELP, BOT_NOTESWAIT1, BOT_NOTESWAIT1_ARGS);
 		  dprintf(DP_HELP, "NOTICE %s :%s /MSG %s NOTES [pass] INDEX\n",
-			  m->nick, BOT_NOTESWAIT2, origbotname);
+			  m->nick, BOT_NOTESWAIT2, botname);
 	       }
 	    }
 	    m = m->next;
@@ -814,9 +907,9 @@ static void join_notes (char * nick, char * uhost, char * handle, char * par) {
        i = 0;		/* they already know they have notes */
    if (i) {
       dprintf(DP_HELP, "NOTICE %s :You have %d note%s waiting on %s.\n",
-	      nick, i, i == 1 ? "" : "s", origbotname);
+	      nick, i, i == 1 ? "" : "s", botname);
       dprintf(DP_HELP, "NOTICE %s :For a list, /MSG %s NOTES [pass] INDEX\n",
-	      nick, origbotname);
+	      nick, botname);
    }
 }
 
@@ -860,6 +953,8 @@ static tcl_strings notes_strings [] = {
 
 static tcl_cmds notes_tcls [] = {
      { "notes", tcl_notes },
+     { "erasenotes", tcl_erasenotes },
+     { "listnotes", tcl_listnotes },
      { "storenote", tcl_storenote },
      { 0, 0 }
 };
@@ -936,8 +1031,8 @@ char * notes_start (Function * global_funcs) {
    context;
    notefile[0] = 0;
    module_register(MODULE_NAME, notes_table, 2, 0);
-   if (!module_depend(MODULE_NAME, "eggdrop", 103,0)) 
-     return "This module requires eggdrop1.3.0 or later";
+   if (!module_depend(MODULE_NAME, "eggdrop", 103,15)) 
+     return "This module requires eggdrop1.3.15 or later";
    add_hook(HOOK_HOURLY,notes_hourly);
    add_tcl_ints(notes_ints);
    add_tcl_strings(notes_strings);

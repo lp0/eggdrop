@@ -238,23 +238,23 @@ static void share_newuser (int idx, char * par) {
 	  || !(u->flags & USER_UNSHARED)) {
 	 fr.global = 0;
 	 /* If user already exists, ignore command */
+	 shareout_but(NULL,idx, "n %s %s\n", etc, private_global
+		      ? ((fr.global & USER_BOT) ? "b" : "-") : par);
 	 if (!u) {
 	    noshare = 1;
 	    if (strlen(etc) > HANDLEN)
 	      etc[HANDLEN] = 0;
 	    etc2 = newsplit(&par);
-	    etc3 = newsplit(&par);
+	    etc3 = newsplit(&par);	
 	    fr.match = FR_GLOBAL;
 	    break_down_flags(par,&fr,NULL);
 	    fr.match = FR_CHAN;
 	    userlist = adduser(userlist, etc, etc2, etc3, 
-			       private_global ? fr.global :
-			       (fr.global & USER_BOT));
+			       private_global ? (fr.global & USER_BOT)
+			       : fr.global);
 	    noshare = 0;
 	    putlog(LOG_CMDS, "*", "%s: newuser %s", dcc[idx].nick, etc);
 	 }
-	 shareout_but(NULL,idx, "n %s %s\n", etc,  private_global ?
-		      ((fr.global & USER_BOT) ? "b" : "") : par);
       }
    }
 }
@@ -1161,7 +1161,7 @@ static void finish_share (int idx) {
 	 for (u = userlist; u; u = u->next) {
 	    struct userrec * u2 = get_user_by_handle(ou,u->handle);
 	    
-	    if (u2 && !(u2->flags & (USER_UNSHARED|USER_BOT))) {
+	    if (u2 && !(u2->flags & (USER_BOT|USER_UNSHARED))) {
 	       struct chanuserrec * cr, *cr2, *cr_old = NULL;
 	       struct user_entry * ue;
 	       
@@ -1205,7 +1205,7 @@ static void finish_share (int idx) {
 	       for (ue = u2->entries; ue; ue = ue->next) 
 		 if (ue->type && !ue->type->got_share && ue->type->dup_user)
 		   ue->type->dup_user(u,u2,ue);
-	    } else if (private_global) {
+	    } else if (!u2 && private_global) {
 	       u->flags = 0;
 	       u->flags_udef = 0;
 	    }

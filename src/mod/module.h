@@ -291,6 +291,7 @@
 #define check_dcc_chanattrs ((int (*)(struct userrec *,char *,int,int))global[208])
 #define add_tcl_coups ((void (*) (tcl_coups *))global[209])
 #define rem_tcl_coups ((void (*) (tcl_coups *))global[210])
+#define botname ((char *)(global[211]))
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */

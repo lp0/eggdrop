@@ -858,7 +858,7 @@ static cmd_t C_msg[17]={
   { "help", "", (Function)msg_help, NULL },
   { "ident", "", (Function)msg_ident, NULL },
   { "info", "", (Function)msg_info, NULL },
-  { "invite", "o", (Function)msg_invite, NULL },
+  { "invite", "o|o", (Function)msg_invite, NULL },
   { "jump", "m",(Function) msg_jump, NULL },
   { "memory", "m", (Function)msg_memory, NULL },
   { "op", "", (Function)msg_op, NULL },

@@ -405,6 +405,7 @@ Function global_table [] =
      (Function) check_dcc_chanattrs,
      (Function) add_tcl_coups,
      (Function) rem_tcl_coups,
+     (Function) botname,
 };
 
 void init_modules(void)

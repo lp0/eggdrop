@@ -305,11 +305,11 @@ static int u_addban (struct chanset_t * chan, char * ban, char * from, char * no
       if (!chan)
 	shareout(NULL,"+b %s %lu %s%s %s %s\n", host, expire_time - now,
 		 (flags & BANREC_STICKY) ? "s" : "",
-		 (flags & BANREC_PERM) ? "p": "", from, note);
+		 (flags & BANREC_PERM) ? "p": "-", from, note);
       else 
 	shareout(chan,"+bc %s %lu %s %s%s %s %s\n", host, expire_time - now,
 		 chan->name, (flags & BANREC_STICKY) ? "s" : "",
-		 (flags & BANREC_PERM) ? "p": "", from, note);
+		 (flags & BANREC_PERM) ? "p": "-", from, note);
    }
    return 1;
 }

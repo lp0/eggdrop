@@ -69,9 +69,9 @@ static void flush_mode (struct chanset_t * chan, int pri) {
    /* do -b before +b to avoid server ban overlap ignores */
    for (i = 0; i < modesperline; i++)
       if ((chan->cmode[i].type & MINUS) && (chan->cmode[i].type & BAN)) {
-	 if (!ok) {
+	 if (ok < 2) {
 	    *p++ = '-';
-	    ok = 1;
+	    ok = 2;
 	 }
 	 *p++ = 'b';
 	 strcat(post, chan->cmode[i].op);
@@ -79,7 +79,7 @@ static void flush_mode (struct chanset_t * chan, int pri) {
 	 nfree(chan->cmode[i].op);
 	 chan->cmode[i].op = NULL;
       }
-   ok = 0;
+   ok &= 1;
    for (i = 0; i < modesperline; i++)
       if (chan->cmode[i].type & PLUS) {
 	 if (!ok) {
@@ -581,11 +581,11 @@ static void got_unban (struct chanset_t * chan, char * nick, char * from,
 }
 
 /* a pain in the ass: mode changes */
-static void gotmode (char * from, char * msg)
-{
+static void gotmode (char * from, char * msg) {
    char * nick, *ch, *op, *chg;
    char s[UHOSTLEN], ms[UHOSTLEN];
    char ms2[3];
+   int z;
    struct userrec * u;
    memberlist *m;
    struct chanset_t *chan;
@@ -600,6 +600,9 @@ static void gotmode (char * from, char * msg)
 	 putlog(LOG_MISC, "*", CHAN_FORCEJOIN, ch);
 	 dprintf(DP_SERVER, "PART %s\n", ch);
       } else if (!channel_pending(chan)) {
+	 z = strlen(msg);
+         if (msg[--z] == ' ') /* i hate cosmetic bugs :P -poptix */
+           msg[z] = 0;
 	 putlog(LOG_MODES, chan->name, "%s: mode change '%s %s' by %s", 
 		ch, chg, msg, from);
 	 u = get_user_by_host(from);

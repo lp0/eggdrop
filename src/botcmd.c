@@ -592,9 +592,9 @@ static void bot_nlinked (int idx, char * par) {
       dprintf(idx, "error Loop (%s)\n", newbot);
    } 
    if (!s[0]) {
-      for (p = newbot; *p; p++)
-	 if ((*p < 32) || (*p == 127))
-	    bogus = 1;
+      for (p = newbot; *p; p++) 
+	if ((*p < 32) || (*p == 127) || ((p - newbot) >= HANDLEN))
+	  bogus = 1;
       i = nextbot(next);
       if (i != idx)
 	 bogus = 1;

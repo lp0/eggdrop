@@ -1189,15 +1189,27 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
 these commands are provided by notes.so to allow you to store notes for 
 users to read later
 
-  notes <user> [number]
-    gets info on notes stored for a user
-    returns: (if no numbers specified) number of notes for user,
-             -1 if no such user, -2 if notefile failure
-             (if a note number specified) the number'th note for the
-             user, -1 if no such user, -2 if notefile failure, 0 if
-             no such note. the note is a list, first element from,
-             2nd element timestamp, 3rd element the note itself
-  
+| notes <user> [numberlist]
+|   gets info on notes stored for a user
+|   returns: (if no numbers specified) number of notes for user,
+|            -1 if no such user, -2 if notefile failure
+|            (if a note numberlist specified) a list of notes,
+|            -1 if no such user, -2 if notefile failure, 0 if no
+|            such note. Each note of the list is also a list: first
+|            element from, 2nd element timestamp, 3rd element the
+|            note itself. (ex: 'notes mynick "2-4;8;16-"')
+
+| erasenotes <user> <numberlist>
+|   erases some or all stored notes for a user
+|   returns: -1 if no such user, -2 if notefile failure, 0 if
+|            no such note, or number of erased notes.
+|            'erasenote mynick "-"' erase all notes for mynick.
+
+| listnotes <user> <numberlist>
+|   lists existing notes according to the numberlist (ex: "2-4;8;16-")
+|   returns: -1 if no such user, -2 if notefile failure, 0 if no
+|            such note, list of existing notes.
+
   storenote <from> <to> <msg> <idx>
     stores a note for later reading, notify idx of any results (use
     idx == -1 for no notify).

@@ -731,6 +731,7 @@ static int botfl_tcl_get (Tcl_Interp * interp, struct userrec * u,
    char x[100];
    struct flag_record fr = {FR_BOT,0,0,0,0,0};
 
+   fr.bot = e->u.ulong;
    build_flags(x,&fr,NULL);
    Tcl_AppendResult(interp, x, NULL);
    return TCL_OK;

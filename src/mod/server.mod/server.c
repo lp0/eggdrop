@@ -13,8 +13,6 @@
 static int serv;
 /* strict masking of hosts ? */
 static int strict_host;
-/* current bot name on irc */
-static char botname[NICKLEN];
 /* new server? */
 static char newserver[121];
 /* new server port? */
@@ -488,10 +486,10 @@ static char * traced_botname (ClientData cdata, Tcl_Interp * irp, char * name1,
 
 static tcl_strings my_tcl_strings[] =
 {
+   {"botnick", 0, 0, STR_PROTECT},
    {"altnick", altnick, NICKMAX, 0},
    {"realname", botrealname, 80, 0},
    {"init-server", initserver, 120, 0},
-   {"botnick", botname, 0, STR_PROTECT},
    {0, 0, 0, 0}
 };
 
@@ -898,7 +896,7 @@ static Function server_table[] =
      (Function) server_expmem,
      (Function) server_report,
      /* 4 - 7 */
-     (Function) botname,      /* char * */
+     (Function) 0,      /* char * */
      (Function) botuserhost,  /* char * */
      (Function) &quiet_reject,/* int */
      (Function) &serv,
@@ -985,6 +983,7 @@ char *server_start (Function * global_funcs)
    maxqmsg = 300;
    burst = 0;
    context;
+   server_table[4] = (Function)botname;
    module_register(MODULE_NAME, server_table, 1, 0);
    if (!module_depend(MODULE_NAME, "eggdrop", 103, 13))
      return "This module requires eggdrop1.3.13 or later";
@@ -1022,6 +1021,7 @@ char *server_start (Function * global_funcs)
    add_builtins(H_ctcp,my_ctcps,1);
    add_help_reference("server.help");
    context;
+   my_tcl_strings[0].buf = botname;
    add_tcl_strings(my_tcl_strings);
    my_tcl_ints[0].val = &use_silence;
    my_tcl_ints[1].val = &use_console_r;

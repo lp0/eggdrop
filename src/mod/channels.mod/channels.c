@@ -436,8 +436,8 @@ static void channels_report (int idx, int details) {
 	   strcpy(s, MISC_LURKING);
 	 get_mode_protect(chan, s2);
 	 if (channel_active(chan))
-	   dprintf(idx, "    %-10s: %2d member%c, enforcing \"%s\"  (%s)\n", chan->name,
-		   chan->channel.members, chan->channel.members == 1 ? ' ' : 's', s2, s);
+	   dprintf(idx, "    %-10s: %2d member%s enforcing \"%s\" (%s)\n", chan->name,
+		   chan->channel.members, chan->channel.members == 1 ? "," : "s,", s2, s);
 	 else
 	   dprintf(idx, "    %-10s: (inactive), enforcing \"%s\"  (%s)\n",
 		   chan->name, s2, s);

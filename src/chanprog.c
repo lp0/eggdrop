@@ -52,6 +52,7 @@ struct chanset_t *chanset = NULL;
 char admin[121] = "";
 /* primary botname */
 char origbotname[NICKLEN+1];
+char botname[NICKLEN+1];
 
 /* remove space characters from beginning and end of string */
 /* (more efficent by Fred1) */

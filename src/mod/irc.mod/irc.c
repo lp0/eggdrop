@@ -275,9 +275,9 @@ static void log_chans()
 	    bans++;
 	    b = b->next;
 	 }
-	 putlog(LOG_MISC, chan->name, "%-10s: %2d member%c (%2d chop%c), %2d ban%c %s",
+	 putlog(LOG_MISC, chan->name, "%-10s: %d member%c (%d chop%s, %2d ba%s %s",
 		chan->name, chan->channel.members, chan->channel.members == 1 ? ' ' : 's',
-		chops, chops == 1 ? ' ' : 's', bans, bans == 1 ? ' ' : 's', me_op(chan) ? "" :
+		chops, chops == 1 ? ")" : "s)", bans, bans == 1 ? "n" : "ns", me_op(chan) ? "" :
 		"(not op'd)");
       }
       chan = chan->next;

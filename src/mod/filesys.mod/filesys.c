@@ -357,7 +357,7 @@ static int _dcc_send (int idx, char * filename, char * nick, char * dir)
       nfn++;
    if (strcasecmp(nick, dcc[idx].nick) != 0)
       dprintf(DP_HELP, "NOTICE %s :Here is a file from %s ...\n", nick, dcc[idx].nick);
-   dprintf(idx, "Type '/DCC GET %s %s' to receive.\n", origbotname, nfn);
+   dprintf(idx, "Type '/DCC GET %s %s' to receive.\n", botname, nfn);
    dprintf(idx, "Sending: %s to %s\n", nfn, nick);
    return 1;
 }
@@ -801,6 +801,8 @@ char *filesys_start (Function * global_funcs)
    module_register(MODULE_NAME, filesys_table, 2, 0);
    if (!(transfer_funcs = module_depend(MODULE_NAME, "transfer", 2, 0)))
       return "You need the transfer module to user the file system.";
+   if (!module_depend(MODULE_NAME, "eggdrop", 103, 15))
+     return "You need at least eggdrop1.3.15 to run this module.";
    add_tcl_commands(mytcls);
    add_tcl_strings(mystrings);
    add_tcl_ints(myints);
