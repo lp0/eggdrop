@@ -2,7 +2,7 @@
    tcluser.c -- handles:
    Tcl stubs for the user-record-oriented commands
 
-   dprintf'ized, 1aug96
+   dprintf'ized, 1aug1996
  */
 /*
    This file is part of the eggdrop source code
@@ -13,6 +13,7 @@
  */
 
 #include "main.h"
+#include "rfc1459.h"
 #include "users.h"
 #include "chan.h"
 #include "tandem.h"
@@ -183,8 +184,10 @@ static int tcl_matchattr STDVAR {
    
    context;
    BADARGS(3, 4, " handle flags ?channel?");
+   context; /* a2 - Last context: tcluser.c/184 */
    if ((u = get_user_by_handle(userlist,argv[1]))
 	&& ((argc == 3) || findchan(argv[3]))) {
+   context; /* a2 - Last context: tcluser.c/184 */
       user.match = FR_GLOBAL|(argc == 4 ? FR_CHAN : 0)|FR_BOT;
       get_user_flagrec(u,&user,argv[3]);
       plus.match = user.match;
@@ -192,6 +195,7 @@ static int tcl_matchattr STDVAR {
       f = (minus.global || minus.udef_global || minus.chan || minus.udef_chan
 	   || minus.bot);
       if (flagrec_eq(&plus,&user)) {
+   context; /* a2 - Last context: tcluser.c/184 */
 	 if (!f)
 	   ok = 1;
 	 else {
@@ -201,6 +205,7 @@ static int tcl_matchattr STDVAR {
 	 }
       }
    }
+   context; /* a2 - Last context: tcluser.c/184 */
    Tcl_AppendResult(irp, ok ? "1" : "0", NULL);
    return TCL_OK;
 }
@@ -345,7 +350,7 @@ static int tcl_chnick STDVAR {
 	x = 0;
       else if (get_user_by_handle(userlist,hand))
 	x = 0;
-      else if (!strcasecmp(origbotname, hand) || !strcasecmp(botnetnick, hand))
+      else if (!rfc_casecmp(origbotname, hand) || !rfc_casecmp(botnetnick, hand))
 	x = 0;
       else if (hand[0] == '*')
 	x = 0;

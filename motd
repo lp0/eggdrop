@@ -16,3 +16,11 @@ Local time is now %b%T%b
 You are an owner of this bot. Only +n users can see this! For more info,
 try %b.help set motd%b (please edit the %bmotd%b file in your bot's directory)
 %{-}
+If you need help with this eggdrop you can go
+to the following help channels:
+
+#eggdrop@Undernet
+#bothelp@Ircnet
+#egghelp@Efnet
+
+Have fun.

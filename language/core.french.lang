@@ -130,6 +130,7 @@
 0x53c,Le fichier usagers est manquant!
 0x53d,Bots connectés
 0x53e,%B  (%E)\n\nEntrez votre nickname\n
+0x53f,Rotation du fichier de log %s, taille maximale depassée (%d)
 
 # IRC_
 

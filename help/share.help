@@ -71,8 +71,8 @@ see also: set private-owner, set private-global
 	 info shared, ALL global info will be shared.
 	 
    Steps:
-     (1) Edit your config file and make sure each of the channels
-         you want to share is marked +shared in the settings.
+     (1) Do for each of the channels you want to share a
+         .chanset #channel +shared
      (2) on A type: '.botattr B +s'   +s == actively share
          on B type: '.botattr A +p'   +p == passively share
      (3) for each channel you want shared between the two,

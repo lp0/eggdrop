@@ -465,7 +465,7 @@ static int write_bans (FILE * f, int idx)
    struct igrec * i;
    
    if (global_ign)
-     if (fprintf(f, "*ignore - -\n")==EOF)
+     if (fprintf(f, IGNORE_NAME " - -\n")==EOF) /* Daemus */
 	 return 0;
    for (i = global_ign;i;i=i->next) 
      if (fprintf(f,"- %s:%s%lu:%s:%lu:%s\n", i->igmask,
@@ -473,7 +473,7 @@ static int write_bans (FILE * f, int idx)
 		 i->user?i->user:botnetnick, i->added, i->msg?i->msg:"")==EOF)
        return 0;
    if (global_bans)
-     if (fprintf(f, "*ban - -\n")==EOF)
+     if (fprintf(f, BAN_NAME " - -\n")==EOF) /* Daemus */
        return 0;
    for (b = global_bans;b;b=b->next) 
      if (fprintf(f,"- %s:%s%lu%s:+%lu:%lu:%s:%s\n",b->banmask,

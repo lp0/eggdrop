@@ -14,6 +14,7 @@
 
 #include "main.h"
 #include "tandem.h"
+#include "rfc1459.h"
 #include <varargs.h>
 
 extern struct dcc_t * dcc;
@@ -701,9 +702,9 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
       x[20] = 0;
       *p = '@';
       p++;
-      if (strcasecmp(p, botnetnick) == 0)	/* to me?? */
+      if (rfc_casecmp(p, botnetnick) == 0)	/* to me?? */
 	return add_note(x, from, msg, idx, echo);	/* start over, dimwit. */
-      if (strcasecmp(from, botnetnick)) {
+      if (rfc_casecmp(from, botnetnick)) {
 	 if (strlen(from) > 40)
 	   from[40] = 0;
 	 if (strchr(from,'@')) {
@@ -760,7 +761,7 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
    for (i = 0; i < dcc_total; i++) {
       if ((dcc[i].type->flags & DCT_GETNOTES) &&
 	  ((sock == (-1)) || (sock == dcc[i].sock)) &&
-	  (strcasecmp(dcc[i].nick, to) == 0)) {
+	  (rfc_casecmp(dcc[i].nick, to) == 0)) {
 	 int aok = 1;
 	 if (dcc[i].type == &DCC_CHAT)
 	   if ((dcc[i].u.chat->away != NULL) &&
@@ -786,7 +787,7 @@ int add_note (char * to, char * from, char * msg, int idx, int echo)
 	       else if (*from == '@')
 		 fr = p + 1;
 	    }  
-	    if ((idx == (-2)) || (strcasecmp(from, botnetnick) == 0))
+	    if ((idx == (-2)) || (rfc_casecmp(from, botnetnick) == 0))
 	      dprintf(i, "*** [%s] %s%s\n", fr, l ? work : "", msg);
 	    else
 	      dprintf(i, "%cNote [%s]: %s%s\n", 7, fr, l ? work : "", msg);

@@ -3,7 +3,7 @@
    Tcl stubs for file system commands
    moved here to support modules
 
-   dprintf'ized, 1aug96
+   dprintf'ized, 1aug1996
  */
 /*
    This file is part of the eggdrop source code

@@ -8,6 +8,8 @@
 	             after how many minutes (use 0, or no-idle-kick
 		     to turn this off)
 %{+n}
+        ATTENTION: Due to security concerns, only permanent owners can 
+                   set the need-*  modes.
 	%bneed-op%b      tcl command to execute when the bot doesnt have ops
 	%bneed-invite%b  tcl command to execute when the bot needs to be
 	             invited to the channel (ie channel has mode +i)
@@ -33,11 +35,12 @@
 	%bstatuslog%b    log the channel status every 5 minutes
 	%bstopnethack%b  de-op anyone who enters the channel with server
 	             ops
+	%bcycle%b        cycle the channel when it becomes op-less
 	%brevenge%b      take revenge on anyone who deops, kicks or
 	             bans the bot or any valid user
 	%bsecret%b       don't provide info about the channel over the botnet
 	%bshared%b       share user settings for this channel 
-	             (%bNOTE%b: this can only be set in the config file)
+	             (%bNOTE%b: this can be set online now)
 	%bautovoice%b    this causes the bot to also monitor channel voice
 	             settings, using the +v/+q settings.
      The following are flood settins, they are set by going

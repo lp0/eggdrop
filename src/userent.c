@@ -11,6 +11,7 @@
  */
 #include "main.h"
 #include "users.h"
+#include "rfc1459.h"
 
 extern int noshare;
 extern struct userrec * userlist;
@@ -327,6 +328,7 @@ static int laston_set (struct userrec * u, struct user_entry * e, void * buf) {
 	nfree(((struct laston_info *)(e->u.extra))->lastonplace);
       nfree(e->u.extra);
    }
+   contextnote("SEGV with sharing bug track");
    if (buf) {
       e->u.list = (struct list_type *)buf;
    } else 
@@ -344,7 +346,7 @@ static int laston_tcl_get (Tcl_Interp * irp, struct userrec * u,
    BADARGS(3,4," handle LASTON ?channel?");
    if (argc == 4) {
       for (cr = u->chanrec; cr; cr = cr->next) 
-	if (!strcasecmp(cr->channel, argv[3])) {
+	if (!rfc_casecmp(cr->channel, argv[3])) {
 	   Tcl_AppendResult(irp, int_to_base10(cr->laston),NULL);
 	   break;
 	}
@@ -371,7 +373,7 @@ static int laston_tcl_set (Tcl_Interp * irp, struct userrec * u,
       set_user(&USERENTRY_LASTON,u,li);
    } else {
       for (cr = u->chanrec; cr; cr = cr->next) 
-	if (!strcasecmp(cr->channel, argv[4]))
+	if (!rfc_casecmp(cr->channel, argv[4]))
 	  cr->laston = atoi(argv[3]);
    }
    return TCL_OK;
@@ -490,6 +492,7 @@ static int botaddr_set (struct userrec * u, struct user_entry * e, void * buf) {
 	nfree(((struct bot_addr *)(e->u.extra))->address);
       nfree(e->u.extra);
    }
+   contextnote("SEGV with sharing bug track");
    if (buf) {
       e->u.list = (struct list_type *)buf;
       /* donut share laston unfo */
@@ -927,13 +930,21 @@ static void hosts_display (int idx, struct user_entry * e) {
 
 static int hosts_set (struct userrec * u, struct user_entry * e, void * buf) {
    context;
-   if (!buf || !strcasecmp(buf,"none")) {
-      list_type_kill(e->u.list);
-      e->u.list = NULL;
+   if (!buf || !rfc_casecmp(buf,"none")) {
+      contextnote("SEGV with sharing bug track"); 
+      /* when the bot crashes, it's in this part, not in the 'else' part */
+      contextnote((e->u.list) ? "e->u.list is valid" : "e->u.list is NULL!")
+      contextnote(e ? "e is valid" : "e is NULL!")
+      if (e) {
+         list_type_kill(e->u.list);
+         contextnote("SEGV with sharing bug track - added 99/03/26"); 
+         e->u.list = NULL;
+         contextnote("SEGV with sharing bug track - added 99/03/26");
+      }
    } else {
       char *host = buf, *p = strchr(host, ',');
       struct list_type ** t;
-      
+      contextnote("SEGV with sharing bug track");
       /* can't have ,'s in hostmasks */
       while (p) {
 	 *p = '?';
@@ -980,7 +991,7 @@ static int hosts_tcl_set (Tcl_Interp * irp, struct userrec * u,
    if (argc == 4) 
      addhost_by_handle(u->handle,argv[3]);
    else {
-      while (e->u.list && strcasecmp(e->u.list->extra,"none"))
+      while (e->u.list && rfc_casecmp(e->u.list->extra,"none"))
 	delhost_by_handle(u->handle,e->u.list->extra);
    }
    return TCL_OK;
@@ -1068,7 +1079,7 @@ struct user_entry_type * find_entry_type ( char * name ) {
    struct user_entry_type * p;
    
    for (p = entry_type_list;p;p = p->next) {
-      if (!strcasecmp(name,p->name))
+      if (!rfc_casecmp(name,p->name))
 	return p;
    }
    return NULL;
@@ -1080,7 +1091,7 @@ struct user_entry * find_user_entry ( struct user_entry_type * et,
    
    for (e = &(u->entries);*e;e = &((*e)->next)) {
       if (((*e)->type == et) || 
-	  ((*e)->name && !strcasecmp((*e)->name,et->name))) {
+	  ((*e)->name && !rfc_casecmp((*e)->name,et->name))) {
 	 t = *e;
 	 *e = t->next;
 	 t->next = u->entries;

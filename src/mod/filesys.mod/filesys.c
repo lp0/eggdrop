@@ -561,7 +561,7 @@ static void filesys_dcc_send (char * nick, char * from, struct userrec * u,
    } else {
       ip = newsplit(&msg);
       prt = newsplit(&msg);
-      if ((atoi(prt) < 1024) || (atoi(prt) > 65535)) {
+      if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
        /* invalid port range, do clients even use over 5000?? */
        dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
          DCC_CONNECTFAILED1);
@@ -690,7 +690,7 @@ static int filesys_DCC_CHAT(char * nick, char * from, char * handle,
 		nick, from);
 	 putlog(LOG_MISC, "*", "    (%s)", buf);
 	 killsock(sock);
-    } else if ((atoi(prt) < 1024) || (atoi(prt) > 65535)) {
+    } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
       /* invalid port range, do clients even use over 5000?? */
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
          DCC_CONNECTFAILED1);

@@ -7,6 +7,7 @@
  */
 
 #include "main.h"
+#include "rfc1459.h"
 
 extern int use_console_r;
 extern int debug_output;
@@ -578,7 +579,7 @@ void set_user_flagrec (struct userrec * u, struct flag_record * fr,
    
    if ((oldflags & FR_CHAN) && chname) {
       for (cr = u->chanrec;cr;cr = cr->next)
-	if (!strcasecmp(chname,cr->channel))
+	if (!rfc_casecmp(chname,cr->channel))
 	    break;
       ch = findchan(chname);
       
@@ -634,7 +635,7 @@ void get_user_flagrec (struct userrec * u, struct flag_record * fr,
       } else {
 	 if (chname)
 	   for (cr = u->chanrec;cr;cr = cr->next)
-	     if (!strcasecmp(chname,cr->channel))
+	     if (!rfc_casecmp(chname,cr->channel))
 		 break;
 	 if (chname && cr) {
 	    fr->chan = cr->flags;

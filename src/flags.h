@@ -27,11 +27,11 @@ struct flag_record {
 /* + user defined A-Z                      */
 /*   unused letters: bceghjlprtwxyz        */
 
-#define USER_MASK    (0x001fffff) /* all non-userdef flags */
-#define USER_CHANMASK 0x00017569  /* flags common to global & chan records */
+#define USER_MASK    (0x001bffff) /* all non-userdef flags */
+#define USER_CHANMASK 0x00417569  /* flags common to global & chan records */
 
-#define USER_VALID    0x00B9f6Af
-#define CHAN_VALID    0x00357429
+#define USER_VALID    0x00f9f6Af
+#define CHAN_VALID    0x00757429
 #define BOT_VALID     0x7fe689C1
 
 #define USER_AUTOOP   0x00000001  /* a   auto-op - future */

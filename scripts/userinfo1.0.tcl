@@ -1,19 +1,20 @@
 #
-# userinfo.tcl v1.02 for Eggdrop 1.1.6 and higher 
-#			Scott G. Taylor -- ButchBub!staylor@mrynet.com
+# userinfo.tcl v1.02 for Eggdrop 1.1.6 and higher
+#           Scott G. Taylor -- ButchBub!staylor@mrynet.com
 #
-# V1.00	     ButchBub	  14 July      1997  Original release.  Based on
-#						whois.tcl "URL" commands.
+# V1.00      ButchBub     14 July      1997  Original release.  Based on
+#                       whois.tcl "URL" commands.
 # v1.01      Beldin       11 November  1997  1.3 only version
 # v1.02      Kirk         19 June      1998  extremely small fixes
+# v1.03      guppy        17 March     1999  small fixes again
 #
-# TO USE:  o	Set the desired userinfo field keywords to the 
-#		`userinfo-fields' line below where indicated.
-#	   o	Load this script on a 1.1.6 or later Eggdrop bot.
-#	   o	Begin having users save the desired information.  If you
-#		chose to add the default "IRL" field, they just use
-#		the IRC command: /MSG <botnick> irl Joe Blow.
-#	   o	See the new information now appear with the whois command.
+# TO USE:  o    Set the desired userinfo field keywords to the
+#       `userinfo-fields' line below where indicated.
+#      o    Load this script on a 1.1.6 or later Eggdrop bot.
+#      o    Begin having users save the desired information.  If you
+#       chose to add the default "IRL" field, they just use
+#       the IRC command: /MSG <botnick> irl Joe Blow.
+#      o    See the new information now appear with the whois command.
 #
 # This script enhances the `whois' output utilising the `whois-fields'
 # option of eggdrop 1.1-grant and later versions.  It adds the functionality
@@ -30,21 +31,21 @@
 # The commands that will be added to the running eggdrop are:
 #  (<info> will be the respective userfile field added in `userinfo-fields')
 #
-#	TYPE	COMMAND		USAGE
-#	======	==============	========================================
-#	msg	<info>		To change your <info> via /MSG.
-#	dcc	.<info>		To change your <info> via DCC.
-#	dcc	.ch<info>	To change someone else's <info> via DCC.
+#   TYPE    COMMAND     USAGE
+#   ======  ==============  ========================================
+#   msg <info>      To change your <info> via /MSG.
+#   dcc .<info>     To change your <info> via DCC.
+#   dcc .ch<info>   To change someone else's <info> via DCC.
 #
 # Currently supported fields and commands:
 #
-#	FIELD	USAGE
-#	=====	=====================
-#	URL	WWW page URL
-#	IRL	In Real Life name
-#	BF	Boyfriend
-#	GF	Girlfriend
-#	DOB     Birthday (Date Of Birth)
+#   FIELD   USAGE
+#   =====   =====================
+#   URL WWW page URL
+#   IRL In Real Life name
+#   BF  Boyfriend
+#   GF  Girlfriend
+#   DOB     Birthday (Date Of Birth)
 #       EMAIL   Email address
 
 ################################
@@ -77,7 +78,7 @@ if {![info exists whois-fields]} {
 foreach f1 [split ${userinfo-fields}] {
   set ffound 0
   foreach f2 [split ${whois-fields}] {
-    if {[string tolower $f1] == [string tolower $f2]} { 
+    if {[string tolower $f1] == [string tolower $f2]} {
       set ffound 1
       break
     }
@@ -111,7 +112,7 @@ proc msg_setuserinfo {nick uhost hand arg} {
   }
   if {$ignore} {
     return 0
-  }   
+  }
    if {$hand != "*"} {
       if {$arg != ""} {
          if {[string tolower $arg] == "none"} {
@@ -130,7 +131,7 @@ proc msg_setuserinfo {nick uhost hand arg} {
       }
    } else {
       if {${quiet-reject} != 1} {
-        putserv 
+        putserv
           "NOTICE $nick :Ymust be a registered user to use this feature."
       }
    }
@@ -167,19 +168,19 @@ proc dcc_chuserinfo {hand idx arg} {
 global lastbind
   set userinfo [string toupper [string range $lastbind 2 end]]
   set arg [cleanarg $arg]
-  if {[llength $arg] == 0} {
+  if {[llength [split $arg]] == 0} {
     putdcc $idx "syntax: .ch[string tolower $userinfo] <who> \[<[string tolower $userinfo]>|NONE\]"
     return 0
   }
-  set who [lindex $arg 0]
+  set who [lindex [split $arg] 0]
   if {![validuser $who]} {
     putdcc $idx "$who is not a valid user."
     return 0
   }
-  if {[llength $arg] == 1} {
+  if {[llength [split $arg]] == 1} {
     set info ""
   } {
-    set info [lindex $arg 1]
+    set info [lrange [split $arg] 1 end]
   }
   if {$info != ""} {
     if {[string tolower $info] == "none"} {

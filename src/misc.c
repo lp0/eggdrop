@@ -8,7 +8,7 @@
    help system
    motd display and %var substitution
 
-   dprintf'ized, 12dec95
+   dprintf'ized, 12dec1995
  */
 /*
    This file is part of the eggdrop source code
@@ -19,7 +19,9 @@
  */
 
 #include "main.h"
+#include "rfc1459.h"
 #include <sys/stat.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <varargs.h>
 #include "chan.h"
@@ -27,14 +29,12 @@
 #include <sys/utsname.h>
 #endif
 
-extern int serv;
 extern int dcc_total;
 extern struct dcc_t * dcc;
 extern char helpdir[];
 extern char version[];
 extern char origbotname[];
 extern char admin[];
-extern int require_p;
 extern int backgrd;
 extern int con_chan;
 extern int term_z;
@@ -53,6 +53,8 @@ int shtime = 1;
 log_t * logs = 0;
 /* current maximum log files */
 int max_logs = 5;
+/* maximum logfile size, 0 for no limit */
+int max_logsize = 0;
 /* console mask */
 int conmask = LOG_MODES | LOG_CMDS | LOG_MISC;
 /* disply output to server to LOG_SERVEROUT */
@@ -98,6 +100,9 @@ void init_misc()
       logs[last].filename = logs[last].chname = NULL;
       logs[last].mask = 0;
       logs[last].f = NULL;
+      /*        Added by cybah  */
+      logs[last].szLast[0] = 0;
+      logs[last].Repeats = 0;
    }
 }
 
@@ -115,10 +120,11 @@ static int is_file (char * s)
    return 0;
 }
 
+
+/* unixware has no strcasecmp() without linking in a hefty library */
+#if !HAVE_STRCASECMP
 #define upcase(c) (((c)>='a' && (c)<='z') ? (c)-'a'+'A' : (c))
 
-#if !HAVE_STRCASECMP
-/* unixware has no strcasecmp() without linking in a hefty library */
 int strcasecmp (char * s1, char * s2)
 {
    while ((*s1) && (*s2) && (upcase(*s1) == upcase(*s2))) {
@@ -401,9 +407,11 @@ va_dcl
 {
    va_list va;
    int i, type;
-   char *format, *chname, s[768], s1[256], *out;
+   char *format, *chname, s[MAX_LOG_LINE+1], s1[256], *out;
    time_t tt;
    char ct[81];
+   struct tm    *T = localtime(&now);
+      
    va_start(va);
    type = va_arg(va, int);
    chname = va_arg(va, char *);
@@ -411,8 +419,9 @@ va_dcl
    /* format log entry at offset 8, then i can prepend the timestamp */
    out = &s[8];
 #ifdef HAVE_VSNPRINTF
-   if (vsnprintf(out, 759, format, va) < 0)
-     out[767] = 0;
+   /* no need to check if out should be null-terminated here, just do it! <cybah> */
+   vsnprintf(out, MAX_LOG_LINE-8, format, va);
+   out[MAX_LOG_LINE-8] = 0;
 #else
    vsprintf(out, format, va);
 #endif
@@ -443,7 +452,7 @@ va_dcl
       for (i = 0; i < max_logs; i++) {
 	 if ((logs[i].filename != NULL) && (logs[i].mask & type) &&
 	     ((chname[0] == '*') || (logs[i].chname[0] == '*') ||
-	      (strcasecmp(chname, logs[i].chname) == 0))) {
+	      (rfc_casecmp(chname, logs[i].chname) == 0))) {
 	    if (logs[i].f == NULL) {
 	       /* open this logfile */
 	       if (keep_all_logs) {
@@ -452,8 +461,39 @@ va_dcl
 	       } else
 		  logs[i].f = fopen(logs[i].filename, "a+");
 	    }
-	    if (logs[i].f != NULL)
-	       fputs(out, logs[i].f);
+	    if (logs[i].f != NULL) {
+	        /*        Check if this is the same as the last line added to
+	                the log. <cybah>
+	        */
+                if(!strcasecmp(out+8,logs[i].szLast)) {
+                        /*      It is a repeat, so increment Repeats */
+                        logs[i].Repeats++;
+                } else {
+                        /*        Not a repeat, check if there were any repeat
+                                lines previously...
+                        */
+                        if(logs[i].Repeats>0) {
+                                /*        Yep.. so display 'last message
+                                        repeated x times' then reset Repeats.
+                                        We want the current time here, so put
+                                        that in the file first.
+                                */
+                                if(T)
+                                        fprintf(logs[i].f,"[%2.2d:%2.2d] last message repeated %d times\n",
+                                                T->tm_hour,T->tm_min,logs[i].Repeats);
+                                else
+                                        fprintf(logs[i].f,"[??:??] last message repeated %d times\n",
+                                                logs[i].Repeats);                                                
+                                logs[i].Repeats = 0;
+                                /*        no need to reset logs[i].szLast here
+                                        because we update it later on...
+                                */
+                        }
+                        fputs(out, logs[i].f);
+                        strncpy(logs[i].szLast,out+8,MAX_LOG_LINE);
+                        logs[i].szLast[MAX_LOG_LINE] = 0;
+                }
+	    }
 	 }
       }
    }
@@ -462,7 +502,7 @@ va_dcl
    for (i = 0; i < dcc_total; i++)
       if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->con_flags & type)) {
 	 if ((chname[0] == '*') || (dcc[i].u.chat->con_chan[0] == '*') ||
-	     (strcasecmp(chname, dcc[i].u.chat->con_chan) == 0))
+	     (rfc_casecmp(chname, dcc[i].u.chat->con_chan) == 0))
 	    dprintf(i, "%s", out);
       }
    if ((type & LOG_MISC) && use_stderr) {
@@ -473,14 +513,90 @@ va_dcl
    va_end(va);
 }
 
+void check_logsize()
+{
+	struct stat ss;
+	int i;
+/*	int x=1; */
+	char buf[1024]; /* should be plenty */
+	context;
+	if (!keep_all_logs && (max_logsize < 512000))
+        for (i = 0; i < max_logs; i++) {
+                if (logs[i].filename) {
+			if (stat(logs[i].filename,&ss) != 0) {
+				break;
+			}
+			if (ss.st_size > (max_logsize*1024)) {
+				context;
+				if (logs[i].f) {
+					fclose(logs[i].f);
+					logs[i].f = NULL;
+					context;
+				}
+				context;
+				putlog(LOG_MISC,"*",MISC_CLOGS,logs[i].filename,ss.st_size);
+				buf[0]='\0';
+				snprintf(buf,1024,"%s.yesterday",logs[i].filename);
+				unlink(buf);
+				
+/*				x++; 
+   This is an alternate method i was considering, i want to leave
+   this in here and commented.. in case someone wants it like this
+   it really depends on feedback from the users. - poptix
+   feel free to ask me, if you have questions on this.. 
+
+				while (x > 0) {
+					buf[0]='\0';
+					x++;
+					* only YOU can prevent buffer overflows! *
+					snprintf(buf,1024,"%s.%d",logs[i].filename,x);
+					if (stat(buf,&ss) == -1) { 
+					* file doesnt exist, lets use it *
+*/
+#ifdef RENAME
+						rename(logs[i].filename, buf);
+#else
+						movefile(logs[i].filename, buf);
+#endif
+/*						x=0;
+					}
+				} */
+			}
+		}
+	}
+	context;
+}
+
+
 /* flush the logfiles to disk */
 void flushlogs()
 {
-   int i;
-   context;
-   for (i = 0; i < max_logs; i++)
-      if (logs[i].f != NULL)
-	 fflush(logs[i].f);
+        int             i;
+        struct tm      *T = localtime(&now);
+        
+        context;
+        /*        Now also checks to see if there's a repeat message and
+                displays the 'last message repeated...' stuff too <cybah>
+        */
+        for (i = 0; i < max_logs; i++) {
+                if (logs[i].f != NULL) {
+                        if(logs[i].Repeats>0) {
+                                /*        Repeat.. so display 'last message
+                                        repeated x times' then reset Repeats.
+                                */
+                                if(T) {
+                                        fprintf(logs[i].f,"[%2.2d:%2.2d] last message repeated %d times\n",
+                                                T->tm_hour,T->tm_min,logs[i].Repeats);
+                                } else {
+                                        fprintf(logs[i].f,"[??:??] last message repeated %d times\n",logs[i].Repeats);
+                                }
+                                
+                                /*      Reset repeats */
+                                logs[i].Repeats = 0;
+                        }
+                        fflush(logs[i].f);
+                }
+        } 
    context;
 }
 
@@ -973,7 +1089,7 @@ void showhelp (char * who, char * file, struct flag_record * flags, int fl)
 	    if (!s[0])
 	      strcpy(s, " ");
 	    help_subst(s, who, flags, 0, file);
-	    if (s[0]) {
+	    if ((s[0]) && (strlen(s) > 1)) {
 	       dprintf(DP_HELP, "NOTICE %s :%s\n", who, s);
 	       lines++;
 	    }

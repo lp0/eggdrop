@@ -61,12 +61,10 @@ before. PLEASE! READ IT!
     That means Tcl is on your system.  If tclsh doesn't load, then Tcl
     probably isn't on your system, and you will need to ftp it.  The
     best ftp site is:
-       ftp://ftp.sunlabs.com/pub/tcl
-    The current version as of this writing is 8.0.  Right now, eggdrop
-    pukes on 8.0betas, so we suggest that you use 7.6p2. NEW: 8.0 release
-    reputedly works, but we've already had to code around problems with
-    it.  7.6p2 is still suggested! If you email someone with problems and
-    you're using 8.0 anything, you will have vomituous masses spat at you.
+       ftp://ftp.scriptics.com/pub/tcl
+
+    The best version to use right now is 8.0.4 (as recommended by
+    dw@Undernet), versions like 7.6p2 are still fine to use though.
 
     Tcl comes with the Slackware distribution of Linux.  HOWEVER, the
     one that comes on Slackware 3.0 is goofed up and you'll have to

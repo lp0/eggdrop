@@ -40,6 +40,7 @@
 #define NICKMAX       15     /* valid values HANDLEN->32 */
 #define UHOSTLEN     161     /* reasonable, i think? */
 #define DIRLEN       256     /* paranoia */
+#define MAX_LOG_LINE (767)   /* for misc.c/putlog() <cybah> */
 
 #define NICKLEN		NICKMAX + 1
 #define NOTENAMELEN     ((HANDLEN * 2) + 1)
@@ -121,10 +122,19 @@
 
 #define context { cx_ptr=((cx_ptr + 1) & 15); \
                   strcpy(cx_file[cx_ptr],__FILE__); \
-                  cx_line[cx_ptr]=__LINE__; }
+                  cx_line[cx_ptr]=__LINE__; \
+                  cx_note[cx_ptr][0] = 0; }
+/*      It's usefull to track variables too <cybah> */
+#define contextnote(string) { cx_ptr=((cx_ptr + 1) & 15); \
+                              strncpy(cx_file[cx_ptr],__FILE__,29); \
+                              cx_file[cx_ptr][29] = 0; \
+                              cx_line[cx_ptr]=__LINE__; \
+                              strncpy(cx_note[cx_ptr],string,255); \
+                              cx_note[cx_ptr][255] = 0; }
 /* move these here, makes more sense to me :) */
 extern int cx_line[16];
 extern char cx_file[16][30];
+extern char cx_note[16][256];
 extern int cx_ptr;
 
 #undef malloc
@@ -219,6 +229,7 @@ struct chat_info {
   int max_line;             /* maximum lines at once */
   int line_count;           /* number of lines sent since last page */
   int current_lines;        /* number of lines total stored */
+  char *su_nick;
 };
 
 struct file_info {
@@ -329,9 +340,11 @@ struct script_info {
 /* structure for internal logs */
 typedef struct {
   char *filename;
-  unsigned int mask;       /* what to send to this log */
-  char *chname;            /* which channel */
-  FILE *f;                 /* existing file */
+  unsigned int mask;            /* what to send to this log */
+  char *chname;                 /* which channel */
+  char  szLast[MAX_LOG_LINE+1]; /* for 'Last message repeated n times' stuff in misc.c/putlog() <cybah> */
+  int   Repeats;                /* number of times szLast has been repeated */
+  FILE *f;                      /* existing file */
 } log_t;
 
 /* logfile display flags */

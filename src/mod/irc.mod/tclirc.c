@@ -9,7 +9,7 @@ static int tcl_chanlist STDVAR
    struct flag_record plus = {FR_CHAN|FR_GLOBAL|FR_BOT,0,0,0,0,0},
      minus = {FR_CHAN|FR_GLOBAL|FR_BOT,0,0,0,0,0},
      user = {FR_CHAN|FR_GLOBAL|FR_BOT,0,0,0,0,0};
-   
+
    BADARGS(2, 3, " channel ?flags?");
    context;
    chan = findchan(argv[1]);
@@ -22,14 +22,14 @@ static int tcl_chanlist STDVAR
    if (argc == 2) {
       /* no flag restrictions so just whiz it thru quick */
       while (m->nick[0]) {
-	 Tcl_AppendElement(irp, m->nick);
-	 m = m->next;
+     Tcl_AppendElement(irp, m->nick);
+     m = m->next;
       }
       return TCL_OK;
    }
    break_down_flags(argv[2],&plus,&minus);
    f = (minus.global || minus.udef_global || minus.chan || minus.udef_chan
-	|| minus.bot);
+    || minus.bot);
    /* return empty set if asked for flags but flags don't exist */
    if (!plus.global && !plus.udef_global && !plus.chan && !plus.udef_chan
        && !plus.bot && !f)
@@ -41,9 +41,9 @@ static int tcl_chanlist STDVAR
       get_user_flagrec(u,&user,argv[1]);
       user.match = plus.match;
       if (flagrec_eq(&plus,&user)) {
-	 if (!f || !flagrec_eq(&minus,&user))
-	   Tcl_AppendElement(irp, m->nick);
-      } 
+     if (!f || !flagrec_eq(&minus,&user))
+       Tcl_AppendElement(irp, m->nick);
+      }
       m = m->next;
    }
    return TCL_OK;
@@ -52,7 +52,7 @@ static int tcl_chanlist STDVAR
 static int tcl_botisop STDVAR
 {
    struct chanset_t *chan;
-   
+
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
    if (chan == NULL) {
@@ -63,6 +63,24 @@ static int tcl_botisop STDVAR
        Tcl_AppendResult(irp, "1", NULL);
    else
       Tcl_AppendResult(irp, "0", NULL);
+   return TCL_OK;
+}
+
+static int tcl_botisvoice STDVAR
+{
+   struct chanset_t *chan;
+   memberlist * mx;
+
+   BADARGS(2, 2, " channel");
+   chan = findchan(argv[1]);
+   if (chan == NULL) {
+      Tcl_AppendResult(irp, "illegal channel: ", argv[1], NULL);
+      return TCL_ERROR;
+   }
+   if ((mx = ismember(chan,botname)) && chan_hasvoice(mx))
+     Tcl_AppendResult(irp, "1", NULL);
+   else
+     Tcl_AppendResult(irp, "0", NULL);
    return TCL_OK;
 }
 
@@ -87,7 +105,7 @@ static int tcl_isop STDVAR
 {
    struct chanset_t *chan;
    memberlist * mx;
-   
+
    BADARGS(3, 3, " nick channel");
    chan = findchan(argv[2]);
    if (chan == NULL) {
@@ -105,9 +123,9 @@ static int tcl_isvoice STDVAR
 {
    struct chanset_t *chan;
    memberlist * mx;
-   
+
    BADARGS(3, 3, " nick channel");
-   chan = findchan(argv[2]);   
+   chan = findchan(argv[2]);
    if (chan == NULL) {
       Tcl_AppendResult(irp, "illegal channel: ", argv[2], NULL);
       return TCL_ERROR;
@@ -123,7 +141,7 @@ static int tcl_onchan STDVAR
 {
    struct chanset_t *chan;
    BADARGS(3, 3, " nickname channel");
-   
+
    chan = findchan(argv[2]);
    if (chan == NULL) {
       Tcl_AppendResult(irp, "illegal channel: ", argv[2], NULL);
@@ -140,7 +158,7 @@ static int tcl_handonchan STDVAR
 {
    struct chanset_t *chan;
    struct userrec * u;
-   
+
    BADARGS(3, 3, " handle channel");
    chan = findchan(argv[2]);
    if (chan == NULL) {
@@ -149,8 +167,8 @@ static int tcl_handonchan STDVAR
    }
    if ((u = get_user_by_handle(userlist,argv[1])))
      if (hand_on_chan(chan, u)) {
-	Tcl_AppendResult(irp, "1", NULL);
-	return TCL_OK;
+    Tcl_AppendResult(irp, "1", NULL);
+    return TCL_OK;
      }
    Tcl_AppendResult(irp, "0", NULL);
    return TCL_OK;
@@ -208,7 +226,7 @@ static int tcl_getchanhost STDVAR
 {
    struct chanset_t *chan;
    memberlist *m;
-   
+
    BADARGS(3, 3, " nickname channel");
    if (!(chan = findchan(argv[2]))) {
       Tcl_AppendResult(irp, "illegal channel: ", argv[2], NULL);
@@ -224,7 +242,7 @@ static int tcl_onchansplit STDVAR
 {
    struct chanset_t *chan;
    memberlist * m;
-   
+
    BADARGS(3, 3, " nickname channel");
    if (!(chan = findchan(argv[2]))) {
       Tcl_AppendResult(irp, "illegal channel: ", argv[2], NULL);
@@ -245,7 +263,7 @@ static int tcl_maskhost STDVAR
     maskhost(argv[1], new);
     Tcl_AppendResult(irp, new, NULL);
     return TCL_OK;
-} 
+}
 
 static int tcl_getchanidle STDVAR
 {
@@ -253,7 +271,7 @@ static int tcl_getchanidle STDVAR
    struct chanset_t *chan;
    char s[20];
    int x;
-   
+
    BADARGS(3, 3, " nickname channel");
    if(!(chan = findchan(argv[2]))) {
       Tcl_AppendResult(irp, "invalid channel: ", argv[2], NULL);
@@ -275,7 +293,7 @@ static int tcl_chanbans STDVAR
    banlist *b;
    struct chanset_t *chan;
    char * list[3],work[20], *p;
-   
+
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
    if (chan == NULL) {
@@ -351,7 +369,7 @@ static int tcl_chaninvites STDVAR
 static int tcl_getchanmode STDVAR
 {
    struct chanset_t *chan;
-   
+
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
    if (chan == NULL) {
@@ -367,7 +385,7 @@ static int tcl_getchanjoin STDVAR
    struct chanset_t *chan;
    char s[21];
    memberlist *m;
-   
+
    BADARGS(3, 3, " nick channel");
    chan = findchan(argv[2]);
    if (chan == NULL) {
@@ -418,8 +436,8 @@ static int tcl_pushmode STDVAR
       Tcl_AppendResult(irp, "invalid mode: ", argv[2], NULL);
       return TCL_ERROR;
    }
-   if ((argc < 4) && (strchr("bvo", mode) != NULL)) {
-      Tcl_AppendResult(irp, "modes b/v/o require an argument", NULL);
+   if ((argc < 4) && (strchr("bvoeIkl", mode) != NULL)) {
+      Tcl_AppendResult(irp, "modes b/v/o/e/I/k/l require an argument", NULL);
       return TCL_ERROR;
    }
    if (argc == 4)
@@ -434,7 +452,7 @@ static int tcl_resetbans STDVAR
    struct chanset_t *chan;
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
-   
+
    if (chan == NULL) {
       Tcl_AppendResult(irp, "invalid channel ", argv[1], NULL);
       return TCL_ERROR;
@@ -444,7 +462,7 @@ static int tcl_resetbans STDVAR
 }
 
 static int tcl_resetexempts STDVAR
-{   
+{
    struct chanset_t *chan;
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
@@ -453,12 +471,12 @@ static int tcl_resetexempts STDVAR
       Tcl_AppendResult(irp, "invalid channel ", argv[1], NULL);
       return TCL_ERROR;
    }
-   resetexempts(chan); 
+   resetexempts(chan);
    return TCL_OK;
 }
 
 static int tcl_resetinvites STDVAR
-{   
+{
    struct chanset_t *chan;
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
@@ -467,14 +485,14 @@ static int tcl_resetinvites STDVAR
       Tcl_AppendResult(irp, "invalid channel ", argv[1], NULL);
       return TCL_ERROR;
    }
-   resetinvites(chan); 
+   resetinvites(chan);
    return TCL_OK;
 }
 
 static int tcl_resetchan STDVAR
 {
    struct chanset_t *chan;
-   
+
    context;
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
@@ -489,7 +507,7 @@ static int tcl_resetchan STDVAR
 static int tcl_topic STDVAR
 {
    struct chanset_t *chan;
-   
+
    context;
    BADARGS(2, 2, " channel");
    chan = findchan(argv[1]);
@@ -507,7 +525,7 @@ static int tcl_hand2nick STDVAR
    char s[161];
    struct chanset_t *chan;
    struct userrec * u;
-   
+
    BADARGS(3, 3, " handle channel");
    chan = findchan(argv[2]);
    if (chan == NULL) {
@@ -519,12 +537,12 @@ static int tcl_hand2nick STDVAR
       simple_sprintf(s, "%s!%s", m->nick, m->userhost);
       u = get_user_by_host(s);
       if (u && !strcasecmp(u->handle, argv[1])) {
-	 Tcl_AppendResult(irp, m->nick, NULL);
-	 return TCL_OK;
+     Tcl_AppendResult(irp, m->nick, NULL);
+     return TCL_OK;
       }
       m = m->next;
    }
-   return TCL_OK;		/* blank */
+   return TCL_OK;       /* blank */
 }
 
 static int tcl_nick2hand STDVAR
@@ -533,7 +551,7 @@ static int tcl_nick2hand STDVAR
    char s[161];
    struct chanset_t *chan;
    struct userrec * u;
-   
+
    BADARGS(3, 3, " nick channel");
    chan = findchan(argv[2]);
    if (chan == NULL) {
@@ -549,9 +567,10 @@ static int tcl_nick2hand STDVAR
    return TCL_OK;
 }
 
-static tcl_cmds tclchan_cmds [] = {   
+static tcl_cmds tclchan_cmds [] = {
    { "chanlist", tcl_chanlist },
    { "botisop", tcl_botisop },
+   { "botisvoice", tcl_botisvoice },
    { "isop", tcl_isop },
    { "isvoice", tcl_isvoice },
    { "onchan", tcl_onchan },

@@ -6,10 +6,10 @@
  * COPYING that was distributed with this code.
  */
 
-extern int use_ison;
-extern int net_type;
+static time_t last_ctcp = (time_t) 0L;
+static int count_ctcp=0;
 
-/* shrug (guppy:24Feb99) */
+/* shrug (guppy:24Feb1999) */
 static int gotfake433 (char * from)
 {
    char c, *oknicks = "^-_\\[]`", *p;
@@ -216,8 +216,16 @@ static int got001 (char * from, char * msg)
    strncpy(botname,msg,NICKMAX);
    botname[NICKMAX]=0;
    /* init-server */
+   /* dont leave this stuff in :)
+   putlog(LOG_MISC, "*", "net-type = %d", (int) net_type);
+   putlog(LOG_MISC, "*", "use-silence = %d", (int) use_silence);
+   putlog(LOG_MISC, "*", "must-be-owner = %d", (int) must_be_owner);
+   putlog(LOG_MISC, "*", "ctcp-mode = %d", (int) ctcp_mode);
+   putlog(LOG_MISC, "*", "global-flood-ctcp = %d:%d", (int) global_flood_ctcp_thr, (int) global_flood_ctcp_time);
+   */
    if (initserver[0])
       do_tcl("init-server", initserver);
+   recycle = 1;
    x = serverlist;
    if (x == NULL)
       return 0;             /* uh, no server list */
@@ -338,9 +346,9 @@ static int detect_flood (char * floodnick, char * floodhost,
       putlog(LOG_MISC, "*", IRC_FLOODIGNORE1, p);
       addignore(h, origbotname, (which == FLOOD_CTCP) ? "CTCP flood" :
         "MSG/NOTICE flood", now + (60 * ignore_time));
-      if ((use_silence) || (net_type == 2))
+      if (use_silence)
     /* attempt to use ircdu's SILENCE command */
-    dprintf(DP_MODE, "SILENCE *@%s\n", p);
+    dprintf(DP_MODE, "SILENCE +*@%s\n", p);
    }
    return 0;
 }
@@ -459,8 +467,20 @@ static int gotmsg (char * from, char * msg)
       }
    }
    /* send out possible ctcp responses */
-   if (ctcp_reply[0])
-     dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+   if (ctcp_reply[0]) {
+      if (ctcp_mode != 2) {
+         dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+      } else {
+         if (now - last_ctcp > global_flood_ctcp_time) {
+            dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+            count_ctcp = 1;
+         } else if (count_ctcp < global_flood_ctcp_thr) {
+            dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+            count_ctcp++;
+         }
+         last_ctcp = now;  
+      }
+   }
    if (msg[0]) {
       if ((to[0] == '$') || (strchr(to, '.') != NULL)) {
      /* msg from oper */
@@ -555,8 +575,12 @@ static int gotnotice (char * from, char * msg)
      /* server notice? */
      if ((from[0] == 0) || (nick[0] == 0)) {
         /* hidden `250' connection count message from server */
-        if (strncmp(msg, "Highest connection count:", 25) != 0)
-          putlog(LOG_SERV, "*", "-NOTICE- %s", msg);
+        if (strncmp(msg, "Highest connection count:", 25) != 0) {
+               /* NO_CHOPS_ON_SPLIT server */
+           if (recycle && (strncmp(msg, "*** Notice -- Due to a network split, you can not obtain channel operator status in a new channel at this time.", 111) == 0))
+              recycle = 0;
+           putlog(LOG_SERV, "*", "-NOTICE- %s", msg);
+        }
      } else if (!ignoring) {
         check_tcl_notc(nick, from, u, msg);
         putlog(LOG_MSGS, "*", "-%s (%s)- %s", nick, from, msg);
@@ -724,8 +748,8 @@ static int got433 (char * from, char * msg)
    /* could be futile attempt to regain nick: */
    context;
    if (server_online) {
-      /* If we're online, dont bother changing ... (guppy:14Nov98) */
-         /* Lets log the nick is in use now though, I forgot this (guppy:19Jan98) */
+      /* If we're online, dont bother changing ... (guppy:14Nov1998) */
+         /* Lets log the nick is in use now though, I forgot this (guppy:19Jan1998) */
          /* sigh */
          tmp = newsplit(&msg);
          strncpy(botname, tmp, NICKMAX);
@@ -833,9 +857,6 @@ static int gotnick (char * from, char * msg)
 static int gotmode (char * from, char * msg)
 {
    char *ch;
-
-   if (net_type == 1)
-      check_mode_r = 1;
 
    ch = newsplit(&msg);
    /* usermode changes? */

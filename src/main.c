@@ -5,7 +5,7 @@
  * signal handling
  * command line arguments
  * 
- * dprintf'ized, 15nov95
+ * dprintf'ized, 15nov1995
  */
 /*
  * This file is part of the eggdrop source code
@@ -79,8 +79,8 @@ extern jmp_buf alarmret;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.24i";
-int egg_numver = 1032400;
+char egg_version[1024] = "1.3.25";
+int egg_numver = 1032500;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -102,6 +102,7 @@ char textdir[121] = "";
 int keep_all_logs = 0;
 /* context storage for fatal crashes */
 char cx_file[16][30];
+char cx_note[16][256];
 int cx_line[16];
 int cx_ptr = 0;
 /* unix-time that the bot loaded up */
@@ -193,11 +194,13 @@ void write_debug()
    if (nested_debug) {
       /* yoicks, if we have this there's serious trouble */
       /* all of these are pretty reliable, so we'll try these */
+      /* dont try and display context-notes in here, it's _not_ safe <cybah> */
       x = creat("DEBUG.DEBUG", 0644);
       setsock(x, SOCK_NONSOCK);
       if (x >= 0) {
 	 strcpy(s, ctime(&now));
 	 dprintf(-x, "Debug (%s) written %s", ver, s);
+         dprintf(-x, "Please report problem to eggheads@eggheads.org");
 	 dprintf(-x, "Full Patch List: %s\n", egg_xtra);
 	 dprintf(-x, "Context: ");
 	 cx_ptr = cx_ptr & 15;
@@ -211,7 +214,7 @@ void write_debug()
 		 * have caused the fault last time */
    } else
       nested_debug = 1;
-   putlog(LOG_MISC, "*", "* Last context: %s/%d", cx_file[cx_ptr], cx_line[cx_ptr]);
+   putlog(LOG_MISC, "*", "* Last context: %s/%d [%s]", cx_file[cx_ptr], cx_line[cx_ptr],cx_note[cx_ptr][0] ? cx_note[cx_ptr] : "");
    x = creat("DEBUG", 0644);
    setsock(x, SOCK_NONSOCK);
    if (x < 0) {
@@ -233,8 +236,8 @@ void write_debug()
       dprintf(-x, "Context: ");
       cx_ptr = cx_ptr & 15;
       for (y = ((cx_ptr + 1) & 15); y != cx_ptr; y = ((y + 1) & 15)) 
-	dprintf(-x, "%s/%d,\n         ", cx_file[y], cx_line[y]);
-      dprintf(-x, "%s/%d\n\n", cx_file[cx_ptr], cx_line[cx_ptr]);
+	dprintf(-x, "%s/%d, [%s]\n         ", cx_file[y], cx_line[y], (cx_note[y][0]) ? cx_note[y] : "");
+      dprintf(-x, "%s/%d [%s]\n\n", cx_file[cx_ptr], cx_line[cx_ptr], (cx_note[cx_ptr][0]) ? cx_note[cx_ptr] : "");
       tell_dcc(-x);
       dprintf(-x, "\n");
       debug_mem_to_dcc(-x);
@@ -331,7 +334,6 @@ static void got_usr1 (int z)
 /* got USR2 signal -- crash */
 static void got_usr2 (int z)
 {
-   putlog(LOG_MISC, "*", "* Last context: %s/%d", cx_file, cx_line);
    write_debug();
    fatal("USR2 SIGNAL -- CRASHING!", 0);
 }
@@ -339,7 +341,7 @@ static void got_usr2 (int z)
 /* got ILL signal -- log context and continue */
 static void got_ill (int z)
 {
-   putlog(LOG_MISC, "*", "* Context: %s/%d", cx_file, cx_line);
+   putlog(LOG_MISC, "*", "* Context: %s/%d [%s]", cx_file[cx_ptr], cx_line[cx_ptr], (cx_note[cx_ptr][0]) ? cx_note[cx_ptr] : "");
 }
 
 static void do_arg (char * s)
@@ -439,6 +441,7 @@ static void core_secondly () {
 	 call_hook(HOOK_5MINUTELY);
 	 check_botnet_pings();
 	 flushlogs();
+	 check_logsize();
 	 if (miltime == 0) {		/* at midnight */
 	    char s[128];
 	    int j;
@@ -587,7 +590,6 @@ int main (int argc, char ** argv)
    init_userent();
    init_misc();
    init_bots();
-   context; /* arthur2 */
    init_net();
    init_modules();
    init_tcl();
@@ -733,7 +735,7 @@ int main (int argc, char ** argv)
       /* lets move some of this here, reducing the numer of actual
        * calls to periodic_timers */
       now = time(NULL);
-      random();			/* woop, lest really jumble things */
+      random();			/* woop, lets really jumble things */
       if (now != then) {		/* once a second */
 	 call_hook(HOOK_SECONDLY);
 	 then = now;
@@ -754,7 +756,6 @@ int main (int argc, char ** argv)
 	 socket_cleanup = 5;
       } else
 	socket_cleanup--;
-      context;
       /* new net routines: help me mary! */
       xx = sockgets(buf, &i);
       if (xx >= 0) {		/* non-error */

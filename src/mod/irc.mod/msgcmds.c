@@ -2,7 +2,7 @@
  * msgcmds.c -- handles:
  * all commands entered via /MSG
  * 
- * dprintf'ized, 4feb96
+ * dprintf'ized, 4feb1996
  */
 /*
  * This file is part of the eggdrop source code
@@ -44,7 +44,7 @@ static int msg_hello (char * nick, char * h, struct userrec * u, char * p)
       dprintf(DP_SERVER, "NOTICE %s :%s.\n", nick, IRC_BANNED2);
       return 1;
    }
-   if (strlen(nick) > 9) {
+   if (strlen(nick) > HANDLEN) {
       /* crazy dalnet */
       dprintf(DP_SERVER, "NOTICE %s :%s.\n", nick, IRC_NICKTOOLONG);
       return 1;
@@ -748,10 +748,10 @@ static int msg_status (char * nick,
 		       struct userrec * u,
 		       char * par)
 {
-   char s[256], p[160];
+   char s[256];
    char * ve_t, * un_t;
    char *pass;
-   int i, k, l;
+   int i, l;
    struct chanset_t *chan;
 #ifdef HAVE_UNAME
    struct utsname un;
@@ -765,7 +765,7 @@ static int msg_status (char * nick,
       un_t = un.sysname;
    }
 #endif
-   
+
    if (match_my_nick(nick))
      return 1;
    if (!u_pass_match(u,"-")) {
@@ -781,30 +781,36 @@ static int msg_status (char * nick,
    dprintf(DP_HELP, "NOTICE %s :Running on %s %s\n", nick, un_t, ve_t);
     if (admin[0])
       dprintf(DP_HELP, "NOTICE %s :Admin: %s\n", nick, admin);
-   strcpy(p, "Channels: ");
-   k = 10;
-   for (chan = chanset; chan; chan = chan->next) {
-      l = my_strcpy(s, chan->name);
-      if (!channel_active(chan))
-	 l += my_strcpy(s + l, " (trying)");
-      else if (channel_pending(chan))
-	 l += my_strcpy(s + l, " (pending)");
-      else if (!me_op(chan))
-	 l += my_strcpy(s + l, " (want ops!)");
-      s[l++] = ',';
-      s[l++] = ' ';
-      if ((k + l) > 70) {
-	 dprintf(DP_HELP, "NOTICE %s :%s\n", nick, p);
-	 strcpy(p,"          ");
-	 k = 10;
-      }
-      strcpy(p+k, s);
-      k += l;
-   }
-   if (k > 10) {
-      p[k - 2] = 0;
-      dprintf(DP_HELP, "NOTICE %s :%s\n", nick, p);
-   }
+      
+        /*          Fixed previous lame code. Well it's still lame, will
+                overflow the buffer with a long channel-name. <cybah>
+        */
+        context;
+        strcpy(s, "Channels: ");
+        l = 10;
+        for (chan = chanset; chan; chan = chan->next) {
+                l += my_strcpy(s+l, chan->name);
+                if (!channel_active(chan))
+                        l += my_strcpy(s + l, " (trying)");
+                else if (channel_pending(chan))
+                        l += my_strcpy(s + l, " (pending)");
+                else if (!me_op(chan))
+                        l += my_strcpy(s + l, " (want ops!)");
+                s[l++] = ',';
+                s[l++] = ' ';
+                if (l > 70) {
+                        s[l] = 0;
+                        dprintf(DP_HELP, "NOTICE %s :%s\n", nick, s);
+                        strcpy(s,"          ");
+                        l = 10;
+                }
+        }
+        if (l>10) {
+	        s[l] = 0;
+                dprintf(DP_HELP, "NOTICE %s :%s\n", nick, s);
+        }
+        context;
+        
    i = count_users(userlist);
    dprintf(DP_HELP, "NOTICE %s :%d user%s  (mem: %uk)\n", nick, i, i == 1 ? "" : "s",
 	   (int) (expected_memory() / 1024));
@@ -872,10 +878,27 @@ static int msg_rehash (char * nick, char * host, struct userrec * u, char * par)
    if (u_pass_match(u, par)) {
       putlog(LOG_CMDS, "*", "(%s!%s) !%s! REHASH", nick, host, u->handle);
       dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, USERF_REHASHING);
-      do_restart = -2;
+      if (make_userfile)
+       make_userfile = 0;
+      write_userfile(-1);
+	  do_restart = -2;
       return 1;
    }
    putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed REHASH", nick, host, u->handle);
+   return 1;
+}
+
+static int msg_save (char * nick, char * host, struct userrec * u, char * par)
+{
+   if (match_my_nick(nick))
+      return 1;
+   if (u_pass_match(u, par)) {
+      putlog(LOG_CMDS, "*", "(%s!%s) !%s! SAVE", nick, host, u->handle);
+      dprintf(DP_SERVER, "NOTICE %s :Saving user file...\n", nick);
+      write_userfile(-1);
+      return 1;
+   }
+   putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed SAVE", nick, host, u->handle);
    return 1;
 }
 
@@ -927,6 +950,10 @@ static int msg_go (char * nick, char * host, struct userrec * u, char * par)
       chan = findchan(par);
       if (!chan)
 	 return 0;
+      if (!(chan->status & CHAN_ACTIVE)) {
+         putlog(LOG_CMDS,"*","(%s!%s) !%s! failed GO (i'm blind)",nick,host,u->handle);
+         return 1;
+      }
       get_user_flagrec(u,&fr,par);
       if (!chan_op(fr) && !(glob_op(fr) && !chan_deop(fr))) {
 	 putlog(LOG_CMDS, "*", "(%s!%s) !%s! failed GO (not op)", nick, host,
@@ -1003,7 +1030,7 @@ static int msg_jump (char * nick, char * host, struct userrec * u, char * par)
  *  int msg_cmd("handle","nick","user@host","params");
  *  function is responsible for any logging
  *  (return 1 if successful, 0 if not) */
-static cmd_t C_msg[19]={
+static cmd_t C_msg[20]={
    { "addhost", "", (Function)msg_addhost, NULL },
    { "die", "n", (Function)msg_die, NULL },
    { "go", "", (Function)msg_go, NULL },
@@ -1019,6 +1046,7 @@ static cmd_t C_msg[19]={
    { "pass", "", (Function)msg_pass, NULL },
    { "rehash", "m", (Function)msg_rehash, NULL },
    { "reset", "m", (Function)msg_reset, NULL },
+   { "save", "m", (Function)msg_save, NULL },
    { "status", "m|m", (Function)msg_status, NULL },
    { "voice", "", (Function)msg_voice, NULL },
    { "who", "", (Function)msg_who, NULL },

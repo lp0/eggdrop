@@ -362,9 +362,13 @@ static int tcl_encrypt STDVAR
 {
    char *p;
     BADARGS(3, 3, " key string");
-    p = encrypt_string(argv[1], argv[2]);
-    Tcl_AppendResult(irp, p, NULL);
-    nfree(p);
+    if (strlen(argv[1])>0) {
+       p = encrypt_string(argv[1], argv[2]);
+       Tcl_AppendResult(irp, p, NULL);
+       nfree(p);
+       } else {
+       Tcl_AppendResult(irp, "", NULL);
+       }
     return TCL_OK;
 }
 

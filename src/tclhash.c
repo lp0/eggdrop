@@ -5,7 +5,7 @@
  * listing current bindings
  * adding/removing new binding tables
  * 
- * dprintf'ized, 4feb96
+ * dprintf'ized, 4feb1996
  * Now includes FREE OF CHARGE everything from hash.c, 'cause they
  * were exporting functions to each other and only for each other.
  * 
@@ -13,7 +13,7 @@
  * (non-Tcl) procedure lookups for msg/dcc/file commands
  * (Tcl) binding internal procedures to msg/dcc/file commands
  *
- *  dprintf'ized, 15nov95
+ *  dprintf'ized, 15nov1995
 */
 
 /*
@@ -38,7 +38,6 @@ extern int debug_tcl;
 extern int raw_binds;
 extern int dcc_total;
 extern time_t now;
-extern int lowercase_ctcp;
 
 static p_tcl_bind_list bind_table_list;
 p_tcl_bind_list H_chat, H_act, H_bcst, H_chon, H_chof;
@@ -104,11 +103,11 @@ void init_bind () {
    H_bcst = add_bind_table("bcst",HT_STACKABLE,builtin_chat);
    H_away = add_bind_table("away",HT_STACKABLE,builtin_chat); 
    H_act = add_bind_table("act",HT_STACKABLE,builtin_chat);
-   add_builtins(H_dcc, C_dcc,64);
+   add_builtins(H_dcc, C_dcc,65);
 }
 
 void kill_bind () {
-   rem_builtins(H_dcc, C_dcc,64);
+   rem_builtins(H_dcc, C_dcc,65);
    while (bind_table_list) {
       del_bind_table(bind_table_list);
    }  

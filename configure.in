@@ -118,7 +118,7 @@ case $system in
     fi
     ;;
   *BSD)
-    AC_MSG_RESULT(FreeBSD/NetBSD - choose your poison)
+    AC_MSG_RESULT(FreeBSD/NetBSD/OpenBSD - choose your poison)
     SHLIB_CC="$CC -fpic"
     SHLIB_LD="ld -Bshareable -x"
     AC_DEFINE(MODULES_OK)

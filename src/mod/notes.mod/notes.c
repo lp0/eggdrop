@@ -3,7 +3,7 @@
  * reading and sending notes
  * killing old notes and changing the destinations
  *
- * dprintf'ized, 5aug96
+ * dprintf'ized, 5aug1996
  */
 /*
    This file is part of the eggdrop source code

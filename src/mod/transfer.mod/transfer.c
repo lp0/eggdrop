@@ -5,6 +5,15 @@
    For full details, read the top of 'main.c' or the file called
    COPYING that was distributed with this code.
  */
+/*
+   This file is patched by drummer@sophia.jpte.hu
+   fixed DCC file getting bug,
+   hoping filesys module is no longer exploitable
+   01/01/99 (year 2000 bug found in this comment:)
+   
+   How to crash the unpatched bot:
+     send him a file, and close the connection before EOF
+ */
 
 #define MAKING_TRANSFER
 #define MOD_FILESYS
@@ -339,7 +348,6 @@ static void eof_dcc_send (int idx)
 	 lostdcc(idx);
 	 return;
       }
-
       putlog(LOG_FILES, "*", "Completed dcc send %s from %s!%s",
 	     dcc[idx].u.xfer->filename, dcc[idx].nick, dcc[idx].host);
       simple_sprintf(s, "%s!%s", dcc[idx].nick, dcc[idx].host);
@@ -356,14 +364,14 @@ static void eof_dcc_send (int idx)
          /* the filename is to long... blow it off */
          putlog(LOG_FILES, "*", "Filename %d length. Way To LONG.", 
                 strlen(dcc[idx].u.xfer->filename) );
-	 dprintf(DP_HELP, "NOTICE %s :Filename %d length Way To LONG!\n",
-		   dcc[idx].nick, strlen(dcc[idx].u.xfer->filename) );
+        dprintf(DP_HELP, "NOTICE %s :Filename %d length Way To LONG!\n",
+                  dcc[idx].nick, strlen(dcc[idx].u.xfer->filename) );
          putlog(LOG_FILES, "*", "To Bad So Sad Your Dad!" ); 
-	 dprintf(DP_HELP, "NOTICE %s :To Bad So Sad Your Dad!\n",
-		   dcc[idx].nick );
-	 killsock(dcc[idx].sock);
-	 lostdcc(idx);
-	 return;
+        dprintf(DP_HELP, "NOTICE %s :To Bad So Sad Your Dad!\n",
+                  dcc[idx].nick );
+        killsock(dcc[idx].sock);
+        lostdcc(idx);
+        return;
       }
       /* slwstub - filenames to long segfault and kill the eggdrop */
 
@@ -398,7 +406,8 @@ static void eof_dcc_send (int idx)
       return;
    }
    /* failure :( */
-   fclose(dcc[idx].u.xfer->f); /* this line is buggy */
+   context;
+   fclose(dcc[idx].u.xfer->f);
    if (strcmp(dcc[idx].nick, "*users") == 0) {
       int x, y = 0;
       for (x = 0; x < dcc_total; x++)
@@ -422,13 +431,13 @@ static void eof_dcc_send (int idx)
 	 }
 	 killsock(dcc[y].sock);
 	 lostdcc(y);   
+	 }
       } else {
 	 putlog(LOG_FILES, "*", "Lost dcc send %s from %s!%s (%lu/%lu)",
 		dcc[idx].u.xfer->filename, dcc[idx].nick, dcc[idx].host,
 		dcc[idx].status, dcc[idx].u.xfer->length);
 	 sprintf(s, "%s%s", tempdir, dcc[idx].u.xfer->filename);
 	 unlink(s);
-      }
       killsock(dcc[idx].sock);
       lostdcc(idx);
    }

@@ -4,7 +4,7 @@
    memory allocation and deallocation
    keeping track of what memory is being used by whom
 
-   dprintf'ized, 15nov95
+   dprintf'ized, 15nov1995
  */
 /*
    This file is part of the eggdrop source code
@@ -30,8 +30,6 @@
 typedef int (*Function) ();
 #include "mod/modvals.h"
 extern module_entry *module_list;
-
-extern int serv;
 
 #ifdef DEBUG
 unsigned long memused = 0;

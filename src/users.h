@@ -111,6 +111,8 @@ int set_user ( struct user_entry_type *, struct userrec *, void *);
 /* fake users used to store ignores and bans */
 #define IGNORE_NAME "*ignore"
 #define BAN_NAME    "*ban"
+#define EXEMPT_NAME "*exempt"
+#define INVITE_NAME "*invite"
 
 /* channel-specific info */
 struct chanuserrec {

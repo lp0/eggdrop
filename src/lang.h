@@ -152,7 +152,8 @@
 #define MISC_CANTRELOADUSER get_language(0x53b)
 #define MISC_MISSINGUSERF get_language(0x53c)
 #define MISC_BOTSCONNECTED get_language(0x53d)
-#define MISC_BANNER get_language(0x53e)
+#define MISC_BANNER     get_language(0x53e)
+#define MISC_CLOGS      get_language(0x53f)
 
 /* IRC */
 #define IRC_BANNED	get_language(0x600)

@@ -2,8 +2,8 @@
    files.c -- handles:
    all the file system commands
 
-   dprintf'ized, 4nov95
-   rewritten, 26feb96
+   dprintf'ized, 4nov1995
+   rewritten, 26feb1996
  */
 /*
    This file is part of the eggdrop source code

@@ -4,6 +4,9 @@
 
    This is hereby released into the public domain.
    Robey Pointer, robey@netcom.com
+
+   patched by drummer@sophia.jpte.hu
+   fixed firewall bug, 1jan1999
  */
 
 #include "main.h"
@@ -43,7 +46,7 @@ char myip[121] = "";
 /* socks server for firewall */
 char firewall[121] = "";
 /* socks server port */
-int firewallport = 178;
+int firewallport = 1080; /* default port of Sock4/5 firewalls */
 /* username of the user running the bot */
 char botuser[21] = "llama";
 /* we should do some sanity checking on dcc connections. */
@@ -311,7 +314,7 @@ static int proxy_connect (int sock, char * host, int port, int proxy)
       }
       sprintf(s, "\004\001%c%c%c%c%c%c%s", (port >> 8) % 256, (port % 256), x[0], x[1], x[2],
 	      x[3], botuser);
-      write(sock, s, strlen(s) + 1);
+      write(sock, s, strlen(botuser) + 9);
    } else if (proxy == PROXY_SUN) {
       sprintf(s, "%s %d\n", host, port);
       write(sock, s, strlen(s));
@@ -767,19 +770,25 @@ int sockgets (char * s, int * len)
    context;
    /* prepend old data back */
    if (socklist[ret].inbuf != NULL) {
+      contextnote("dw's bug");
       p = socklist[ret].inbuf;
       socklist[ret].inbuf = (char *) nmalloc(strlen(p) + strlen(xx) + 1);
       strcpy(socklist[ret].inbuf, xx);
       strcat(socklist[ret].inbuf, p);
       nfree(p);
    } else {
+      contextnote("dw's bug");
       socklist[ret].inbuf = (char *) nmalloc(strlen(xx) + 1);
       strcpy(socklist[ret].inbuf, xx);
    }
-   if (data)
+   contextnote("dw's bug");
+   if (data) {
+      contextnote("dw's bug");
       return socklist[ret].sock;
-   else
+   } else {
+      contextnote("dw's bug");
       return -3;
+   }
 }
 
 /* dump something to a socket */

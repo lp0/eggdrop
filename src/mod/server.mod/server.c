@@ -9,6 +9,7 @@
 #include "server.h"
 #include <netdb.h>
 
+static int ctcp_mode;
 /* sock # of server currently */
 static int serv;
 /* strict masking of hosts ? */
@@ -82,9 +83,11 @@ static int lowercase_ctcp;
 static char bothost[81];
 /* check for IRCNET +r modes */
 static int check_mode_r;
-int use_ison;
+static int use_ison; /* arthur2 static */
+static int recycle; /* arthur2 static */
 /* net-type: 0 = efnet, 1 = ircnet, 2 = undernet, 3 = dalnet, 4 = others */
-int net_type = 0;
+static int net_type;
+static int must_be_owner; /* arthur2 */
 
 static Function * global = NULL;
 
@@ -487,6 +490,34 @@ static char * traced_botname (ClientData cdata, Tcl_Interp * irp, char * name1,
    return NULL;
 }
 
+static char * traced_nettype (ClientData cdata, Tcl_Interp * irp, char * name1,
+			      char * name2, int flags) {
+   switch (net_type) {
+    case 0:
+      use_silence = 0;
+      check_mode_r = 0;
+      break;
+    case 1:
+      use_silence = 0;
+      check_mode_r = 1;
+      break;
+    case 2:
+      use_silence = 1;
+      check_mode_r = 0;
+      break;
+    case 3:
+      use_silence = 0;
+      check_mode_r = 0;
+      break;
+    case 4:
+      use_silence = 0;
+      check_mode_r = 0;
+      break;
+    default:
+      break;
+   }
+   return NULL;
+}
 static tcl_strings my_tcl_strings[] =
 {
    {"botnick", 0, 0, STR_PROTECT},
@@ -525,6 +556,8 @@ static tcl_ints my_tcl_ints[] =
    {"check-mode-r", &check_mode_r, 0},
    {"use-ison", &use_ison, 0},
    {"net-type", &net_type, 0},
+   {"must-be-owner", &must_be_owner, 0}, /* arthur2 */
+   {"ctcp-mode", &ctcp_mode, 0},
    { 0, 0, 0}
 };
 
@@ -623,7 +656,7 @@ static int ctcp_DCC_CHAT(char * nick, char * from, char * handle,
    } else if (u_pass_match(u,"-")) {
       dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, DCC_REFUSED3);
       putlog(LOG_MISC, "*", "%s: %s!%s", DCC_REFUSED4, nick, from);
-   } else if ((atoi(prt) < 1024) || (atoi(prt) > 65535)) {
+   } else if ((atoi(prt) < min_dcc_port) || (atoi(prt) > max_dcc_port)) {
       /* invalid port range, do clients even use over 5000?? */
       dprintf(DP_HELP, "NOTICE %s :%s (invalid port)\n", nick,
          DCC_CONNECTFAILED1);
@@ -888,6 +921,9 @@ static char *server_close() {
    Tcl_UntraceVar(interp, "server", 
 		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		  traced_server, NULL);
+   Tcl_UntraceVar(interp, "net-type",
+		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		  traced_nettype, NULL);
    tcl_untraceserver("servers", NULL);
    context;
    empty_msgq();
@@ -999,6 +1035,10 @@ char *server_start (Function * global_funcs)
    maxqmsg = 300;
    burst = 0;
    use_ison = 1;
+   recycle = 1;
+   net_type = 0;
+   global_flood_ctcp_thr = 5;
+   global_flood_ctcp_time = 30;
    context;
    server_table[4] = (Function)botname;
    module_register(MODULE_NAME, server_table, 1, 0);
@@ -1023,6 +1063,9 @@ char *server_start (Function * global_funcs)
    Tcl_TraceVar(interp, "server", 
 		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		  traced_server, NULL);
+   Tcl_TraceVar(interp, "net-type",
+		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		  traced_nettype, NULL);
    context;
    H_wall = add_bind_table("wall",HT_STACKABLE,server_2char);
    H_raw = add_bind_table("raw",HT_STACKABLE,server_raw);
@@ -1065,6 +1108,26 @@ char *server_start (Function * global_funcs)
    context;
    sprintf(botuserhost, "%s@%s", botuser, bothost);	/* wishful thinking */
    curserv = 999;
+   if (net_type == 0) { /* EfNet except new +e/+I hybrid */
+      use_silence = 0;
+      check_mode_r = 0;
+   }
+   if (net_type == 1) { /* Ircnet */
+      use_silence = 0;
+      check_mode_r = 1;
+   }
+   if (net_type == 2) { /* Undernet */
+      use_silence = 1;
+      check_mode_r = 0;
+   }
+   if (net_type == 3) { /* Dalnet */
+      use_silence = 0;
+      check_mode_r = 0;
+   }
+   if (net_type == 4) { /* new +e/+I Efnet hybrid */
+      use_silence = 0;
+      check_mode_r = 0;
+   }
    putlog(LOG_ALL,"*","=== SERVER SUPPORT LOADED");
    return NULL;
 }

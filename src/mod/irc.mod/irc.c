@@ -17,6 +17,9 @@ static p_tcl_bind_list H_topc, H_splt, H_sign, H_rejn, H_part, H_pub, H_pubm;
 static p_tcl_bind_list H_nick, H_mode, H_kick, H_join;
 static Function * global = NULL, *channels_funcs = NULL, *server_funcs = NULL;
 
+static int ctcp_mode;
+static int net_type;
+static int strict_host;
 /* time to wait for user to return for net-split */
 static int wait_split = 300;
 static int max_bans = 20;
@@ -38,7 +41,7 @@ static int mode_buf_len = 200;
 /* use ircu's short 354 /who responses */
 static int use_354 = 0;
 /* how many kicks does the irc network support at once?
-   0 = as many as possible.  Ernst 18/3/98 */
+   0 = as many as possible.  Ernst 18/3/1998 */
 static int kick_method = 1;
 static int kick_bogus = 0;
 static int ban_bogus = 0;
@@ -191,7 +194,7 @@ static void newban (struct chanset_t * chan, char * s, char * who)
    b->timer = now;
 }
 
-/* add a ban exemption to the list - Daemus - 2/3/99 */
+/* add a ban exemption to the list - Daemus - 2/3/1999 */
 static void newexempt (struct chanset_t * chan, char * s, char * who)
 {
    exemptlist *e;
@@ -213,7 +216,7 @@ static void newexempt (struct chanset_t * chan, char * s, char * who)
    e->timer = now;
 }
 
-/* add an invite exemption to the list - Daemus - 2/3/99 */
+/* add an invite exemption to the list - Daemus - 2/3/1999 */
 static void newinvite (struct chanset_t * chan, char * s, char * who)
 {
    invitelist *inv;
@@ -300,11 +303,13 @@ static void reset_chan_info (struct chanset_t * chan)
 	 chan->status |= CHAN_ASKEDBANS;
 	 dprintf(DP_MODE, "MODE %s +b\n", chan->name);
       }
-      if (!(chan->ircnet_status & CHAN_ASKED_EXEMPTS)) {
+      if (!(chan->ircnet_status & CHAN_ASKED_EXEMPTS) && 
+        ((net_type == 1) || (net_type == 4))) {
         chan->ircnet_status |= CHAN_ASKED_EXEMPTS;
         dprintf(DP_MODE, "MODE %s +e\n", chan->name);
       }
-      if (!(chan->ircnet_status & CHAN_ASKED_INVITED)) {
+      if (!(chan->ircnet_status & CHAN_ASKED_INVITED) && 
+        ((net_type == 1) || (net_type == 4))) {
         chan->ircnet_status |= CHAN_ASKED_INVITED;
         dprintf(DP_MODE, "MODE %s +I\n", chan->name);
       }
@@ -373,6 +378,7 @@ static void check_lonely_channel (struct chanset_t * chan)
 	i++;
       m = m->next;
    }
+/*   if ((i == 1) && channel_cycle(chan) && recycle) { */
    if ((i == 1) && channel_cycle(chan)) {
       if (chan->name[0] != '+') { /* Its pointless to cycle + chans for ops */
 		    putlog(LOG_MISC, "*", "Trying to cycle %s to regain ops.", chan->name);
@@ -440,8 +446,10 @@ static void check_expired_chanstuff()
    if (!server_online)
      return;
    for (chan = chanset; chan; chan = chan->next) {
-      if (server_online && !(chan->status & (CHAN_ACTIVE | CHAN_PEND))) 
+      if (server_online && !(chan->status & (CHAN_ACTIVE | CHAN_PEND))) {
 	dprintf(DP_MODE, "JOIN %s\n", chan->name);
+        dprintf(DP_MODE, "WHO %s\n", chan->name); /* drummer's bug fix? */
+      }
       if (channel_dynamicbans(chan) && me_op(chan)) {
 	 for (b = chan->channel.ban; b->ban[0]; b = b->next) {
 	    if ((ban_time != 0) && (((now - b->timer) > (60 * ban_time)) &&
@@ -680,7 +688,7 @@ static void check_tcl_pubm (char * nick, char * from, char * chname, char * msg)
 
 static tcl_ints myints[] = 
 {
-     {"learn-users", &learn_users},
+     {"learn-users", &learn_users, 0}, /* arthur2 */
      {"wait-split", &wait_split, 0},
      {"wait-info", &wait_info, 0},
      {"bounce-bans", &bounce_bans, 0},
@@ -702,7 +710,10 @@ static tcl_ints myints[] =
      {"max-exempts", &max_exempts, 0},
      {"max-invites", &max_invites, 0},
      {"max-modes", &max_modes, 0},
-     {0,0}
+     {"net-type", &net_type, 0},
+     {"strict-host", &strict_host, 0}, /* arthur2 */
+     {"ctcp-mode", &ctcp_mode, 0}, /* arthur2 */
+     {0,0,0} /* arthur2 */
 };
 
 /* for EVERY channel */
@@ -754,6 +765,44 @@ static void irc_report (int idx, int details)
    }
 }
 
+static char * traced_nettype (ClientData cdata, Tcl_Interp * irp, char * name1,
+			      char * name2, int flags) {
+   switch (net_type) {
+   	case 0:
+      kick_method = 1;
+      modesperline = 4;
+      use_354 = 0;
+      use_silence = 0;
+      break;
+    case 1:
+      kick_method = 4;
+      modesperline = 3;
+      use_354 = 0;
+      use_silence = 0;
+      break;
+    case 2:
+      kick_method = 1;
+      modesperline = 6;
+      use_354 = 1;
+      use_silence = 1;
+      break;
+    case 3:
+      kick_method = 1;
+      modesperline = 6;
+      use_354 = 0;
+      use_silence = 0;
+      break;
+    case 4:
+      kick_method = 1;
+      modesperline = 4;
+      use_354 = 0;
+      use_silence = 0;
+      break;
+    default:
+      break;
+   }
+   return NULL;
+}
 static int irc_expmem ()
 {
    return 0;
@@ -783,7 +832,7 @@ static char *irc_close()
    context;
    rem_tcl_ints(myints);
    rem_builtins(H_dcc,irc_dcc,18);
-   rem_builtins(H_msg,C_msg,19);
+   rem_builtins(H_msg,C_msg,20);
    rem_builtins(H_raw,irc_raw,28);
    rem_tcl_commands(tclchan_cmds);
    rem_help_reference("irc.help");
@@ -792,6 +841,9 @@ static char *irc_close()
    del_hook(HOOK_5MINUTELY,log_chans);
    del_hook(HOOK_ADD_MODE,real_add_mode);
    del_hook(HOOK_IDLE,flush_modes);
+   Tcl_UntraceVar(interp, "net-type",
+		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		  traced_nettype, NULL);
    context;
    module_undepend(MODULE_NAME);
    context;
@@ -852,10 +904,13 @@ char *irc_start (Function* global_funcs)
    add_hook(HOOK_5MINUTELY,log_chans);
    add_hook(HOOK_ADD_MODE,real_add_mode);
    add_hook(HOOK_IDLE,flush_modes);
+   Tcl_TraceVar(interp, "net-type",
+		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		  traced_nettype, NULL);
    context;
    add_tcl_ints(myints);
    add_builtins(H_dcc,irc_dcc,18);
-   add_builtins(H_msg,C_msg,19);
+   add_builtins(H_msg,C_msg,20);
    add_builtins(H_raw,irc_raw,28);
    add_tcl_commands(tclchan_cmds);
    add_help_reference("irc.help");
@@ -871,6 +926,32 @@ char *irc_start (Function* global_funcs)
    H_join = add_bind_table("join",HT_STACKABLE,channels_4char);
    H_pubm = add_bind_table("pubm",HT_STACKABLE,channels_5char);
    H_pub = add_bind_table("pub",0,channels_5char);
+   context;
+   if (net_type == 0) { /* EfNet except new +e/+I hybrid */
+      kick_method = 1;
+      modesperline = 4;
+      use_354 = 0;
+   }
+   if (net_type == 1) { /* Ircnet */
+      kick_method = 4;
+      modesperline = 3;
+      use_354 = 0;
+   }
+   if (net_type == 2) { /* Undernet */
+      kick_method = 1;
+      modesperline = 6;
+      use_354 = 1;
+   }
+   if (net_type == 3) { /* Dalnet */
+      kick_method = 1;
+      modesperline = 6;
+      use_354 = 0;
+   }
+   if (net_type == 4) { /* new +e/+I Efnet hybrid */
+      kick_method = 1;
+      modesperline = 4;
+      use_354 = 0;
+   }
    context;
    return NULL;
 }

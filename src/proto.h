@@ -156,6 +156,7 @@ void debug_mem_to_dcc (int);
 int my_strcpy(char *, char *);
 void putlog();
 void flushlogs();
+void check_logsize();
 void maskhost (char *, char *);
 char *stristr (char *, char *);
 void splitc (char *,char *,char);

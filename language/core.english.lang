@@ -128,10 +128,11 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x53c,User file is missing!
 0x53d,Bots connected
 0x53e,%B  (%E)\n\nPlease enter your nickname.\n
+0x53f,Cycling logfile %s, over max-logsize (%d)
 
 # IRC_
 
-0x600,banned
+0x600,banned.
 0x601,You are banned
 0x602,Wanted to ban myself--deflected.
 0x603,that was fun, let's do it again!
@@ -238,7 +239,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x668,From now on, you dont need to use the -m option to start the bot.\nEnjoy !!
 0x669,Telnet connection flood from %s!  Placing on ignore!
 0x66a,banned
-0x66b,lemmingbot
+0x66b,nick flood
 0x66c,don't kick my friends, bud
 0x66d,...and don't come back.
 
@@ -303,7 +304,7 @@ use .-ban' in dcc chat if you want it gone for good.
 0xb15,For a list:
 0xb16,### You have %d note%s waiting.\n
 0xb17,### Use '.notes read' to read them.\n
-0xb18,Bot shut down begining....
+0xb18,Bot shut down beginning....
 0xb19,No such user
 0xb1a,No channels
 0xb1b,Party line members:

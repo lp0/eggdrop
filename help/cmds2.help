@@ -164,6 +164,12 @@ see also: rehash, reload, save
    the user file is only written to disk about once an hour.
    
 see also: reload, rehash
+%{help=backup}%{+m|m}
+###  %bbackup%b
+   makes the bot write a backup of its entire user list to the disk.
+   this is useful if you feel the need to backup the user list.
+   
+see also: reload, rehash
 %{help=simul}%{+n}
 ###  %bsimul%b <nickname> <text>
    if the user is on the party line, the bot will simulate them typing
@@ -411,4 +417,3 @@ see also: set, channel, debug
    displays the bot's current uptime like .status would show.
 
 see also: status
-

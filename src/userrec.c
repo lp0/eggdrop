@@ -4,7 +4,7 @@
    a bunch of functions to find and change user records
    change and check user (and channel-specific) flags
 
-   dprintf'ized, 10nov95
+   dprintf'ized, 10nov1995
  */
 /*
    This file is part of the eggdrop source code
@@ -15,6 +15,7 @@
  */
 
 #include "main.h"
+#include "rfc1459.h"
 #include <sys/stat.h>
 #include "users.h"
 #include "chan.h"
@@ -26,7 +27,6 @@ extern struct dcc_t * dcc;
 extern int dcc_total;
 extern char userfile[];
 extern int share_greet;
-extern int require_p;
 extern struct chanset_t *chanset;
 extern char ver[];
 extern char botnetnick[];
@@ -139,7 +139,7 @@ struct userrec *check_dcclist_hand (char * handle)
    int i;
    
    for (i = 0; i < dcc_total; i++) 
-     if (!strcasecmp(dcc[i].nick,handle))
+     if (!rfc_casecmp(dcc[i].nick,handle))
        return dcc[i].user;
    return NULL;
 }
@@ -153,7 +153,7 @@ struct userrec *get_user_by_handle (struct userrec * bu, char * handle)
    if (!handle[0] || (handle[0] == '*'))
       return NULL;
    if (bu == userlist) {
-      if (lastuser && !strcasecmp(lastuser->handle, handle)) {
+      if (lastuser && !rfc_casecmp(lastuser->handle, handle)) {
 	 cache_hit++;
 	 return lastuser;
       }
@@ -170,7 +170,7 @@ struct userrec *get_user_by_handle (struct userrec * bu, char * handle)
       cache_miss++;
    }
    while (u) {
-      if (!strcasecmp(u->handle, handle)) {
+      if (!rfc_casecmp(u->handle, handle)) {
 	 if (bu == userlist)
 	   lastuser = u;
 	 return u;
@@ -286,7 +286,7 @@ struct userrec *get_user_by_equal_host (char * host)
    while (u != NULL) {
       q = get_user(&USERENTRY_HOSTS,u);
       while (q != NULL) {
-	 if (strcasecmp(q->extra, host) == 0)
+	 if (rfc_casecmp(q->extra, host) == 0)
 	    return u;
 	 q = q->next;
       }
@@ -408,7 +408,7 @@ int sort_compare(struct userrec *a, struct userrec *b)
     if (a->flags & ~b->flags & USER_OP)
       return 0;
   }
-  return (strcasecmp(a->handle, b->handle)>0);
+  return (rfc_casecmp(a->handle, b->handle)>0);
 }
 
 void sort_userlist()
@@ -509,7 +509,7 @@ int change_handle (struct userrec * u, char * newh)
    strcpy(s, u->handle);
    strcpy(u->handle, newh);
    for (i = 0; i < dcc_total; i++) {
-      if (!strcasecmp(dcc[i].nick, s) &&
+      if (!rfc_casecmp(dcc[i].nick, s) &&
 	  (dcc[i].type != &DCC_BOT)) {
 	 strcpy(dcc[i].nick, newh);
 	 if ((dcc[i].type == &DCC_CHAT) && (dcc[i].u.chat->channel >= 0)) {
@@ -626,7 +626,7 @@ int deluser (char * handle)
    struct userrec *u = userlist, *prev = NULL;
    int fnd = 0;
    while ((u != NULL) && (!fnd)) {
-      if (strcasecmp(u->handle, handle) == 0)
+      if (rfc_casecmp(u->handle, handle) == 0)
 	 fnd = 1;
       else {
 	 prev = u;
@@ -663,7 +663,7 @@ int delhost_by_handle (char * handle, char * host)
    if (u == NULL)
       return 0;
    q = get_user(&USERENTRY_HOSTS,u);
-   if (q && !strcasecmp(q->extra,host)) {
+   if (q && !rfc_casecmp(q->extra,host)) {
       e = find_user_entry(&USERENTRY_HOSTS,u);
       e->u.extra = t = q->next;
       nfree(q->extra);
@@ -672,7 +672,7 @@ int delhost_by_handle (char * handle, char * host)
       q = t;
    } else if (q) 
 	while (q->next) {
-	   if (!strcasecmp(q->next->extra,host)) {
+	   if (!rfc_casecmp(q->next->extra,host)) {
 	      t = q->next;
 	      q->next = t->next;
 	      nfree(t->extra);

@@ -1,5 +1,109 @@
-UChanges in eggdrop: (since v1.3.0)
+Changes in eggdrop: (since v1.3.0)
 ----------------------------------
+
+1.3.25
+Foundby   Fixedby   What....
+          poptix    Added max-logsize, allows you to set a maximum logfile
+                    size.
+          slennox   Successful dcc/telnet logins are logged.
+\-\itman  slennox   Added channel set example for +seen to eggdrop.conf.dist.
+          Michael/  Adds core.german.language to /language. 
+          C_Olli    Use '.language core.german' to load it.
+          Daemus    Added traces for net-type, so some variables don't get
+                    munged.
+Dude      cybah     Fix for msg_status bug where the bot is in many channels.
+          guppy     rewrote gotinvite, it now only accepts 1 invite per
+                    30 secs to a channel, instead of per nick
+          Michael   Added something to the motd
+          Daemus    Two typos fixed in irc.mod KICK comments ":I ".
+                    IGNORE_NAME and BAN_NAME should be used where needed.
+          Daemus    Fix for msg_hello, nick length has to be HANDLEN and
+                    not 9.
+??/       dw        .help chaninfo missed 'cycle'
+John`     
+          Tothwolf  Added a call to Tcl_PkgProvide() in src/tcl.c to
+                    register eggdrop in the package(n) list.
+drummer   cybah     Fixes crash if someone is stupid enough to killdcc their
+                    controlling idx/socket when we're trying to tell them it's
+                    closed (ie txt is ""). Updated tcl-commands.doc.
+	  cybah	    Small fixes to a couple of sig-handlers that were
+		    displaying incorrect context info.
+    	  cybah     Really for the dev-team... added contextnote() to aid
+		    bug-tracking. eg contextnote((string) ? string : "null").
+          cybah     Logs now say 'last message repeated n times' to help
+		    with the large log-file problem.
+          michael   Small share helpfile update.
+mho       arthur2   deop for join flood was buggy.
+          Eule      Better nick-flood protection. Tries to kick the actual 
+                    nick, and not the old one, as nick chasing is not
+                    efficient after a few seconds.
+dw/       dw/       '+bot *!login@hostmask #channel comment' crashed the bot.
+Johnny    arthur2
+Q         guppy     Fixed an old bug in tcl.c.
+          Eule/     Adds ctcp-mode 2: bot doesn't answer more than C CTCPs
+          arthur2/  in S seconds. C/S are defined by set global-flood-ctcp C:S.
+          dw
+          drummer   Fixes firewall bug. Default port of Sock4/5 firewalls
+                    is 1080 not 178.
+          drummer   cycle didn't work well. Bot parts the channel if it
+                    has op but hasn't got the chanlist.
+          drummer   Fixes a blowfish bug (.tcl encrypt/decrypt "" "exploit").
+drummer/  drummer   Fixes the famous dcc bug, which permitted +x users to
+slennox/            crash a filesys bot.
+Daemus
+          guppy     Added tcl_duration and updated tcl-commands.doc.
+Dude      dw        /msg help lead to garbage in some cases.
+          Michael   Add-ons to the chaninfo help file for +shared and
+                    need-*.
+slennox   arthur2   lemmingbot kick reason wasn't explicit enough.
+Michael/  guppy/    need-* settings can only be set by perm owners if
+vod/      Daemus    must-be-owner is set in the config.
+toot
+Dagmar    Dagmar/   Fix for rfc1459 related problems. Improper use of
+          arthur2   strcasecmp/strncasecmp.
+Dude      guppy     Fixed a .su bug, problem with NULL ptr.
+Lobo^Loco Crotale   Trailing spaces failed to match with .-unstick/.-ban.
+          guppy     Added msg_save.
+          guppy     Beldin forgot to add $server-online and [botlist] to
+                    tcl-commands.doc I think, added them now.
+          guppy     Added tcl_islinked (no more lsearch'ng [bots]).
+toot      guppy     msg_rehash saves the userfile now.
+John`     guppy     userinfo1.0.tcl had some probs with {}[].
+          guppy     tcl_die exits properly now, (ie: saves userfile).
+          guppy/dw  Added dcc-portrange 1024:65535.
+          guppy     README should use ftp.scriptics.com not sunlabs.com
+KuNgFo0   guppy     Added .backup since there is a [backup] cmd.
+          guppy     Added .uptime to core.help (forgot in my patch).
+          guppy     dcc.c was using 'buf' instead of 'dcc[idx].host' in some
+                    places, so you didn't get the incoming host.
+toot      guppy     dcc.c now ignores source ports lowers than 1024.
+John`     arthur2   Bot didn't compile on BSD/OS with old 2.7 gcc.
+toot      arthur2   If strict-host off, quickban will replace first login
+                    letter by a * (except if it's a 1 letter login).
+                    (strict-host on doesn't put this *).
+KuNgFo0   guppy     Added [botisvoice <chan>].
+guppy     Segfault/ Fixes an annoying .su bug from 1.3.15.
+          guppy
+mho       guppy/    net-type 2 now has a kick-method of 1.
+          arthur2/  must_be_owner now works into server module. It applies
+          dw        now to .dump command.
+Dude      arthur2   Silence bug must be fixed.
+herz      arthur2   Bot kicks exempted banned users when coming back from
+                    a split.
+toot      arthur2   Fixes the net-type problems.
+          Bass      Fixed a typo 'begining' -> 'beginning'.
+          CHaiNeSS  Fixed +w flag addition
+          arthur2/  Adds the tcl-var ctcp-mode to the ctcp module. Set it
+          Crotale   to "paranoid" to make the bot answers only to CTCP
+                    PING & CTCP CHAT requested by +o flag users. All
+                    others CTCP will be ignored.
+Dude      Daemus    Only asks for +e/+I modes when net-type is set to 1.
+toot      Daemus    Fixes the .deluser bug. isowner wasn't defined in
+                    global_table array (modules.c).
+John`     CHaiNeSS  Bot crashed receiving a +k server mode with no
+                    specified key.
+John`     CHaiNeSS  Bot crashed receiving a +l server mode with no 
+                    specified limit.
 
 1.3.24
 Foundby   Fixedby   What....
@@ -140,11 +244,11 @@ Chriphil  MHT       notes2.tcl fixes: idx mistakes for multiple
                     now '.match *' is more readable !
 Tothwolf  BB        Someone puked write_userfile with unfinished "quick"
                     code.   It's commented out now.
-          Kirk      implemented a config file option (sort-users) to
-                    determine whether the user wants their userlist to be
+          Tothwolf/ implemented a config file option (sort-users) to
+              Kirk  determine whether the user wants their userlist to be
                     bubble sorted when they save it
-          Kirk      removed the quick parameter to the write_userfile
-                    function and made the fekker just sort the list every
+          Tothwolf/ removed the quick parameter to the write_userfile
+              Kirk  function and made the fekker just sort the list every
                     save, that is if the user has specified they want to do
                     this in the config file. A simple bubble sort shouldn't
                     consume that much CPU time
@@ -191,9 +295,9 @@ poptix    Beldin    TRACE is being used for detect added use-ison variable
                     to use ISON if requried
 Mr_Jode   Beldin    it was possible for global +o's to set global bans 
                     (should be +m only)
-TothWolf  Beldin    valididx wasnt return sane results
+Tothwolf  Beldin    valididx wasnt return sane results
           Tothwolf  dont overwrite scripts dir
-TothWolf  Beldin    calling the nick binding later in gotnick makes life easier
+Tothwolf  Beldin    calling the nick binding later in gotnick makes life easier
         Roger Stone .resetbans SEGV on invalid console channel
 TheUnknown Beldin   take_revenge needed to update a channel members user entry
                     otherwise many extra bad users could be created.

@@ -82,4 +82,4 @@
    each entry has a '.<entry>' command for users and a
    '.ch<entry>' command for masters, also there is a /msg command
    to change each one.
-   
+

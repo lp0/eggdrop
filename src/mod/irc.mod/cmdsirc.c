@@ -738,7 +738,6 @@ static void cmd_deluser (struct userrec * u, int idx, char * par)
       dprintf(idx, "Can't delete a bot!\n");
    } else {
       char buf[HANDLEN + 1];
-      
       strncpy(buf, u->handle, HANDLEN);
       buf[HANDLEN] = 0;
       if (deluser(u->handle)) {

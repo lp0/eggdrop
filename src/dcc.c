@@ -4,7 +4,7 @@
    disconnect on a dcc socket
    ...and that's it!  (but it's a LOT)
 
-   dprintf'ized, 27oct95
+   dprintf'ized, 27oct1995
  */
 /*
    This file is part of the eggdrop source code
@@ -16,6 +16,7 @@
 
 #include "main.h"
 #include <ctype.h>
+#include "rfc1459.h"
 #include <errno.h>
 #include "modules.h"
 #include "tandem.h"
@@ -352,7 +353,7 @@ static void dcc_bot (int idx, char * code,int i) {
    f = 0;
    i = 0;
    while ((C_bot[i].name != NULL) && (!f)) {
-      int y = strcasecmp(code, C_bot[i].name);
+      int y = rfc_casecmp(code, C_bot[i].name);
       
       if (y == 0) {
 	 /* found a match */
@@ -436,6 +437,9 @@ static void dcc_chat_pass (int idx, char * buf,int atr)
 	 dprintf(idx, "*hello!\n");
 	 greet_new_bot(idx);
       } else {
+	 /* log entry for successful login -slennox 3/28/99 */
+	 putlog(LOG_MISC, "*", "Logged in: %s (%s/%d)", dcc[idx].nick,
+	    dcc[idx].host, dcc[idx].port);
 	 if (dcc[idx].u.chat->away) {
 	    nfree(dcc[idx].u.chat->away);
 	    dcc[idx].u.chat->away = NULL;
@@ -461,7 +465,9 @@ static void dcc_chat_pass (int idx, char * buf,int atr)
 	 dcc[idx].user = get_user_by_handle(userlist,dcc[idx].u.chat->away);
 	 strcpy(dcc[idx].nick, dcc[idx].u.chat->away);
 	 nfree(dcc[idx].u.chat->away);
+         nfree(dcc[idx].u.chat->su_nick);
 	 dcc[idx].u.chat->away = NULL;
+         dcc[idx].u.chat->su_nick = NULL;
 	 dcc[idx].type = &DCC_CHAT;
 	 if (dcc[idx].u.chat->channel < 100000)
 	   botnet_send_join_idx( idx, -1);
@@ -782,11 +788,24 @@ static void dcc_chat (int idx, char * buf,int i)
 		  chanout_but(-1,dcc[idx].u.chat->channel,
 			      "*** %s left the party line%s%s\n",
 			  dcc[idx].nick, buf[0] ? ": " : ".", buf);
-		  context;
 		  if (dcc[idx].u.chat->channel < 100000)
 		    botnet_send_part_idx(idx, buf);
 	       }
-	       if ((dcc[idx].sock != STDOUT) || backgrd) {
+               if (dcc[idx].u.chat->su_nick)
+               {
+                  dcc[idx].user = get_user_by_handle(userlist, dcc[idx].u.chat->su_nick);
+                  strcpy(dcc[idx].nick, dcc[idx].u.chat->su_nick);
+                  dcc[idx].type = &DCC_CHAT;
+                  if (dcc[idx].u.chat->channel < 100000)
+                    botnet_send_join_idx(idx, -1);
+                  dprintf(idx, "Returning to real nick %s!\r\n", dcc[idx].u.chat->su_nick);
+                  nfree(dcc[idx].u.chat->su_nick);
+                  dcc[idx].u.chat->su_nick = NULL;
+				  chanout_but(-1, dcc[idx].u.chat->channel, "*** %s has rejoined the party line.\n", dcc[idx].nick);
+                  dcc_chatter(idx);
+                  return;
+               } 
+	       else if ((dcc[idx].sock != STDOUT) || backgrd) {
 		  killsock(dcc[idx].sock);
 		  lostdcc(idx);
 		  return;
@@ -942,6 +961,15 @@ static void dcc_telnet (int idx, char * buf,int i)
       killsock(sock);
       return;
    }
+   /* <bindle> [09:37] Telnet connection: 168.246.255.191/0
+      <bindle> [09:37] Lost connection while identing [168.246.255.191/0]
+    */
+   context;
+   if (port < 1024) {
+   putlog(LOG_BOTS, "*", "Refused %s/%d (bad src port)", s, port);
+      killsock(sock);
+      return;
+   }
    context;
    if (dcc[idx].host[0] == '@') {
       /* restrict by hostname */
@@ -1035,8 +1063,8 @@ static void dcc_telnet_id (int idx, char * buf,int atr)
    /* toss out bad nicknames */
    if ((dcc[idx].nick[0] != '@') && (!wild_match(dcc[idx].nick, buf))) {
       dprintf(idx, "Sorry, this port is busy.\r\n");
-      putlog(LOG_BOTS, "*", "Refused %s (bad nick)", buf);
-      killsock(dcc[idx].sock);
+      putlog(LOG_BOTS, "*", "Refused %s (bad nick)", dcc[idx].host);
+	  killsock(dcc[idx].sock);
       lostdcc(idx);
       return;
    }
@@ -1045,14 +1073,14 @@ static void dcc_telnet_id (int idx, char * buf,int atr)
    /* make sure users-only/bots-only connects are honored */
    if ((dcc[idx].status & STAT_BOTONLY) && !glob_bot(fr)) {
       dprintf(idx, "This telnet port is for bots only.\r\n");
-      putlog(LOG_BOTS, "*", "Refused %s (non-bot)", buf);
+      putlog(LOG_BOTS, "*", "Refused %s (non-bot)", dcc[idx].host);
       killsock(dcc[idx].sock);
       lostdcc(idx);
       return;
    }
    if ((dcc[idx].status & STAT_USRONLY) && glob_bot(fr)) {
       dprintf(idx, "error Only users may connect at this port.\n");
-      putlog(LOG_BOTS, "*", "Refused %s (non-user)", buf);
+      putlog(LOG_BOTS, "*", "Refused %s (non-user)", dcc[idx].host);
       killsock(dcc[idx].sock);
       lostdcc(idx);
       return;
@@ -1090,7 +1118,7 @@ static void dcc_telnet_id (int idx, char * buf,int atr)
    if (glob_bot(fr)) {
       if (in_chain(buf)) {
 	 dprintf(idx, "error Already connected.\n");
-	 putlog(LOG_BOTS, "*", "Refused telnet connection from %s (duplicate)", buf);
+	 putlog(LOG_BOTS, "*", "Refused telnet connection from %s (duplicate)", dcc[idx].host);
 	 killsock(dcc[idx].sock);
 	 lostdcc(idx);
 	 return;
@@ -1209,7 +1237,7 @@ static void dcc_telnet_new (int idx, char * buf, int x)
       dprintf(idx, "\nSorry, that nickname is taken already.\n");
       dprintf(idx, "Try another one please:\n");
       return;
-   } else if (!strcasecmp(buf, origbotname) || !strcasecmp(buf, botnetnick)) {
+   } else if (!rfc_casecmp(buf, origbotname) || !rfc_casecmp(buf, botnetnick)) {
       dprintf(idx, "Sorry, can't use my name for a nick.\n");
    } else {
       if (make_userfile)
@@ -1413,8 +1441,23 @@ static void dcc_script (int idx, char * buf,int len)
 
 static void eof_dcc_script (int idx) {
    void *old;
-   /* tell the script they're gone: */
-   call_tcl_func(dcc[idx].u.script->command, dcc[idx].sock, "");
+   int  oldflags;
+   
+   context;
+   
+        /*        This will stop a killdcc from working, incase the script tries
+                to kill it's controlling socket while handling an EOF <cybah>
+        */
+        oldflags = dcc[idx].type->flags;
+        dcc[idx].type->flags &= ~(DCT_VALIDIDX);
+   
+        /* tell the script they're gone: */
+        call_tcl_func(dcc[idx].u.script->command, dcc[idx].sock, "");
+        
+        /*      Restore the flags */
+        dcc[idx].type->flags = oldflags;
+   
+   context;
    old = dcc[idx].u.script->u.other;
    dcc[idx].type = dcc[idx].u.script->type;
    nfree(dcc[idx].u.script);

@@ -3,8 +3,8 @@
    low-level manipulation of the filesystem database files
    reaction to remote requests for files 
 
-   dprintf'ized, 25feb96
-   english, 5mar96
+   dprintf'ized, 25feb1996
+   english, 5mar1996
  */
 /*
    This file is part of the eggdrop source code

@@ -3,7 +3,7 @@
    Tcl stubs for file system commands
    Tcl stubs for everything else
 
-   dprintf'ized, 1aug96
+   dprintf'ized, 1aug1996
  */
 /*
    This file is part of the eggdrop source code
@@ -16,13 +16,13 @@
 #include "main.h"
 #include <sys/stat.h>
 #include "modules.h"
+#include "tandem.h"
 #ifdef HAVE_UNAME
 #include <sys/utsname.h>
 #endif
 
 /* eggdrop always uses the same interpreter */
 extern Tcl_Interp *interp;
-extern int serv;
 extern tcl_timer_t *timer, *utimer;
 extern struct dcc_t * dcc;
 extern int dcc_total;
@@ -30,6 +30,7 @@ extern char origbotname[];
 extern struct userrec * userlist;
 extern time_t now;
 extern module_entry * module_list;
+extern char botnetnick[];
 
 /***********************************************************************/
 
@@ -46,12 +47,12 @@ static int tcl_putquick STDVAR
    if (p != NULL)
       *p = 0;
     p = strchr(s, '\r');
-   if (p != NULL)  
+   if (p != NULL)
       *p = 0;
     dprintf(DP_MODE, "%s\n", s);
     return TCL_OK;
 }
-   
+
 static int tcl_putserv STDVAR
 {
    char s[511], *p;
@@ -91,7 +92,7 @@ static int tcl_puthelp STDVAR
 static int tcl_putlog STDVAR
 {
    char logtext[501];
-   
+
    context;
    BADARGS(2, 2, " text");
    strncpy(logtext, argv[1], 500);
@@ -103,7 +104,7 @@ static int tcl_putlog STDVAR
 static int tcl_putcmdlog STDVAR
 {
    char logtext[501];
-   
+
    context;
    BADARGS(2, 2, " text");
    strncpy(logtext, argv[1], 500);
@@ -115,7 +116,7 @@ static int tcl_putcmdlog STDVAR
 static int tcl_putxferlog STDVAR
 {
    char logtext[501];
-   
+
    context;
    BADARGS(2, 2, " text");
    strncpy(logtext, argv[1], 500);
@@ -145,7 +146,7 @@ static int tcl_timer STDVAR
 {
    unsigned long x;
    char s[41];
-   
+
    context;
    BADARGS(3, 3, " minutes command");
    if (atoi(argv[1]) < 0) {
@@ -164,7 +165,7 @@ static int tcl_utimer STDVAR
 {
    unsigned long x;
    char s[41];
-   
+
    context;
    BADARGS(3, 3, " seconds command");
    if (atoi(argv[1]) < 0) {
@@ -207,6 +208,63 @@ static int tcl_killutimer STDVAR
    return TCL_ERROR;
 }
 
+static int tcl_duration STDVAR
+{
+   char s[256];
+   time_t sec;
+   BADARGS(2, 2, " seconds");
+
+   if (atol(argv[1]) <= 0) {
+    Tcl_AppendResult(irp, "0secs", NULL);
+    return TCL_OK;
+   }
+
+   sec = atoi(argv[1]);
+   if (sec >= 31536000) {
+    sprintf(s, "%dyr", (int) (sec / 31536000));
+    if ((int) (sec / 31536000) > 1)
+     strcat(s, "s");
+    strcat(s, " ");
+    sec -= (((int) (sec / 31536000)) * 31536000);
+   }
+   if (sec >= 604800) {
+    sprintf(&s[strlen(s)], "%dwk", (int) (sec / 604800));
+    if ((int) (sec / 604800) > 1)
+     strcat(s, "s");
+    strcat(s, " ");
+    sec -= (((int) (sec / 604800)) * 604800);
+   }
+   if (sec >= 86400) {
+    sprintf(&s[strlen(s)], "%dday", (int) (sec / 86400));
+    if ((int) (sec / 86400) > 1)
+     strcat(s, "s");
+    strcat(s, " ");
+    sec -= (((int) (sec / 86400)) * 86400);
+   }
+   if (sec >= 3600) {
+    sprintf(&s[strlen(s)], "%dhr", (int) (sec / 3600));
+    if ((int) (sec / 3600) > 1)
+     strcat(s, "s");
+    strcat(s, " ");
+    sec -= (((int) (sec / 3600)) * 3600);
+   }
+   if (sec >= 60) {
+    sprintf(&s[strlen(s)], "%dmin", (int) (sec / 60));
+    if ((int) (sec / 60) > 1)
+     strcat(s, "s");
+    strcat(s, " ");
+    sec -= (((int) (sec / 60)) * 60);
+   }
+   if (sec > 0) {
+    sprintf(&s[strlen(s)], "%dsec", (int) (sec / 1));
+    if ((int) (sec / 1) > 1)
+     strcat(s, "s");
+   }
+   Tcl_AppendResult(irp, s, NULL);
+   return TCL_OK;
+}
+
+
 static int tcl_unixtime STDVAR
 {
    char s[20];
@@ -234,10 +292,10 @@ static int tcl_time STDVAR
 static int tcl_date STDVAR
 {
    char s[81];
-   
+
    context;
    BADARGS(1, 1, "");
-   
+
    strcpy(s, ctime(&now));
    s[10] = s[24] = 0;
    strcpy(s, &s[8]);
@@ -366,14 +424,26 @@ static int tcl_backup STDVAR
 
 static int tcl_die STDVAR
 {
+   char s[1024];
+   char g[1024];
+
    context;
    BADARGS(1, 2, " ?reason?");
-   if (argc == 2)
-      fatal(argv[1], 0);
-   else
-      fatal("EXIT", 0);
+   if (argc == 2) {
+      simple_sprintf(s,"BOT SHUTDOWN (%s)",argv[1]);
+      simple_sprintf(g, "%s",argv[1]);
+   } else {
+      simple_sprintf(s,"BOT SHUTDOWN (authorized by a canadian)");
+      simple_sprintf(g, "EXIT");
+   }
+   chatout("*** %s\n",s);
+   botnet_send_chat(-1,botnetnick,s);
+   botnet_send_bye();
+   write_userfile(-1);
+   fatal(g, 0);
    /* should never return, but, to keep gcc happy: */
    return TCL_OK;
+
 }
 
 static int tcl_strftime STDVAR
@@ -426,7 +496,7 @@ static int tcl_unames STDVAR
    if (uname(&un) < 0) {
 #endif
          unix_n = "*unkown*";
-         vers_n = "";   
+         vers_n = "";
 #ifdef HAVE_UNAME
    } else {
          unix_n = un.sysname;
@@ -435,16 +505,16 @@ static int tcl_unames STDVAR
 #endif
    Tcl_AppendResult(irp, unix_n, vers_n, NULL);
    return TCL_OK;
-} 
+}
 
-static int tcl_modules STDVAR 
+static int tcl_modules STDVAR
 {
    module_entry * current;
    dependancy * dep;
    char * list[100], *list2[2], *p;
    char s[40],s2[40];
    int i;
-   
+
    context;
    BADARGS(1, 1, "");
 
@@ -454,20 +524,20 @@ static int tcl_modules STDVAR
       list[1] = s;
       i = 2;
       for (dep = dependancy_list;dep && (i < 100);dep = dep->next) {
-	 if (dep->needing == current) {
-	    list2[0] = dep->needed->name;
-	    simple_sprintf(s2,"%d.%d",dep->major,dep->minor);
-	    list2[1] = s2;
-	    list[i] = Tcl_Merge(2,list2);
-	    i++;
-	 }
+     if (dep->needing == current) {
+        list2[0] = dep->needed->name;
+        simple_sprintf(s2,"%d.%d",dep->major,dep->minor);
+        list2[1] = s2;
+        list[i] = Tcl_Merge(2,list2);
+        i++;
+     }
       }
       p = Tcl_Merge(i,list);
       Tcl_AppendElement(irp,p);
       n_free(p, "", 0);
       while (i > 2) {
-	 i--;
-	 n_free(list[i],"",0);
+     i--;
+     n_free(list[i],"",0);
       }
    }
    return TCL_OK;
@@ -521,6 +591,7 @@ tcl_cmds tclmisc_cmds [] = {
    { "dumpfile", tcl_dumpfile },
    { "dccdumpfile", tcl_dccdumpfile },
    { "backup", tcl_backup },
+   { "exit", tcl_die },
    { "die", tcl_die },
    { "strftime", tcl_strftime },
    { "unames", tcl_unames },
@@ -531,5 +602,6 @@ tcl_cmds tclmisc_cmds [] = {
    { "loadhelp", tcl_loadhelp },
    { "unloadhelp", tcl_unloadhelp },
    { "reloadhelp", tcl_reloadhelp },
+   { "duration", tcl_duration },
    { 0, 0 }
 };

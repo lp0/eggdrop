@@ -7,7 +7,7 @@
    telling the current programmed settings
    initializing a lot of stuff and loading the tcl scripts
 
-   dprintf'ized, 1nov95
+   dprintf'ized, 1nov1995
  */
 /*
    This file is part of the eggdrop source code
@@ -17,9 +17,10 @@
    COPYING that was distributed with this code.
  */
 
-/* config file format changed 27jan94 (Tcl outdates that) */
+/* config file format changed 27jan1994 (Tcl outdates that) */
 
 #include "main.h"
+#include "rfc1459.h"
 #if HAVE_GETRUSAGE
 #include <sys/resource.h>
 #if HAVE_SYS_RUSAGE_H
@@ -75,7 +76,7 @@ memberlist *ismember (struct chanset_t * chan, char * nick)
    memberlist *x;
    
    x = chan->channel.member;
-   while (x->nick[0] && strcasecmp(x->nick, nick))
+   while (x->nick[0] && rfc_casecmp(x->nick, nick))
      x = x->next;
    if (!x->nick[0])
      return NULL;
@@ -87,7 +88,7 @@ struct chanset_t *findchan (char * name)
 {
    struct chanset_t *chan = chanset;
    while (chan != NULL) {
-      if (strcasecmp(chan->name, name) == 0)
+      if (rfc_casecmp(chan->name, name) == 0)
 	 return chan;
       chan = chan->next;
    }
@@ -111,8 +112,8 @@ struct userrec *check_chanlist (char * host)
    for ( chan = chanset; chan; chan = chan->next ) {
       m = chan->channel.member;
       while (m->nick[0]) {
-	 if (!strcasecmp(nick, m->nick) && 
-	     !strcasecmp(uhost, m->userhost))
+	 if (!rfc_casecmp(nick, m->nick) && 
+	     !rfc_casecmp(uhost, m->userhost))
 	   return m->user;
 	 m = m->next;
       }
@@ -130,7 +131,7 @@ struct userrec *check_chanlist_hand (char * hand)
       m = chan->channel.member;
       while (m->nick[0]) {
 	 if (m->user)
-	    if (strcasecmp(m->user->handle, hand) == 0)
+	    if (rfc_casecmp(m->user->handle, hand) == 0)
 	       return m->user;
 	 m = m->next;
       }
@@ -170,8 +171,8 @@ void set_chanlist (char * host, struct userrec * rec)
    while (chan) {
       m = chan->channel.member;
       while (m->nick[0]) {
-	 if (!strcasecmp(nick, m->nick) &&
-	     !strcasecmp(uhost, m->userhost))
+	 if (!rfc_casecmp(nick, m->nick) &&
+	     !rfc_casecmp(uhost, m->userhost))
 	   m->user = rec;
 	 m = m->next;
       }
@@ -601,7 +602,7 @@ int isowner(char *name)
                         pb++;
                 }
                 pl = (unsigned int)pb - (unsigned int)pa;
-                if ((pl == nl) && (!strncasecmp(pa,name,nl))) return(1);
+                if ((pl == nl) && (!rfc_ncasecmp(pa,name,nl))) return(1);
                 while(1)
                 {
                         if ((*pb == 0) || ((*pb != ',') && (*pb != ' '))) break;

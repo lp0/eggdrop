@@ -713,7 +713,11 @@ static void cmd_chanset (struct userrec * u, int idx, char * par) {
 	     * line is args. Woops nearly made a nasty little hole here :) we'll *
 	     * just ignore any non global +n's trying to set the need-commands   */
 	    if (strncmp(list[0], "need-", 5) || (u->flags & USER_OWNER)) {
-	       list[1] = par;
+		 if (!strncmp(list[0], "need-", 5) && !(isowner(dcc[idx].nick)) && (must_be_owner)) {
+          dprintf(idx, "Due to security concerns, only permanent owners can set these modes.\n");
+          return;
+		 }
+		   list[1] = par;
 	       if (tcl_channel_modify(0, chan, 2, list) == TCL_OK) {
 		  strcat(answers, list[0]);
 		  strcat(answers, " { ");

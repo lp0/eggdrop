@@ -592,7 +592,7 @@ static void share_userfileq (int idx, char * par) {
 	 dprintf(idx, "s un Already sharing.\n");
       else {
 	 dprintf(idx, "s uy\n");
-	 /* set stat-getting to astatic void race condition (robey 23jun96) */
+	 /* set stat-getting to astatic void race condition (robey 23jun1996) */
 	 dcc[idx].status |= STAT_SHARE | STAT_GETTING | STAT_AGGRESSIVE;
 	 putlog(LOG_BOTS, "*", "Downloading user file from %s", dcc[idx].nick);
       }
@@ -1117,8 +1117,11 @@ static struct userrec *dup_userlist (int t) {
 		 list_append((&nue->u.list),list);
 		 context;
 	      }
-	   } else if (ue->type->dup_user && (t || ue->type->got_share)) 
-		ue->type->dup_user(nu,u,ue);
+	   } else {
+              context; /* arthur2: SEGV with sharing bug track */
+              if (ue->type->dup_user && (t || ue->type->got_share)) 
+                 ue->type->dup_user(nu,u,ue);
+           }
 	}
      }
    noshare = 0;

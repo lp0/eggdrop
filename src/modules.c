@@ -57,6 +57,8 @@ extern char helpdir[], version[];
 extern int reserved_port, noshare, dcc_total, egg_numver, use_silence;
 extern int use_console_r, ignore_time, debug_output, gban_total, make_userfile;
 extern int default_flags, require_p, max_dcc, share_greet, password_timeout;
+extern int min_dcc_port, max_dcc_port; /* dw */
+extern int global_flood_ctcp_thr, global_flood_ctcp_time; /* arthur2 */
 extern int do_restart;
 extern time_t now, online_since;
 extern struct chanset_t * chanset;
@@ -410,10 +412,16 @@ Function global_table [] =
      (Function) add_tcl_coups,
      (Function) rem_tcl_coups,
      (Function) botname,
-     /* 212 - ??? */
+     /* 212 - 215 */
      (Function) remove_gunk,
      (Function) check_tcl_chjn,
      (Function) sanitycheck_dcc,
+     (Function) isowner, /* Daemus */
+     /* 216 - 219 */
+     (Function) &min_dcc_port, /* dw */
+     (Function) &max_dcc_port,
+     (Function) &global_flood_ctcp_thr, /* arthur2 */
+     (Function) &global_flood_ctcp_time, /* arthur2 */
 };
 
 void init_modules(void)

@@ -8,7 +8,7 @@
    listing users ('.whois' and '.match')
    reading the user file
 
-   dprintf'ized, 9nov95
+   dprintf'ized, 9nov1995
  */
 /*
    This file is part of the eggdrop source code
@@ -18,6 +18,7 @@
    COPYING that was distributed with this code.
  */
 
+#include "rfc1459.h"
 #include "main.h"
 #include "users.h"
 #include "chan.h"
@@ -65,7 +66,7 @@ int equals_ignore (char * uhost)
 {
    struct igrec * u = global_ign;
    for (;u;u=u->next)
-     if (!strcasecmp(u->igmask,uhost)) {
+     if (!rfc_casecmp(u->igmask,uhost)) {
 	if (u->flags & IGREC_PERM)
 	  return 2;
 	else
@@ -92,7 +93,7 @@ int delignore (char * ign)
    } else {
       /* find the matching host, if there is one */
       for (u = &global_ign;*u && !i;u=&((*u)->next)) 
-	 if (!strcasecmp(ign,(*u)->igmask)) {
+	 if (!rfc_casecmp(ign,(*u)->igmask)) {
 	    i = 1;
 	    break;
 	 }
@@ -117,7 +118,7 @@ void addignore (char * ign, char * from, char * mnote, time_t expire_time)
    struct igrec * p;
    
    if (equals_ignore(ign))
-      delignore(ign);		/* remove old ban */
+      delignore(ign);		/* remove old ignore */
    p = user_malloc(sizeof(struct igrec));
    p->next = global_ign;
    global_ign = p;
@@ -607,7 +608,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 	 if ((s[0] != '#') && (s[0] != ';') && (s[0])) {
 	    code = newsplit(&s);
 	    rmspace(s);
-	    if (strcasecmp(code, "-") == 0) {
+	    if (strcmp(code, "-") == 0) {
 	       if (lasthand[0]) {
 		  if (u) { /* only break it down if there a real users */
 		     p = strchr(s, ',');
@@ -635,7 +636,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 		     }
 		  }
 	       }
-	    } else if (strcasecmp(code, "!") == 0) {
+	    } else if (strcmp(code, "!") == 0) {
 	       /* ! #chan laston flags [info] */
 	       char *chname, *st, *fl;
 	       
@@ -648,7 +649,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 		  break_down_flags(fl,&fr,0);
 		  if (findchan(chname)) {
 		     for (cr = u->chanrec; cr; cr = cr->next)
-		       if (!strcasecmp(cr->channel, chname))
+		       if (!rfc_casecmp(cr->channel, chname))
 			 break;
 		     if (!cr) {
 			cr = (struct chanuserrec *) 
@@ -709,7 +710,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 	       if (u) {
 		   ue = u->entries;
 		  for (;ue && !ok;ue=ue->next)
-		    if (ue->name && !strcasecmp(code+2,ue->name)) {
+		    if (ue->name && !rfc_casecmp(code+2,ue->name)) {
 		       struct list_type * list;
 		       
 		       list = user_malloc(sizeof(struct list_type));
@@ -731,12 +732,18 @@ int readuserfile (char * file, struct userrec ** ret) {
 		     list_insert((&u->entries),ue);
 		  }
 	       }
-	    } else if (!strcasecmp(code,BAN_NAME)) {
+	    } else if (!rfc_casecmp(code,BAN_NAME)) {
 	       strcpy(lasthand,code);
 	       u = NULL;
-	    } else if (!strcasecmp(code,IGNORE_NAME)) {
+	    } else if (!rfc_casecmp(code,IGNORE_NAME)) {
 	       strcpy(lasthand,code);
 	       u = NULL;
+            } else if (!rfc_casecmp(code,EXEMPT_NAME)) {
+               strcpy(lasthand,code);   
+               u = NULL;
+            } else if (!rfc_casecmp(code,INVITE_NAME)) {
+               strcpy(lasthand,code);
+               u = NULL;
 	    } else if (code[0] == '*') {
 	       lasthand[0] = 0;
 	       u = NULL;
@@ -772,7 +779,7 @@ int readuserfile (char * file, struct userrec ** ret) {
 				  sanity_check(fr.global & USER_VALID));
 		     u = get_user_by_handle(bu,code);
 		     for (i = 0; i < dcc_total; i++) 
-		       if (!strcasecmp(code,dcc[i].nick))
+		       if (!rfc_casecmp(code,dcc[i].nick))
 			 dcc[i].user = u;
 		     u->flags_udef = fr.udef_global;
 		     /* if s starts with '/' it's got file info */
@@ -868,7 +875,7 @@ void autolink_cycle (char * start)
 	       }
 	       /* did we make it where we're supposed to start?  yay! */
 	       if (!ready)
-		 if (!strcasecmp(u->handle, start)) {
+		 if (!rfc_casecmp(u->handle, start)) {
 		    ready = 1;
 		    autc = NULL;
 		    /* if starting point is a +h bot, must be in 2nd cycle */
@@ -886,7 +893,7 @@ void autolink_cycle (char * start)
 	       int i;
 	       
 	       i = nextbot(u->handle);
-	       if ((i >= 0) && !strcasecmp(dcc[i].nick, u->handle)) {
+	       if ((i >= 0) && !rfc_casecmp(dcc[i].nick, u->handle)) {
 		  char * p = MISC_REJECTED;
 		  /* we're directly connected to the offending bot?! (shudder!) */
 		  putlog(LOG_BOTS, "*", "%s %s", BOT_REJECTING, dcc[i].nick);

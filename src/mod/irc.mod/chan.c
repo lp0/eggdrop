@@ -6,8 +6,8 @@
  * user kickban, kick, op, deop
  * idle kicking
  * 
- * dprintf'ized, 27oct95
- * multi-channel, 8feb96
+ * dprintf'ized, 27oct1995
+ * multi-channel, 8feb1996
  */
 /*
  * This file is part of the eggdrop source code
@@ -17,7 +17,12 @@
  * COPYING that was distributed with this code.
  */
 
-extern int net_type;
+/* new ctcp stuff */
+static time_t last_ctcp = (time_t) 0L;
+static int count_ctcp=0;
+/* new gotinvite stuff */
+static time_t last_invtime = (time_t) 0L; 
+static char last_invchan[300] = "";
 
 /* returns a pointer to a new channel member structure */
 static memberlist *newmember (struct chanset_t * chan) {
@@ -217,7 +222,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
        case FLOOD_NICK:
 	 simple_sprintf(h, "*!*@%s", p);
 	 if (!isbanned(chan, h) && me_op(chan)) {
-	    add_mode(chan, '-', 'o', from);
+	    add_mode(chan, '-', 'o', splitnick(&from)); /* mho/arthur2 */
 	    do_ban(chan, h);
 	 }
 	 if ((u_match_ban(global_bans,from))
@@ -235,7 +240,7 @@ static int detect_chan_flood (char * floodnick, char * floodhost, char * from,
 	       if (wild_match(h, s) && 
 		   (m->joined >= chan->floodtime[which]) && (!chan_sentkick(m))) {
 		  m->flags |= SENTKICK;
-		  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, m->nick, IRC_LEMMINGBOT);
+		  dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, victim, IRC_LEMMINGBOT);
 	       }
 	       m = m->next;
 	    }
@@ -268,12 +273,14 @@ static char *quickban (struct chanset_t * chan, char * uhost) {
    maskhost(uhost, s1);
 /*   s1[2] = '*'; */ /* removed by Crotale,
                         because it's buggy for 1 letter logins */
+   if ((strlen(s1) != 1) && (strict_host == 0))
+      s1[2] = '*'; /* arthur2 */
    do_ban(chan, s1);
    return s1;
 }
 
 /* kicks any user (except friends/masters) with certain mask from channel
-   with a specified comment.  Ernst 18/3/98 */
+   with a specified comment.  Ernst 18/3/1998 */
 static void kick_all (struct chanset_t * chan, char * hostmask, char * comment) {
    memberlist *m;
    char kickchan[512], kicknick[512], s[UHOSTLEN];
@@ -308,11 +315,7 @@ static void kick_all (struct chanset_t * chan, char * hostmask, char * comment) 
 	 strcat(kicknick, m->nick);
 	 k += 1;
 	 l = strlen(kickchan) + strlen(kicknick) + strlen(IRC_BANNED) + strlen(comment) + 5;
-         if (net_type == 2)
-            kick_method = 0;
-	 if ((kick_method != 0 && k == kick_method) || (l > 480) ||
-             ((net_type == 0 || net_type == 3) && k == 1) ||
-              (net_type == 1 && k == 4)) {
+	 if ((kick_method != 0 && k == kick_method) || (l > 480)) {
 	    dprintf(DP_SERVER, "KICK %s %s :%s\n", kickchan, kicknick, comment);
 	    k = 0; kickchan[0] = 0; kicknick[0] = 0;
 	 }
@@ -359,7 +362,7 @@ static void refresh_ban_kick (struct chanset_t * chan, char * user, char * nick)
    }
 }
 
-/* enforce all channel bans in a given channel.  Ernst 18/3/98 */
+/* enforce all channel bans in a given channel.  Ernst 18/3/1998 */
 static void enforce_bans (struct chanset_t * chan) {
    char me[UHOSTLEN];
    banlist *b = chan->channel.ban;
@@ -605,31 +608,33 @@ static int got324 (char * from, char * msg) {
       if (msg[i] == 'q') 
 	chan->channel.mode |= CHANQUIET;
       if (msg[i] == 'k') {
-	 p = strchr(msg, ' ');
-	 p++;
-	 q = strchr(p, ' ');
-	 if (q != NULL) {
-	    *q = 0;
-	    set_key(chan, p);
-	    strcpy(p, q + 1);
-	 } else {
-	    set_key(chan, p);
-	    *p = 0;
-	 }
+        p = strchr(msg, ' ');
+	if (p != NULL) { /* test for null key assignment */
+           p++;
+           q = strchr(p, ' ');
+	   if (q != NULL) {
+	      *q = 0;
+	      set_key(chan, p);
+	      strcpy(p, q + 1);
+	   } else {
+	      set_key(chan, p);
+	      *p = 0;
+	   }
+        }
       }
       if (msg[i] == 'l') {
 	 p = strchr(msg, ' ');
-	 p++;
-         context; /* a2 */
-	 q = strchr(p, ' '); /* the bot crashes here when +l is not set */
-         context; /* a2 */
-	 if (q != NULL) {
-	    *q = 0;
-	    chan->channel.maxmembers = atoi(p);
-	    strcpy(p, q + 1);
-	 } else {
-	    chan->channel.maxmembers = atoi(p);
-	    *p = 0;
+	 if (p != NULL) {  /* test for null limit assignment */
+	    p++;
+	    q = strchr(p, ' ');
+	    if (q != NULL) {
+	       *q = 0;
+	       chan->channel.maxmembers = atoi(p);
+	       strcpy(p, q + 1);
+	    } else {
+	       chan->channel.maxmembers = atoi(p);
+	       *p = 0;
+	    }
 	 }
       }
       i++;
@@ -700,6 +705,7 @@ static int got352or4 (struct chanset_t * chan, char * user, char * host,
        /* and it's not me, and i'm an op */
        && !match_my_nick(nick) && me_op(chan)
        && !chan_friend(fr) && !glob_friend(fr) /* arthur2 */
+       && !isexempted(chan,userhost)
        && !(channel_dontkickops(chan) && (chan_op(fr) || (glob_op(fr) && !chan_deop(fr))))) /* arthur2 */
      /* *bewm* */
      dprintf(DP_SERVER, "KICK %s %s :%s\n", chan->name, nick, IRC_BANNED);
@@ -746,7 +752,7 @@ static int got354 (char * from, char * msg)
    struct chanset_t *chan;
 
    context;
-   if ((net_type == 2 ) || (use_354)) {
+   if (use_354) {
       newsplit(&msg);				/* Skip my nick - effeciently*/
       if ((msg[0] == '#') || (msg[0] == '&')) {
 	 chname = newsplit(&msg);		/* Grab the channel */
@@ -867,7 +873,7 @@ static int got348 (char * from, char * msg) {
    char * ban, *chname;
    struct chanset_t *chan;
 
-   if (net_type) {
+   if (net_type == 1) {
       newsplit(&msg);
       chname = newsplit(&msg);
    
@@ -887,7 +893,7 @@ static int got349 (char * from, char * msg)
    struct chanset_t *chan;
    char * chname;
 
-   if (net_type) {
+   if (net_type == 1) {
       newsplit(&msg);
       chname = newsplit(&msg);
       chan = findchan(chname);
@@ -903,7 +909,7 @@ static int got346 (char * from, char * msg) {
    char * ban, *chname;
    struct chanset_t *chan;
 
-   if (net_type) {
+   if (net_type == 1) {
       newsplit(&msg);
       chname = newsplit(&msg);
    
@@ -923,7 +929,7 @@ static int got347 (char * from, char * msg)
    struct chanset_t *chan;
    char * chname;
 
-   if (net_type) {
+   if (net_type == 1) {
       newsplit(&msg);
       chname = newsplit(&msg);
       chan = findchan(chname);
@@ -1028,24 +1034,22 @@ static int gotinvite (char * from, char * msg)
    char * nick;
    struct chanset_t *chan;
    
-   static char lastnick[NICKLEN] = "*";
-   static time_t lastinv = (time_t) 0L;
-   
    newsplit(&msg);
    fixcolon(msg);
    nick = splitnick(&from);
-   /* come on.  more than one invite from someone within 30 seconds? */
-   /* just ignore them -- don't even log it. */
-   if (strcasecmp(lastnick, nick) || (now - lastinv >= 30)) {
-      putlog(LOG_MISC, "*", "%s!%s invited me to %s", nick, from, msg);
-      strcpy(lastnick, nick);
-      lastinv = now;
-      chan = findchan(msg);
-      if (chan && (channel_pending(chan) || channel_active(chan))) {
-	 dprintf(DP_SERVER, "NOTICE %s :I'm already here.\n", nick);
-      } else if (chan) 
-	   dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
+
+   if (!strcasecmp(last_invchan, msg)) {
+    if (now - last_invtime < 30)
+	 return 0; /* two invites to the same channel in 30 seconds? */
    }
+   putlog(LOG_MISC, "*", "%s!%s invited me to %s", nick, from, msg);
+   strncpy(last_invchan, msg, 299);
+   last_invtime = now;	
+   chan = findchan(msg);
+   if (chan && (channel_pending(chan) || channel_active(chan)))
+    dprintf(DP_SERVER, "NOTICE %s :I'm already here.\n", nick);
+   else if (chan) 
+    dprintf(DP_MODE, "JOIN %s %s\n", chan->name, chan->key_prot);
    return 0;
 }
 
@@ -1451,8 +1455,8 @@ static int gotnick (char * from, char * msg)
 	       killmember(chan, mm->nick);
 	    }
 	 }
-	 detect_chan_flood(nick, uhost, from, chan, FLOOD_NICK, 0);
-	 /* any pending kick to the old nick is lost. Ernst 18/3/98 */
+	 detect_chan_flood(nick, uhost, from, chan, FLOOD_NICK, msg); /* TK */
+	 /* any pending kick to the old nick is lost. Ernst 18/3/1998 */
 	 if (chan_sentkick(m))
 	    m->flags &= ~SENTKICK;
 	 /* banned? */
@@ -1559,7 +1563,7 @@ static int gotmsg (char * from, char * msg)
                u_addban(chan, quickban(chan, uhost), origbotname,
                   IRC_FUNKICK, now + (60 * ban_time),0);
             if (kick_fun)
-               dprintf(DP_SERVER, "KICK %s %s :I %s\n",
+               dprintf(DP_SERVER, "KICK %s %s :%s\n",
                   realto, nick, IRC_FUNKICK); /* this can induce kickflood - arthur2 */
          } 
       }     
@@ -1618,8 +1622,20 @@ static int gotmsg (char * from, char * msg)
       }
    }
    /* send out possible ctcp responses */
-   if (ctcp_reply[0])
-     dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+   if (ctcp_reply[0]) {
+      if (ctcp_mode != 2) {
+         dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+      } else {
+         if (now - last_ctcp > global_flood_ctcp_time) {
+            dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+            count_ctcp = 1;
+         } else if (count_ctcp < global_flood_ctcp_thr) {
+            dprintf(DP_SERVER, "NOTICE %s :%s\n", nick, ctcp_reply);
+            count_ctcp++;
+         }
+         last_ctcp = now;
+      }
+   }
    if (msg[0]) {
       if (!ignoring)
 	detect_chan_flood(nick, uhost, from, chan, FLOOD_PRIVMSG, NULL);
@@ -1673,7 +1689,7 @@ static int gotnotice (char * from, char * msg)
                u_addban(chan, quickban(chan, uhost), origbotname,
                   IRC_FUNKICK, now + (60 * ban_time),0);
             if (kick_fun)
-               dprintf(DP_SERVER, "KICK %s %s :I %s\n",
+               dprintf(DP_SERVER, "KICK %s %s :%s\n",
                   realto, nick, IRC_FUNKICK); /* this can induce kickflood - arthur2 */
          }
       }
@@ -1748,7 +1764,7 @@ static cmd_t irc_raw [28] = {
      { "PRIVMSG", "", (Function)gotmsg, "irc:msg" },
      { "NOTICE", "", (Function)gotnotice, "irc:notice" },
      { "MODE", "", (Function)gotmode, "irc:mode" },
-/*      Added for IRCnet +e/+I support - Daemus 2/4/99 */
+/*      Added for IRCnet +e/+I support - Daemus 2/4/1999 */
      { "346", "", (Function)got346, "irc:346" },
      { "347", "", (Function)got347, "irc:347" },
      { "348", "", (Function)got348, "irc:348" },

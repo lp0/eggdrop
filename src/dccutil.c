@@ -6,7 +6,7 @@
    memory management for dcc structures
    timeout checking for dcc connections
 
-   dprintf'ized, 28aug95
+   dprintf'ized, 28aug1995
  */
 /*
    This file is part of the eggdrop source code
@@ -26,16 +26,10 @@
 
 extern struct dcc_t * dcc;
 extern int dcc_total;
-extern char tempdir[];
-extern char botname[];
 extern char botnetnick[];
 extern char ver[], spaces[];
 extern char version[];
-extern char admin[];
-extern int serv;
 extern struct chanset_t *chanset;
-extern time_t trying_server;extern char botserver[];
-extern int botserverport;
 extern time_t now;
 extern struct userrec * userlist;
 extern int max_dcc;

@@ -10,8 +10,6 @@
  * COPYING that was distributed with this code.
  */
 
-/* extern int must_be_owner; */ /* needs to be fixed */
-
 static void cmd_servers (struct userrec * u, int idx, char * par)
 {
    struct server_list *x = serverlist;
@@ -39,10 +37,10 @@ static void cmd_servers (struct userrec * u, int idx, char * par)
 static void cmd_dump (struct userrec * u, int idx, char * par)
 {
 
-/*   if (!(isowner(dcc[idx].nick)) && (must_be_owner)) {
+   if (!(isowner(dcc[idx].nick)) && (must_be_owner == 2)) {
       dprintf(idx, MISC_NOSUCHCMD);
       return;
-   } */ /* needs to be fixed */
+   }
 
    if (!par[0]) {
       dprintf(idx, "Usage: dump <server stuff>\n");

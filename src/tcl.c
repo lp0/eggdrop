@@ -4,7 +4,7 @@
    Tcl initialization
    getting and setting Tcl/eggdrop variables
 
-   dprintf'ized, 4feb96
+   dprintf'ized, 4feb1996
  */
 /*
    This file is part of the eggdrop source code
@@ -38,27 +38,21 @@ char whois_fields[121] = "";
 Tcl_Interp *interp;
 
 /* 1/2 of these arent even here anymore, one day I'll clean them up */
-extern int curserv, serv, backgrd, flood_telnet_thr, flood_telnet_time;
-extern int shtime, share_users, share_greet, require_p,
- keep_all_logs, copy_to_tmp, use_stderr, upload_to_cd, allow_new_telnets;
-extern int min_servs, default_flags, conmask, newserverport,
- switch_logfiles_at, server_timeout, connect_timeout,
- firewallport, reserved_port, notify_users_at;
-extern int flood_thr, flood_nick_thr, ban_time, exempt_time, ignore_time,
- flood_ctcp_thr, flood_time, flood_nick_time, flood_ctcp_time;
-extern char origbotname[], botuser[],
- motdfile[], admin[], userfile[], altnick[], firewall[], helpdir[],
- initserver[], notify_new[], hostname[], myip[], moddir[],
- tempdir[], newserver[], ctcp_version[], ctcp_finger[], ctcp_userinfo[],
- owner[], newserverpass[], newbotname[], network[], botnetnick[], chanfile[];
-extern int modesperline, maxqmsg, wait_split, wait_info,
- wait_dcc_xfer, die_on_sighup,die_on_sigterm,
- trigger_on_ignore,answer_ctcp, lowercase_ctcp, max_logs, enable_simul;
-extern int dcc_total,mode_buf_len, debug_output, identtimeout, protect_telnet;
+/* done - arthur2 */
+extern int backgrd, flood_telnet_thr, flood_telnet_time;
+extern int shtime, share_greet, require_p, keep_all_logs;
+extern int use_stderr, allow_new_telnets;
+extern int default_flags, conmask, switch_logfiles_at, connect_timeout;
+extern int firewallport, reserved_port, notify_users_at;
+extern int flood_thr, ignore_time;
+extern char origbotname[], botuser[], motdfile[], admin[], userfile[],
+ firewall[], helpdir[], notify_new[], hostname[], myip[], moddir[],
+ tempdir[], owner[], network[], botnetnick[];
+extern int die_on_sighup, die_on_sigterm, max_logs, max_logsize, enable_simul;
+extern int dcc_total, debug_output, identtimeout, protect_telnet;
 extern int egg_numver, share_unlinks, dcc_sanitycheck, sort_users;
-extern struct server_list *serverlist;
 extern struct dcc_t * dcc;
-extern char egg_version[], langdir[];
+extern char egg_version[];
 extern tcl_timer_t *timer, *utimer;
 extern time_t online_since;
 extern log_t * logs;
@@ -76,6 +70,11 @@ int must_be_owner = 1;
 /* needs at least 4 or 5 just to get started */
 /* 20 should be enough */
 int max_dcc = 20;
+/* valid dcc-portrange, dw/guppy */
+int min_dcc_port = 1024;
+int max_dcc_port = 65535;
+int global_flood_ctcp_thr = 5;
+int global_flood_ctcp_time = 30;
 
 /* prototypes for tcl */
 Tcl_Interp *Tcl_CreateInterp();
@@ -290,14 +289,14 @@ static char *tcl_eggstr (ClientData cdata, Tcl_Interp * irp, char * name1,
       }
       return NULL;
    } else {			/* writes */
-      if ((st->max < 0) && (protect_readonly || (st->max == 0))) {
+      if ((st->max <= 0) && (protect_readonly || (st->max == 0))) {
 	 Tcl_SetVar2(interp, name1, name2, st->str, TCL_GLOBAL_ONLY);
 	 return "read-only variable";
       }
       s = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
       if (s != NULL) {
-	 if (strlen(s) > st->max)
-	    s[st->max] = 0;
+	 if (strlen(s) > abs(st->max))
+	    s[abs(st->max)] = 0;
 	 if (st->str == botnetnick)
 	    botnet_change(s);
 	 else if (st->str == firewall) {
@@ -383,6 +382,7 @@ static tcl_ints def_tcl_ints[] =
    {"remote-boots", &remote_boots, 1},
    {"max-dcc", &max_dcc, 0},
    {"max-logs", &max_logs, 0},
+   {"max-logsize", &max_logsize, 0},
    {"enable-simul", &enable_simul, 1},
    {"debug-output", &debug_output, 1},
    {"protect-telnet", &protect_telnet, 0},
@@ -394,11 +394,14 @@ static tcl_ints def_tcl_ints[] =
    {"allow-dk-cmds", &allow_dk_cmds, 0},
    {"resolve-timeout", &resolve_timeout, 0},
    {"must-be-owner", &must_be_owner, 0},
-   {0, 0}
+   {"use-silence", &use_silence, 0}, /* arthur2 */
+   {0, 0, 0} /* arthur2 */
 };
 
 static tcl_coups def_tcl_coups[] = {
    { "telnet-flood", &flood_telnet_thr, &flood_telnet_time },
+   { "dcc-portrange", &min_dcc_port, &max_dcc_port }, /* dw */
+   { "global-flood-ctcp", &global_flood_ctcp_thr, &global_flood_ctcp_time }, /* arthur2 */
    { 0, 0, 0 }
 };
   
@@ -424,6 +427,8 @@ extern tcl_cmds tcluser_cmds [],tcldcc_cmds[],tclmisc_cmds[];
    smoking?!) so we gotta initialize the Tcl interpreter */
 void init_tcl()
 {
+   char pver[25];
+
    /* initialize the interpreter */
    interp = Tcl_CreateInterp();
    Tcl_Init(interp);
@@ -437,6 +442,8 @@ void init_tcl()
    
 #define Q(A,B) Tcl_CreateCommand(interp,A,B,NULL,NULL)
    Q("logfile", tcl_logfile);
+   sscanf(egg_version, "%s", pver);
+   Tcl_PkgProvide(interp, "eggdrop", pver);
 }
 
 /**********************************************************************/

@@ -306,6 +306,9 @@ specific commands, see later.
   botisop <channel>
     returns: "1" if the bot is an op on that channel; "0" otherwise
 
+  botisvoice <channel>
+    returns: "1" if the bot is has a voice on that channel; "0" otherwise
+
   botonchan <channel>
     returns: "1" if the bot is on that channel; "0" otherwise
 
@@ -513,6 +516,19 @@ specific commands, see later.
   bots
     returns: list of the bots currently connected to the botnet
 
+| botlist
+|   returns: a list of bots currently on the botnet; each item in the list
+|     will be a sublist with four elements: bot, uplink, version, sharing
+|     status.
+|
+|     bot    : the bot's nickname
+|     uptlink: who the bot is connected through
+|     version: its current numeric version
+|     sharing: a "+" if the bot is sharing, "-" otherwise/
+
+| islinked <bot>
+|   returns: "1" if the bot is currently linked, "0" otherwise
+
   dccused
     returns: number of dcc connections currently in use
 
@@ -648,6 +664,10 @@ specific commands, see later.
   time
     returns: the current time in 24-hour format (ie "14:15")
 
+  duration <seconds>
+    returns: the number of seconds converted into years, weeks, days, hours, minutes,
+      and seconds (ie: 804600secs is turned into 1wk 2days 7hrs 30mins).
+
   strftime <formatstring> [time]
     returns: a formatted string of time using standard strftime
       format, uses the value of time, or now if no time specified
@@ -673,7 +693,8 @@ specific commands, see later.
       to indicate success and "1" to indicate that it relinquishes control of
       the user back to the bot; the idx must be for a user in the party line
       area or the file area; if the input text is blank (""), it indicates
-      that the dcc user has dropped connection
+      that the dcc user has dropped connection. Also, if the input text is
+      blank, never call killdcc on it, it will fail with 'invalid idx'.
     returns: nothing
 
   sendnote <from> <to> <message>
@@ -704,8 +725,8 @@ specific commands, see later.
     causes the bot to log a fatal error and exit completely; if no reason
     is given, "EXIT" is used
 
-| unames
-|  returns:  The current operating system the bot is using.
+  unames
+   returns:  The current operating system the bot is using.
 
 
 GLOBAL VARIABLES:
@@ -736,6 +757,9 @@ GLOBAL VARIABLES:
 
   uptime
     unixtime value for when the bot was started
+
+| server-online
+|    unixtime value for how long the bot has been on its server
 
   lastbind
     The last command binding which triggered.   This allows you to
@@ -1155,7 +1179,9 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
     To indicate that the connection has closed, your control procedure
     will be called with blank text (the input-text will be "").  This
     is the only time it will ever be called with "" as the text, and it
-    is the last time your proc will be called for that connection.
+    is the last time your proc will be called for that connection. Dont call
+    killdcc on the idx when text is blank, it will always fail with
+    'invalid idx'.
 
     If you want to hand control of your connection back to eggdrop, your
     proc should return 1.  Otherwise, return 0 to retain control.
@@ -1197,7 +1223,8 @@ for the msg-command "stop", use "unbind msg - stop msg_stop".
     proc (indicating that you want control to return to eggdrop), the bot
     will just close the connection and dispose of it.  Other commands
     that work on normal DCC connections, like 'killdcc' and 'putdcc',
-    will work on this idx too.
+    will work on this idx too. 'killdcc' will fail with 'invalid idx' if you
+    attempt to use it on a closed socket, ie when text is blank.
 
     To create a listening port, use:
        listen 6667 script grabproc

@@ -17,27 +17,40 @@ static Function * global = NULL, * server_funcs = NULL;
 static char ctcp_version[256];
 static char ctcp_finger[256];
 static char ctcp_userinfo[256];
+static int ctcp_mode = 0;
 
 static int ctcp_FINGER(char * nick, char * uhost, char * handle, 
 		 char * object, char * keyword, char * text) {
    context;
-   if (ctcp_finger[0]) 
+   if ((ctcp_finger[0]) && (ctcp_mode != 1))
      simple_sprintf(ctcp_reply,"%s\001FINGER %s\001", ctcp_reply, ctcp_finger);
    return 1;
 }
 
-static int ctcp_ECHOPINGERR (char * nick, char * uhost, char * handle,
+static int ctcp_ECHOERR (char * nick, char * uhost, char * handle,
 		       char * object, char * keyword, char * text) {
    context;
-   if (strlen(text) <= 80) /* bitch ignores > 80 */
+   if ((strlen(text) <= 80) && (ctcp_mode != 1))
      simple_sprintf(ctcp_reply,"%s\001%s %s\001", ctcp_reply, keyword,text);
+   return 1;
+}
+
+static int ctcp_PING (char * nick, char * uhost, char * handle,
+                       char * object, char * keyword, char * text) {
+   struct userrec * u = get_user_by_handle(userlist,handle);
+   int atr = u ? u->flags : 0;
+   context;
+   if ((ctcp_mode != 1) || ((atr & (USER_OP)))) {
+      if (strlen(text) <= 80) /* bitch ignores > 80 */
+        simple_sprintf(ctcp_reply,"%s\001%s %s\001", ctcp_reply, keyword,text);
+   }
    return 1;
 }
 
 static int ctcp_VERSION(char * nick, char * uhost, char * handle, 
 		 char * object, char * keyword, char * text) {
    context;
-   if (ctcp_version[0]) 
+   if ((ctcp_version[0]) && (ctcp_mode != 1))
      simple_sprintf(ctcp_reply, "%s\001VERSION %s\001", ctcp_reply, ctcp_version);
    return 1;
 }
@@ -45,7 +58,7 @@ static int ctcp_VERSION(char * nick, char * uhost, char * handle,
 static int ctcp_USERINFO(char * nick, char * uhost, char * handle, 
 		 char * object, char * keyword, char * text) {
    context;
-   if (ctcp_userinfo[0]) 
+   if ((ctcp_userinfo[0]) && (ctcp_mode != 1))
      simple_sprintf(ctcp_reply, "%s\001USERINFO %s\001", ctcp_reply, ctcp_userinfo);
    return 1;
 }
@@ -55,6 +68,8 @@ static int ctcp_CLIENTINFO(char * nick, char * uhosr, char * handle,
    char * p = NULL;
    
    context;
+   if ((ctcp_mode == 1))
+      return 1;
    if (!msg[0])
      p = CLIENTINFO;
    else if (strcasecmp(msg, "sed") == 0)
@@ -95,6 +110,8 @@ static int ctcp_TIME (char * nick, char * uhost, char * handle, char * object,
       char tms[81];
    
    context;
+   if ((ctcp_mode == 1))
+      return 1;
    strcpy(tms, ctime(&now));
    tms[strlen(tms) - 1] = 0;
    simple_sprintf(ctcp_reply, "%s\001TIME %s\001", ctcp_reply, tms);
@@ -116,7 +133,7 @@ static int ctcp_CHAT (char * nick, char * uhost, char * handle, char * object,
 	    ix = i;
 	    /* do me a favour and don't change this back to a CTCP reply, */
 	    /* CTCP replies are NOTICE's this has to be a PRIVMSG */
-	    /* -poptix 5/1/97 */
+	    /* -poptix 5/1/1997 */
 	    dprintf(DP_SERVER, "PRIVMSG %s :\001DCC CHAT chat %lu %u\001\n",
 		    nick, 
 		    iptolong(natip[0]?(IP) inet_addr(natip):getmyip()),
@@ -133,9 +150,9 @@ static int ctcp_CHAT (char * nick, char * uhost, char * handle, char * object,
 static cmd_t myctcp[9] =
 {
      { "FINGER", "", ctcp_FINGER, NULL },
-     { "ECHO", "", ctcp_ECHOPINGERR, NULL },
-     { "PING", "", ctcp_ECHOPINGERR, NULL },
-     { "ERRMSG", "", ctcp_ECHOPINGERR, NULL },
+     { "ECHO", "", ctcp_ECHOERR, NULL },
+     { "PING", "", ctcp_PING, NULL },
+     { "ERRMSG", "", ctcp_ECHOERR, NULL },
      { "VERSION", "", ctcp_VERSION, NULL },
      { "USERINFO", "", ctcp_USERINFO, NULL },
      { "CLIENTINFO", "", ctcp_CLIENTINFO, NULL },
@@ -151,9 +168,15 @@ static tcl_strings mystrings [] =
      {0, 0, 0, 0}
 };
 
+static tcl_ints myints[] =
+{
+   {"ctcp-mode", &ctcp_mode},
+   {0, 0}
+};
 static char *ctcp_close()
 {
    rem_tcl_strings(mystrings);
+   rem_tcl_ints(myints);
    rem_builtins(H_ctcp, myctcp,9);
    rem_help_reference("ctcp.help");
    module_undepend(MODULE_NAME);
@@ -178,6 +201,7 @@ char *ctcp_start (Function * global_funcs)
    if (!(server_funcs = module_depend(MODULE_NAME, "server", 1, 0)))
       return "You need the server module to use the ctcp module.";
    add_tcl_strings(mystrings);
+   add_tcl_ints(myints);
    add_builtins(H_ctcp, myctcp,9);
    add_help_reference("ctcp.help");
    if (!ctcp_version[0]) {

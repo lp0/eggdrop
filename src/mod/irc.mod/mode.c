@@ -4,9 +4,9 @@
  * channel mode changes and the bot's reaction to them
  * setting and getting the current wanted channel modes
  * 
- * dprintf'ized, 12dec95
- * multi-channel, 6feb96
- * stopped the bot deopping masters and bots in bitch mode, pteron 23Mar97
+ * dprintf'ized, 12dec1995
+ * multi-channel, 6feb1996
+ * stopped the bot deopping masters and bots in bitch mode, pteron 23Mar1997
  *
  */
 /*
@@ -16,8 +16,6 @@
  * For full details, read the top of 'main.c' or the file called
  * COPYING that was distributed with this code.
  */
-
-extern int net_type;
 
 /* reversing this mode? */
 static int reversing = 0;
@@ -36,13 +34,6 @@ static struct flag_record victim = {FR_GLOBAL|FR_CHAN,0,0,0,0,0};
 static void flush_mode (struct chanset_t * chan, int pri) {
    char *p, out[512], post[512];
    int i, ok = 0;
-
-   if (net_type == 0)
-      modesperline = 4;
-   if (net_type == 1)
-      modesperline = 3;
-   if (net_type == 2 || net_type == 3)
-      modesperline = 6;
 
    p = out;
    post[0] = 0;
@@ -155,13 +146,6 @@ static void real_add_mode (struct chanset_t * chan,
    exemptlist *e;
    invitelist *inv;
    char s[21];
-
-   if (net_type == 0)
-      modesperline = 4;
-   if (net_type == 1)
-      modesperline = 3;
-   if (net_type == 2 || net_type == 3)
-      modesperline = 6;
 
    if (!me_op(chan))
      return; /* no point in queueing the mode */
@@ -398,7 +382,7 @@ static void got_deop (struct chanset_t * chan, char * nick, char * from,
 	ok = 0;
       if (!ok && !match_my_nick(nick) &&
 	  strcasecmp(who, nick) && chan_hasop(m) &&
-	  !match_my_nick(who)) {	/* added 25mar96, robey */
+	  !match_my_nick(who)) {	/* added 25mar1996, robey */
 	 /* reop? */
 	 /* let's break it down home boy...*/
 	 /* is the deopper NOT a master or bot? */
@@ -445,7 +429,7 @@ static void got_deop (struct chanset_t * chan, char * nick, char * from,
    }
    /* was the bot deopped? */
    if (match_my_nick(who)) {
-      /* cancel any pending kicks.  Ernst 18/3/98 */
+      /* cancel any pending kicks.  Ernst 18/3/1998 */
       memberlist *m = chan->channel.member;
       while (m->nick[0]) {
 	 if (chan_sentkick(m))

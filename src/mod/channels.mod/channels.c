@@ -17,6 +17,7 @@ static int invite_time = 0; /* if invite_time = 0, never remove them */
 static char chanfile [121] = "chanfile";
 static Function * global = NULL;
 static int chan_hack = 0;
+static int must_be_owner = 0;
 
 #include "cmdschan.c"
 #include "tclchan.c"
@@ -483,9 +484,11 @@ static void channels_report (int idx, int details) {
 	 if (channel_active(chan))
 	   dprintf(idx, "    %-10s: %2d member%s enforcing \"%s\" (%s)\n", chan->name,
 		   chan->channel.members, chan->channel.members == 1 ? "," : "s,", s2, s);
-	 else
+	 else {
+           context;
 	   dprintf(idx, "    %-10s: (inactive), enforcing \"%s\"  (%s)\n",
 		   chan->name, s2, s);
+         }
 	 if (details) {
 	    s[0] = 0;
 	    i = 0;
@@ -581,7 +584,8 @@ static tcl_ints my_tcl_ints [] = {
      {"ban-time", &ban_time, 0},
      {"exempt-time", &exempt_time, 0},
      {"invite-time", &invite_time, 0},
-     { 0, 0, 0 }
+     {"must-be-owner", &must_be_owner, 0 },
+	 { 0, 0, 0 }
 };
 
 static tcl_strings my_tcl_strings [] = {

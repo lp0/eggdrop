@@ -26,6 +26,7 @@ KEY
 DIE
 JUMP
 MEMORY
+SAVE
 REHASH
 RESET
 %{+m|m}
@@ -102,6 +103,9 @@ There may also be additional commands provided by other modules.
 %{-}
 %b/MSG%b %B %bPASS%b <oldpass> <newpass>
    This is how you change your password.
+%{help=save}%{+m}
+%b/MSG%b %B %bSAVE%b <password>
+   This makes me save my userfile.
 %{help=rehash}%{+m}
 %b/MSG%b %B %bREHASH%b <password>
    This makes me reload my config file.
