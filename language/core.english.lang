@@ -237,6 +237,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x666,This is the telnet interface to %s, an eggdrop bot.\nDon't abuse it, and it will be open for all your friends, too.\n
 0x667,You now get to pick a nick to use on the bot,\nand a password so nobody else can pretend to be you.\nPlease remember both!
 0x668,From now on, you dont need to use the -m option to start the bot.\nEnjoy !!
+0x669,Telnet connection flood from %s!  Placing on ignore!
 
 0x700,Command line arguments:\n\
   -h   help\n\

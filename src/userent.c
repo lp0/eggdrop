@@ -977,7 +977,12 @@ static int hosts_tcl_get (Tcl_Interp * irp, struct userrec * u,
 static int hosts_tcl_set (Tcl_Interp * irp, struct userrec * u,
 			 struct user_entry * e, int argc, char ** argv) {
    BADARGS(3,4," handle HOSTS ?host?");
-   addhost_by_handle(u->handle,argv[3]);
+   if (argc == 4) 
+     addhost_by_handle(u->handle,argv[3]);
+   else {
+      while (e->u.list && strcasecmp(e->u.list->extra,"none"))
+	delhost_by_handle(u->handle,e->u.list->extra);
+   }
    return TCL_OK;
 }
 

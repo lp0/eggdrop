@@ -5,10 +5,11 @@
    lets you manipulate notes that have been stored up for you while
    you were gone.  %b'notes index'%b gives a listing of all the notes
    stored up: who they are from, and when they were left.  
-   %b'notes read'%b lets you read a particular note, or all of 
-   them at once, and %b'notes erase'%b erases notes after you
-   are done with them.
-   
+   %b'notes read'%b lets you read some or all notes, according to a
+   list of numbers and/or intervals separated by semicolon.
+   and %b'notes erase'%b erases notes after you are done with them.
+     ex: notes erase 2-4;8;16-
+
 see also: note, whom
 %{help=notes module}
 ###  help on the %bnotes modules%b

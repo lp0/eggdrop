@@ -343,7 +343,8 @@ static void check_lonely_channel (struct chanset_t * chan)
 	 /* ALL bots!  make them LEAVE!!! */
 	 m = chan->channel.member;
 	 while (m->nick[0]) {
-	    dprintf(DP_SERVER, "PRIVMSG %s :go %s\n", m->nick, chan->name);
+	    if (!match_my_nick(m->nick))
+	      dprintf(DP_SERVER, "PRIVMSG %s :go %s\n", m->nick, chan->name);
 	    m = m->next;
 	 }
       } else {

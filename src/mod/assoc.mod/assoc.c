@@ -31,8 +31,14 @@ static assoc_t *assoc;
 static void botnet_send_assoc (int idx, int chan, char * nick,
                              char * buf) {
    char x[1024];
-   simple_sprintf(x,"%D %s %s", chan, nick ? nick : botnetnick, buf);
-   botnet_send_zapf_broad(idx,botnetnick,"assoc",x);
+   int idx2;
+   
+   simple_sprintf(x,"assoc %D %s %s", chan, nick, buf);
+   for (idx2 = 0; idx2 < dcc_total; idx2++) 
+     if ((dcc[idx2].type == &DCC_BOT) && (idx2 != idx)
+	 && (b_numver(idx2) >= NEAT_BOTNET)
+	 && !(bot_flags(dcc[idx2].user) & BOT_ISOLATE))
+       botnet_send_zapf(idx2, botnetnick, dcc[idx2].nick, x);
 }
 
 static int assoc_expmem() {
@@ -228,9 +234,8 @@ static int cmd_assoc (struct userrec * u, int idx, char * par) {
 	 dprintf(idx, "Okay, removed name for channel %s%d.\n",
 		 (chan < 100000) ? "" : "*", chan % 100000);
 	 chanout_but(-1,chan, "--- %s removed this channel's name.\n", dcc[idx].nick);
-	 if (chan < 100000) {
-	    botnet_send_assoc(-1, chan, dcc[idx].nick, "0");
-	 }
+	 if (chan < 100000) 
+	   botnet_send_assoc(-1, chan, dcc[idx].nick, "0");
 	 return 0;
       }
       if (strlen(par) > 20) {
@@ -246,9 +251,8 @@ static int cmd_assoc (struct userrec * u, int idx, char * par) {
       dprintf(idx, "Okay, channel %s%d is '%s' now.\n",
 	      (chan < 100000) ? "" : "*", chan % 100000, par);
       chanout_but(-1,chan, "--- %s named this channel '%s'\n", dcc[idx].nick, par);
-      if (chan < 100000) {
-	 botnet_send_assoc(-1, chan , dcc[idx].nick, par);
-      }
+      if (chan < 100000) 
+	botnet_send_assoc(-1, chan , dcc[idx].nick, par);
    }
    return 0;
 }

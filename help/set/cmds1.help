@@ -145,3 +145,8 @@ see also: set realname
    socks).
    
 see also: set reserved-port
+%{help=set telnet-flood}%{+n}
+###  %bset telnet-flood <times:seconds>%b
+   this setting will cause the bot to ignore any futher telnets it 
+   receives from any given host that connects any more than the 
+   given times in the given number of seconds

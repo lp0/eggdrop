@@ -478,7 +478,7 @@ static int builtin_chat STDVAR {
    Function F = (Function) cd;
    int ch;
    
-   BADARGS(4, 4, " handle id text");
+   BADARGS(4, 4, " handle idx text");
    CHECKVALIDITY(builtin_chat);
    ch = atoi(argv[2]);
    F(argv[1],ch,argv[3]);

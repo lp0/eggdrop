@@ -77,8 +77,8 @@ extern tcl_timer_t *timer, *utimer;
    modified versions of this bot.
 
  */
-char egg_version[1024] = "1.3.12";
-int egg_numver = 1031200;
+char egg_version[1024] = "1.3.13";
+int egg_numver = 1031300;
 
 /* person to send a note to for new users */
 char notify_new[121] = "";
@@ -161,19 +161,21 @@ int expected_memory()
    return tot;
 }
 
-static void check_expired_dcc()
-{
+static void check_expired_dcc() {
    int i;
-   for (i = 0; i < dcc_total; i++) {
-      if (dcc[i].type && dcc[i].type->timeout_val) {
-	 if ((now - dcc[i].timeval) > *(dcc[i].type->timeout_val)) {
-	    if (dcc[i].type->timeout)
-	       dcc[i].type->timeout(i);
-	    else if (dcc[i].type->eof) 
-	      dcc[i].type->eof(i);
-	 }
-      }
-   }
+   
+   for (i = 0; i < dcc_total; i++) 
+     if (dcc[i].type && dcc[i].type->timeout_val &&
+	 ((now - dcc[i].timeval) > *(dcc[i].type->timeout_val))) {
+	if (dcc[i].type->timeout)
+	  dcc[i].type->timeout(i);
+	else if (dcc[i].type->eof) 
+	  dcc[i].type->eof(i);
+	else 
+	  continue;
+	/* only timeout 1 socket per cycle, too risky for more */
+	return;
+     }
 }
 
 static int nested_debug = 0;
@@ -395,6 +397,7 @@ static void core_secondly () {
    cnt++;
    if (cnt >= 10) {		/* every 10 seconds */
       cnt = 0;
+      check_expired_dcc();
       if (con_chan && !backgrd) {
 	 dprintf(DP_STDOUT, "\033[2J\033[1;1H");
 	 tell_verbose_status(DP_STDOUT, 0);
@@ -411,7 +414,6 @@ static void core_secondly () {
       /* once a minute */
       lastmin = (lastmin + 1) % 60;
       call_hook(HOOK_MINUTELY);
-      check_expired_dcc();
       check_expired_ignores();
       autolink_cycle(NULL);	/* attempt autolinks */
       /* in case for some reason more than 1 min has passed: */

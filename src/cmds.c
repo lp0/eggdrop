@@ -1422,15 +1422,15 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
    if (chan)
      putlog(LOG_CMDS, "*", "#%s# (%s) chattr %s %s",
 	    dcc[idx].nick, chan?chan->name:"*",hand, chg ? chg : "");
-   else if (chg)
-     putlog(LOG_CMDS, "*", "#%s# chattr %s %s", dcc[idx].nick, hand, chg);
    else
-     putlog(LOG_CMDS, "*", "#%s# chattr %s", dcc[idx].nick, hand);
+     putlog(LOG_CMDS, "*", "#%s# chattr %s %s", dcc[idx].nick, hand, 
+            chg ? chg : "");
 
    /* get current flags and display them */
    if (user.match & FR_GLOBAL) {
       user.match = FR_GLOBAL;
-      check_dcc_attrs(u2, of);
+      if (chg)
+         check_dcc_attrs(u2, of);
       get_user_flagrec(u2, &user,NULL);
       build_flags(work, &user, NULL);
       if (work[0] != '-') 
@@ -1442,7 +1442,8 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
       user.match = FR_CHAN;
       get_user_flagrec(u2, &user, par);
       user.chan &= ~BOT_SHARE;
-      check_dcc_chanattrs(u2, chan->name, user.chan, ocf);
+      if (chg)
+         check_dcc_chanattrs(u2, chan->name, user.chan, ocf);
       build_flags(work, &user, NULL);
       if (work[0] != '-') 
 	dprintf(idx, "Channel flags for %s on %s are now +%s\n", hand, 
@@ -1457,7 +1458,7 @@ static void cmd_chattr (struct userrec * u, int idx, char * par)
    }
 }
 
-static void cmd_botattr (struct userrec * u, int idx, char * par)
+static void cmd_botattr (struct userrec * u, int idx, char * par) 
 {
    char * hand, * chg = NULL, work[1024];
    struct chanset_t *chan = NULL;
@@ -1476,10 +1477,10 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
       dprintf(idx, "No such bot!\n");
       return;
    }
-   for (idx2 = 0; idx2 < dcc_total; idx++) 
-     if (!strcasecmp(dcc[idx].nick, hand))
+   for (idx2 = 0; idx2 < dcc_total; idx2++) 
+     if (!strcasecmp(dcc[idx2].nick, hand))
        break;
-   if (idx2 == dcc_total) {
+   if (idx2 != dcc_total) {
       dprintf(idx, "You may not change the attributes of a linked bot.\n");
       return;
    }
@@ -1513,25 +1514,24 @@ static void cmd_botattr (struct userrec * u, int idx, char * par)
 	 mns.chan = 0;
       }
       if (!glob_owner(user)) {
-	 pls.bot &= ~(BOT_SHARE|BOT_PASSIVE);
-	 mns.bot &= ~(BOT_SHARE|BOT_PASSIVE);
+	 pls.bot &= ~(BOT_SHARE | BOT_GLOBAL);
+	 mns.bot &= ~(BOT_SHARE | BOT_GLOBAL);
       }
       user.match = FR_BOT|(chan ? FR_CHAN : 0);
       get_user_flagrec(u2,&user,par);
       user.bot = (user.bot | pls.bot) & ~mns.bot;
-      if (user.bot & BOT_SHARE)
-	user.bot &= ~BOT_ALT;
       if ((user.bot & BOT_SHARE) == BOT_SHARE)
 	user.bot &= ~BOT_SHARE;
       if (chan)
 	user.chan = (user.chan | pls.chan) & ~mns.chan;
       set_user_flagrec(u2,&user,par);
    }
-   if (chg)
-     putlog(LOG_CMDS, "*", "#%s# botattr %s %s", dcc[idx].nick, hand, chg,par);
+    if (chan)
+     putlog(LOG_CMDS, "*", "#%s# (%s) botattr %s %s",
+	    dcc[idx].nick, chan->name, hand, chg ? chg : "");
    else
-     putlog(LOG_CMDS, "*", "#%s# botattr %s %s", dcc[idx].nick, hand, par);
-
+      putlog(LOG_CMDS, "*", "#%s# botattr %s %s", dcc[idx].nick, hand, 
+	     chg ? chg : "");
    /* get current flags and display them */
    if (!chan || pls.bot || mns.bot) {
       user.match = FR_BOT;
@@ -1588,7 +1588,7 @@ static void cmd_chat (struct userrec * u, int idx, char * par)
 		 newchan = -1;
 	    }
 	    if (newchan < 0) {
-	       dprintf(idx, "No channel by the name.\n");
+	       dprintf(idx, "No channel by that name.\n");
 	       return;
 	    }
 	 } else

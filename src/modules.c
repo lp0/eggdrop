@@ -400,6 +400,11 @@ Function global_table [] =
      (Function) sub_lang,
      (Function) &online_since,
      (Function) cmd_loadlanguage,
+     (Function) check_dcc_attrs,
+     /* 208 - 211 */
+     (Function) check_dcc_chanattrs,
+     (Function) add_tcl_coups,
+     (Function) rem_tcl_coups,
 };
 
 void init_modules(void)

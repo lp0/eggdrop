@@ -719,6 +719,8 @@ static int botfl_set (struct userrec * u, struct user_entry * e, void * buf) {
       if (atr & BOT_ALT)
 	 atr &= ~(BOT_ALT | BOT_REJECT);
    }
+   if (!(atr & BOT_SHARE))
+      atr &= ~BOT_GLOBAL;
    e->u.ulong = atr;
    context;
    return 1;

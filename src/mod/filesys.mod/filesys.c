@@ -734,7 +734,7 @@ static void filesys_report (int idx, int details)
       else
 	 dprintf(idx, "    (no uploads)\n");
       if (dcc_users)
-	 dprintf(idx, "       max users is %d\n", dcc_users);
+	 dprintf(idx, "        max users is %d\n", dcc_users);
       if ((upload_to_cd) || (dccin[0]))
 	 dprintf(idx, "    DCC max file size: %dk\n", dcc_maxsize);
    } else

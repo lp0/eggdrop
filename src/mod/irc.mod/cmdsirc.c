@@ -678,7 +678,7 @@ static void cmd_deluser (struct userrec * u, int idx, char * par)
     * like that - beldin */
    /* checks vs channel owner/master ANYWHERE now -
     * so deluser on a channel they're not on should work */
-   if (glob_owner(victim) && !strcasecmp(dcc[idx].nick, nick)) {
+   if (glob_owner(victim) && strcasecmp(dcc[idx].nick, nick)) {
       dprintf(idx, "Can't remove the bot owner!\n");
    } else if (glob_botmast(victim) && !glob_owner(user)) {
       dprintf(idx, "Can't delete a master!\n");

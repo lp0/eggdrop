@@ -286,7 +286,11 @@
 #define sub_lang ((void(*)(int,char *))global[204])
 #define online_since (*(int *)(global[205]))
 #define cmd_loadlanguage ((int (*)(struct userrec *,int,char *))global[206])
-
+#define check_dcc_attrs ((int (*)(struct userrec *,int))global[207])
+/* 209 - 211 */
+#define check_dcc_chanattrs ((int (*)(struct userrec *,char *,int,int))global[208])
+#define add_tcl_coups ((void (*) (tcl_coups *))global[209])
+#define rem_tcl_coups ((void (*) (tcl_coups *))global[210])
 
 /* this is for blowfish module, couldnt be bothereed making a whole new .h 
  * file for it ;) */

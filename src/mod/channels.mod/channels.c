@@ -102,6 +102,7 @@ static void set_mode_protect (struct chanset_t * chan, char * set)
 	 }
       }
    }
+   dprintf(DP_MODE,"MODE %s\n",chan->name);
 }
 
 static void get_mode_protect (struct chanset_t * chan, char * s)
@@ -436,10 +437,10 @@ static void channels_report (int idx, int details)
 	   strcpy(s, MISC_LURKING);
 	 get_mode_protect(chan, s2);
 	 if (channel_active(chan))
-	   dprintf(idx, "   %-10s: %2d member%c, enforcing \"%s\"  (%s)\n", chan->name,
+	   dprintf(idx, "    %-10s: %2d member%c, enforcing \"%s\"  (%s)\n", chan->name,
 		   chan->channel.members, chan->channel.members == 1 ? ' ' : 's', s2, s);
 	 else
-	   dprintf(idx, "   %-10s: (inactive), enforcing \"%s\"  (%s)\n",
+	   dprintf(idx, "    %-10s: (inactive), enforcing \"%s\"  (%s)\n",
 		   chan->name, s2, s);
 	 if (details) {
 	    s[0] = 0;
@@ -476,6 +477,8 @@ static void channels_report (int idx, int details)
 	      i += my_strcpy(s + i, "autovoice ");
 	    if (channel_cycle(chan))
 	      i += my_strcpy(s + i, "cycle ");
+            if (channel_seen(chan))
+              i += my_strcpy(s + i, "seen ");
 	    dprintf(idx, "      Options: %s\n", s);
 	    if (chan->need_op[0])
 	      dprintf(idx, "      To get ops I do: %s\n", chan->need_op);
@@ -494,7 +497,7 @@ static void channels_report (int idx, int details)
       chan = chan->next;
    }
    if (details)
-     dprintf(idx, "   Bans last %d mins.\n", ban_time);
+     dprintf(idx, "    Bans last %d mins.\n", ban_time);
 }
 
 static int channels_expmem ()

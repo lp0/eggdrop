@@ -266,6 +266,10 @@ static int tcl_channel_info (Tcl_Interp * irp, struct chanset_t * chan)
       Tcl_AppendElement(irp, "+cycle");
    else
       Tcl_AppendElement(irp, "-cycle");
+   if (chan->status& CHAN_SEEN)
+      Tcl_AppendElement(irp, "+seen");
+   else
+      Tcl_AppendElement(irp, "-seen");
    return TCL_OK;
 }
 
@@ -450,6 +454,10 @@ static int tcl_channel_modify (Tcl_Interp * irp, struct chanset_t * chan,
 	 chan->status|= CHAN_CYCLE;
       else if (strcmp(item[i], "-cycle") == 0)
 	 chan->status&= ~CHAN_CYCLE;
+      else if (strcmp(item[i], "+seen") == 0)
+	 chan->status|= CHAN_SEEN;
+      else if (strcmp(item[i], "-seen") == 0)
+	 chan->status&= ~CHAN_SEEN;
       else if (strncmp(item[i], "flood-", 6) == 0) {
 	 int * pthr = 0, * ptime;
 	 char * p;

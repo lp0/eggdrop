@@ -482,10 +482,12 @@ static int write_bans (FILE * f, int idx)
        return 0;
    for (chan = chanset;chan;chan=chan->next) 
      if ((idx < 0) || (chan->status & CHAN_SHARED)) {
-	struct flag_record fr = {FR_CHAN|FR_GLOBAL,0,0,0,0,0};
-	if (idx >= 0)
+	struct flag_record fr = {FR_CHAN|FR_GLOBAL|FR_BOT,0,0,0,0,0};
+	if ((idx >= 0) && !(fr.bot & BOT_GLOBAL))
 	  get_user_flagrec(dcc[idx].user,&fr,chan->name);
-	if ((idx < 0) || (glob_bot(fr) && (fr.chan & BOT_SHARE))) {
+	else
+	  fr.chan = BOT_SHARE;
+	if (fr.chan & BOT_SHARE) {
 	   if (fprintf(f, "::%s bans\n", chan->name) == EOF)
 	     return 0;
 	   for (b = chan->bans;b;b=b->next) 

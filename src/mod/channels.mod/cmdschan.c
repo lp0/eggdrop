@@ -603,10 +603,11 @@ static void cmd_chaninfo (struct userrec * u, int idx, char * par) {
 	      (chan->status & CHAN_STOPNETHACK) ? '+' : '-',
 	      (chan->status & CHAN_REVENGE) ? '+' : '-',
 	      (chan->status & CHAN_SECRET) ? '+' : '-');
-      dprintf(idx, "     %cshared     %cautovoice    %ccycle\n", 
+      dprintf(idx, "     %cshared     %cautovoice    %ccycle        %cseen\n", 
 	      (chan->status & CHAN_SHARED) ? '+' : '-',
 	      channel_autovoice(chan) ? '+' : '-',
-	      channel_cycle(chan) ? '+' : '-');
+	      channel_cycle(chan) ? '+' : '-',
+              (chan->status & CHAN_SEEN) ? '+' : '-');
       dprintf(idx, "flood settings: chan ctcp join kick deop\n");
       dprintf(idx, "number:          %3d  %3d  %3d  %3d  %3d\n",
 	      chan->flood_pub_thr, chan->flood_ctcp_thr, chan->flood_join_thr,

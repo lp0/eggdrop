@@ -38,7 +38,7 @@ char whois_fields[121] = "";
 Tcl_Interp *interp;
 
 /* 1/2 of these arent even here anymore, one day I'll clean them up */
-extern int curserv, serv, backgrd;
+extern int curserv, serv, backgrd, flood_telnet_thr, flood_telnet_time;
 extern int shtime, share_users, share_greet, require_p,
  keep_all_logs, copy_to_tmp, use_stderr, upload_to_cd, allow_new_telnets;
 extern int min_servs, default_flags, conmask, newserverport,
@@ -176,6 +176,37 @@ static void botnet_change (char * new)
 
 
 int init_dcc_max(), init_misc();
+
+/* used for read/write to integer couplets */
+typedef struct {
+   int *left;			/* left side of couplet */
+   int *right;			/* right side */
+} coupletinfo;
+
+/* read/write integer couplets (int1:int2) */
+static char *tcl_eggcouplet (ClientData cdata, Tcl_Interp * irp, char * name1,
+			    char * name2, int flags) {
+   char *s, s1[41];
+   coupletinfo *cp = (coupletinfo *) cdata;
+   
+   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
+      sprintf(s1, "%d:%d", *(cp->left), *(cp->right));
+      Tcl_SetVar2(interp, name1, name2, s1, TCL_GLOBAL_ONLY);
+   } else {			/* writes */
+      s = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
+      if (s != NULL) {
+	 if (strlen(s) > 40)
+	    s[40] = 0;
+	 splitc(s1, s, ':');
+	 if (s1[0]) {
+	    *(cp->left) = atoi(s1);
+	    *(cp->right) = atoi(s);
+	 } else
+	    *(cp->left) = atoi(s);
+      }
+   }
+   return NULL;
+}
 
 /* read/write normal integer */
 static char *tcl_eggint (ClientData cdata, Tcl_Interp * irp, char * name1,
@@ -360,16 +391,21 @@ static tcl_ints def_tcl_ints[] =
    {0, 0}
 };
 
+static tcl_coups def_tcl_coups[] = {
+   { "telnet-flood", &flood_telnet_thr, &flood_telnet_time },
+   { 0, 0, 0 }
+};
+  
 /* set up Tcl variables that will hook into eggdrop internal vars via */
 /* trace callbacks */
-static void init_traces()
-{
+static void init_traces() {
+   add_tcl_coups(def_tcl_coups);
    add_tcl_strings(def_tcl_strings);
    add_tcl_ints(def_tcl_ints);
 }
 
-void kill_tcl()
-{
+void kill_tcl() {
+   rem_tcl_coups(def_tcl_coups);
    rem_tcl_strings(def_tcl_strings);
    rem_tcl_ints(def_tcl_ints);
    kill_bind();
@@ -458,8 +494,7 @@ int readtclprog (char * fname)
    return 1;
 }
 
-void add_tcl_strings (tcl_strings * list)
-{
+void add_tcl_strings (tcl_strings * list) {
    int i;
    strinfo *st;
    
@@ -492,8 +527,7 @@ void add_tcl_strings (tcl_strings * list)
    }
 }
 
-void rem_tcl_strings (tcl_strings * list)
-{
+void rem_tcl_strings (tcl_strings * list) {
    int i;
    strinfo *st;
 
@@ -511,8 +545,7 @@ void rem_tcl_strings (tcl_strings * list)
    }
 }
 
-void add_tcl_ints (tcl_ints * list)
-{
+void add_tcl_ints (tcl_ints * list) {
    int i;
    intinfo * ii;
    
@@ -531,8 +564,7 @@ void add_tcl_ints (tcl_ints * list)
    
 }
 
-void rem_tcl_ints (tcl_ints * list)
-{
+void rem_tcl_ints (tcl_ints * list) {
    int i;
    intinfo * ii;
    
@@ -547,5 +579,37 @@ void rem_tcl_ints (tcl_ints * list)
 	 strtot -= sizeof(intinfo);
 	 nfree(ii);
       }
+   }
+}
+
+/* allocate couplet space for tracing couplets */
+void add_tcl_coups (tcl_coups * list) {
+   coupletinfo *cp;
+   int i;
+   
+   for (i = 0; list[i].name; i++) {
+      cp = (coupletinfo *) nmalloc(sizeof(coupletinfo));
+      strtot += sizeof(coupletinfo);
+      cp->left = list[i].lptr;
+      cp->right = list[i].rptr;
+      Tcl_TraceVar(interp, list[i].name, 
+		   TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		   tcl_eggcouplet, (ClientData) cp);
+   }
+}
+
+void rem_tcl_coups (tcl_coups * list) {
+   coupletinfo *cp;
+   int i;
+   
+   for (i = 0; list[i].name; i++) {
+      cp = (coupletinfo *) Tcl_VarTraceInfo(interp, list[i].name,
+					    TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+					    tcl_eggcouplet, NULL);
+      strtot -= sizeof(coupletinfo);
+      Tcl_UntraceVar(interp, list[i].name,
+		     TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
+		     tcl_eggcouplet, (ClientData) cp);
+      nfree(cp);
    }
 }

@@ -119,6 +119,7 @@ ignore-time
 uptime
 version
 numversion
+telnet-flood
 %{end}
    use %b'.help set <variable>'%b for more info on each variable.
 %{+n}

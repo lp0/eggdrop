@@ -62,6 +62,7 @@
 #include "../module.h"
 #include "../../users.h"
 #include "../../chan.h"
+#include "../channels.mod/channels.h"
 
 static Function *global = NULL;
 static void wordshift();
@@ -99,9 +100,12 @@ static int pub_seen (char *nick, char *host, char *hand,
                                                 char *channel, char *text)  
 {
 char prefix[50];
+struct chanset_t *chan = findchan(channel);
 context;
-   sprintf(prefix, "PRIVMSG %s :", channel);
-   do_seen(DP_HELP, prefix, nick, hand, channel, text);
+   if ((chan != NULL) && channel_seen(chan)) {
+     sprintf(prefix, "PRIVMSG %s :", channel);
+     do_seen(DP_HELP, prefix, nick, hand, channel, text);
+   }
    return 0;
 }
 

@@ -478,21 +478,7 @@ set init-server { putserv "MODE $botnick +iw-s" }
 # (please note: you need to change these servers to YOUR network's servers)
 set servers {
   raistlin.toledolink.com:6667
-  nukem.winternet.com:6667
-  irc.iceworld.org:6667
-  eclipse.v-wave.com:6667
-  helios.insnet.com:6667
 }  
-
-# many irc ops check for bots that respond to 'hello'.  you can change this
-# to another word by uncommenting the following two lines, and changing
-# "myword" to the word you want to use instead of 'hello' (it must be a
-# single word)
-# novice users are not expected to understand what these two lines do; they
-# are just here to help you.  for more information on 'bind', check the file
-# 'tcl-commands.doc'
-#unbind msg - hello *msg:hello
-#bind msg - myword *msg:hello
 
 # [0/1] if the bot's nickname is changed (for example, if the intended
 # nickname is already in use) keep trying to get the nick back?
@@ -642,6 +628,16 @@ set mode-buf-length 200
 # use ircu2.10.01 specific /who requests, therefore only asking for
 # exactly what's needed 
 set use-354 0
+
+# many irc ops check for bots that respond to 'hello'.  you can change this
+# to another word by uncommenting the following two lines, and changing
+# "myword" to the word you want to use instead of 'hello' (it must be a
+# single word)
+# novice users are not expected to understand what these two lines do; they
+# are just here to help you.  for more information on 'bind', check the file
+# 'tcl-commands.doc'
+#unbind msg - hello *msg:hello
+#bind msg - myword *msg:hello
 
 ##### TRANSFER MODULE #####
 

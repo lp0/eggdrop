@@ -279,18 +279,66 @@ static int tcl_storenote STDVAR
    return TCL_OK;
 }
 
-/* rd=-1 : index
-   rd=0 : read all msgs
-   rd>0 : read msg #n
+/* convert a string like "2-4;8;16-" in an array {2, 4, 8, 8, 16, maxnotes, -1} */
+static void notes_parse (int dl[], char * s)
+{
+  int i=0;
+  int idl=0;
+  do {
+    while (s[i] == ';')
+      i++;
+    if (s[i]) {
+      if (s[i] == '-')
+	dl[idl] = 1;
+      else
+	dl[idl] = atoi(s+i);
+      idl++;
+      while ( (s[i]) && (s[i]!='-') && (s[i]!=';') )
+	i++;
+      if (s[i] == '-') {
+	dl[idl] = atoi(s+i+1); /* will be 0 if not a number */
+	if (dl[idl] == 0)
+	  dl[idl] = maxnotes;
+      }
+      else
+	dl[idl] = dl[idl-1];
+      idl++;
+      while ( (s[i]) && (s[i]!=';') )
+	i++;
+    }
+  }
+  while ( (s[i]) && (idl < 124) );
+  dl[idl] = -1;
+}
+
+/* return true if 'in' is in intervals of 'dl' */
+static int notes_in (int dl[], int in)
+{
+  int i=0;
+  while (dl[i] != -1) {
+    if ( (dl[i]<=in) && (in<=dl[i+1]) )
+      return 1;
+    i+=2;
+  }
+  return 0;
+}
+
+/* srd="+" : index
+   srd="-" : read all msgs
+   else    : read msg in list : (ex: .notes read 5-9;12;13;18-)
 
    idx=-1 : /msg
  */
-static void notes_read (char * hand, char * nick, int rd, int idx)
+static void notes_read (char * hand, char * nick, char * srd, int idx)
 {
    FILE *f;
    char s[601], *to, *dt, *from, *s1,wt[100];
    time_t tt;
    int ix = 1;
+   int ir = 0;
+   int rd[128]; /* is it enough ? */
+   if (srd[0]==0)
+     srd = "-";
    if (!notefile[0]) {
       if (idx >= 0)
 	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
@@ -306,6 +354,7 @@ static void notes_read (char * hand, char * nick, int rd, int idx)
 	 dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
       return;
    }
+   notes_parse(rd, srd);
    while (!feof(f)) {
       fgets(s, 600, f);
       if (s[strlen(s) - 1] == '\n')
@@ -332,21 +381,23 @@ static void notes_read (char * hand, char * nick, int rd, int idx)
 			     note_life - lapse, 
 			     (note_life - lapse) == 1 ? "" : "S");
 	       }
-	       if ((ix == rd) || (rd == 0)) {
+	       if (srd[0]=='+') {
+		  if (idx >= 0) {
+		     if (ix == 1)
+			dprintf(idx, "### %s:\n", BOT_NOTEWAIT);
+		     dprintf(idx, "  %2d. %s (%s)\n", ix, from, dt);
+		  } else {
+		     dprintf(DP_HELP, "NOTICE %s :%2d. %s (%s)\n",
+			     nick, ix, from, dt);
+		  }
+	       }
+	       else if (notes_in(rd, ix)) {
 		  if (idx >= 0)
 		     dprintf(idx, "%2d. %s (%s): %s\n", ix, from, dt, s1);
 		  else
 		     dprintf(DP_HELP, "NOTICE %s :%2d. %s (%s): %s\n", 
 			     nick, ix, from, dt, s1);
-	       }
-	       if (rd < 0) {
-		  if (idx >= 0) {
-		     if (ix == 1)
-			dprintf(idx, "### %s:\n", BOT_NOTEWAIT);
-		     dprintf(idx, "  %2d. %s (%s)\n", ix, from, dt);
-		  } else
-		     dprintf(DP_HELP, "NOTICE %s :%2d. %s (%s)\n",
-			     nick, ix, from, dt);
+		  ir++;
 	       }
 	       ix++;
 	    }
@@ -354,13 +405,13 @@ static void notes_read (char * hand, char * nick, int rd, int idx)
       }
    }
    fclose(f);
-   if ((rd >= ix) && (rd > 0)) {
+   if ( (srd[0] != '+') && (ir == 0) && (ix > 1) ) {
       if (idx >= 0)
 	 dprintf(idx, "%s.\n", BOT_NOTTHATMANY);
       else
 	 dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, BOT_NOTTHATMANY);
    }
-   if (rd < 0) {
+   if (srd[0] == '+') {
       if (ix == 1) {
 	 if (idx >= 0)
 	    dprintf(idx, "%s.\n", BOT_NOMESSAGES);
@@ -373,7 +424,7 @@ static void notes_read (char * hand, char * nick, int rd, int idx)
 	    dprintf(DP_HELP, "NOTICE %s :(%d %s)\n", nick, ix - 1, MISC_TOTAL);
       }
    }
-   if ((rd == 0) && (ix == 1)) {
+   if ((ir == 0) && (ix == 1)) {
       if (idx >= 0)
 	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
       else
@@ -381,11 +432,20 @@ static void notes_read (char * hand, char * nick, int rd, int idx)
    }
 }
 
-static void notes_del (char * hand, char * nick, int dl, int idx)
+/* sdl="-" : erase all msgs
+   else    : erase msg in list : (ex: .notes erase 2-4;8;16-)
+
+   idx=-1 : /msg
+ */
+static void notes_del (char * hand, char * nick, char * sdl, int idx)
 {
    FILE *f, *g;
    char s[513], *to, *s1;
    int in = 1;
+   int er = 0;
+   int dl[128]; /* is it enough ? */
+   if (sdl[0]==0)
+     sdl = "-";
    if (!notefile[0]) {
       if (idx >= 0)
 	 dprintf(idx, "%s.\n", BOT_NOMESSAGES);
@@ -411,6 +471,7 @@ static void notes_del (char * hand, char * nick, int dl, int idx)
       fclose(f);
       return;
    }
+   notes_parse(dl, sdl);
    while (!feof(f)) {
       fgets(s, 512, f);
       if (s[strlen(s) - 1] == '\n')
@@ -421,9 +482,11 @@ static void notes_del (char * hand, char * nick, int dl, int idx)
 	    s1 = s;
 	    to = newsplit(&s1);
 	    if (strcasecmp(to, hand) == 0) {
-	       if ((dl > 0) && (in != dl))
-		  fprintf(g, "%s %s\n", to, s1);
-	       in++;
+	        if (!notes_in(dl, in))
+		    fprintf(g, "%s %s\n", to, s1);
+		else
+		  er++;
+		in++;
 	    } else
 	       fprintf(g, "%s %s\n", to, s1);
 	 } else
@@ -439,7 +502,7 @@ static void notes_del (char * hand, char * nick, int dl, int idx)
 #else
    movefile(s, notefile);
 #endif
-   if ((dl >= in) && (dl > 0)) {
+   if ((er == 0) && (in > 1)) {
       if (idx >= 0)
 	 dprintf(idx, "%s.\n", BOT_NOTTHATMANY);
       else
@@ -450,18 +513,18 @@ static void notes_del (char * hand, char * nick, int dl, int idx)
       else
 	 dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, BOT_NOMESSAGES);
    } else {
-      if (dl == 0) {
+      if (er==(in-1)) {
 	 if (idx >= 0)
 	    dprintf(idx, "%s.\n", BOT_NOTESERASED);
 	 else
 	    dprintf(DP_HELP, "NOTICE %s :%s.\n", nick, BOT_NOTESERASED);
       } else {
 	 if (idx >= 0)
-	    dprintf(idx, "%s #%d; %d left.\n", MISC_ERASED, dl, in - 2,
-					MISC_LEFT);
+	    dprintf(idx, "%s %d note%s; %d left.\n", MISC_ERASED, er, (er>1)?"s":"",
+		    in-1-er, MISC_LEFT);
 	 else
-	    dprintf(DP_HELP, "NOTICE %s :%s #%d; %d %s.\n", MISC_ERASED,
-			nick, dl, in - 2, MISC_LEFT);
+	    dprintf(DP_HELP, "NOTICE %s :%s %d note%s; %d %s.\n", nick, MISC_ERASED,
+		    er, (er>1)?"s":"", in-1-er, MISC_LEFT);
       }
    }
 }
@@ -532,21 +595,23 @@ static void cmd_notes (struct userrec * u, int idx, char * par)
       dprintf(idx, "Usage: notes index\n");
       dprintf(idx, "       notes read <# or ALL>\n");
       dprintf(idx, "       notes erase <# or ALL>\n");
+      dprintf(idx, "       # may be numbers and/or intervals separated by ;\n");
+      dprintf(idx, "       ex: notes erase 2-4;8;16-\n");
       return;
    }
    fcn = newsplit(&par);
    if (strcasecmp(fcn, "index") == 0)
-      notes_read(dcc[idx].nick, "", -1, idx);
+      notes_read(dcc[idx].nick, "", "+", idx);
    else if (strcasecmp(fcn, "read") == 0) {
       if (strcasecmp(par, "all") == 0)
-	 notes_read(dcc[idx].nick, "", 0, idx);
+	 notes_read(dcc[idx].nick, "", "-", idx);
       else
-	 notes_read(dcc[idx].nick, "", atoi(par), idx);
+	 notes_read(dcc[idx].nick, "", par, idx);
    } else if (strcasecmp(fcn, "erase") == 0) {
       if (strcasecmp(par, "all") == 0)
-	 notes_del(dcc[idx].nick, "", 0, idx);
+	 notes_del(dcc[idx].nick, "", "-", idx);
       else
-	 notes_del(dcc[idx].nick, "", atoi(par), idx);
+	 notes_del(dcc[idx].nick, "", par, idx);
    } else {
       dprintf(idx, "Function must be one of INDEX, READ, or ERASE.\n");
       return;
@@ -598,6 +663,8 @@ static int msg_notes (char * nick, char * host, struct userrec * u, char * par)
       dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] TO <nick> <msg>\n", nick);
       dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] READ <# or ALL>\n", nick);
       dprintf(DP_HELP, "NOTICE %s :       NOTES [pass] ERASE <# or ALL>\n", nick);
+      dprintf(DP_HELP, "NOTICE %s :       # may be numbers and/or intervals separated by ;\n", nick);
+      dprintf(DP_HELP, "NOTICE %s :       ex: NOTES mypass ERASE 2-4;8;16-\n", nick);
       return 1;
    }
    if (!u_pass_match(u,"-")) {
@@ -608,17 +675,17 @@ static int msg_notes (char * nick, char * host, struct userrec * u, char * par)
    }
    fcn = newsplit(&par);
    if (strcasecmp(fcn, "INDEX") == 0)
-      notes_read(u->handle, nick, -1, -1);
+      notes_read(u->handle, nick, "+", -1);
    else if (strcasecmp(fcn, "READ") == 0) {
       if (strcasecmp(par, "ALL") == 0)
-	 notes_read(u->handle, nick, 0, -1);
+	 notes_read(u->handle, nick, "-", -1);
       else
-	 notes_read(u->handle, nick, atoi(par), -1);
+	 notes_read(u->handle, nick, par, -1);
    } else if (strcasecmp(fcn, "ERASE") == 0) {
       if (strcasecmp(par, "ALL") == 0)
-	 notes_del(u->handle, nick, 0, -1);
+	 notes_del(u->handle, nick, "-", -1);
       else
-	 notes_del(u->handle, nick, atoi(par), -1);
+	 notes_del(u->handle, nick, par, -1);
    } else if (strcasecmp(fcn, "TO") == 0) {
       char *to;
       int i;
@@ -729,12 +796,12 @@ static void away_notes ( char * bot, int idx, char * msg ) {
    if (msg && msg[0])
      dprintf(idx,"Notes will be stored.\n");
    else
-     notes_read(dcc[idx].nick, 0, -1, idx);
+     notes_read(dcc[idx].nick, 0, "+", idx);
 }
 
 static int chon_notes ( char * nick, int idx ) {
    if (dcc[idx].type == &DCC_CHAT)
-     notes_read(nick, 0, -1, idx);
+     notes_read(nick, 0, "+", idx);
    return 0;
 }
 
@@ -848,9 +915,9 @@ static void notes_report (int idx, int details) {
    
    if (details) {
       if (notefile[0])
-	dprintf(idx, "   Notes can be stored, in: %s\n", notefile);
+	dprintf(idx, "    Notes can be stored, in: %s\n", notefile);
       else
-	dprintf(idx, "   Notes can not be stored.\n");
+	dprintf(idx, "    Notes can not be stored.\n");
    }
 }
 

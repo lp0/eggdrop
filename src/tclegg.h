@@ -113,6 +113,12 @@ typedef struct _tcl_int {
    int readonly;
 } tcl_ints;
 
+typedef struct _tcl_coups {
+   char * name;
+   int * lptr;
+   int * rptr;
+} tcl_coups;
+
 typedef struct _tcl_cmds {
    char * name;
    void * func;
@@ -122,6 +128,8 @@ void add_tcl_commands (tcl_cmds *);
 void rem_tcl_commands (tcl_cmds *);
 void add_tcl_strings (tcl_strings *);
 void rem_tcl_strings (tcl_strings *);
+void add_tcl_coups (tcl_coups *);
+void rem_tcl_coups (tcl_coups *);
 void add_tcl_ints (tcl_ints *);
 void rem_tcl_ints (tcl_ints *);
 /* set Tcl variables to match eggdrop internal variables */

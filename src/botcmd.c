@@ -81,8 +81,7 @@ static void fake_alert (int idx, char * item, char * extra)
 }
 
 /* chan <from> <chan> <text> */
-static void bot_chan (int idx, char * msg)
-{
+static void bot_chan2 (int idx, char * msg) {
    char *from, *p;
    int i, chan;
    
@@ -694,14 +693,10 @@ static void bot_trace (int idx, char * par) {
    context;
    from = newsplit(&par);
    dest = newsplit(&par);
-   if (strcasecmp(dest, botnetnick) == 0) {
-      simple_sprintf(TBUF,"%s:%s",par,botnetnick);
-      botnet_send_traced(idx,from,TBUF);
-   } else {
-      i = nextbot(dest);
-      if (i >= 0)
-	botnet_send_trace(i, from, dest, par);
-   }
+   simple_sprintf(TBUF,"%s:%s",par,botnetnick);
+   botnet_send_traced(idx,from,TBUF);
+   if (strcasecmp(dest, botnetnick) && ((i = nextbot(dest)) > 0))
+     botnet_send_trace(i, from, dest, par);
 }
 
 static void bot_traced (int idx, char * par) {
@@ -1384,9 +1379,9 @@ botcmd_t C_bot[]={
   { "aw", (Function) bot_away },
   { "away", (Function) bot_away },
   { "bye", (Function) bot_bye },
-  { "c", (Function) bot_chan },
+  { "c", (Function) bot_chan2 },
 #ifndef NO_OLD_BOTNET
-  { "chan", (Function) bot_chan },
+  { "chan", (Function) bot_chan2 },
   { "chat", (Function) bot_chat },
 #endif
   { "ct", (Function) bot_chat },

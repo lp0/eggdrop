@@ -20,8 +20,8 @@ struct flag_record {
 /* + user defined A-Z                      */
 /*   unused letters: eglrwyz               */
 /* botflags soon to be:                    */
-/*   ?9876543 210??sr? p???l??i h?????ba   */
-/*   unused letters: cdefgijkmnoqtuvwxyz   */
+/*   ?9876543 210??sr? p???l??i hg????ba   */
+/*   unused letters: cdefjkmnoqtuvwxyz     */
 /* chanflags:                              */
 /*   ???????? ??vu?s?q ?onm?k?? ??f?d??a   */
 /* + user defined A-Z                      */
@@ -32,7 +32,7 @@ struct flag_record {
 
 #define USER_VALID    0x00B9f6Af
 #define CHAN_VALID    0x00357429
-#define BOT_VALID     0x7fe68981
+#define BOT_VALID     0x7fe689C1
 
 #define USER_AUTOOP   0x00000001  /* a   auto-op - future */
 #define USER_BOT      0x00000002  /* b   user is a bot */
@@ -68,9 +68,9 @@ struct flag_record {
 #define BOT_D         0x00000008  /* d   unused */
 #define BOT_E         0x00000010  /* e   unused */
 #define BOT_F         0x00000020  /* f   unused */
-#define BOT_G         0x00000040  /* g   unused */
+#define BOT_GLOBAL    0x00000040  /* g   all channel are shared */
 #define BOT_HUB       0x00000080  /* h   auto-link to ONE of these bots */
-#define BOT_ISOLATE   0x00000100  /* i   unused */
+#define BOT_ISOLATE   0x00000100  /* i   Isolate party line from botnet */
 #define BOT_J         0x00000200  /* j   unused */
 #define BOT_K         0x00000400  /* k   unused */
 #define BOT_LEAF      0x00000800  /* l   may not link other bots */
@@ -126,6 +126,10 @@ struct flag_record {
 #define glob_party(x) ((x).global & USER_PARTY)
 #define glob_xfer(x) ((x).global & USER_XFER)
 #define glob_hilite(x) ((x).global & USER_HIGHLITE)
+
+#define bot_global(x) ((x).bot & BOT_GLOBAL)
+#define bot_chan(x) ((x).chan & BOT_AGGRESSIVE)
+#define bot_shared(x) ((x).bot & BOT_SHARE)
 
 #ifndef MAKING_MODS
 void get_user_flagrec (struct userrec *, struct flag_record *, char *);

@@ -25,7 +25,7 @@ extern struct chanset_t *chanset;
 extern Tcl_Interp * interp;
 extern time_t now;
 extern int egg_numver, connect_timeout, conmask, backgrd, max_dcc;
-extern int make_userfile, default_flags;
+extern int make_userfile, default_flags, debug_output, ignore_time;
 extern char botnetnick[], ver[], origbotname[], notify_new[];
 
 /* dcc list */
@@ -48,6 +48,10 @@ int bot_timeout = 60;
 int identtimeout = 5;
 /* even bothet with ident lookups :) */
 int protect_telnet = 1;
+/* number of telnet connections to be considered a flood */
+int flood_telnet_thr = 5;
+/* in how many seconds? */
+int flood_telnet_time = 60;
 
 static void strip_telnet (int sock, char * buf, int * len)
 {
@@ -334,10 +338,12 @@ static void dcc_bot (int idx, char * code,int i) {
    int f;
    context;
    strip_telnet(dcc[idx].sock, code, &i);
-   if (code[0] == 's') 
-      putlog(LOG_BOTSHARE,"*","{%s} %s",dcc[idx].nick,code+2);
-   else
-      putlog(LOG_BOTNET,"*","[%s] %s",dcc[idx].nick,code);
+   if (debug_output) {
+     if (code[0] == 's') 
+        putlog(LOG_BOTSHARE,"*","{%s} %s",dcc[idx].nick,code+2);
+     else
+        putlog(LOG_BOTNET,"*","[%s] %s",dcc[idx].nick,code);
+   }
    msg = strchr(code, ' ');
    if (msg) {
       *msg =0;
@@ -864,6 +870,42 @@ struct dcc_table DCC_CHAT = {
    out_dcc_general  
 };
 
+static int lasttelnets;
+static char lasttelnethost[81];
+static time_t lasttelnettime;
+
+/* a modified detect_flood for incoming telnet flood protection */
+static int detect_telnet_flood (char * floodhost)
+{
+   context;
+   if (flood_telnet_thr == 0)
+      return 0;			/* no flood protection */
+   if (strcasecmp(lasttelnethost, floodhost) != 0) {	/* new */
+      strcpy(lasttelnethost, floodhost);
+      lasttelnettime = now;
+      lasttelnets = 0;
+      return 0;
+   }
+   if (lasttelnettime < now - flood_telnet_time) {
+      /* flood timer expired, reset it */
+      lasttelnettime = now;
+      lasttelnets = 0;
+      return 0;
+   }
+   lasttelnets++;
+   if (lasttelnets >= flood_telnet_thr) {	/* FLOOD */
+      /* reset counters */
+      lasttelnets = 0;
+      lasttelnettime = 0;
+      lasttelnethost[0] = 0;
+      putlog(LOG_MISC, "*", IRC_TELNETFLOOD, floodhost);
+      addignore(floodhost, origbotname, "Telnet connection flood", 
+                now + (60 * ignore_time));
+      return 1;
+   }
+   return 0;
+}
+
 static void dcc_telnet_got_ident(int, char*);
 
 static void dcc_telnet (int idx, char * buf,int i)
@@ -903,7 +945,7 @@ static void dcc_telnet (int idx, char * buf,int i)
    }
    context;
    sprintf(s2,"telnet!telnet@%s",s);
-   if (match_ignore(s2)) {
+   if (match_ignore(s2) || detect_telnet_flood(s2)) {
       killsock(sock);
       return;
    }

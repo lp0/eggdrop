@@ -137,6 +137,7 @@ struct chanset_t {
 #define CHAN_STATIC          0x8000000    /* channels that are NOT dynamic */
 #define CHAN_SHARED        0x10000000    /* channel is being shared */
 #define CHAN_ASKEDBANS     0x20000000
+#define CHAN_SEEN          0x40000000
 
 /* prototypes */
 memberlist *ismember(struct chanset_t *, char *);
@@ -164,6 +165,7 @@ struct chanset_t *findchan();
 #define channel_shared(chan) (chan->status & CHAN_SHARED)
 #define channel_static(chan) (chan->status & CHAN_STATIC)
 #define channel_cycle(chan) (chan->status & CHAN_CYCLE)
+#define channel_seen(chan) (chan->status & CHAN_SEEN)
 
 struct server_list {
    struct server_list * next;

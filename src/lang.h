@@ -272,6 +272,8 @@
 #define IRC_TELNET_ARGS botnetnick
 #define IRC_TELNET1             get_language(0x667)
 #define IRC_LIMBO               get_language(0x668)
+#define IRC_TELNETFLOOD         get_language(0x669)
+
 /* Eggdrop command line usage */
 
 #define EGG_USAGE	get_language(0x700)

@@ -1,6 +1,34 @@
 Changes in eggdrop: (since v1.3.0)
 ==================
 
+1.3.13 
+Foundby   Fixedby   What....
+Ernst     Beldin    .botattr SEGV
+          easton    /msg hello binds should be in a different place in config
+	  easton    help whois clarity fixes
+	  easton    easton likes 4 characet indents in status
+          Beldin    made assocs use zapf's the whole way (no broadcast),
+	            so isolate will work for them too
+          NC        allow 2 bots in same directory to received userfile shares
+	  NC        added a new bot flag 'g' for sharing of all channels
+	  NC        botattr should get logged well
+          NC        chattr <user> <channel> with no changes won't ** poof ** 
+	            as if the user was given all its flags from nothing
+	  NC        it is now possible to share with alternate hubs
+	  NC        one could get botnet traffic and share traffic even 
+	            though debug_output was set to 0
+          Beldin    botnet trace returns at result at each passing bot,
+	            indicating lag by link.
+Various   Beldin    .deluser was letting non +n's delete +n's (extra !)
+        Roger Stone GO should not be sent to self
+NC        Beldin    incoming shared chanrec were not being handled correctly
+NC        Beldin    incoming chattr's where not being checked for owner changes
+          NC        telnet ignore facility
+          Beldin    made couplet-variable support generic to support telnet
+	            ignore
+          Daklop    added a +seen channel setting
+Daklop    Beldin    probably solution to ident timeouts causing SEGV's
+
 1.3.12
 Foundby   Fixedby   What....
           Mloe      socks firewall fixes

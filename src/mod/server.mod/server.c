@@ -495,6 +495,12 @@ static tcl_strings my_tcl_strings[] =
    {0, 0, 0, 0}
 };
 
+static tcl_coups my_tcl_coups [] = {
+   { "flood-msg", &flood_thr, &flood_time },
+   { "flood-ctcp", &flood_ctcp_thr, &flood_ctcp_time },
+   { 0, 0, 0 }
+};
+
 static tcl_ints my_tcl_ints[] =
 {
    {"use-silence", 0, 0},
@@ -572,40 +578,6 @@ static char *tcl_eggserver (ClientData cdata, Tcl_Interp * irp, char * name1,
    return NULL;
 }
 
-/* used for read/write to integer couplets */
-typedef struct {
-   int *left;			/* left side of couplet */
-   int *right;			/* right side */
-} coupletinfo;
-
-static int couptot = 0;
-
-/* read/write integer couplets (int1:int2) */
-static char *tcl_eggcouplet (ClientData cdata, Tcl_Interp * irp, char * name1,
-			    char * name2, int flags)
-{
-   char *s, s1[41];
-   coupletinfo *cp = (coupletinfo *) cdata;
-   if (flags & (TCL_TRACE_READS | TCL_TRACE_UNSETS)) {
-      sprintf(s1, "%d:%d", *(cp->left), *(cp->right));
-      Tcl_SetVar2(interp, name1, name2, s1, TCL_GLOBAL_ONLY);
-      return NULL;
-   } else {			/* writes */
-      s = Tcl_GetVar2(interp, name1, name2, TCL_GLOBAL_ONLY);
-      if (s != NULL) {
-	 if (strlen(s) > 40)
-	    s[40] = 0;
-	 splitc(s1, s, ':');
-	 if (s1[0]) {
-	    *(cp->left) = atoi(s1);
-	    *(cp->right) = atoi(s);
-	 } else
-	    *(cp->left) = atoi(s);
-      }
-      return NULL;
-   }
-}
-
 /* trace the servers */
 #define tcl_traceserver(name,ptr) \
   Tcl_TraceVar(interp,name,TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS, \
@@ -615,31 +587,6 @@ static char *tcl_eggcouplet (ClientData cdata, Tcl_Interp * irp, char * name1,
   Tcl_UntraceVar(interp,name,TCL_TRACE_READS|TCL_TRACE_WRITES|TCL_TRACE_UNSETS, \
 	       tcl_eggserver,(ClientData)ptr)
 
-
-/* allocate couplet space for tracing couplets */
-static void tcl_tracecouplet (char * name, int * lptr, int * rptr)
-{
-   coupletinfo *cp;
-   cp = (coupletinfo *) nmalloc(sizeof(coupletinfo));
-   couptot += sizeof(coupletinfo);
-   cp->left = lptr;
-   cp->right = rptr;
-   Tcl_TraceVar(interp, name, TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
-		tcl_eggcouplet, (ClientData) cp);
-}
-
-static void tcl_untracecouplet (char * name)
-{
-   coupletinfo *cp;
-   cp = (coupletinfo *) Tcl_VarTraceInfo(interp, name,
-		   TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
-					 tcl_eggcouplet, NULL);
-   couptot -= sizeof(coupletinfo);
-   Tcl_UntraceVar(interp, name,
-		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
-		  tcl_eggcouplet, (ClientData) cp);
-   nfree(cp);
-}
 
 /* this only handles CHAT requests, otherwise it's handled in 
  * filesys */
@@ -756,7 +703,7 @@ static void server_report (int idx, int details)
 {
    char s1[128], s[128];
    
-   dprintf(idx, "   Online as: %s!%s (%s)\n", botname, botuserhost,
+   dprintf(idx, "    Online as: %s!%s (%s)\n", botname, botuserhost,
 	   botrealname);
    if (!trying_server) {
       daysdur(now, server_online, s1);
@@ -770,32 +717,32 @@ static void server_report (int idx, int details)
    }
    if (server_online) {
       int servidx = findanyidx(serv);
-      dprintf(idx, "   Server %s:%d %s\n", dcc[servidx].host, dcc[servidx].port,
+      dprintf(idx, "    Server %s:%d %s\n", dcc[servidx].host, dcc[servidx].port,
 	      trying_server ? "(trying)" : s);
    } else
-     dprintf(idx, "   %s\n", IRC_NOSERVER);
+     dprintf(idx, "    %s\n", IRC_NOSERVER);
    if (modeq.tot)
-      dprintf(idx, "   %s %d%%\n", IRC_MODEQUEUE,
+      dprintf(idx, "    %s %d%%\n", IRC_MODEQUEUE,
 	      (int) ((float) (modeq.tot * 100.0) / (float) maxqmsg));
    if (mq.tot)
-      dprintf(idx, "   %s %d%%\n", IRC_SERVERQUEUE,
+      dprintf(idx, "    %s %d%%\n", IRC_SERVERQUEUE,
 	      (int) ((float) (mq.tot * 100.0) / (float) maxqmsg));
    if (hq.tot)
-      dprintf(idx, "   %s %d%%\n", IRC_HELPQUEUE,
+      dprintf(idx, "    %s %d%%\n", IRC_HELPQUEUE,
 	      (int) ((float) (hq.tot * 100.0) / (float) maxqmsg));
    if (details) {
       if (min_servs)
-	dprintf(idx, "   Requiring a net of at least %d server(s)\n", min_servs);
+	dprintf(idx, "    Requiring a net of at least %d server(s)\n", min_servs);
       if (initserver[0])
-	dprintf(idx, "   On connect, I do: %s\n", initserver);
-      dprintf(idx, "   Flood is: %d msg/%ds, %d ctcp/%ds\n",
+	dprintf(idx, "    On connect, I do: %s\n", initserver);
+      dprintf(idx, "    Flood is: %d msg/%ds, %d ctcp/%ds\n",
 	      flood_thr, flood_time, flood_ctcp_thr, flood_ctcp_time);
    }
 }
 
 static int server_expmem ()
 {
-   int tot = couptot;
+   int tot = 0;
    struct msgq *m = mq.head;
    struct server_list *s = serverlist;
    context;
@@ -912,6 +859,7 @@ static char *server_close() {
    del_bind_table(H_ctcr);
    del_bind_table(H_ctcp);
    context;
+   rem_tcl_coups(my_tcl_coups);
    rem_tcl_strings(my_tcl_strings);
    rem_tcl_ints(my_tcl_ints);
    rem_help_reference("server.help");
@@ -927,8 +875,6 @@ static char *server_close() {
 		  TCL_TRACE_READS | TCL_TRACE_WRITES | TCL_TRACE_UNSETS,
 		  traced_server, NULL);
    tcl_untraceserver("servers", NULL);
-   tcl_untracecouplet("flood-msg");
-   tcl_untracecouplet("flood-ctcp");
    context;
    empty_msgq();
    context;
@@ -1040,15 +986,13 @@ char *server_start (Function * global_funcs)
    burst = 0;
    context;
    module_register(MODULE_NAME, server_table, 1, 0);
-   if (!module_depend(MODULE_NAME, "eggdrop", 103, 0))
-     return "This module requires eggdrop1.3.0 or later";
+   if (!module_depend(MODULE_NAME, "eggdrop", 103, 13))
+     return "This module requires eggdrop1.3.13 or later";
    /* weird ones */
    context;
    /* fool bot in reading the values */
    tcl_eggserver (NULL, interp, "servers", NULL, 0);
    tcl_traceserver("servers", NULL);
-   tcl_tracecouplet("flood-msg", &flood_thr, &flood_time);
-   tcl_tracecouplet("flood-ctcp", &flood_ctcp_thr, &flood_ctcp_time);
    s = Tcl_GetVar(interp, "nick", TCL_GLOBAL_ONLY);
    if (s) {
       strncpy(origbotname,s,NICKMAX);
@@ -1083,6 +1027,7 @@ char *server_start (Function * global_funcs)
    my_tcl_ints[1].val = &use_console_r;
    add_tcl_ints(my_tcl_ints);
    add_tcl_commands(my_tcl_cmds);
+   add_tcl_coups(my_tcl_coups);
    context;
    add_hook(HOOK_SECONDLY,server_secondly);
    add_hook(HOOK_5MINUTELY,server_5minutely);
