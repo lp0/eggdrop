@@ -17,6 +17,34 @@
 0x109,Use '.bans all' to see the total list
 0x10A,No longer banning
 
+# EXEMPTS_
+
+0x110,Created
+0x111,last used
+0x112,inactive
+0x113,placed by
+0x114,Global exempts
+0x115,not active on
+0x116,Channel exempts for
+0x117,not active
+0x118,not placed by bot
+0x119,Use '.exempts all' to see the total list
+0x11A,No longer ban exempting
+
+# Invites
+
+0x120,Created
+0x121,last used
+0x122,inactive
+0x123,placed by
+0x124,Global invites
+0x125,not active on
+0x126,Channel invites for
+0x127,not active
+0x128,not placed by bot
+0x129,Use '.invites all' to see the total list
+0x12A,No longer inviteing
+
 # MOD_
 
 0x200,Already loaded.
@@ -117,7 +145,7 @@ module, please consult the default config file for info.\n
 0x532,Permanent owner(s)
 0x533,WARNING! You are running eggdrop as root!
 0x534,CONFIG FILE NOT LOADED (NOT FOUND, OR ERROR)
-0x535,USER FILE NOT FOUND!  (try 'eggdrop -m' to make one)
+0x535,USER FILE NOT FOUND!  (try './eggdrop -m' to make one)
 0x536,STARTING BOT IN USERFILE CREATION MODE.\n\
 Telnet to the bot and enter 'NEW' as your nickname.
 0x537,OR Go to IRC and:  /msg %s hello\n
@@ -130,6 +158,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x53e,%B  (%E)\n\nPlease enter your nickname.\n
 0x53f,Cycling logfile %s, over max-logsize (%d)
 0x540,\nNickname.\n
+0x541,Last message repeated %d time(s).\n
 
 # IRC_
 
@@ -224,11 +253,11 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x658,...and thank you for playing.
 0x659,Jumping servers (need %d servers, only have %d)
 0x65a,changing servers
-0x65b,I'm on too many channels--can't join:
-0x65c,Channel full--can't join:
-0x65d,Channel invite only--can't join:
-0x65e,Banned from channel--can't join:
-0x65f,Server says I'm not on channel:
+0x65b,I'm on too many channels--can't join: %s
+0x65c,Channel full--can't join: %s
+0x65d,Channel invite only--can't join: %s
+0x65e,Banned from channel--can't join: %s
+0x65f,Server says I'm not on channel: %s
 0x660,Bad key--can't join: %s
 0x661,NOTICE %s :All commands are done via /MSG. For the complete list, /MSG %s help   Cya!\n
 0x662,NOTICE %s :I don't recognize you from that host.\n
@@ -244,6 +273,10 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x66c,don't kick my friends, bud
 0x66d,...and don't come back.
 0x66e,Switching back to altnick %s
+0x670,Removed exempt
+0x671,Removed invite
+
+# EGG_
 
 0x700,Command line arguments:\n\
   -h   help\n\
@@ -256,10 +289,15 @@ Telnet to the bot and enter 'NEW' as your nickname.
 
 0x701,I detect %s already running from this directory.\n
 0x702,If this is incorrect, erase the '%s'\n
+0x703,* Warning!  Could not write %s file!\n
+
+# USER_
 
 0x800,  (is a global op)
 0x801,  (is a bot)
 0x802,  (is a master)
+
+# CHAN_
 
 0x900,No such channel defined
 0x901,Bogus channel key
@@ -276,6 +314,8 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0x90c,flood
 0x90d,bogus ban
 0x90e,bogus username
+0x90f,bogus exempt
+0x910,bogus invite
 
 0xa00,No ignores
 0xa01,Currently ignoring
@@ -307,7 +347,7 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0xb17,### Use '.notes read' to read them.\n
 0xb18,Bot shut down beginning....
 0xb19,No such user
-0xb1a,No channels
+0xb1a,no channels
 0xb1b,Party line members:
 0xb1c,Bots connected
 0xb1d,Other people on the bot
@@ -429,3 +469,48 @@ Telnet to the bot and enter 'NEW' as your nickname.
 0xe05,is now away
 0xe06,is no longer away
 0xe07,Nick Change:
+
+# dcc.c Messages
+
+0xe08,Rejecting link from %s
+0xe09,Linked to %s.
+0xe0a,Failed link to %s.
+0xe0b,Bad password on connect attempt to %s.
+0xe0c,Password required for connection to %s.
+0xe0d,ERROR linking %s: %s
+0xe0e,Lost Bot: %s
+0xe0f,Timeout: bot link to %s at %s:%d
+0xe10,Logged in: %s (%s/%d)
+0xe11,Bad Password: [%s]%s/%d
+0xe12,Negative on that, Houston.\n
+0xe13,*** %s has joined the party line.\n
+0xe14,Lost dcc connection to %s (%s/%d)
+0xe15,Password timeout on dcc chat: [%s]%s
+0xe16,DCC connection closed (%s!%s)
+0xe17,Failed TELNET incoming (%s)
+0xe18,Refused %s/%d (bad src port)
+0xe19,Refused %s/%d (invalid ip)
+0xe1a,Refused %s (bad hostname)
+0xe1b,Telnet connection: %s/%d
+0xe1c,Ident failed for %s: %s
+0xe1d,(!) Listening port %d abruptly died.
+0xe1e,Refused %s (bad nick)
+0xe1f,Refused %s (non-bot)
+0xe20,Refused %s (non-user)
+0xe21,Refused %s (invalid handle: %s)
+0xe22,Refused telnet connection from %s (duplicate)
+0xe23,Refused [%s]%s (no password)
+0xe24,Lost telnet connection to %s/%d
+0xe25,Ident timeout on telnet: %s
+0xe26,Bot installation complete, first master is %s
+0xe27,New user via telnet: [%s]%s/%d
+0xe28,Lost new telnet user (%s/%d)
+0xe29,Lost new telnet user %s (%s/%d)
+0xe2a,Timeout on new telnet user: %s/%d
+0xe2b,Timeout on new telnet user: [%s]%s/%d
+0xe2c,Tcl error [%s]: %s
+0xe2d,*** ATTENTION: DEAD SOCKET (%d) OF TYPE %s UNTRAPPED
+0xe2e,Lost connection while identing [%s/%d]
+0xe2f,Timeout/EOF ident connection
+0xe30,Lost ident wait telnet socket!!
+0xe31,Denied telnet: %s, No Access

@@ -17,7 +17,8 @@ AC_ISC_POSIX
 AC_MINIX
 dnl no cross-compiling!
 
-if test ! x${cross_compiling} = xno; then
+if test ! x${cross_compiling} = xno
+then
   echo ""
   echo "This system does not appear to have a working C compiler."
   echo "A working C compiler is required to compile eggdrop."
@@ -33,9 +34,11 @@ AC_CHECK_PROG(UNAME,uname,uname)
 AC_PROG_RANLIB
 
 dnl stop putting -g in there!  @#$!#$%!
-if test "x${CFLAGS}" = "x" ; then
+if test "x${CFLAGS}" = "x"
+then
   CFLAGS="-O"
-  if test "x$CC" = "xgcc"; then
+  if test "x$CC" = "xgcc"
+  then
     CFLAGS="-O2"
   fi
 else
@@ -67,7 +70,8 @@ fi
 rm -f $ac_file1 $ac_file2
 
 dnl test the os and set the module linking settings
-if test "x$STRIP" = "x"; then
+if test "x$STRIP" = "x"
+then
   STRIP="touch"
 fi
 IRIX=no
@@ -96,7 +100,8 @@ case $system in
     DLOPEN_1=
     ;;
   BSD/OS)
-    if test x`uname -r | cut -d . -f 1` = "x2"; then
+    if test x`uname -r | cut -d . -f 1` = "x2"
+    then
       AC_MSG_RESULT(BSD/OS 2! statically linked modules are the only choice)
       need_dl=0
       DEFAULT_MAKE=static
@@ -110,7 +115,8 @@ case $system in
       AC_DEFINE(MODULES_OK)
     fi
     AC_CHECK_PROG(GMAKE,gmake,gmake)
-    if test "x$GMAKE" = "x"; then
+    if test "x$GMAKE" = "x"
+    then
       echo ""
       echo "Yoicks! you have BSD/OS & you dont have 'gmake', you may"
       echo "not be able to compile the bot successfully :("
@@ -125,7 +131,8 @@ case $system in
     DLOPEN_1=
     ;;
   SunOS)
-    if test x`uname -r | cut -d . -f 1` = "x5"; then
+    if test x`uname -r | cut -d . -f 1` = "x5"
+    then
       AC_MSG_RESULT(Solaris!)
       SHLIB_LD="/usr/ccs/bin/ld -G -z text"
     else
@@ -141,26 +148,26 @@ case $system in
     AC_MSG_RESULT(OSF...)
     case `uname -r | cut -d . -f 1` in
       V*)
-        AC_MSG_RESULT(Digital OSF)
+	AC_MSG_RESULT(Digital OSF)
 	SHLIB_LD="ld -shared -expect_unresolved '*'"
 	SHLIB_STRIP="touch"
-        AC_DEFINE(MODULES_OK)
-        ;;
+	AC_DEFINE(MODULES_OK)
+	;;
       1.0|1.1|1.2)
-        AC_MSG_RESULT(pre 1.3)
+	AC_MSG_RESULT(pre 1.3)
 	SHLIB_LD='ld -R -export $@:'
 	AC_DEFINE(OSF1_HACKS)
-        AC_DEFINE(MODULES_OK)
-        ;;
+	AC_DEFINE(MODULES_OK)
+	;;
       1.*)
-        AC_MSG_RESULT(1.3+)
-        SHLIB_CFL="$CC -fpic"
+	AC_MSG_RESULT(1.3+)
+	SHLIB_CFL="$CC -fpic"
 	SHLIB_LD='ld -shared'
 	AC_DEFINE(OSF1_HACKS)
-        AC_DEFINE(MODULES_OK)
-        ;;
+	AC_DEFINE(MODULES_OK)
+	;;
       *)
-        AC_MSG_RESULT(Some other weird OSF! No modules for you..)
+	AC_MSG_RESULT(Some other weird OSF! No modules for you..)
 	need_dl=0
 	DEFAULT_MAKE=static
 	;;
@@ -172,13 +179,14 @@ case $system in
     AC_CHECK_LIB(dld,shl_load)
     AC_DEFINE(MODULES_OK)
     AC_DEFINE(HPUX_HACKS)
-    if test x`uname -r | cut -d . -f 2` = "x10"; then
+    if test x`uname -r | cut -d . -f 2` = "x10"
+    then
        AC_DEFINE(HPUX10_HACKS)
     fi
     BEL_MOD_LD="gcc -Wl,-E"
     SHLIB_CC="gcc -fPIC"
     SHLIB_LD="ld -b"
-    need_dl=0;
+    need_dl=0
     ;;
   IRIX64)
     echo "$ac_t""you are cursed with IRIX" 1>&6
@@ -195,7 +203,8 @@ case $system in
     DEFAULT_MAKE=static
     ;;
   *)
-    if test -r /mach; then
+    if test -r /mach
+    then
       AC_MSG_RESULT(NeXT...We are borg, you will be assimilated)
       AC_MSG_RESULT(break out the static modules, it's all you'll ever get :P)
       AC_MSG_RESULT(Hiya DK :P)
@@ -210,16 +219,19 @@ case $system in
 esac
 
 dnl Check for Sun libraries.
-if test ${IRIX} = yes; then
+if test ${IRIX} = yes
+then
   echo Skipping library tests because they CONFUSE Irix.
 else
   AC_CHECK_LIB(socket,socket)
   AC_CHECK_LIB(nsl,connect)
   AC_CHECK_LIB(dns,gethostbyname)
   AC_CHECK_LIB(dl,dlopen)
-  if test x`${UNAME}` = "xSunOS"; then
+  if test x`${UNAME}` = "xSunOS"
+  then
     AC_MSG_CHECKING(for SunOS 4)
-    if test x`uname -r | cut -d . -f 1` = "x5"; then
+    if test x`uname -r | cut -d . -f 1` = "x5"
+    then
       AC_MSG_RESULT(Solaris -- "*bollocks*" zarni )
     else
       AC_MSG_RESULT(SunOS -- sigh)
@@ -247,7 +259,8 @@ AC_CHECK_FUNCS(rename getrusage getdtablesize srandom random sigaction)
 AC_CHECK_FUNCS(sigemptyset vsprintf strcasecmp setpgid clock dlopen)
 AC_CHECK_FUNCS(dprintf bzero uname vsnprintf)
 
-if test "${ac_cv_func_vsprintf}" = "no"; then
+if test "${ac_cv_func_vsprintf}" = "no"
+then
   echo ""
   echo "Your system does not have the sprintf/vsprintf libraries."
   echo "These are required to compile almost anything.  Sorry."
@@ -255,16 +268,15 @@ if test "${ac_cv_func_vsprintf}" = "no"; then
   exit
 fi
 
-if test "${ac_cv_header_stdc}" = "no"; then
+if test "${ac_cv_header_stdc}" = "no"
+then
   echo ""
   echo "Your system must support ANSI C Header files."
   echo "These are required for the language support. Sorry."
   exit
 fi
 
-
 dnl check how much space is left in filedb (informational purposes)
-
 AC_MSG_CHECKING(space left in file database struct)
 cat >abacab.c <<'EOF'
 #include <stdio.h>
@@ -287,7 +299,8 @@ dnl where is tcl?  is it here?
 dnl oohh new configure --variables for those with multiple tcl libs
 AC_CHECK_PROG(BASENAME,basename,basename)
 AC_CHECK_PROG(DIRNAME,dirname,dirname)
-if test $BASENAME = "" || test $DIRNAME = "" ; then
+if test $BASENAME = "" || test $DIRNAME = ""
+then
   echo ack...no basename or dirname, we cant configure tcl without em.
   exit 1
 fi
@@ -295,31 +308,43 @@ fi
 AC_ARG_WITH(tcllib, [  --with-tcllib=PATH      full path to tcl library], tcllibname=$withval)
 AC_ARG_WITH(tclinc, [  --with-tclinc=PATH      full path to tcl header], tclincname=$withval)
 
-if test -r "$tcllibname"; then
+if test -r "$tcllibname"
+then
   TCLLIB=`$DIRNAME $tcllibname`
   TCLLIBFN=`$BASENAME $tcllibname | cut -c4-`
   echo "using tcllib $TCLLIB/lib$TCLLIBFN"
 else
 
- libnames="tcl.so tcl.so.1 tcl81.so.1.0 tcl80.so.1.0 tcl76.so.1.0 tcl75.so.1.0\
-          tcl81.so.1 tcl80.so.1 tcl76.so.1 tcl75.so.1\
-	  tcl8.1.so tcl8.0.so tcl7.6.so tcl7.5.so\
-	  tcl8.1.so.1 tcl8.0.so.1 tcl7.6.so.1 tcl7.5.so.1\
-	  tcl.a tcl81.a tcl80.a tcl76.a tcl75.a tcl74.a\
-	  tcl8.1.a tcl8.0.a tcl7.6.a tcl7.5.a tcl7.4.a"
+ libnames="tcl.so tcl.so.1\
+	tcl8.2.so tcl8.2.so.1 tcl82.so.1.0 tcl82.so.1\
+	tcl8.1.so tcl8.1.so.1 tcl81.so.1.0 tcl81.so.1\
+	tcl8.0.so tcl8.0.so.1 tcl80.so.1.0 tcl80.so.1\
+	tcl7.6.so tcl7.6.so.1 tcl76.so.1.0 tcl76.so.1\
+	tcl7.5.so tcl7.5.so.1 tcl75.so.1.0 tcl75.so.1\
+	tcl.a\
+	tcl8.2.a tcl82.a\
+	tcl8.1.a tcl81.a\
+	tcl8.0.a tcl80.a\
+	tcl7.6.a tcl76.a\
+	tcl7.5.a tcl75.a\
+	tcl7.4.a tcl74.a"
 
- # look for libtcl.a: if TCLLIB is set, check there first
- if test "$TCLLIB" != ""; then
+ # look for libtcl: if TCLLIB is set, check there first
+ if test "$TCLLIB" != ""
+ then
    TCLLIBFN=notfound
-   for checkfn in $libnames;
+   for checkfn in $libnames
    do
-     if test -r $TCLLIB/lib$checkfn; then
-       if test $TCLLIBFN = notfound; then
-         TCLLIBFN=$checkfn
+     if test -r $TCLLIB/lib$checkfn
+     then
+       if test $TCLLIBFN = notfound
+       then
+	 TCLLIBFN=$checkfn
        fi
      fi
    done
-   if test $TCLLIBFN = notfound; then
+   if test $TCLLIBFN = notfound
+   then
      echo "Environment variable TCLLIB is set, but incorrect."
      unset TCLLIB
    fi
@@ -327,19 +352,23 @@ else
 
  # check in common places now
  AC_MSG_CHECKING(for libtcl)
- if test "$TCLLIB" = ""; then
-   for checkfn in $libnames;
+ if test "$TCLLIB" = ""
+ then
+   for checkfn in $libnames
    do
-     if test "$TCLLIB" = ""; then
-       for check in /usr/local/lib /usr/local/lib/tcl /usr/local/pkgs/tcl/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/tcl $HOME/tcl/lib;
+     if test "$TCLLIB" = ""
+     then
+       for check in /usr/local/lib /usr/local/lib/tcl /usr/local/pkgs/tcl/lib /usr/lib /usr/i486-linuxaout/lib $HOME/lib $HOME/tcl $HOME/tcl/lib $HOME /lib
        do
-         if test -r $check/lib$checkfn; then
-           if test "$TCLLIB" = ""; then
-             AC_MSG_RESULT(found in $check/lib$checkfn)
-             TCLLIB=$check
-             TCLLIBFN=$checkfn
-           fi
-         fi
+	 if test -r $check/lib$checkfn
+         then
+	   if test "$TCLLIB" = ""
+           then
+	     AC_MSG_RESULT(found in $check/lib$checkfn)
+	     TCLLIB=$check
+	     TCLLIBFN=$checkfn
+	   fi
+	 fi
        done
      fi
    done
@@ -350,20 +379,23 @@ else
 fi # option
 
 # give up if they don't even have that
-if test "$TCLLIB" = ""; then
+if test "$TCLLIB" = ""
+then
   AC_MSG_RESULT(not found)
 fi
 
 # now look for pesky $TCLINCFN file
-if test -r "$tclincname"; then
+if test -r "$tclincname"
+then
   TCLINC=`$DIRNAME $tclincname`
   TCLINCFN=`$BASENAME $tclincname`
   echo "using TCL header $TCLINC/$TCLINCFN"
 else
   TCLINCFN=tcl.h
-  	
-  if test "$TCLINC" != ""; then
-    if test ! -r $TCLINC/$TCLINCFN; then
+  if test "$TCLINC" != ""
+  then
+    if test ! -r $TCLINC/$TCLINCFN
+    then
       echo "Environment variable TCLINC is set, but incorrect."
       unset TCLINC
     fi
@@ -371,24 +403,45 @@ else
 
   # check in common places now
   AC_MSG_CHECKING(for $TCLINCFN)
-  if test "$TCLINC" = ""; then
-    for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME $HOME/tcl $HOME/tcl/include /usr/local/include/tcl8.0;
+  if test "$TCLINC" = ""
+  then
+    for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME/include $HOME/tcl $HOME/tcl/include $HOME
     do
-      if test -r $check/$TCLINCFN; then
-        if test "$TCLINC" != ""; then
-          break
-        fi
-        AC_MSG_RESULT(found in $check/$TCLINCFN)
-        TCLINC=$check
-        break
+      if test -r $check/$TCLINCFN
+      then
+	if test "$TCLINC" != ""
+        then
+	  break
+	fi
+	AC_MSG_RESULT(found in $check/$TCLINCFN)
+	TCLINC=$check
+	break
       fi
     done
+    # freebsd hack
+    if test "$TCLINC" = ""
+    then
+      for ver in 8.2 8.1 8.0 7.6 7.5 7.4
+      do
+	if test -r /usr/local/include/tcl$ver/$TCLINCFN
+        then
+	  if test "$TCLINC" != ""
+          then
+	    break
+	  fi
+	  AC_MSG_RESULT(found in /usr/local/include/tcl$ver/$TCLINCFN)
+	  TCLINC=/usr/local/include/tcl$ver
+	  break
+	fi
+      done
+    fi
   else
     AC_MSG_RESULT(found in $TCLINC/$TCLINCFN)
   fi
 
   # had TCLLIB but not TCLINC?  so close... :(
-  if test "$TCLINC" = ""; then
+  if test "$TCLINC" = ""
+  then
     AC_MSG_RESULT(not found)
     unset TCLLIB
     unset TCLLIBFN
@@ -397,7 +450,8 @@ fi # option
 
 # done looking, now either TCLLIB & TCLINC are both set, or neither is set
 
-if test "$TCLLIB" = ""; then
+if test "$TCLLIB" = ""
+then
   echo ""
   echo "I can't find Tcl on this system."
   echo ""
@@ -420,14 +474,19 @@ else
     if test $tclver = 0; then
       tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "8.0" | wc -l`
       if test $tclver = 0; then
-        tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "8.1" | wc -l`
-        if test $tclver = 1; then
+	tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "8.1" | wc -l`
+	if test $tclver = 0; then
+	  tclver=`grep TCL_VERSION $TCLINC/$TCLINCFN | grep "8.2" | wc -l`
+	  if test $tclver = 1; then
+	    AC_MSG_RESULT(8.2 found)	
+	  else
+	    AC_MSG_RESULT(hmm... unknown version)
+          fi
+	else
 	  AC_MSG_RESULT(8.1 found)
-        else
-          AC_MSG_RESULT(hmm... unknown version)
-        fi
+	fi
       else
-        AC_MSG_RESULT(8.0 found!)
+	AC_MSG_RESULT(8.0 found!)
       fi
     else
       AC_MSG_RESULT(7.6 found!)
@@ -435,21 +494,23 @@ else
   else      
     AC_MSG_RESULT(7.5 found)
   fi
-
 fi # option 
 
-  if test $need_dl = 1 -a "${ac_cv_func_dlopen}" = "no"; then
-    if test "$LINUX" = "yes"; then
-      echo "Since you are on a Linux system, this has a know problem,"
-      if test -r /lib/libdl.so.1; then
-        echo "and you seem to have it, I know a kludge for it,"
+  if test $need_dl = 1 -a "${ac_cv_func_dlopen}" = "no"
+  then
+    if test "$LINUX" = "yes"
+    then
+      echo "Since you are on a Linux system, this has a known problem,"
+      if test -r /lib/libdl.so.1
+      then
+	echo "and you seem to have it, I know a kludge for it,"
 	echo "so we'll do that..."
 	echo ""
 	AC_DEFINE(HAVE_DLOPEN)
 	LIBS="/lib/libdl.so.1 $LIBS"
 	got_dl=1
       else 
-        echo "which you DONT seem to have... doh!"
+	echo "which you DONT seem to have... doh!"
 	echo "perhaps you may still have the stuff lying around somewhere"
 	echo "if you work out where it is, add it to your XLIBS= lines"
 	echo "and #define HAVE_DLOPEN in config.h"
@@ -472,14 +533,15 @@ fi # option
   TCLLIBFNS=`basename $TCLLIBFNS .so.1.0`
   TCLLIBFNS=`basename $TCLLIBFNS .so.1`
   TCLLIBFNS=`basename $TCLLIBFNS .so`
-  if test $tclver = 1; then
+  if test $tclver = 1
+  then
     TCL_REQS="$TCLLIB/lib$TCLLIBFN"
     TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
   else
     echo ""
-    echo "You're tcl version is way to old - Version 7.4 or earlier"
+    echo "You're tcl version is way too old - Version 7.4 or earlier"
     echo "I suggest you download and complie a more recent version"
-    echo "The most reliable current version is 8.0"
+    echo "The most reliable current version is 8.2b1"
     echo ""
     exit 1
   fi
@@ -493,11 +555,15 @@ AC_SUBST(TCL_LIBS)
 
 # ---------- end of robey's tcl thingies
 
-if test ! "x$GMAKE" = "x"; then
+if test ! "x$GMAKE" = "x"
+then
   SET_MAKE="MAKE=gmake"
 fi
 
-if test -z "$DEST"; then DEST=\${prefix}; fi
+if test -z "$DEST"
+then
+  DEST=\${prefix}
+fi
 
 AC_SUBST(DEST)
 AC_SUBST(CP1)
@@ -524,7 +590,7 @@ echo "Configure is done."
 echo ""
 echo "If your bot will be on Dalnet, or a network that uses their server"
 echo "code, please edit the Makefile and remove \"-DRFC_COMPLIANT\" from"
-echo "the \"CFLAGS=\" line."
+echo "the \"CFLGS=\" line."
 echo ""
 echo "Type 'make' to create the bot"
 echo ""

@@ -2,67 +2,76 @@
 # This script just quickly maps old tcl functions to the new ones,
 # use this is you are to lazy to get of your butt and update your scripts :D
 #
+# cleanup by Tothwolf 25May1999
 
-proc gethosts {handle} {
-  return [getuser $handle HOSTS]
+proc gethosts {hand} {
+  return [getuser $hand HOSTS]
 }
 
-proc addhost {handle host} {
-  setuser $handle HOSTS $host
+proc addhost {hand host} {
+  return [setuser $hand HOSTS $host]
 }
 
-proc chpass {handle newpass} {
-  setuser $handle PASS $newpass
+proc chpass {hand pass} {
+  return [setuser $hand PASS $pass]
 }
 
 # setxtra is no longer relevant 
 
-proc getxtra {handle} {
-   return [getuser $handle XTRA]
+proc getxtra {hand} {
+  return [getuser $hand XTRA]
 }
 
-proc setinfo {handle info} {
-   setuser $handle INFO $info
+proc setinfo {hand info} {
+  return [setuser $hand INFO $info]
 }
 
-proc getinfo {handle} {
-   return [getuser $handle INFO]
+proc getinfo {hand} {
+  return [getuser $hand INFO]
 }
 
-proc getaddr {handle} {
-   return [getuser $handle BOTADDR]
+proc getaddr {hand} {
+  return [getuser $hand BOTADDR]
 }
 
-proc setaddr {handle addr} {
-   setuser $handle BOTADDR $addr
+proc setaddr {hand addr} {
+  return [setuser $hand BOTADDR $addr]
 }
 
-proc getdccdir {handle} {
-   return [getuser $handle DCCDIR]
+proc getdccdir {hand} {
+  return [getuser $hand DCCDIR]
 }
 
-proc setdccdir {handle dccdir} {
-   setuser $handle DCCDIR $dccdir
+proc setdccdir {hand dccdir} {
+  return [setuser $hand DCCDIR $dccdir]
 }
 
-proc getcomment {handle} {
-   return [getuser $handle COMMENT]
+proc getcomment {hand} {
+  return [getuser $hand COMMENT]
 }
 
-proc setcomment {handle comment} {
-   setuser $handle COMMENT $comment
+proc setcomment {hand comment} {
+  return [setuser $hand COMMENT $comment]
 }
 
-proc getemail {handle} {
-   return [getuser $handle XTRA email]
+proc getemail {hand} {
+  return [getuser $hand XTRA email]
 }
 
-proc setemail {handle email} {
-   setuser $handle XTRA EMAIL $email
+proc setemail {hand email} {
+  return [setuser $hand XTRA EMAIL $email]
 }
 
-proc getchanlaston {handle} {
-   return [lindex [getuser $handle LASTON] 1]
+proc getchanlaston {hand} {
+  return [lindex [getuser $hand LASTON] 1]
+}
+
+proc time {} {
+  return [strftime "%H:%M"]
+}
+
+proc date {} {
+  return [strftime "%d %b %Y"]
 }
 
 # as you can see it takes a lot of effort to simulate all the old commands

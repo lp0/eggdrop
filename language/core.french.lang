@@ -120,7 +120,7 @@
 0x532,Proprietaire(s) permanent(s)
 0x533,ATTENTION! Vous exécutez Eggdrop en tant que root!
 0x534,FICHIER DE CONFIGURATION NON CHARGE (INTROUVABLE OU ERREUR)
-0x535,FICHIER USAGERS NON TROUVE!  (essayez 'eggdrop -m' pour en créer un)
+0x535,FICHIER USAGERS NON TROUVE!  (essayez './eggdrop -m' pour en créer un)
 0x536,JE DEMARRE LE BOT EN MODE CREATION DE FICHIER USAGERS. Faites un Telnet sur le bot et entrez 'NEW' comme nickname.
 0x537,OU Allez sur IRC et:  /msg %s hello\n
 0x538,Cela va faire que le bot vous reconnaitra comme maître.
@@ -226,11 +226,11 @@
 0x658,... et merci d'avoir joué.
 0x659,Je change de serveur (j'ai besoin de %d serveurs, je n'en ai que %d)
 0x65a,je change de serveur
-0x65b,Je suis sur trop de canaux. Je ne peux pas venir sur:
-0x65c,Le canal est plein -- je ne peux venir sur:
-0x65d,Le canal est réservé aux invités -- je ne peux venir sur:
-0x65e,Je suis banni du canal -- je ne peux venir sur:
-0x65f,Le serveur dit que je ne suis pas sur le canal:
+0x65b,Je suis sur trop de canaux. Je ne peux pas venir sur: %s
+0x65c,Le canal est plein -- je ne peux venir sur: %s
+0x65d,Le canal est réservé aux invités -- je ne peux venir sur: %s
+0x65e,Je suis banni du canal -- je ne peux venir sur: %s
+0x65f,Le serveur dit que je ne suis pas sur le canal: %s
 0x660,Mauvaise clé -- je ne peux venir sur: %s
 0x661,NOTICE %s :Toutes les commandes sont faites par /MSG. pour la liste complete, /MSG %s help   Cya!\n
 0x662,NOTICE %s :Je ne vous reconnais pas sur ce host.\n
@@ -277,6 +277,8 @@
 0x90c,avalanche
 0x90d,ban incorrect
 0x90e,nom d'utilisateur incorrect
+0x90f,exempt incorrect
+0x910,invite incorrect
 
 0xa00,Pas de Ignores
 0xa01,Pour l'instant, j'ignore

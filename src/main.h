@@ -22,7 +22,7 @@
 #define VARARGS(type, name) ()
 #define VARARGS_DEF(type, name) (va_alist) va_dcl
 #define VARARGS_START(type, name, list) (va_start(list), va_arg(list,type))
-#endif 				/* HAVE_STDARG_H */
+#endif				/* HAVE_STDARG_H */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,11 +42,11 @@
 #include "rfc1459.h"
 
 #ifndef MAKING_MODS
-extern struct dcc_table DCC_CHAT,DCC_BOT,DCC_LOST,DCC_SCRIPT,
-DCC_BOT_NEW,DCC_RELAY,DCC_RELAYING,DCC_FORK_RELAY,DCC_PRE_RELAY,
-DCC_CHAT_PASS,DCC_FORK_BOT,DCC_SOCKET,
-DCC_TELNET_ID,DCC_TELNET_NEW,DCC_TELNET_PW,
-DCC_TELNET,DCC_IDENT,DCC_IDENTWAIT;
+extern struct dcc_table DCC_CHAT, DCC_BOT, DCC_LOST, DCC_SCRIPT, DCC_BOT_NEW,
+ DCC_RELAY, DCC_RELAYING, DCC_FORK_RELAY, DCC_PRE_RELAY, DCC_CHAT_PASS,
+ DCC_FORK_BOT, DCC_SOCKET, DCC_TELNET_ID, DCC_TELNET_NEW, DCC_TELNET_PW,
+ DCC_TELNET, DCC_IDENT, DCC_IDENTWAIT;
+
 #endif
 
 /* from net.h */
@@ -57,21 +57,20 @@ DCC_TELNET,DCC_IDENT,DCC_IDENTWAIT;
 #define swap_long(ln) (ln)
 #else
 #define swap_short(sh) ((((sh) & 0xff00) >> 8) | (((sh) & 0x00ff) << 8))
-#define swap_long(ln) (swap_short(((ln)&0xffff0000)>>16) | \
-                       (swap_short((ln)&0x0000ffff)<<16))
+#define swap_long(ln) (swap_short(((ln)&0xffff0000)>>16) | (swap_short((ln)&0x0000ffff)<<16))
 #endif
-#define iptolong(a) swap_long((unsigned long)a)
+#define iptolong(a) (0xffffffff & (long)(swap_long((unsigned long)a)))
 #define fixcolon(x) if (x[0]==':') {x++;} else {x=newsplit(&x);}
 
 /* Stupid Borg Cube crap ;p */
 #ifdef BORGCUBES
 
 /* net.h needs this */
-#define O_NONBLOCK      00000004        /* POSIX non-blocking I/O       */
+#define O_NONBLOCK      00000004	/* POSIX non-blocking I/O       */
 
 /* mod/filesys.mod/filedb.c needs this */
-#define _S_IFMT         0170000         /* type of file */
-#define   _S_IFDIR      0040000         /*   directory */
+#define _S_IFMT         0170000		/* type of file */
+#define _S_IFDIR        0040000		/*   directory */
 #define S_ISDIR(m)      (((m)&(_S_IFMT)) == (_S_IFDIR))
 
 #endif

@@ -1,2 +1,2 @@
 all:
-	@./configure; make install
+	@./configure; make

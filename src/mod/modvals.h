@@ -1,4 +1,5 @@
-#define HOOK_GET_FLAGREC         0 /* these *were* something, but changed */
+/* these *were* something, but changed */
+#define HOOK_GET_FLAGREC         0
 #define HOOK_BUILD_FLAGREC       1
 #define HOOK_SET_FLAGREC         2
 #define HOOK_READ_USERFILE       3
@@ -18,8 +19,8 @@
 #define HOOK_QSERV               108
 #define HOOK_ADD_MODE            109
 
-/* these are FIXED once they are in a relase they STAY */
-/* well, unless im feeling grumpy ;) */
+/* these are FIXED once they are in a relase they STAY
+ * well, unless im feeling grumpy ;) */
 #define MODCALL_START  0
 #define MODCALL_CLOSE  1
 #define MODCALL_EXPMEM 2
@@ -38,19 +39,19 @@
 #endif
 
 typedef struct _module_entry {
-   char * name;           /* name of the module (without .so) */
-   int major;             /* major version number MUST match */
-   int minor;             /* minor version number MUST be >= */
+  char *name;			/* name of the module (without .so) */
+  int major;			/* major version number MUST match */
+  int minor;			/* minor version number MUST be >= */
 #ifndef STATIC
 #ifdef HPUX_HACKS
-   shl_t hand;
+  shl_t hand;
 #else
-   void * hand;           /* module handle */
+  void *hand;			/* module handle */
 #endif
 #endif
-   struct _module_entry * next;
-   Function * funcs;
+  struct _module_entry *next;
+  Function *funcs;
 #ifdef EBUG_MEM
-   int mem_work;
+  int mem_work;
 #endif
 } module_entry;

@@ -1,9 +1,243 @@
 Changes in eggdrop: (since v1.3.0)
 ----------------------------------
 
+1.3.28
+Foundby   Fixedby   What....
+dude      Fabian    telnet banner added to config file
+jkw       jkw       64 bit *nix fix for dcc chat problems
+          drummer   usermode_r fix
+          drummer   DCC Log fix
+          Fabian    telnet-banner was broken; added use-telnet-banner flag
+          drummer   more proxy changes in net.c
+slennox   drummer   minor fix to +inactive and tcl_botonchan
+          drummer   tcl unset fixes
+          drummer   a fix to the +s-p mode flood patch
+SegFault  SegFault  Default for linux is now to make debugmem when you
+                    type make, this will help debug better.
+          dw        Changed debug msg to an url instead of an email addy.
+          drummer   global channel set stuff.
+matt	  arthur2   Expired function didn't test for use_exempts/invites.
+	  drummer   Fixed channels.c file printf when flood settings were 0.
+          drummer   Removed ischaninviteonly() and moved
+                    use-invites/exempts to the core.
+          Rufus     -clearbans stops the bot from expiring bans/exempts/invites
+                    set by bots who are still in the channel and have chanop
+                    to prevent repeating -b/+b on channels with bots that are
+     	            not sharing their banlist (same with +e/-e and +I/-i).
+		    to disable this set force-expire 1
+arthur2   Rufus     core dump when expiring bans/exempts/invites which are
+                    set by someone who is not in the bots userlist.
+          Johoho    rewrote doc/BOTNET and doc/patch.howto
+          Rufus     arg instead of args in tcl-commands.doc
+          Kimmo     "last message repeated" flood fixed
+various   guppy     removed the static tcl check for now
+          Jason     more exempt/invite fixes/changes
+          dw        using chattr to change chanflags w/o a '|' made
+                     the bot wipe botflags from the chan.
+          mho	    duplicate ban fix
+          drummer   some proxy fixes, short->default int in mem.c
+Mixter    Mixter    fclose() on file that was not able to be opened
+                    (chanfile)
+          poptix    crash-on-start from long PATCH() macro's
+poptix    poptix    configure now looks in /lib for tcl (heh!)
+          poptix    configure now detects and uses tcl8.2, fixed typo in
+                    configure, 'to/too'.
+          guppy     minor share changes dealing with chan exempts/invites
+          dw        added the new chanset options to the help
+          guppy     Fixes removing of bans/exempts/invites in a non sharing 
+                    environment
+          guppy     moved puthelp/serv/quick to the server module
+          guppy     removed useless var in tell_verbose_(status/uptime)
+John      guppy     share channel bans/exempts/invites correctly upon
+linking.
+Jason     guppy     share exempts/invites when sharebots first link
+raeK      arthur2   Fixes problem with -cycle/-autovoice channel settings.
+Jason     arthur2/  -userbans doesn't have to unban server bans (on rejoin).
+	  Rufus/Jason
+John`     guppy     help_subst wasn't using botname for irc help.
+poptix    poptix    default Makefile that runs ./configure then make, 
+                    changed 'make dist' so that the default is as above
+                    instead of './configure ; make install' 
+          Eule      enforce flood protect against ignored hosts
+Eule      Eule      Patch to fix kicking bug in joinflood
+\-\iTman  Jason     Adds use-exempts/use-invites.
+                    +I modes set when a user wants to join a +i channel
+                    (by messaging the bot).
+                    +e modes set when a matching ban is set, and expires
+                    after the ban has been removed.
+Dude      Dude      lots of changes to userinfo1.0.tcl (too many to name).
+          arthur2   './eggdrop -m' instead of 'eggdrop -m' in language
+                    files.
+Jason     arthur2   chan->ircnet_status &= ~CHAN_ASKED_EXEMPTS/INVITED and
+                    not chan->status &= ~CHAN_ASKED_EXEMPTS/INVITED
+                    (chan.c)
+poptix    poptix    .botinfo buffer overflows (remote/local), cosmetic
+                     fixes.
+slennox   poptix    .botinfo dupes
+          dw        .help chaninfo showed you could use no-idle-kick
+		    as argument to idle-kick, infact it's dont-idle-kick.
+\-\itman  dw        small config file changes
+          poptix    changed strcasecmp to rfccasecmp in nick handling
+                    code, small cpu optimization
+various   guppy     more nick regain stuff
+          F|ame     typo in .-chan command (channels.mod/cmdschan.c).
+          dw        added default chanset's for .+chan
+          guppy     host sharing with bots, other misc botnet commands.
+drummer   drummer   .say fixes/improvements
+          poptix    unresolved hosts got rejected by dcc-sanitycheck
+dude	  poptix    0x660 language file fix.
+          matt      minor language file fixes
+          Mixter    fix for the tcl static check
+          Jason     new channel settings for the +e/+I support.
+          slennox   removed unused 'recycle' stuff.
+          arthur2   % and & added to BADNICKCHARS.
+          Jason     Adds +e/+I mode support in userfile and partyline.
+          drummer   a bug in the note system
+          Mixter    configure checks if tcl is statically linked or not
+          guppy     if we .-chan and the chan is inactive dont send PART
+          drummer/  fixed tcl_duration
+	  Fabian
+          drummer   call HOOK_PRE_REHASH before we clear the userlist
+          drummer   bug in proxy_connect()
+          drummer   more changes to channel_inactive 
+toot      drummer   dont use +bitch is we have no userlist
+          drummer   reworked how default flags work
+          drummer   you can now set nonperm sticky bans
+          drummer   tcl_setuser() bugs
+          drummer   action.fix.tcl now handles {} properly
+          guppy     cmd/msg_status reported origbotname not botnetnick when
+                    saying "I am <bot>, running eggdrop <ver> blah"
+John`     arthur2   typo by poptix in configure.in
+          guppy     removed newbotname, we dont assume our nick anymore
+          guppy     minor updates to README
+matt      guppy     missing 'cvs login' in the README
+Lobo^Loco/John`     updates README: basic cvs usage, mailing list,
+John`               how to obtain eggdrop, upgrading eggdrop, getting help.
+hath/     John`     Cosmetic changes to eggdrop.conf.dist, lots
+John`               of little fixes :P
+Lobo^Loco/John`     updates for tcl-commands.doc, gives a fix
+John`               for the changed MODE bind (the fix is by guppy)
+          guppy     updated copyright info to include eggheads
+          John`     the config tried to use $owner before it was set
+          arthur2   Added a +protectfriends channel setting, to re-op +f users.
+          guppy     improved nickregain code (again?)
+          Tothwolf/ Fixed nasty little bug in refresh_ban_kick() that made
+          ^PRS4^    the bot only ban a global ban on the first channel the
+                    banned nick joined if he/she joined more then one channel
+                    in 60 seconds.  Hi pba!
+          drummer   Fixes the killdcc bug described on eggdev@
+          Fabian    Added a telnet banner much like motd (customizable)
+Ernst     Ernst     autobotchk fixes (for SCO and SunOS)
+Ernst     Ernst     userinfo1.0 with TCL 8.0 fix
+          Alex      If started with -m and usefile exists, warn and
+                    continue instead of exiting.  Minor cosmetic lang fixes
+          dw        Added setting to allow +f users to override
+                    telnet flood protection
+          G`Quann   Added queue utilities, queuesize, clearqueue, etc
+          drummer   Don't deop a user on netjoin if they are +a.
+          drummer   .+ban .-ban .info fixes.
+          Tothwolf  fixes for ban/exempt/invite bogus bounce/kick stuff.
+          drummer   Fixed multiple 'password required' msgs during linking.
+          drummer   irc.c fixes.
+      SKY/Michael   fixed cmds.c, .loadmod can be used only by permowner now
+          Eule      flush_mode fix for I/e modes.
+          arthur2   CHAN_BOGUSBAN and CHAN_BOGUSUSERNAME were inverted.
+michael   cybah     Fixed problems with lang patch.
+          michael   Update to man pages - still had Robey's mail address.
+          michael   modified dcc.c for better language support.
+          arthur2   Share fixes.
+          John`     .help chaninfo missing how to deactivate flood*
+                    settings.
+Nidhogg   John`     updates tcl-commands.doc to behaviour of [chattr
+                    handle channel].
+          guppy     fix to .-bot and .-user not working properly
+slt       arthur2   doesn't reverse bans anymore when they only *remotely*
+                    match any of our hostmasks.
+L0RE      drummer   '/msg bot notes <pass> read all' didnt work.
+AmnesiAc  drummer   dont strip ASCII between 126 and 224 from strings before
+		    sending them to the tcl interpreter.
+SuperS    drummer   die, jump and reset msg cmds didnt check for an empty passwd.
+          drummer   .-chan no longer tells sharebots to remove all bans for
+                    that channel.
+          drummer   .-chrec now works on non-existant channels.
+          drummer   Dont display info line when on channel -1 (chat off).
+Dude      cybah     '.chinfo handle' now does as expected
+          drummer   chan/global masters could remove chan/global owners' chanrec.
+          Tothwolf  More minor source cleanups.
+          Tothwolf  Added date/time procs to compat.tcl
+          Tothwolf  Minor source cleanups.
+Dicctr0s  guppy     cmd_mns_user, only cares about the first parm now.
+          guppy     dcc_telnet_id, changed what it says for nicknames that are not
+                    a valid format.
+          guppy     turn stealth telnet off by default, and ident-timeout default
+                    is now 5 instead of 30 (poptix agreed)
+          John`     notify-newusers now defaults to $owner in eggdrop.conf.dist
+          John`     Minor changes to eggdrop.conf.dist (logfiles)
+dw        dw/John`  updated README (frequent problems with tcl after
+                    admins upgrade, ./configure looking for tcl in the
+                    wrong places etc)
+John      dw        Minor changes to Makefile.in to make it easier.
+Stu       John`     init-server +w not needed as 99% of the users
+                    dont use it, just causes unneccessary traffic.
+          arthur2   Added some missing quiet_reject in server.mod.
+          arthur2   NOTICEs had to be sent through DP_HELP.
+          dw        Added glob/chan +g as in give auto-voice.
+                    this is working as +a but for voice instead.
+          cybah     Fixes for .chattr/.botattr/mkdir commands using CHANMETA.
+		    Those commands now handle +channels properly.
+          drummer   Fix for -/+inactive channel option.
+hath      drummer   Fixed bug in /msg <bot> key
+          drummer   /me (CTCP ACTION) floods are now treated as privmsg floods.
+          arthur2   Added more/better support for different channel types (#&+!)
+          poptix    nickjoinflood stuff.
+          Tothwolf  Minor cleanup of action.fix.tcl and compat.tcl.diff.
+          Tothwolf  put space between number and name in output of [duration]
+          Tothwolf  dumpfile and dccdumpfile now work for files outside text/
+          Tothwolf  Various updates to alltools.tcl
+          Tothwolf  src cleanups.
+slennox   poptix    chan->next being NULL on chan_autoop() in adduser
+                    crashes, this was a logic error(coder error), i wonder
+                    if this is causing problems elsewhere =)
+          Mixter    Fixed a typo in share.mod/share.c (no mode dcc
+                    connections).
+          arthur2   3 missing & (& instead of &&) in notes.mod/notes.c
+          drummer   missing \n in two dprintf's
+          drummer   Fixed .adduser with static hostmask problem.
+          guppy     new tcl bind: evnt (hurray!!)
+          guppy     -host's on shared bots now work .. *shrug*
+          drummer   Ignore unknown options in the chanfile.
+          drummer   notefiles should be mode 600.
+          drummer   Added different ways to use .kickban with !nick and @nick.
+                    (see .help kickban for more info)
+          drummer   use the chankey on JOIN if known.
+          drummer   chanset (+autovoice/+autoop/+bitch/+enforcebans) will now
+                    update channel on-the-fly, you wont need to do a
+                    .reset #chan.
+          drummer   Fixed bug in fixfrom() (server.mod).
+          drummer   Fixed half removed notify-onjoin.
+          drummer   Added +inactive channel option. When set, the bot will 
+                    leave the channel.. when unset, the bot will join the
+                    channel.
+          Tothwolf  more cleanups...
+          Tothwolf  fixes for freebsd's way of installing tcl
+          arthur2   fixed bad behaviour between + and & channels.
+          guppy     added tcl_isbotnick <nick>
+          guppy     dcc/msg_info didn't send NULL to remove chan info, also
+                    tcl_setchaninfo now supports using "none" to remove info,
+                    and rewrote it to prevent it crashing on non-existant 
+                    channels.
+          guppy     '=== Fred: X channels, X users.' should use the botnetnick
+                    not origbotname when starting up.
+          guppy     msg_ident follows the old style .. ie: if you are 
+                    identd, and try it to identd, it wont fail.
+          Tothwolf  src cleaning and indenting. A 2 space per level indent,
+                    with a Kernighan & Ritchie coding style.
+          Al3X      Adds #define BADNICKCHARS and #define EGG_NOWRITE 
+                    get_language(0x703).
+
 1.3.27
 Foundby   Fixedby   What....
-          poptix    Dalnet doesnt follow the RFC, now need to remove 
+          poptix    Dalnet doesn't follow the RFC, now need to remove 
                     RFC_COMPLIENT for the bot to correctly run on these
                     networks (see configure).
           Tothwolf  Removed obsolete SIGUSR1/SIGUSR2 signal handling since
@@ -41,7 +275,7 @@ hath      arthur2   .su' .quit rejoined message was redundant.
           arthur2   'make install' also installs src/mod/*.mod/*.lang 
                     language files.
           arthur2   renames help/chaninfo in help/chaninfo.help.
-Deadgrll  arthur2   channels.mod wasn't properly accounting for the memory 
+deadgrrrl arthur2   channels.mod wasn't properly accounting for the memory 
                     it used.
           SuperS    adds support for irix64 shells.
           arthur2   .+chan now sets the new channel's flood-settings equal to

@@ -122,7 +122,7 @@ schaue bitte in die Standard - Konfigurationsdatei für mehr Informationen.\n
 0x532,Ständige Botbesitzer
 0x533,WARNUNG! Du läßt Eggdrop als root laufen!
 0x534,KONFIGURATIONSDATEI NICHT GELADEN (NICHT GEFUNDEN ODER FEHLER)
-0x535,USERDATEI NICHT GEFUNDEN!  (versuche 'eggdrop -m', um eines zu erstellen)
+0x535,USERDATEI NICHT GEFUNDEN!  (versuche './eggdrop -m', um eines zu erstellen)
 0x536,STARTE DEN BOT IM USERDATEI-ERSTELLUNGS-MODUS.\n\
 Baue eine Telnetverbindung zu dem Bot auf und gib 'NEW' als deinen Nickname.
 0x537,ODER gehe ins IRC und:  /msg %s hello\n
@@ -148,7 +148,7 @@ Baue eine Telnetverbindung zu dem Bot auf und gib 'NEW' als deinen Nickname.
 0x607,Dein Nick ist zu lang um ihn jetzt zu der Userdatei hinzuzufügen.
 0x608,Vorgestellt zu
 0x609,gewühnlicher Platz
-0x60a,NOTICE %s :Hallo %s!  I ch bin %s, ein Eggdrop Bot.\n
+0x60a,NOTICE %s :Hallo %s!  Ich bin %s, ein Eggdrop Bot.\n
 0x60b,NOTICE %s :Ich erkenne dich von nun an anhand deiner Hostmask '%s' von nun an.\n
 0x60c,Da Du von einem gewöhnlichne IRCnet aus kommst, bedeutet das, daß Du
 0x60d,immer diesen Nickname benutzen solltest, wenn du mit mir chattest.
@@ -229,11 +229,11 @@ Baue eine Telnetverbindung zu dem Bot auf und gib 'NEW' als deinen Nickname.
 0x658,...und danke, daß Du mitgespielt hast.
 0x659,Wechsele Server (brauche %d Server, habe nur %d)
 0x65a,Wechsele Server
-0x65b,Ich bin auf zu vielen Channels, kann folgenden Channel nicht betreten:
-0x65c,Channel überfüllt -- kann folgenden Channel nicht betreten:
-0x65d,Channel invite only -- kann folgenden Channel nicht betreten:
-0x65e,Gebannt von Channel -- kann folgenden Channel nicht betreten:
-0x65f,Server sagt ich sei nicht auf Channel:
+0x65b,Ich bin auf zu vielen Channels, kann folgenden Channel nicht betreten: %s
+0x65c,Channel überfüllt -- kann folgenden Channel nicht betreten: %s
+0x65d,Channel invite only -- kann folgenden Channel nicht betreten: %s
+0x65e,Gebannt von Channel -- kann folgenden Channel nicht betreten: %s
+0x65f,Server sagt ich sei nicht auf Channel: %s
 0x660,Falsches Passwort -- kann folgenden Channel nicht betreten: %s
 0x661,NOTICE %s :Alle Befehle erfolgen via /MSG. Für eine vollständige Liste, /MSG %s help   CU!\n
 0x662,NOTICE %s :Ich erkenne Dich nicht mit diesem Host.\n
@@ -280,6 +280,8 @@ Baue eine Telnetverbindung zu dem Bot auf und gib 'NEW' als deinen Nickname.
 0x90c,Flood
 0x90d,Falscher Ban
 0x90e,Falscher Username
+0x90f,Falscher Exempt
+0x910,Falscher Invite
 
 0xa00,keine ignorierten User
 0xa01,Im Moment werden ignoriert

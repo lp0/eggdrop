@@ -8,13 +8,13 @@
 #include "modvals.h"
 #include "../tandem.h"
 
-/* this file contains all the orrible stuff required to do the lookup
+/*
+ * this file contains all the orrible stuff required to do the lookup
  * table for symbols, rather than getting the OS to do it, since most OS's
  * require all symbols resolved, this can cause a problem with some modules
  * this is intimately related to the table in modules.c
- * dont change the files unless you have flamable underwear
- * 
- * donot read this file whilst unless heavily sedated, I will not be help
+ * don't change the files unless you have flamable underwear
+ * do not read this file whilst unless heavily sedated, I will not be held
  * responsible for mental break-downs caused by this file <G>
  */
 
@@ -282,12 +282,12 @@
 #define masktype ((const char *(*)(int))global[201])
 #define stripmodes ((int(*)(char *))global[202])
 #define stripmasktype ((const char *(*)(int))global[203])
-/* 204 - 208 */
+/* 204 - 207 */
 #define sub_lang ((void(*)(int,char *))global[204])
 #define online_since (*(int *)(global[205]))
 #define cmd_loadlanguage ((int (*)(struct userrec *,int,char *))global[206])
 #define check_dcc_attrs ((int (*)(struct userrec *,int))global[207])
-/* 209 - 211 */
+/* 208 - 211 */
 #define check_dcc_chanattrs ((int (*)(struct userrec *,char *,int,int))global[208])
 #define add_tcl_coups ((void (*) (tcl_coups *))global[209])
 #define rem_tcl_coups ((void (*) (tcl_coups *))global[210])
@@ -297,16 +297,24 @@
 #define check_tcl_chjn ((void (*) (char *,char *,int,char,int,char *))global[213])
 #define sanitycheck_dcc ((int (*)(char *, char *, char *, char *))global[214])
 #define isowner ((int (*)(char *))global[215])
-/* 216 - 219 */ /* dcc-portrange dw/guppy */
-#define min_dcc_port (*(int *)(global[216]))
+/* 216 - 219 */
+#define min_dcc_port (*(int *)(global[216]))	/* dcc-portrange dw/guppy */
 #define max_dcc_port (*(int *)(global[217]))
 #define rfc_casecmp ((int(*)(char *, char *))global[218])
 #define rfc_ncasecmp ((int(*)(char *, char *, int *))global[219])
-/* this is for blowfish module, couldnt be bothereed making a whole new .h 
+/* 220 - 223 */
+#define global_exempts (*(struct exemptrec **)(global[220]))
+#define global_invites (*(struct inviterec **)(global[221]))
+#define ginvite_total (*(int*)global[222])
+#define gexempt_total (*(int*)global[223])
+/* 224 - 227 */
+#define H_event (*(p_tcl_bind_list *)(global[224]))
+#define use_exempts (*(int *)(global[225]))	/* drummer/Jason */
+#define use_invites (*(int *)(global[226]))	/* drummer/Jason */
+#define force_expire (*(int *)(global[227]))	/* Rufus */
+/* this is for blowfish module, couldnt be bothereed making a whole new .h
  * file for it ;) */
 #ifndef MAKING_BLOWFISH
-#define encrypt_string(a,b) \
-(((char *(*)(char *,char*))blowfish_funcs[4])(a,b))
-#define decrypt_string(a,b) \
-(((char *(*)(char *,char*))blowfish_funcs[5])(a,b))
+#define encrypt_string(a,b) (((char *(*)(char *,char*))blowfish_funcs[4])(a,b))
+#define decrypt_string(a,b) (((char *(*)(char *,char*))blowfish_funcs[5])(a,b))
 #endif

@@ -1,6 +1,6 @@
 /*
-      Conversion definitions for language support
-*/
+ * Conversion definitions for language support
+ */
 
 #ifndef _H_LANG
 #define _H_LANG
@@ -62,7 +62,6 @@
 #define FILES_ERASED     get_language(0x332)
 #define FILES_WELCOME    get_language(0x33a)
 #define FILES_WELCOME1   get_language(0x33b)
-
 
 /* Userfile messages */
 #define USERF_XFERDONE	get_language(0x400)
@@ -155,6 +154,7 @@
 #define MISC_BANNER     get_language(0x53e)
 #define MISC_CLOGS      get_language(0x53f)
 #define MISC_BANNER_STEALTH get_language(0x540)
+#define MISC_LOGREPEAT  get_language(0x541)
 
 /* IRC */
 #define IRC_BANNED	get_language(0x600)
@@ -264,7 +264,7 @@
 #define IRC_INTRO1_ARGS nick, botname
 #define IRC_BADHOST1            get_language(0x662)
 #define IRC_BADHOST1_ARGS nick
-#define IRC_BADHOST2            get_language(0x663)     
+#define IRC_BADHOST2            get_language(0x663)
 #define IRC_BADHOST2_ARGS nick, botname
 #define IRC_NEWBOT1             get_language(0x664)
 #define IRC_NEWBOT1_ARGS nick, botname
@@ -277,14 +277,18 @@
 #define IRC_TELNETFLOOD         get_language(0x669)
 #define IRC_PREBANNED           get_language(0x66a)
 #define IRC_LEMMINGBOT          get_language(0x66b)
-#define IRC_PROTECT             get_language(0x66c)		
+#define IRC_PROTECT             get_language(0x66c)
 #define IRC_COMMENTKICK         get_language(0x66d)
 #define IRC_GETALTNICK	get_language(0x66e)
+#define IRC_REMOVEDEXEMPT       get_language(0x670)
+#define IRC_REMOVEDINVITE       get_language(0x671)
+
 /* Eggdrop command line usage */
 
 #define EGG_USAGE	get_language(0x700)
 #define EGG_RUNNING1	get_language(0x701)
 #define EGG_RUNNING2	get_language(0x702)
+#define EGG_NOWRITE     get_language(0x703)
 
 #define USER_ISGLOBALOP	get_language(0x800)
 #define USER_ISBOT	get_language(0x801)
@@ -303,6 +307,33 @@
 #define BANS_USEBANSALL	get_language(0x109)
 #define BANS_NOLONGER	get_language(0x10a)
 
+/* Messages used when listing with '.exempts' */
+#define EXEMPTS_CREATED	        get_language(0x110)
+#define EXEMPTS_LASTUSED	get_language(0x111)
+#define EXEMPTS_INACTIVE	get_language(0x112)
+#define EXEMPTS_PLACEDBY	get_language(0x113)
+#define EXEMPTS_GLOBAL	        get_language(0x114)
+#define EXEMPTS_NOTACTIVE	get_language(0x115)
+#define EXEMPTS_BYCHANNEL	get_language(0x116)
+#define EXEMPTS_NOTACTIVE2	get_language(0x117)
+#define EXEMPTS_NOTBYBOT	get_language(0x118)
+#define EXEMPTS_USEEXEMPTSALL	get_language(0x119)
+#define EXEMPTS_NOLONGER	get_language(0x11a)
+
+/* Messages used when listing with '.invites' */
+#define INVITES_CREATED	        get_language(0x120)
+#define INVITES_LASTUSED	get_language(0x121)
+#define INVITES_INACTIVE	get_language(0x122)
+#define INVITES_PLACEDBY	get_language(0x123)
+#define INVITES_GLOBAL	        get_language(0x124)
+#define INVITES_NOTACTIVE	get_language(0x125)
+#define INVITES_BYCHANNEL	get_language(0x126)
+#define INVITES_NOTACTIVE2	get_language(0x127)
+#define INVITES_NOTBYBOT	get_language(0x128)
+#define INVITES_USEINVITESALL	get_language(0x129)
+#define INVITES_NOLONGER	get_language(0x12a)
+
+
 /* Messages referring to channels */
 #define CHAN_NOSUCH	get_language(0x900)
 #define CHAN_BADCHANKEY	get_language(0x901)
@@ -320,8 +351,10 @@
 #define CHAN_DESYNCMODE	get_language(0x90a)
 #define CHAN_DESYNCMODE_KICK	get_language(0x90b)
 #define CHAN_FLOOD get_language(0x90c)
-#define CHAN_BOGUSUSERNAME get_language(0x90d)
-#define CHAN_BOGUSBAN get_language(0x90e)
+#define CHAN_BOGUSBAN	get_language(0x90d)
+#define CHAN_BOGUSUSERNAME	get_language(0x90e)
+#define CHAN_BOGUSEXEMPT	get_language(0x90f)
+#define CHAN_BOGUSINVITE	get_language(0x910)
 
 /* Messages referring to ignores */
 #define IGN_NONE	get_language(0xa00)
@@ -449,7 +482,6 @@
 #define MOD_NOCRYPT	get_language(0x20d)
 #define MOD_NOFILESYSMOD get_language(0x20e)
 
-
 #define DCC_NOSTRANGERS	get_language(0xc00)
 #define DCC_REFUSED	get_language(0xc01)
 #define DCC_REFUSED2	get_language(0xc02)
@@ -491,7 +523,6 @@
 #define DCC_BOOTED3_ARGS	by, dcc[idx].nick, \
                                 reason[0] ? ": " : ".", reason
 
-
 /* Stuff from chan.c */
 
 #define CHAN_LIMBOBOT	get_language(0xd00)
@@ -507,3 +538,50 @@
 #define NET_UNAWAY	get_language(0xe06)
 #define NET_NICKCHANGE	get_language(0xe07)
 #endif
+
+/* Stuff from dcc.c */
+#define DCC_REJECT	get_language(0xe08)
+#define DCC_LINKED	get_language(0xe09)
+#define DCC_LINKFAIL	get_language(0xe0a)
+#define DCC_BADPASS	get_language(0xe0b)
+#define DCC_PASSREQ	get_language(0xe0c)
+#define DCC_LINKERROR	get_language(0xe0d)
+#define DCC_LOSTBOT	get_language(0xe0e)
+#define DCC_TIMEOUT	get_language(0xe0f)
+#define DCC_LOGGEDIN	get_language(0xe10)
+#define DCC_BADLOGIN	get_language(0xe11)
+#define DCC_HOUSTON	get_language(0xe12)
+#define DCC_JOIN	get_language(0xe13)
+#define DCC_LOSTDCC	get_language(0xe14)
+#define DCC_PWDTIMEOUT	get_language(0xe15)
+#define DCC_CLOSED	get_language(0xe16)
+#define DCC_FAILED	get_language(0xe17)
+#define DCC_BADSRC	get_language(0xe18)
+#define DCC_BADIP	get_language(0xe19)
+#define DCC_BADHOST	get_language(0xe1a)
+#define DCC_TELCONN	get_language(0xe1b)
+#define DCC_IDENTFAIL	get_language(0xe1c)
+#define DCC_PORTDIE	get_language(0xe1d)
+#define DCC_BADNICK	get_language(0xe1e)
+#define DCC_NONBOT	get_language(0xe1f)
+#define DCC_NONUSER	get_language(0xe20)
+#define DCC_INVHANDLE	get_language(0xe21)
+#define DCC_DUPLICATE	get_language(0xe22)
+#define DCC_NOPASS	get_language(0xe23)
+#define DCC_LOSTCON	get_language(0xe24)
+#define DCC_TTIMEOUT	get_language(0xe25)
+#define DCC_INSTCOMPL	get_language(0xe26)
+#define DCC_NEWUSER	get_language(0xe27)
+#define DCC_LOSTNEWUSER	get_language(0xe28)
+#define DCC_LOSTNEWUSR2	get_language(0xe29)
+#define DCC_TIMEOUTUSER	get_language(0xe2a)
+#define DCC_TIMEOUTUSR2	get_language(0xe2b)
+#define DCC_TCLERROR	get_language(0xe2c)
+#define DCC_DEADSOCKET	get_language(0xe2d)
+#define DCC_LOSTCONN	get_language(0xe2e)
+#define DCC_EOFIDENT	get_language(0xe2f)
+#define DCC_LOSTIDENT	get_language(0xe30)
+#define DCC_NOACCESS	get_language(0xe31)
+
+
+

@@ -9,35 +9,35 @@
 #define check_tcl_kick(a,b,c,d,e,f) check_tcl_kickmode(a,b,c,d,e,f,H_kick)
 
 #ifdef MAKING_IRC
-static void check_tcl_kickmode (char *,char *,struct userrec *,char *,char *,char *,
-				p_tcl_bind_list);
-static void check_tcl_joinpart (char *,char *,struct userrec *,char *, p_tcl_bind_list);
-static void check_tcl_signtopcnick (char *, char *, struct userrec * u, char *,
-				 char *, p_tcl_bind_list);
-static void check_tcl_pubm (char *, char *, char *, char *);
-static int check_tcl_pub (char *, char *, char *, char *);
-static int me_op (struct chanset_t *);
-static int any_ops (struct chanset_t *);
-static int hand_on_chan (struct chanset_t *, struct userrec *);
-static char * getchanmode (struct chanset_t *);
-static void flush_mode(struct chanset_t *,int);
+static void check_tcl_kickmode(char *, char *, struct userrec *, char *, char *, char *,
+			       p_tcl_bind_list);
+static void check_tcl_joinpart(char *, char *, struct userrec *, char *, p_tcl_bind_list);
+static void check_tcl_signtopcnick(char *, char *, struct userrec *u, char *,
+				   char *, p_tcl_bind_list);
+static void check_tcl_pubm(char *, char *, char *, char *);
+static int check_tcl_pub(char *, char *, char *, char *);
+static int me_op(struct chanset_t *);
+static int any_ops(struct chanset_t *);
+static int hand_on_chan(struct chanset_t *, struct userrec *);
+static char *getchanmode(struct chanset_t *);
+static void flush_mode(struct chanset_t *, int);
 static void resetbans(struct chanset_t *);
 static void resetexempts(struct chanset_t *);
 static void resetinvites(struct chanset_t *);
 static void reset_chan_info(struct chanset_t *);
-static void recheck_channel(struct chanset_t *,int);
-static void set_key (struct chanset_t *, char *);
-static void take_revenge (struct chanset_t *, char *, char *);
-static int detect_chan_flood (char *, char *, char *, struct chanset_t *, int, char *);
-static void newban (struct chanset_t *, char *, char *);
-static void newexempt (struct chanset_t *, char *, char *);
-static void newinvite (struct chanset_t *, char *, char *);
-static char * quickban (struct chanset_t *, char *);
-static void got_op (struct chanset_t * chan, char * nick, char * from,
-	     char * who, struct flag_record * opper);
-static int killmember (struct chanset_t * chan, char * nick);
-static void check_lonely_channel (struct chanset_t * chan);
-static void gotmode (char *, char *);
+static void recheck_channel(struct chanset_t *, int);
+static void set_key(struct chanset_t *, char *);
+static void take_revenge(struct chanset_t *, char *, char *);
+static int detect_chan_flood(char *, char *, char *, struct chanset_t *, int, char *);
+static void newban(struct chanset_t *, char *, char *);
+static void newexempt(struct chanset_t *, char *, char *);
+static void newinvite(struct chanset_t *, char *, char *);
+static char *quickban(struct chanset_t *, char *);
+static void got_op(struct chanset_t *chan, char *nick, char *from,
+		   char *who, struct flag_record *opper);
+static int killmember(struct chanset_t *chan, char *nick);
+static void check_lonely_channel(struct chanset_t *chan);
+static void gotmode(char *, char *);
 
 #else
 /* 4 - 7 */

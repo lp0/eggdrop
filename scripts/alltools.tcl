@@ -1,26 +1,27 @@
-# All-Tool TCL, includes toolbox.tcl, toolkit.tcl and moretools.tcl
+# All-Tools TCL, includes toolbox.tcl, toolkit.tcl and moretools.tcl
 # toolbox is Authored by cmwagner@sodre.net
 # toolkit is Authored by (Someone claim this)[unknown]
 # moretools is Authored by David Sesno(walker@shell.pcrealm.net)
 # modified for 1.3.0 bots by TG
+# rewritten and updated by Tothwolf 02May1999
+# updated even more by guppy 02May1999
+# fixed what guppy broke and updated again by Tothwolf 02May1999
+# more changes from Tothwolf 24/25May1999
 
-###################
-
-# Descriptions of ALL the avaliable commands:
+########################################
+# Descriptions of avaliable commands:
 ## (toolkit):
-# newflag <flag> - REMOVED numeric flags are no longer supported in this way
+# putmsg <nick/chan> <text>
+#   send a message to a nick/chan
 #
-# putmsg <nick> <text>
-#   sends a message to someone on irc
+# putchan <nick/chan> <text>
+#   identical to putmsg
 #
-# putnotc <nick> <text>
-#   sends a notice to someone on irc
+# putnotc <nick/chan> <text>
+#   send a notice to a nick/chan
 #
-# putchan <channel> <text>
-#   sends a public message to a channel
-#
-# putact <channel> <text>
-#   does a public action to a channel
+# putact <nick/chan> <text>
+#   send an action to a nick/chan
 #
 ## (toolbox):
 # strlwr <string>
@@ -33,264 +34,287 @@
 #   string compare
 #
 # stricmp <string1> <string2>
-#   string compare (insensitive to case)
+#   string compare (case insensitive)
 #
 # strlen <string>
-#   string lenght
+#   string length
 #
 # stridx <string> <index>
 #   string index
 #
 # iscommand <command>
-#   is a certain command a valid tcl command?
+#   if the given command exists, return 1
+#   else return 0
 #
-# timerexists <timer_proc>
-#   check to see if a timer for a certain procedure exists.
+# timerexists <command>
+#   if the given command is scheduled by a timer, return its timer id
+#   else return ""
 #
-# utimerexists <utimer_proc>
-#   check to see if a utimer for a certain procedure exists
+# utimerexists <command>
+#   if the given command is scheduled by a utimer, return its utimer id
+#   else return ""
 #
 # inchain <bot>
-#   is a bot in the chain?
+#   if the given bot is connected to the botnet, return 1
+#   else return 0
 #
 # randstring <length>
-#   generate a string with random characters in it.
+#   returns a random string of the given length
 #
-# putdccall <msg>
-#   send text to all dcc users
+# putdccall <text>
+#   send the given text to all dcc users
+#   returns nothing
 #
-# putdccbut <idx> <msg>
-#   send text to all dcc users but idx.
+# putdccbut <idx> <text>
+#   send the given text to all dcc users except for the given idx
+#   returns nothing
 #
-# [killdccall]
-#   kill all dcc users
+# killdccall
+#   kill all dcc user connections
+#   returns nothing
 #
 # killdccbut <idx>
-#   kill dcc users but idx
-#
-# valididx <idx>
-#   check to see if idx is in dcclist, if it is returns 1
+#   kill all dcc user connections except for the given idx
+#   returns nothing
 #
 ## (moretools):
-# testip <host/ip>
-#   test a host to see if it is an ip, if it is returns 1
+# iso <nick> <channel>
+#   if the given nick has +o access on the given channel, return 1
+#   else return 0
 #
-# number_to_number <digit>
-#   converts a digit, 1-15, to an analog Numeral
-# 
-# [realtime]
-#   Returns the "realtime" in standard format, with am/pm, as oppsed to
-#   [time] returning the military format.
+# realtime [format]
+#   'time' returns the current time in 24 hour format '14:15'
+#   'date' returns the current date in the format '21 Dec 1994'
+#   not specifying any format will return the current time with
+#   in 12 hour format '1:15 am'
 #
-# iso <nick> <#channel>
-#   returns 1 if the 'nick'(not hand) has +o access on '#channel' (by dtm)
+# testip <ip>
+#   if the given ip is valid, return 1
+#   else return 0
 #
-#########################
+# number_to_number <number>
+#   if the given number is between 1 and 15, return its analog representation
+#
+########################################
 
 # So scripts can see if allt is loaded.
 set alltools_loaded 1
-set allt_version 101
+set allt_version 203
 
 # For backward comptibility.
-set toolbox_revision 1005
+set toolbox_revision 1007
 set toolbox_loaded 1
 set toolkit_loaded 1
 
-
-# Procs.............
-proc number_to_number {domaintocount} {
-  set numeral ""
-  if {$domaintocount == "0"} {set numeral "Zero"}
-  if {$domaintocount == "1"} {set numeral "One"}
-  if {$domaintocount == "2"} {set numeral "Two"}
-  if {$domaintocount == "3"} {set numeral "Three"}
-  if {$domaintocount == "4"} {set numeral "Four"}
-  if {$domaintocount == "5"} {set numeral "Five"}
-  if {$domaintocount == "6"} {set numeral "Six"}
-  if {$domaintocount == "7"} {set numeral "Seven"}
-  if {$domaintocount == "8"} {set numeral "Eight"}
-  if {$domaintocount == "9"} {set numeral "Nine"}
-  if {$domaintocount == "10"} {set numeral "Ten"}
-  if {$domaintocount == "11"} {set numeral "Eleven"}
-  if {$domaintocount == "12"} {set numeral "Twelve"}
-  if {$domaintocount == "13"} {set numeral "Thirteen"}
-  if {$domaintocount == "14"} {set numeral "Fourteen"}
-  if {$domaintocount == "15"} {set numeral "Fifteen"}
-  if {$numeral == ""} {set $numeral $domaintocount}
-  return $numeral
+proc putmsg {who text} {
+  puthelp "PRIVMSG $who :$text"
 }
 
-proc testip {address} {
- set testhost [split $address "."]
- if {[llength $testhost]==4} {
-  if {[string length [lindex $testhost 0]]<4 &&
-   [string length [lindex $testhost 1]]<4 &&
-   [string length [lindex $testhost 2]]<4 &&
-   [string length [lindex $testhost 3]]<4} {
-    if {[lindex $testhost 0] < 256 &&
-     [lindex $testhost 1] < 256 &&
-     [lindex $testhost 2] < 256 &&
-     [lindex $testhost 3] < 256} {
-      return 1
-    } { return 0 }
-  }
- } {
-  return 0
- }
+proc putchan {who text} {
+  puthelp "PRIVMSG $who :$text"
 }
 
-proc realtime {} {
-  set time1 [lindex [split [time] :] 0]
-  set timestat "am"
-  set time2 "$time1"
-  if {($time1>12) || ($time1 == "00")} {
-    set timestat "pm"
-    if {$time1 == "13"} {set time2 "1"}
-    if {$time1 == "14"} {set time2 "2"}
-    if {$time1 == "15"} {set time2 "3"}
-    if {$time1 == "16"} {set time2 "4"}
-    if {$time1 == "17"} {set time2 "5"}
-    if {$time1 == "18"} {set time2 "6"}
-    if {$time1 == "19"} {set time2 "7"}
-    if {$time1 == "20"} {set time2 "8"}
-    if {$time1 == "21"} {set time2 "9"}
-    if {$time1 == "22"} {set time2 "10"}
-    if {$time1 == "23"} {set time2 "11"}
-    if {$time1 == "00"} {set time2 "12"}
-    if {$time1 == "24"} {set time2 "12"}
-    # Someone told me to add the above line. Does [time] return 24? (=
-  }
-  set time3 [lindex [split [time] :] 1]
-  set realtime "[string trimleft $time2 0]:${time3}"
-  return "${realtime}${timestat}"
+proc putnotc {who text} {
+  puthelp "NOTICE $who :$text"
 }
 
-proc iso {nick chan1} {
- return [matchattr [nick2hand $nick $chan1] o|o $chan1]
-}
-
-proc putmsg {nick text} {
-  putserv "PRIVMSG $nick :$text"
-}
-
-proc putnotc {nick text} {
-  putserv "NOTICE $nick :$text"
-}
-
-proc putchan {chan text} {
-  putserv "PRIVMSG $chan :$text"
-}
-
-proc putact {chan text} {
-  putserv "PRIVMSG $chan :\001ACTION $text\001"
+proc putact {who text} {
+  puthelp "PRIVMSG $who :\001ACTION $text\001"
 }
 
 proc strlwr {string} {
-   return [string tolower $string]
+  return [string tolower $string]
 }
 
 proc strupr {string} {
-   return [string toupper $string]
+  return [string toupper $string]
 }
 
 proc strcmp {string1 string2} {
-   return [string compare $string1 $string2]
+  return [string compare $string1 $string2]
 }
 
 proc stricmp {string1 string2} {
-   return [string compare [strlwr $string1] [strlwr $string2]]
+  return [string compare [string tolower $string1] [string tolower $string2]]
 }
 
 proc strlen {string} {
-   return [string length $string]
+  return [string length $string]
 }
 
 proc stridx {string index} {
-   return [string index $string $index]
+  return [string index $string $index]
 }
 
 proc iscommand {command} {
-   if {[lsearch -exact [strlwr [info commands]] [strlwr $command]] != -1} {
-      return 1
-   }
-
-   return 0
+  if {![string match "" [info commands $command]]} then {
+    return 1
+  }
+  return 0
 }
 
-proc timerexists {timer_proc} {
-   foreach j [timers] {
-      if {[string compare [lindex $j 1] $timer_proc] == 0} {
-         return [lindex $j 2]
-      }
-   }
+proc timerexists {command} {
+  foreach i [timers] {
+    if {[string match [lindex $i 1] $command]} then {
+      return [lindex $i 2]
+    }
+  }
+  return
 }
 
-if {[iscommand utimers]} {
-   proc utimerexists {timer_proc} {
-      foreach j [utimers] {
-         if {[string compare [lindex $j 1] $timer_proc] == 0} {
-            return [lindex $j 2]
-         }
-      }
-   }
+proc utimerexists {command} {
+  foreach i [utimers] {
+    if {[string match [lindex $i 1] $command]} then {
+      return [lindex $i 2]
+    }
+  }
+  return
 }
 
 proc inchain {bot} {
-   if {[lsearch -exact [strlwr [bots]] [strlwr $bot]] != -1} {
-      return 1
-   }
-
-   return 0
+  return [islinked $bot]
 }
 
-proc randstring {count} {
-  set rs ""
-  for {set j 0} {$j < $count} {incr j} {
-     set x [rand 62]
-     append rs [string range "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789" $x $x]
+proc randstring {length} {
+  set string ""
+  set chars abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789
+  set count [string length $chars]
+  for {set i 0} {[expr $i < $length]} {incr i} {
+    append string [string index $chars [rand $count]]
   }
-
-  unset x
-  unset j
-  return $rs
+  return $string
 }
 
-proc putdccall {msg} {
-   foreach j [dcclist] {
-      putdcc [lindex $j 0] $msg
-   }
+proc putdccall {text} {
+  foreach i [dcclist] {
+    set j [lindex $i 0]
+    if {[valididx $j]} then {
+      putdcc $j $text
+    }
+  }
+  return
 }
 
-proc putdccbut {idx msg} {
-   foreach j [dcclist] {
-      if {[lindex $j 0] != $idx} {
-         putdcc [lindex $j 0] $msg
-      }
-   }
+proc putdccbut {idx text} {
+  foreach i [dcclist] {
+    set j [lindex $i 0]
+    if {([valididx $j]) && (![string match $j $idx])} then {
+      putdcc $j $text
+    }
+  }
+  return
 }
 
 proc killdccall {} {
-   foreach j [dcclist] {
-      killdcc [lindex $j 0]
-   }
+  foreach i [dcclist] {
+    set j [lindex $i 0]
+    if {[valididx $j]} then {
+      killdcc $j
+    }
+  }
+  return
 }
 
 proc killdccbut {idx} {
-   foreach j [dcclist] {
-      if {[lindex $j 0] != $idx} {
-         killdcc [lindex $j 0]
-      }
-   }
+  foreach i [dcclist] {
+    set j [lindex $i 0]
+    if {([valididx $j]) && (![string match $j $idx])} then {
+      killdcc $j
+    }
+  }
+  return
 }
 
-proc valididx {idx} {
-   set r 0
-   foreach j [dcclist] {
-      if {[lindex $j 0] == $idx} {
-          set r 1
-          break
-      }
-   }
+proc iso {nick chan} {
+  return [matchattr [nick2hand $nick $chan] o|o $chan]
+}
 
-   return $r
+proc realtime {args} {
+  switch -exact [lindex $args 0] {
+    time {
+      return [strftime "%H:%M"]
+    }
+    date {
+      return [strftime "%d %b %Y"]
+    }
+    default {
+      return [strftime "%l:%M %P"]
+    }
+  }
+}
+
+proc testip {ip} {
+  set tmp [split $ip .]
+  if {[expr [llength $tmp] != 4]} then {
+    return 0
+  }
+  foreach i [split [join $tmp ""] ""] {
+    if {![string match \[0-9\] $i]} then {
+      return 0
+    }
+  }
+  set index 0
+  foreach i $tmp {
+    if {(([expr [string length $i] > 3]) || \
+        (([expr $index == 3]) && (([expr $i > 254]) || ([expr $i < 1]))) || \
+        (([expr $index <= 2]) && (([expr $i > 255]) || ([expr $i < 0]))))} then {
+      return 0
+    }
+    incr index 1
+  }
+  return 1
+}
+
+proc number_to_number {number} {
+  switch -exact $number {
+    0 {
+      return Zero
+    }
+    1 {
+      return One
+    }
+    2 {
+      return Two
+    }
+    3 {
+      return Three
+    }
+    4 {
+      return Four
+    }
+    5 {
+      return Five
+    }
+    6 {
+      return Six
+    }
+    7 {
+      return Seven
+    }
+    8 {
+      return Eight
+    }
+    9 {
+      return Nine
+    }
+    10 {
+      return Ten
+    }
+    11 {
+      return Eleven
+    }
+    12 {
+      return Twelve
+    }
+    13 {
+      return Thirteen
+    }
+    14 {
+      return Fourteen
+    }
+    15 {
+      return Fifteen
+    }
+  }
+  return
 }
