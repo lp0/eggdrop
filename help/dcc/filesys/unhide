@@ -1,0 +1,4 @@
+%{+m}
+###  unhide <file(s)>
+   makes a file be not hidden any more.
+see also: hide, lsa

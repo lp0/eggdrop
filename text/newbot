@@ -1,0 +1,6 @@
+As a master, you really need to set a password:
+   /msg %B pass <your-chosen-password>
+All major commands are used from DCC chat.
+From now on, you don't need to use the -m option
+when starting up this bot.
+     -Enjoy eggdrop!

@@ -1,0 +1,5 @@
+%{+m}
+###  hide <file(s)>
+   marks a file as hidden, so that normal users can't see it.
+   only a master or file janitor using 'lsa' can see hidden files.
+see also: unhide, lsa

@@ -1,0 +1,8 @@
+###  email [email address]
+   sets your email address.  this data isn't really used by the bot,
+   but it will show up if someone does a 'whois' on you.  if you
+   don't specify an address, the bot will show you the email address
+   it currently has for you (if any).
+###  email none
+   clears your email address.
+

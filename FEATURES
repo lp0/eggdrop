@@ -1,0 +1,70 @@
+EGGDROP -- AN IRC BOT
+
+Eggdrop is, as far as I know, the most advanced IRC robot available.  It
+has been under development since December 1993, and, unlike most other bots,
+it is still regularly updated.  Its features include:
+
+  * completely different channel user lists like having a seperate bot for 
+    each channel.
+
+  * complete channel protection, customizable via config file: permanently
+    store a ban list with comments, etc
+
+  * user records saved on disk and alterable via dcc chat: each user can
+    have a password (encrypted), a list of valid hostmasks, a set of access
+    flags, etc
+  
+  * the ability to "learn" new users (if you choose to have the bot do so)
+    by letting users /MSG the bot "hello" and granting them automatic access
+    of whatever type you specify (or even no access at all)
+
+  * a "party line" available through dcc chat or telnet, with multiple 
+    channels, giving you the ability to talk to people without being affected
+    by netsplits
+
+  * console mode: you can view each channel through dcc chat or telnet,
+    selectively looking at mode changes, joins and parts, channel talk, or
+    any combination of the above
+
+  * a file system where people can upload and download files, in an
+    environment that looks and acts (for the most part) like a typical
+    unix system -- plus the ability to mark directories as hidden/
+    unaccessable to people without certain user flags
+
+  * bot network: link two or more bots together for a party line that can
+    stretch not only across channels, but across irc networks (one bot on
+    EFnet, one bot on Undernet, etc)
+
+  * script language: commands and features can be added to the bot on the
+    fly, by means of the TCL script language, giving you the power of TOTAL
+    customization of your bot -- similar to ircII script
+
+  * ability to look almost exactly like an ircII client -- sadly, this is
+    almost a necessity these days for bots
+
+  * slices, dices, and juliennes fries
+
+
+The latest version of eggdrop is always available via web or ftp:
+
+(1) WEB:
+    The web site at:
+       http://www.valuserve.com/~robey/eggdrop/
+    has links to the latest versions, as well as other information like
+    Tcl reference pages and botnet pages.
+
+(2) FTP:
+    The ftp site at:
+       ftp.sodre.net:/pub/eggdrop
+    has the latest version.  It is also mirrored at dozens of places,
+    listed on the web site.
+
+
+!!!  WARNING  !!!
+
+Eggdrop is NOT a simple bot to use.  It is an advanced bot for people who
+know IRC and know what they're doing.  If you don't know what DCC CHAT is
+or how to use it -- if you don't know the difference between #channels and
+&channels -- if you don't know what a clonebot or CTCP avalanche is -- then
+this bot is not for you.  Choose a simpler bot like Vladbot or Baloobot or
+ComBot, or find one of the many scriptbots to use.

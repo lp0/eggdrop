@@ -1,0 +1,15 @@
+###  get <filename(s)> [nickname]
+   sends you the file(s) requested, over IRC.  you should get a
+   DCC SEND notice on IRC, and have your client accept it.  if
+   your nickname on IRC is different than the one you use on the
+   bot, you should specify a nickname too.  you can also use that
+   to send files to other people.  if a file you want is actually
+   on another bot, it may take a little bit longer so be patient.
+   if that bot isn't on the botnet right now, it will say the file
+   isn't availble.
+
+   there is a limit to the number of transfers you can have going
+   simultaneously, so if you go over this limit, the remainder of
+   your file requests will be queued.  as the first files finish
+   transferring, the queued files will be sent.
+see also: pending, cancel

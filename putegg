@@ -1,0 +1,142 @@
+#! /bin/sh
+#
+# script to copy vital files into another directory
+#
+
+if test "$1" = ""; then
+  echo ""
+  echo "Usage: putegg <directory>"
+  echo ""
+  exit 1
+fi
+
+if test ! -d $1; then
+  echo ""
+  echo "Attemping to create directory $1 ..."
+  mkdir $1
+  if test ! -d $1; then
+    echo ""
+    echo "Directory $1 is invalid."
+    echo ""
+    exit 1
+  fi
+fi
+if test ! -r $1; then
+  echo ""
+  echo "You don't have permission there!"
+  echo ""
+  exit 1
+fi
+if test ! -w $1; then
+  echo ""
+  echo "You don't have permission there!"
+  echo ""
+  exit 1
+fi
+if test ! -x $1; then
+  echo ""
+  echo "You don't have permission there!"
+  echo ""
+  exit 1
+fi
+
+if test ! -r eggdrop; then
+  echo ""
+  echo "You must run 'putegg' from the eggdrop directory!"
+  echo ""
+  exit 1
+fi
+
+echo ""
+./eggdrop -v
+echo "Copying eggdrop files into $1 ..."
+rm -f $1/eggdrop
+cp eggdrop* $1
+cp README $1
+
+if test -r $1/doc; then
+  if test ! -d $1/doc; then
+    echo "$1/doc is not a directory!  Skipping..."
+  else
+    echo "Copying documentation (please read it!) into $1/doc ..."
+    cp -r doc/* $1/doc
+  fi
+else
+  echo "Creating doc/ directory ..."
+  mkdir $1/doc
+  echo "Copying documentation (please read it!) into $1/doc ..."
+  cp -r doc/* $1/doc
+fi
+
+if test -r $1/help; then
+  if test ! -d $1/help; then
+    echo "$1/help is not a directory!  Skipping..."
+  else 
+    echo ""
+    echo "You already have a help directory."
+    echo "I can copy the new help files on top of your old ones.  That will"
+    echo "overwrite any changes you've made, but any new help files you've"
+    echo "written should be safe."
+    echo -n "   Overwrite the old help files? (y/n) "
+    read ans
+    echo ""
+    if test "$ans" = "y"; then
+      echo "Copying help files ..."
+      cp -r help/* $1/help
+    else
+      echo "Okay, skipping help files ..."
+    fi
+  fi
+else
+  echo "Creating help directory and copying help files ..."
+  mkdir $1/help
+  cp -r help/* $1/help
+fi
+
+if test -r $1/text; then
+  if test ! -d $1/text; then
+    echo "$1/text is not a directory!  Skipping..."
+  else 
+    echo "Skipping text directory because you already have one ..."
+  fi
+else
+  echo "Creating text directory and copying those files ..."
+  mkdir $1/text
+  cp text/* $1/text
+  if test ! -r $1/motd; then
+    cp motd $1
+  fi
+fi
+
+if test -r $1/filesys; then
+  if test ! -d $1/filesys; then
+    echo "$1/filesys is not a directory!  Skipping..."
+  fi
+else
+  echo "Creating basic file-system directories ..."
+  mkdir $1/filesys
+  mkdir $1/filesys/incoming
+fi
+
+if test -r $1/scripts; then
+  if test ! -d $1/scripts; then
+    echo "$1/scripts is not a directory!  Skipping..."
+  else
+    echo "Updating the scripts that come with eggdrop ..."
+    echo "   (If you modify these, be sure to use different names.)"
+    cp scripts/* $1/scripts
+  fi
+else
+  echo "Creating scripts directory ..."
+  mkdir $1/scripts
+  cp scripts/* $1/scripts
+fi
+
+echo ""
+echo "Okay, copied the important stuff."
+echo "If you haven't read the README file, then READ IT NOW!!!"
+echo "If you're just upgrading, then you can safely erase this directory."
+echo "Otherwise, you should probably keep it around for reference for a"
+echo "little while."
+echo ""
+

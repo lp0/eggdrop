@@ -1,0 +1,6 @@
+%{+O}
+###  deop <nickname> [channel]
+   will remove chanop from the person you specify, so long as the
+   bot is opped on that channel, and the person you specify isn't
+   on the bot's list of authorized chanops.
+see also: op, console

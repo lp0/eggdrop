@@ -1,0 +1,29 @@
+MSG commands for %B:
+%{cols=4/50}%{-}
+EMAIL
+INFO
+WHO
+IDENT
+HELP
+NOTES
+WHOIS
+PASS
+%{+o}
+OP
+INVITE
+GO
+%{-}%{+m}
+DIE
+JUMP
+MEMORY
+REHASH
+RESET
+%{+M}
+STATUS
+%{end}
+For help on a command, /MSG %B HELP <command>
+%{+m}
+You are a master.  Many many more commands are
+available via dcc chat.
+%{-}
+Admin: %A

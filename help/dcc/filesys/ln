@@ -1,0 +1,9 @@
+%{+m}
+###  ln <bot:filepath> <localfile>
+   creates a link to a file on another bot.  the filepath has to
+   be complete, like '/gifs/uglyman.gif'.  if the bot is not
+   connected to the botnet, nobody will be able to download the
+   file until that bot connects again.  the local filename can be
+   anything you want.
+   example:  ln Snowbot:/gifs/uglyman.gif ugly.gif
+see also: share, unshare, get

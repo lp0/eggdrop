@@ -1,0 +1,39 @@
+%{+M}
+### chaninfo <channel>
+     this lists all the settings for the bot on the given channel, 
+     it show any of the following:
+        chanmode     which modes are enforced on the channel, both + and
+	             - modes can be enforced
+	idle-kick    kick idle users (non +f's anyway) on the channel 
+	             after how many minutes (use 0, or no-idle-kick
+		     to turn this off)
+%{+n}
+	need-op      tcl command to execute when the bot doesnt have ops
+	need-invite  tcl command to execute when the bot needs to be
+	             invited to the channel (ie channel has mode +i)
+	need-key     tcl command to execute when the bot needs to find 
+	             out the key to the channel
+	need-unban   tcl command to execute when the bot is banned and
+                     can't get on the channel
+	need-limit   tcl command to execute when the bot can't join the
+	             channel because the channel is full
+%{+M}
+     The following can be set + or - (eg .chanset #channel -clearbans)
+        clearbans    clear all the channel bans when the bot joins the 
+	             channel?
+	enforcebans  kicks people who match channel bans?
+	dynamicbans  only activate bans on channel when they are needed
+	userbans     allow other users to place bans on the channl
+	autoop       automatically op users when they join the channel
+	bitch        only allow users with the +o flag to be ops on the 
+	             channel
+	greet        say a users info line when they join the channel
+	protectops   re-op a +o user who gets deopped?
+	statuslog    log the channel status every 5 minutes
+	stopnethack  de-op anyone why enters the channel with server
+	             ops
+	revenge      take revenge on anyone who deops, kicks or
+	             bans the bot or any valid user
+	secret       dont provide info about the channel over the botnet
+%{+N}
+see also: %{+n}chanadd, chandel,%{+N} chansave, chanload, chanset

@@ -1,0 +1,6 @@
+%{+n}
+###  simul <nickname> <text>
+   if the user is on the party line, the bot will simulate them typing
+   the text you specify.  example:
+      .simul dweeb .quit
+   makes it just as if "dweeb" typed ".quit"

@@ -1,0 +1,4 @@
+{%+m}
+###  -ignore <hostmask OR number>
+   removes the ignore from the list of ignores stored on the bot --
+   you may reference the ignore by the number shown in '.ignores'.

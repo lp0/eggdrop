@@ -1,0 +1,8 @@
+%{+B}
+###  relay <botname>
+   will relay you via telnet to another bot that your bot knows of,
+   whether or not they are currently connected.  your dcc-chat/telnet
+   connection to this bot will be relayed to the other bot until the
+   other bot drops your relay, or until you send "*bye*" on a line by
+   itself.
+see also: bots

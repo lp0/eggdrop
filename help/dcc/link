@@ -1,0 +1,10 @@
+%{+B}
+###  link [some-bot] <new-bot>
+   tries to link in a new bot.  if you use the form
+      .link newbot
+   then your bot must have a record for the new bot (see '.+bot').
+   you can either set a password on each end or they will negotiate
+   one the first time they link.  if you use the form
+      .link somebot newbot
+   then the request will be sent to "somebot" for it to link to
+   "newbot".

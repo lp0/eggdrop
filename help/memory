@@ -1,0 +1,4 @@
+%{+m}
+/MSG %B MEMORY
+   This makes me tell you info about how much memory I'm
+   using.  Pretty boring stuff.

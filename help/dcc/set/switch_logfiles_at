@@ -1,0 +1,12 @@
+%{+m}
+###  set switch-logfiles-at <military-time>
+   tells eggdrop when to switch logfiles, storing away the current
+   logfile and starting fresh.  normally this happens at midnight,
+   but on some busy systems where many other processes do things
+   at midnight, you might want to set this to a different time,
+   like 3am.  the time is a number, in military time with no other
+   characters, like "300" or "2200".
+   (please note that a leading zero will make it think you're
+   specifying the time in octal, which is almost certainly not
+   what you want.)
+see also: set save-users-at

@@ -1,0 +1,5 @@
+%{+m}
+###  debug
+   will display a dump of memory allocation, assuming the bot was
+   compiled with DEBUG defined.  it's useless to anyone but program-
+   mers hacking on the bot and trying to find memory leaks.

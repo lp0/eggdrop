@@ -1,0 +1,25 @@
+%{+m}
+###  set motd <filename>
+   specifies the "Message Of The Day" file.  this should be a
+   text file.  it will be displayed to users as they enter a
+   dcc chat session with the bot (so it shouldn't be TOO long).
+   there are a few %-variables you can insert into the motd,
+   which will be interpreted by eggdrop:
+      %%B   bot's nickname (ie, "%B")
+      %%V   current eggdrop version (ie, "%V")
+      %%E   long form of %%V (ie, "%E")
+      %%C   channels the bot is on (ie, "%C")
+      %%A   whatever is set in 'admin' (see 'set admin')
+      %%T   the current time (ie, "%T")
+      %%N   the current user's nickname (ie, "%N")
+      %%%%   a percent sign ("%%")
+   you can also encode messages which can only be read by people
+   with certain flags:
+      %%{+m}Only masters would see this.%%{-}
+      %%{+1}Only people with user flag #1 see this.%%{-}
+      %%{+b}This is only displayed to users doing a remote '.motd'
+      from another bot.%%{-}
+   Other extended %% commands are:
+      %%{cols=N}     start splitting output into N columns
+      %%{cols=N/W}   same, but use a screen width of W
+      %%{end}        end columnated or restricted (ie %%{+m}) block

@@ -1,0 +1,10 @@
+%{+m}
+###  set flood-chan <#msgs>[:<#seconds>]
+   specifies the flood threshold for channel msgs.  if the
+   same host sends this many consecutive msgs to the channel
+   within 60 seconds, it's considered a flood and the host
+   is site-banned.  you can also specify the number of seconds
+   to scan by adding that after a colon (:).  setting the
+   number of channel msgs to 0 disables channel flood
+   protection.
+see also: set flood-msg, set flood-join, set flood-ctcp

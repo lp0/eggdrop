@@ -1,0 +1,20 @@
+###  chat off
+###  chat <channel # or name>
+   changes your channel on the dcc chat connection.  when you first
+   connect to the bot, it places you on channel 0 (the party line).
+   you can move to another channel where basically nobody can see
+   you (except anyone else who decides to join that channel).  valid
+   channel numbers are 1 thru 99999.  some channels may have assigned
+   names -- for those, you can specify the channel by name instead of
+   number if you wish.
+
+   'chat off' removes you from any channel at all.  you can still
+   use normal bot commands and see the console, but you can't talk
+   to anyone except via '.note'
+
+   'chat on' returns you to the party line (channel 0) if you were
+   elsewhere.
+
+###  chat <*channel# or name>
+   same as above, but for channels available only to the bot you
+   are on.

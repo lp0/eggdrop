@@ -1,0 +1,8 @@
+%{+m}
+###  reset [channel]
+   clears out the bot's channel information and makes it gather the
+   information from the server all over again, as if it had just
+   joined that channel.  it's not really useful much, but could be
+   if an odd bug causes the channel information to get scrambled.
+   unfortunately this command used to get a lot of use.  you can omit
+   the channel name to make it reset ALL channels.

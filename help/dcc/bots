@@ -1,0 +1,5 @@
+###  bots
+   shows the list of bots currently in the botnet.  example:
+      Bots: cEvin, ruthie, Killa1
+   there is no indication of which bots are directly connected to
+   this one.  use 'who' or 'bottree' for that information.

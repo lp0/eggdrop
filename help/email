@@ -1,0 +1,3 @@
+/MSG %B EMAIL <my email address>
+   This will set your email address.  It's shown when
+   someone does a WHOIS on you (see HELP WHOIS).

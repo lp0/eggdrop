@@ -1,0 +1,5 @@
+%{+n}
+###  die [reason]
+   kills the bot.  the bot goes offline immediately, logging who gave
+   the 'die' command.  you shouldn't have to use this too often.  if you
+   specify a reason, it's logged, otherwise the reason is "dead by request"

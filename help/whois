@@ -1,0 +1,5 @@
+/MSG %B WHOIS <nick>
+   This will give you information about someone else I
+   know, including his or her default info line, email
+   address, when they were last on the channel, and
+   if they are an op or master.

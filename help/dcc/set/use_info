@@ -1,0 +1,9 @@
+%{+m}
+###  set use-info <0/1>
+   specifies whether to activate the info system.  if this is off,
+   the bot will not accept changes to any user's "info line" (the
+   line shown for '/msg whois' and '/msg who' requests, and shown
+   when a user joins the channel is you have set 'greet' on).
+   this disables '/msg whois' and '/msg who' obviously, and makes
+   the setting of 'greet' meaningless.
+see also: set greet

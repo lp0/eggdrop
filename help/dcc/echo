@@ -1,0 +1,5 @@
+###  echo <on/off>
+   sets whether you want your messages echoed back to you.  if it's
+   on, then when you say something on the party line, it will be
+   displayed to you just like everyone else will see it.  if it's off,
+   then that won't happen.

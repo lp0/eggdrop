@@ -1,0 +1,9 @@
+%{+m}
+###  set files-path <path>
+   specifies where the bot's dcc file directory is.  if you don't
+   want a file transfer section on your bot, define this as "".
+   otherwise, the directory given will be the root directory for
+   users in the file section.  they may move into any subdirectory
+   and download any file you make visible, but may never move out
+   past the files-path directory.
+see also: set incoming-path

@@ -1,0 +1,5 @@
+###  cancel <file(s)>
+   tells the bot to stop sending a file that is pending (either
+   queued, waiting, or in the process of being transferred).
+see also: pending
+   

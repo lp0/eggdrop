@@ -1,0 +1,63 @@
+These are the example scripts that come with eggdrop.  They're meant
+to be useful AND to introduce Tcl to those who haven't dealt with it
+before.  Even people who program in Tcl may be confused by eggdrop's
+implementation at first, because so many commands were added to
+interface the bot.
+
+compat.tcl
+   compatability script for really old eggdrop versions
+
+console.tcl
+   saves and restores users' console levels
+
+dike.tcl
+   detects floodnet attacks and puts offending floodnet members on
+   ignore, while sharing the floodnet hostmasks with other bots on
+   your botnet (good example of botnet coordination)
+
+gainops1.tcl
+   a way to get ops from other bots on the botnet (if they're on the
+   same channel)
+
+local.tcl
+   uses the FILT binding to send text starting with ' to local users
+   only (not the rest of the botnet)
+
+ques3.tcl
+   makes web pages of who's on each channel, updated periodically
+   (requires toolkit.tcl)
+
+samples.tcl
+   adds several commands (more good examples)
+
+toolkit.tcl
+   a few useful proc's that may be required by other Tcl scripts
+
+toolbox.tcl
+   cmwagner's collection of handy proc's
+
+wire.tcl
+   encrypted communications over a botnet
+
+----------------------------------------------------------------------
+
+There is also one ircII script here:
+
+ntalk.irc
+   ntalk v4, which makes dcc chats with eggdrops look nice
+
+----------------------------------------------------------------------
+
+There is one stand-alone Tcl script:
+
+weed
+   a simple script to clear out old or unwanted users from your
+   userfile
+
+----------------------------------------------------------------------
+
+And there is one sample eggdrop config:
+
+gaysf
+   a bot "Lamerbot" which stays in the shadows, only giving ops to those
+   who ask, and not getting involved in channel politics

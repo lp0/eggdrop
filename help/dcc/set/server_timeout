@@ -1,0 +1,5 @@
+%{+m}
+###  set server-timeout <seconds>
+   specifies how long to wait when connecting to a server.  if the
+   server doesn't connect after this many seconds, the bot will just
+   hang up and move on to the next server.

@@ -1,0 +1,52 @@
+%{+O}
+###  whois <nickname>
+   will show you the bot information about a user record.  there are
+   five headings:
+      HANDLE       the handle (nickname) of the user
+      PASS         "yes" if she has a password set, "no" if not
+      NOTES        number of notes stored waiting for the user
+      FLAGS        the list of flags for this user (see below)
+      LAST         the time or date that the user was last on the
+                      channel
+   
+   the valid flags under FLAGS are:
+      o   global op (bot will op this user on any channel)
+      m   master (user is a bot master)
+      n   owner (user is the bot owner)
+      B   botnet master (user is a botnet master)
+      x   xfer (user has file-area access)
+      j   janitor (user is a file-area master)
+      p   party-line (user has party-line access)
+      c   common (user record is a common-access site)  [see 'help common']
+      u   unshared (not sent to other share-bots)
+      b   bot (user is another bot)
+      (plus 10 user-defined flags, 0-9)
+   for bots, there are additional flags that can be set:
+      s   share (bot is sharing user records)
+      h   hub (bot is auto-linked at highest priority)
+      a   alternate (bot is auto-linked if no hub bots can be linked)
+      l   leaf (bot is not allowed to link in other bots)
+      r   reject (bot will not be allowed on the net)
+   
+   each channel that the user has joined will have a specific record
+   for it, with the channel-specific flags and possibly an info
+   line.  the channel-specific flags are:
+      m   master (user is a master for the channel)
+      n   owner (user is an owner for the channel)
+      o   op (bot will give this user chanop)
+      d   deop (bot will not allow this user to become a chanop)
+      f   friend (user is not punished for doing bad things)
+      k   kick (user is auto-kicked)
+      (plus 10 user-defined flags, 0-9)
+   
+   hostmasks for the user are displayed on the following lines.
+   if the user entry is for a bot, there will be a line below which
+   says "ADDRESS:" and gives the bot's telnet address.  some user
+   entries may have "EMAIL:" and "INFO:" entries too.
+%{+m}
+   masters: if there is a comment, you will see it under "COMMENT:"
+%{-}
+
+
+
+see also: match

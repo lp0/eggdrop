@@ -1,0 +1,5 @@
+%{+m}
+###  comment <user> <comment...>
+   creates or changes the comment field for a user.  the comment field
+   can only be seen via 'user' or 'match' -- non-masters can never see
+   user comments.

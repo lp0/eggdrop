@@ -1,0 +1,7 @@
+%{+m}
+###  set ctcp-version <text>
+   specifies the response to send to a CTCP VERSION request.  you
+   might want to set this to look like a response from a normal irc
+   client, so irc-ops can't tell this is a bot.  one example is:
+      ircII 2.8 Linux 1.2.4 :ircii 2.6: almost there...
+see also: set ctcp-finger, set ctcp-userinfo

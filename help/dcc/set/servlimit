@@ -1,0 +1,8 @@
+%{+m}
+###  set servlimit <#>
+   specifies the minimum number of servers the bot should accept.
+   if the bot's home channel ever empties out, and the number of
+   servers on the irc net becomes less than the 'servlimit', the
+   bot will jump to a new server.  this is to prevent it from
+   getting stuck on the wrong end of a netsplit.  to disable it,
+   just set it to 0.

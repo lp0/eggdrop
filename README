@@ -1,0 +1,366 @@
+                       _
+  ___   __ _  __ _  __| |_ __  ___  _ __
+ / _ \ / _` |/ _` |/ _` | '__|/ _ \| '_ \
+|  __/| (_| | (_| | (_| | |  | (_) | |_) |
+ \___| \__, |\__, |\__,_|_|   \___/| .__/
+       |___/ |___/                 |_|     v1.1 ALPHA
+
+Please at least SKIM this document before asking questions.
+
+
+(1) WHAT IS EGGDROP?
+
+    Eggdrop is an IRC bot, written in C.  If you don't know what IRC is,
+    this is probably not whatever you're looking for!  Eggdrop, being a
+    bot, sits on a channel and takes protective measures: to keep the
+    channel from being taken over (in the few ways that anything CAN),
+    to recognize banished users or sites and reject them, to recognize
+    priveledged users and let them gain ops, etc.
+
+    One of the more unique features of eggdrop is its "party line",
+    accessable via DCC chat, which allows you to talk to other people
+    lag-free.  Consider it a multi-way DCC chat, or a miniature IRC
+    (complete with channels).  You can link up with other bots and
+    expand the party line until it actually becomes something very much
+    like IRC, in fact.  
+
+    Eggdrop is always being improved and adjusted because the author
+    is never really satisfied with it.  In fact, it existed for several
+    years as v0.7 - v0.9 before finally going 1.0.  A valiant effort has 
+    been made to chase down and destroy bugs.  It is definitely nowhere
+    near as buggy as the ircII client.  Crashes should be rare and
+    surprising (but aren't they always? [surprising anyway]).
+
+    This README file contains information about how to get eggdrop, how to
+    quickly compile the bot, what you may need to do when upgrading from 
+    older versions, a list of frequently asked questions about compiling,
+    how to set up a crontab, some boring legal stuff, info about the mailing
+    list (a great place to ask questions), and a complaint/explanation about
+    the lack of documentation.
+
+    The preliminary documentation is in "eggdrop.doc" and is intended to be
+    read after you have eggdrop compiled and set up.  It's changing all the
+    time and getting new sections added.  If you'd like to write a section
+    or just indicate some part that needs improving, please do!
+
+
+(2) HOW TO GET EGGDROP
+
+    Before you can compile eggdrop, you need to have Tcl installed on
+    your system.  Most systems should have Tcl on them by now -- you
+    can check by trying the command "tclsh".  If it works, you will be
+    given a "%" prompt, and you can type "exit" to exit the program.
+    That means Tcl is on your system.  If tclsh doesn't load, then Tcl
+    probably isn't on your system, and you will need to ftp it.  The
+    best ftp site is:
+       ftp://ftp.sunlabs.com/pub/tcl
+    The current version as of this writing is 7.5.  Right now, eggdrop
+    has only minimal support for the new 7.5 features and I haven't
+    tested them, but feedback is welcome.
+
+    Tcl comes with the Slackware distribution of Linux.  HOWEVER, the
+    one that comes on Slackware 3.0 is goofed up and you'll have to
+    re-install it for yourself to get it working.
+
+    The eggdrop code is available via anonymous FTP at:
+       ftp://ftp.sodre.net/pub/eggdrop/
+       ftp://ftp.crafti.com.au/
+       ftp://ftp.eagle.ovik.se/pub/unix/irc/ftp_sodre_net/
+       ftp://ftp.ntis.com/pub/irc/DeadelviS/bot/c/eggdrop/
+
+    There is also a web page that is updated pretty frequently, and
+    always has links to the latest few versions, as well as to botnets
+    and other sources of info:
+       http://www.valuserve.com/~robey/eggdrop/
+       http://www.sodre.net/eggdrop/
+
+    There are several eggdrop Tcl script libraries out there.  I have
+    pointers to a few on the web page.
+
+
+(3) QUICK STARTUP
+
+    Eggdrop, while not covered under the GPL (for various reasons), does
+    use the GNU autoconfigure scripts, to make things easier.
+
+    1. Type './configure' from the eggdrop directory.  That script will
+       determine how your system is set up, and figure out how to compile
+       eggdrop (I hope).  It will also try to find Tcl, which is required
+       to compile.
+
+    2. Edit 'src/eggdrop.h' to your liking if you're the hacker type.
+       (THIS STEP IS OPTIONAL.)
+
+    3. Type 'make' from the eggdrop directory.  If you want your bot to run
+       from it's own directory (highly recommended), type 'putegg <dir>' to
+       copy the main files there.
+
+    4. Edit 'eggdrop.conf' (a sample script) and rename it to something you
+       can remember (like "mybot").  Move it to your bot's directory.
+       (THIS STEP IS NOT OPTIONAL!)
+
+    5. Start the bot with the "-m" option to create a user file, ie
+       'eggdrop -m mybot'.
+
+    6. When starting the bot in the future, drop the "-m".  If you have 
+       edited your bot script correctly, you can type: 
+           chmod u+x <my-bot-script-name>
+       and from then on, you will be able to run your bot directly from the
+       script.  So you can just type "mybot" from your shell prompt to
+       start up your bot.  For this to work, the top line of your script MUST
+       contain the correct path to eggdrop.
+
+    7. It's advisable to run your bot via crontab so that it will automatic-
+       ally restart if the machine goes down or (heaven forbid) the bot
+       should crash.  Look at the file 'botchk' for a great start with cron-
+       tabbing the bot.
+
+
+(4) UPGRADING
+
+    There are many major changes between v0.9 and v1.0 and v1.1 so 
+                               PAY ATTENTION
+    to this part if you have a v0.9 or 1.0 bot already.  If you're 
+    just starting out, you can skip this section.
+
+    to 1.1alpha+
+    *  If you run sharebots, you will need to upgrade them all at the
+       same time because of the new userfile format.  Older bots will
+       be able to link in, but will not get or send a userfile.
+
+    to 1.0g:
+    *  If you run sharebots, you will need to upgrade them all at the
+       same time because of the new userfile format.  Older bots will
+       be able to link in, but will not get or send a userfile.
+
+    from 0.9 to 1.0:
+    *  You will have to make a new config file.  Because eggdrop is now
+       multi-channel, whole sections of the config file have changed --
+       particularly the part where you define the channels.  My advice is
+       to just start over from the 'eggdrop.conf' example config, and use
+       your old config as a guide.  It might be a pain, but it should
+       only take 5-10 minutes.
+    *  non-Tcl bots aren't supported any more: upgrade or stick with 0.9
+    *  many commands have changed somewhat -- for example, commands like
+       '.say' and '.kickban' now operate on the user's current console
+       channel (which can be changed with '.console')
+    *  virtually every Tcl script for 0.9 will have to be changed to work
+       with 1.0 -- many scripts already have 1.0 versions as of this
+       writing, and the file "tcl-commands.doc" tells how to convert your
+       own scripts
+    *  the +a and +h flags for bots no longer have their old meanings; the
+       new meanings are:
+          +h  preferred (hub) link -- these bots will be tried first until
+              one +h is directly linked in, at which point no more auto-
+              connects are tried.  if a +h bot suddenly becomes available
+              when none were available before, all interfering links are
+              DROPPED, and the connection to the +h bot is made
+          +a  alternate link -- if no hub bots can be linked, then these
+              bots will be tried until at least one is linked in.  they're
+              just an alternate connection, and could be dropped once a +h
+              link can be made
+       the new meanings for the flags make botnet connecting more reliable,
+       and make it easier to structure a "default" layout that will maintain
+       itself even if nobody's around.
+    *  sharebots: be sure to upgrade all sharebots at the same time -- 1.0
+       bots will be unable to transfer userfiles with 0.9 bots and likewise
+       for 1.1 <-> 1.0 (the userlist is sent through DCC now, for speed)
+    *  helpbot support and 'ntalk.irc' support were removed, since both were
+       effectively useless any more  (a new 'ntalk.irc' has been included
+       with this distribution, which does not require bot support any more)
+    *  the file system will rebuild itself as you use it (IF you use it)
+       but this should be transparent
+
+
+(5) FREQUENTLY ASKED QUESTIONS
+
+    1. WHAT DO I DO IF I GET THE ERROR "USER FILE NOT FOUND"?
+
+       (1) Run eggdrop with the "-m" option (ie, "eggdrop -m mybot").
+       (2) Go to IRC and send "hello" to your bot (ie, "/msg mybot hello").
+       (3) You will become a master on your bot.  You can leave the bot
+           running (nobody else will become a master if they say "hello"),
+           but in the future, don't use the "-m" option when running the bot.
+
+    2. MY EGGDROP WON'T RUN; IT JUST SAYS "CAN'T FIND YOUR HOSTNAME!"
+
+       Your machine is set up strangely, and eggdrop can't figure out its 
+       network hostname.  You can get around this by setting an environment
+       variable called HOSTNAME.  In sh or ksh:
+         $ HOSTNAME=myhost.domain.edu
+         $ export HOSTNAME
+       In csh or tcsh:
+         % setenv HOSTNAME myhost.domain.edu
+       It should work after that.  You may want to bug your system admini-
+       strator to set up her /etc/hosts file correctly, or add those above
+       commands to your '.login' file (sh or ksh: '.profile').
+
+    3. WHAT THE HECK IS TCL?
+
+       Tcl is a scripting language written by John Ousterhout.  It's much 
+       better than most "in-built" script langauges (like the one in ircII)
+       and is meant to be linked with anything needing a script language.
+       So I linked it with eggdrop.
+
+       The file "tcl-commands.doc" in the eggdrop directory contains a list
+       of the commands added to Tcl by eggdrop.  There are also several
+       example scripts in the script/ directory, and there are gobs of
+       scripts floating around on the ftp sites if you like working by
+       example (which is typically the best way).
+
+    4. MY USER LIST IS VERY LARGE.  HOW CAN I CUT IT DOWN?
+
+       There is a Tcl script called "weed" distributed with eggdrop.  To use 
+       it, type:
+         tclsh weed
+       It will give you a list of options for weeding out your userlist.  You
+       can erase users who haven't been on the channel within a specified
+       number of days, or erase any ops who haven't set a password yet, etc.
+       Lots of options.
+
+    5. MY BOT DIES AND THE LAST ENTRY IN THE LOGFILE IS "RECEIVED TERMINATE
+       SIGNAL".  WHAT DOES THAT MEAN AND CAN I PREVENT IT?
+
+       There's nothing you can do to prevent it.  It means the system admini-
+       stator is killing the eggdrop process.  Most of the time, it's an
+       automatic thing that happens when the system is being rebooted -- so
+       it's harmless, and if you have a crontab running, the bot will get
+       restarted when the system is back online.  Occassionally the system
+       administrator will kill the bot manually -- for example, if he/she
+       doesn't want bots running on the system.
+
+    6. MY COMPILE DIES AT THE LAST MINUTE WITH "LD FATAL SIGNAL 11"!
+
+       This happens on Linux machines which have recently been converted
+       to ELF by upgrading to Slackware 3.0.  Apparently Slackware 3.0
+       comes with a non-ELF (a.out) Tcl library, and the compiler doesn't
+       handle that well.  (It should give you an error; instead it barfs.)
+       Fixing it is tricky because even if you recompile libtcl.a, the
+       linker will most likely find the "bad" one first, and your work
+       will be in vain.
+
+       Here's a fix that's been floating around on the eggdrop list:
+       1. Recompile 'libtcl.a' for yourself, to make sure an ELF library
+          is created.
+       2. Copy it into your eggdrop/src directory, naming it 'libtcl2.a'.
+       3. Edit the Makefile and change the line that says '-L/usr/lib -ltcl'
+          to '-L. -ltcl2'.
+       4. Recompile eggdrop.
+
+       Also send hate-mail to the Slackware guy telling him to stop fucking
+       up the libraries.  He seemed to assume that everyone would still
+       want to compile old-style (a.out) binaries.  As far as I know, only
+       cruddy old Netscape still uses that.
+
+    7. SOMEONE ELSE SET UP A BOT I DON'T LIKE.  ARE THERE ANY BACKDOORS I
+       CAN USE TO TAKE THEIR BOT DOWN?
+
+       No, there have never been any backdoors and there never will be,
+       so please stop asking.  Every once in a while, someone finds a way
+       to exploit a bug in eggdrop, but we fix these bugs as soon as I find
+       out about them.  If you want to bring down someone else's bot, you
+       will not have my help.
+
+
+(6) SETTING UP A CRONTAB
+
+    Eggdrop has become more stable with time, thanks mostly to people detail-
+    ing bugs to me and helping me find places where it crashes.  However, I'm
+    sure there are still a few places where things aren't perfect -- that's
+    how life works.  Also, most systems go down from time to time.  These 
+    things cause your bot to disappear from IRC, and you have to restart it.
+
+    I have included a csh script called 'botchk' which will help keep the bot
+    online.  It will make the machine check every ten minutes to make sure
+    your bot is still running.  To use it, you have to add a line to your
+    crontab.  First, edit 'botchk' and change the directory and command line
+    parameters so that it will be able to start up your bot.  Then, add this
+    line to your crontab:
+
+    0,10,20,30,40,50 * * * *   /home/mydir/botchk
+
+    If you don't want to get emails from cron, put this:
+
+    0,10,20,30,40,50 * * * *   /home/mydir/botchk >/dev/null 2>&1
+
+    Naturally, you need to change the path to the correct path for botchk.  If
+    you've never used crontab before, here is a simple way to add that line:
+    Create a new file called 'mycron' and put the above line into it.  Then,
+    from your shell prompt, type
+      % crontab mycron
+    That will create a new crontab entry for you, with a line that runs botchk
+    every ten minutes.  Botchk will then restart the bot when necessary (and
+    send you email informing you).
+
+
+(7) BORING LEGAL STUFF
+
+    The eggdrop bot is copyright (c) by Robey Pointer.  As of January 1997,
+    eggdrop is distributed according to the GNU General Public License.
+    There should be a copy of this license in the file COPYING.  If not,
+    write to the Free Software Foundation, Inc., 675 Mass Ave, Cambridge,
+    MA 02139, USA.
+
+    Releases previous to 1.0m were made using a different licensing scheme.
+    You may, at your option, use the GNU General Public License on those
+    versions (instead of the license packaged with them) with my blessing.
+    For any versions bearing a copyright date of 1997 or later, you have
+    no choice -- you must use the GNU General Public License.
+
+    The files "match.c", "net.c", and "blowfish.c" are exempt from the above
+    restrictions.  "match.c" is original code by Chris Fuller (email:
+    crf@cfox.bchs.uh.edu) and has been placed by him into the public domain.
+    "net.c" is by me and I also choose to place it in the public domain.
+    "blowfish.c" is by various sources and is in the public domain.  All 3
+    files contain useful functions that could easily be ported to other
+    applications -- the other parts of the bot generally don't.
+
+    Tcl is by John Ousterhout and is in no way affiliated with eggdrop,
+    and has its own set of copyrights and whatnots, I'm sure.
+
+    There is no warranty, implied or whatever.  You use this software at
+    your own risk, no matter what purpose you put it to.  You didn't pay
+    for it, so don't expect magic.
+
+
+(8) MAILING LIST
+
+    Yes, there is a mailing list.  The address has changed recently,
+    though, and (thank the heavens) I don't have to maintain it any more.
+    To subscribe, send email to:
+       majordomo@sodre.net
+    In the body of the message, put "subscribe eggdrop".
+
+    I tend to get a lot of mail about this thing, so please don't flood
+    my mailbox.  However if you have something urgent and private to tell
+    me, I can be reached at
+       robey@netcom.com
+
+    WARNING: If you send me private email about something that they've
+    discussed on the mailing list, I'll probably just delete it.  So don't
+    ask me simple questions that waste my time, that probably anyone on
+    the mailing list could answer.  There are a lot of people on there
+    who have used the bot for a year or more, and know almost as much
+    about the bot as I do.  (Some of them probably know more...)
+
+
+(9) DOCUMENTATION
+
+    I've been trying hard to keep the online documentation (in the help/
+    directory) fairly up-to-date.  It should be complete now; you can browse
+    through there for some handy tips.  Please let me know if you find any
+    help files that are incorrect or confusing!
+
+    I know that a unified documentation would REALLY BE HELPFUL.  All I can
+    say is...  I've been pretty busy.  I just graduated in December and I've
+    spent the past several months getting settled into the bay area, getting
+    a job, etc.  So I haven't even had much time to keep updating the bot.
+    But I AM working on it, bit by bit.  Stage one was finishing the online
+    docs.  Now I'm slowly adding bits to the unified documentation. 
+
+    I have seven sections written so far, and I'm not sure how helpful
+    they are, but you can find them in "eggdrop.doc" for now.  Comments and
+    suggestions would be welcome!
+
+
+This is the end.  Wow.  Someone actually read this far.

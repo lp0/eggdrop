@@ -1,0 +1,8 @@
+%{+m}
+###  set firewall <host:port>
+   specifies your telnet proxy server if you're behind a firewall.
+   leave this blank if you have a normal (direct) net connection.
+   if set, this should contain the host and port of your socks v4
+   proxy server.  or it starts with a '!', your sun telnet passthru
+   server (this barely works, if at all -- consider using socks).
+see also: set reserved-port

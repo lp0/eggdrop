@@ -1,0 +1,31 @@
+DCC COMMANDS for %B, %V:
+  who          +ban         say          away         quit
+  whom         -ban         msg          me           servers
+  whois        bans         act          note         channel
+  match        resetbans    motd         files        kick
+  bots         op           addlog       newpass      kickban
+  bottree      deop         invite       console      chat
+  notes        topic        nick         email        info
+  echo         botinfo      stick        unstick      strip
+  trace
+%{+M}
+For channel masters:
+  adduser      +host        chattr       save         reload
+  deluser      -host        status       boot
+%{end}
+%{+B}
+For botnet masters:
+  +bot         chbotattr    chnick       chpass       +bothost
+  -bot         link         chaddr       relay        -bothost
+   unlink       assoc       boot
+%{end}
+%{+m}
+For masters:
+  chinfo       +user        set          jump         die
+  chemail      -user        flush        dccstat      dump
+  comment      binds        banner       +ignore      debug
+  rehash       restart      reset        -ignore
+%{end}
+All commands begin with '.' and all else goes to the party line.
+%{+m}Text starting with ',' is sent ONLY to bot-masters.%{end}
+You can get help on individual commands: '.help <command>'

@@ -1,0 +1,7 @@
+###  pending
+   gives you a listing of every file you've requested which is
+   still waiting, queued, or in the process of transferring.
+   it shows you the nickname on IRC that the file is being sent
+   to, and, if the transfer is in progress, tells you how far
+   along the transfer is.
+see also: cancel

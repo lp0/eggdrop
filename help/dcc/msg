@@ -1,0 +1,4 @@
+%{+O}
+###  msg <nickname> <text>
+   sends a private message to someone from the bot, just as if the
+   bot had typed /msg.

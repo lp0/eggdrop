@@ -1,0 +1,323 @@
+dnl Process this file with autoconf to produce a configure script.
+AC_INIT(eggdrop.conf)
+AC_CONFIG_HEADER(config.h)
+
+echo ""
+echo "This is eggdrop's GNU configure script."
+echo "It's going to run a bunch of strange tests to hopefully make"
+echo "your compile work without much twiddling."
+echo ""
+
+AC_PROG_CC
+
+dnl no cross-compiling!
+dnl AC_C_CROSS  <- was merged into AC_PROG_CC
+
+if test ! x${cross_compiling} = xno; then
+  echo ""
+  echo "This system does not appear to have a working C compiler."
+  echo "A working C compiler is required to compile eggdrop."
+  echo ""
+  exit
+fi
+
+dnl Checks for programs.
+AC_PROG_MAKE_SET
+AC_CHECK_PROG(STRIP,strip,-s)
+AC_CHECK_PROG(UNAME,uname,uname)
+
+dnl 'nawk' is NOT compatable! dammit!
+dnl no longer use awk for anything
+dnl AC_CHECK_PROGS(AWK,awk gawk mawk)
+
+AC_PROG_RANLIB
+
+dnl stop putting -g in there!  @#$!#$%!
+dnl also fix strength-reduce problem in gcc
+CFLAGS="-O"
+if test "x$CC" = "xgcc"; then
+  CFLAGS="-O3 -fno-strength-reduce"
+fi
+if test x`${UNAME}` = "xLinux"; then
+  CFLAGS="${CFLAGS} -Wall"
+fi
+
+dnl Check for OSF/1.
+AC_MSG_CHECKING(for OSF/1)
+if test x`${UNAME}` = "xOSF1"; then
+  AC_MSG_RESULT(yes)
+  AC_DEFINE(STOP_UAC)
+else  
+  AC_MSG_RESULT(no)
+fi
+
+AC_MSG_CHECKING(for IRIX)
+if test x`${UNAME}` = "xIRIX"; then
+  AC_MSG_RESULT(you are cursed with IRIX)
+  IRIX=yes
+  STRIP=
+else
+  AC_MSG_RESULT(no)
+  IRIX=no
+fi
+
+AC_MSG_CHECKING(for Windows NT)
+if test x`${UNAME}` = "xCYGWIN32/NT"; then
+  AC_MSG_RESULT(Windows NT -- enjoy the ride!)
+  NT=yes
+  STRIP=
+  EGGEXEC=eggdrop.exe
+else
+  AC_MSG_RESULT(Good, we aren't lamers :)
+  NT=no
+  EGGEXEC=eggdrop
+fi
+
+dnl crazy machines
+AC_AIX
+AC_ISC_POSIX
+AC_MINIX
+
+AC_C_BIGENDIAN
+AC_CHECK_SIZEOF(long)
+AC_CHECK_SIZEOF(int)
+
+dnl Check for Sun libraries.
+if test ${IRIX} = yes; then
+  echo Skipping library tests because they CONFUSE Irix.
+else
+  AC_CHECK_LIB(socket,socket)
+  AC_CHECK_LIB(nsl,connect)
+  AC_CHECK_LIB(dns,gethostbyname)
+  if test x`${UNAME}` = "xSunOS"; then
+    AC_MSG_CHECKING(for SunOS 4)
+    if test x`uname -r | cut -d . -f 1` = "x5"; then
+      AC_MSG_RESULT(Solaris -- yay)
+    else
+      AC_MSG_RESULT(SunOS -- sigh)
+      dnl for suns without yp or something like that:
+      AC_CHECK_LIB(dl,main)
+    fi
+  fi
+fi
+
+dnl Checks for header files.
+AC_HEADER_DIRENT
+AC_HEADER_SYS_WAIT
+AC_CHECK_HEADERS(sys/time.h sys/select.h sys/rusage.h unistd.h)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_PID_T
+AC_HEADER_TIME
+
+dnl Checks for library functions.
+AC_CHECK_FUNCS(rename getrusage getdtablesize srandom random sigaction)
+AC_CHECK_FUNCS(sigemptyset vsprintf strcasecmp setpgid clock dlopen)
+
+if test "${ac_cv_func_vsprintf}" = "no"; then
+  echo ""
+  echo "Your system does not have the sprintf/vsprintf libraries."
+  echo "These are required to compile almost anything.  Sorry."
+  echo ""
+  exit
+fi
+
+dnl check how much space is left in filedb (informational purposes)
+
+AC_MSG_CHECKING(space left in file database struct)
+cat >abacab.c <<'EOF'
+#include <stdio.h>
+#include <sys/time.h>
+#include "src/files.h"
+main() {
+  printf("%d\n",512-sizeof(struct filler));
+}
+EOF
+${CC} -o abacab abacab.c
+FILEDB_SPACE=`./abacab`
+AC_MSG_RESULT($FILEDB_SPACE bytes)
+rm -f abacab abacab.o abacab.c
+echo "   (standard is currently 36 bytes)"
+
+dnl where is tcl?  is it here?
+
+# ---------- begin robey's tcl thingies
+
+libnames="tcl.so tcl.so.1 tcl80.so.1.0 tcl76.so.1.0 tcl75.so.1.0 \
+         tcl80.so.1 tcl76.so.1 tcl75.so.1 tcl74.so.1 \
+         tcl8.0.so tcl7.6.so tcl7.5.so tcl7.4.so \
+         tcl8.0.so.1 tcl7.6.so.1 tcl7.5.so.1 tcl7.4.so.1 \
+         tcl.a tcl80.a tcl76.a tcl75.a tcl74.a \
+         tcl8.0.a tcl7.6.a tcl7.5.a tcl7.4.a"
+
+# look for libtcl.a: if TCLLIB is set, check there first
+if test "$TCLLIB" != ""; then
+  TCLLIBFN=notfound
+  for checkfn in $libnames;
+  do
+    if test -r $TCLLIB/lib$checkfn; then
+      if test $TCLLIBFN = notfound; then
+        TCLLIBFN=$checkfn
+      fi
+    fi
+  done
+  if test $TCLLIBFN = notfound; then
+    echo "Environment variable TCLLIB is set, but incorrect."
+    unset TCLLIB
+  fi
+fi
+
+# check in common places now
+AC_MSG_CHECKING(for libtcl)
+if test "$TCLLIB" = ""; then
+  for checkfn in $libnames;
+  do
+    if test "$TCLLIB" = ""; then
+      for check in /usr/local/lib /usr/local/lib/tcl /usr/local/pkgs/tcl/lib /usr/lib /usr/i486-linuxaout/lib $HOME $HOME/tcl $HOME/tcl/lib;
+      do
+        if test -r $check/lib$checkfn; then
+          if test "$TCLLIB" = ""; then
+            AC_MSG_RESULT(found in $check/lib$checkfn)
+            TCLLIB=$check
+            TCLLIBFN=$checkfn
+          fi
+        fi
+      done
+    fi
+  done
+else
+  AC_MSG_RESULT(found in $TCLLIB/lib$TCLLIBFN)
+fi
+
+# give up if they don't even have that
+if test "$TCLLIB" = ""; then
+  AC_MSG_RESULT(not found)
+else
+# now look for pesky tcl.h file
+  if test "$TCLINC" != ""; then
+    if test ! -r $TCLINC/tcl.h; then
+      echo "Environment variable TCLINC is set, but incorrect."
+      unset TCLINC
+    fi
+  fi
+
+  # check in common places now
+  AC_MSG_CHECKING(for tcl.h)
+  if test "$TCLINC" = ""; then
+    for check in /usr/local/include /usr/local/include/tcl /usr/local/pkgs/tcl/include /usr/include /usr/include/tcl $HOME $HOME/tcl $HOME/tcl/include;
+    do
+      if test -r $check/tcl.h; then
+        if test "$TCLINC" != ""; then
+          break
+        fi
+        AC_MSG_RESULT(found in $check/tcl.h)
+        TCLINC=$check
+        break
+      fi
+    done
+  else
+    AC_MSG_RESULT(found in $TCLINC/tcl.h)
+  fi
+ 
+  # had TCLLIB but not TCLINC?  so close... :(
+  if test "$TCLINC" = ""; then
+    AC_MSG_RESULT(not found)
+    unset TCLLIB
+    unset TCLLIBFN
+  fi
+fi
+
+# done looking, now either TCLLIB & TCLINC are both set, or neither is set
+
+if test "$TCLLIB" = ""; then
+  echo ""
+  echo "I can't find Tcl on this system."
+  echo ""
+  echo "Eggdrop now requires Tcl to compile.  If you already have Tcl"
+  echo "installed on this system, and I just wasn't looking in the right"
+  echo "place for it, set the environment variables TCLLIB and TCLINC so"
+  echo "I will know where to find 'libtcl.a' (or 'libtcl.so') and 'tcl.h'"
+  echo "(respectively).  Then run 'configure' again."
+  echo ""
+  echo "Read the README file if you don't know what Tcl is or how to get"
+  echo "it and install it."
+  echo ""
+  exit 1
+else
+  AC_MSG_CHECKING(for Tcl version)
+  tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.4" | wc -l`
+  if test $tclver = 0; then
+    tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.5" | wc -l`
+    if test $tclver = 0; then
+      tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "7.6" | wc -l`
+      if test $tclver = 0; then
+        tclver=`grep TCL_VERSION $TCLINC/tcl.h | grep "8.0" | wc -l`
+        if test $tclver = 1; then
+          AC_MSG_RESULT(8.0 found!)
+          need_dl=1
+        else
+          AC_MSG_RESULT(hmm... unknown version)
+        fi
+      else
+        AC_MSG_RESULT(7.6 found!)
+        need_dl=1
+      fi
+    else
+      AC_MSG_RESULT(7.5 found!)
+      need_dl=1
+    fi
+  else      
+    AC_MSG_RESULT(7.4 found)
+    echo "   7.4 is kind of old; you may want to upgrade soon."
+    need_dl=0
+  fi
+
+  if test $need_dl = 1 -a "${ac_cv_func_dlopen}" = "no"; then
+    got_dl=0
+    dnl some weird weird OS's put it here :/
+    if test -r /usr/bin/libdl.so.1; then
+      CFLAGS="$CFLAGS -L/usr/bin"
+    fi
+    AC_CHECK_LIB(dl,dlopen,got_dl=1)
+    if test $got_dl = 0; then
+      echo ""
+      echo "In order to use versions of Tcl from 7.5 on, you must have"
+      echo "the DL libraries somewhere on your system (-ldl)."
+      echo ""
+      exit 1
+    fi
+    LIBS="-ldl $LIBS"
+  fi
+  TCLLIBFNS=`basename $TCLLIBFN .a`
+  TCLLIBFNS=`basename $TCLLIBFNS .so.1.0`
+  TCLLIBFNS=`basename $TCLLIBFNS .so.1`
+  TCLLIBFNS=`basename $TCLLIBFNS .so`
+  if test $tclver = 1; then
+    TCL_REQS="$TCLLIB/lib$TCLLIBFN"
+    TCL_LIBS="-L$TCLLIB -l$TCLLIBFNS -lm"
+  else
+    AC_MSG_RESULT(7.3 or earlier -- sigh)
+    TCL_REQS="libtcle.a"
+    TCL_LIBS="-L. -ltcle -lm"
+  fi
+fi
+
+AC_SUBST(TCLINC)
+AC_SUBST(TCLLIB)
+AC_SUBST(TCLLIBFN)
+AC_SUBST(TCL_REQS)
+AC_SUBST(TCL_LIBS)
+
+# ---------- end of robey's tcl thingies
+
+AC_SUBST(EGGEXEC)
+
+AC_OUTPUT(Makefile lush.h)
+
+# if you configure again, you must re-make everything.  tough shit.
+make clean
+
+echo ""
+echo "Configure is done."
+echo "Type 'make' to create the bot."
+echo ""

@@ -1,0 +1,6 @@
+%{+m}
+###  set network <net-name>
+   names the IRC network you're connected to.  (obviously,
+   this only matters if the bot is on IRC.)  it's just
+   human-readable text that's shared with other bots on
+   your botnet.

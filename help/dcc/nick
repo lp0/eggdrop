@@ -1,0 +1,4 @@
+###  nick <new-nick>
+   changes your nickname on the bot.  that's the handle that the bot
+   will know you as forever and ever, and what you have to use when
+   telnetting in or IDENT'ing yourself, so remember it.

@@ -1,0 +1,8 @@
+%{+m}
+###  set admin <admin-info>
+   specifies the admin info for your bot.  it's just human-
+   readable text that is displayed every once in a while.  it
+   shouldn't be very long (no more than about 60 characters)
+   and ought to say who's running the bot, and maybe an email
+   address too.  here's an example:
+      set admin "Jace the Happy <jason@mtu.edu>"

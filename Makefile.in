@@ -1,0 +1,84 @@
+#
+#  This is the Makefile for EGGDROP (the irc bot)
+#  You should never need to edit this.
+#
+
+# things you can put here:
+#   -Wall            if you're using gcc and it supports it (configure
+#                      usually detects this anyway now)
+#   -DEBUG_MEM       to be able to debug memory allocation (.debug)
+#   -DEBUG_OUTPUT    to send everything sent to the server to +d console people
+#   -DEBUG_TCL       writes a DEBUG.TCL file which grows really fast and
+#                      logs EVERY command sent to Tcl
+#   -DEBUG           logs random debugging comments to +d level (annoying
+#                      and useless to most people)
+CFLGS = -g
+
+
+# STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
+# - - - - - - - - do not edit anything below this line. - - - - - - - - #
+# - - - - - - - - -  it's all done by configure now.  - - - - - - - - - #
+# STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP STOP #
+
+
+# stuff for Tcl
+XREQ = @TCL_REQS@
+TCLLIB = @TCLLIB@
+
+CFLAGS = -c @CFLAGS@ -I.. @DEFS@ ${CFLGS}
+@SET_MAKE@
+
+all: eggdrop
+
+help:
+	@echo Makefile for Eggdrop.
+	@echo "To make eggdrop (the bot):"
+	@echo "   % make eggdrop"
+
+clean:
+	@rm -f eggdrop egg core *.o *.a
+	@cd src ; rm -f eggdrop egg core *.o *.a
+
+dist: clean
+	@rm -f Makefile config.cache config.log config.status config.h lush.h
+	@echo "all:" >Makefile
+	@echo "	@./configure; make" >>Makefile
+
+eggdrop: always
+	@cd src ; ${GMAKE} eggdrop
+	@mv src/@EGGEXEC@ .
+	@echo ""
+	@./eggdrop -v
+	@echo ""
+	@echo "To copy the help files and executables into your bot's"
+	@echo "directory, type:"
+	@echo "   putegg <my-bot's-directory>"
+	@echo ""
+
+debug: always
+	@cd src ; ${GMAKE} debug
+	@mv src/@EGGEXEC@ .
+
+always: 
+
+# Justin Slootsky says some systems need this (?)
+src/libtcle.a: ${TCLLIB}/lib@TCLLIBFN@
+	@echo "[ Fixing lib@TCLLIBFN@ -> libtcle.a ]"
+	cp ${TCLLIB}/lib@TCLLIBFN@ src/libtcle.a
+	chmod u+rw src/libtcle.a
+	ar d src/libtcle.a tclMain.o
+	@RANLIB@ src/libtcle.a
+
+GMAKE = ${MAKE} 'CC=@CC@' 'OBJS=${OBJS}' 'TCLLIBFN=@TCLLIBFN@'\
+	'CFLAGS=${CFLAGS}' 'XREQ=${XREQ}' 'XLIBS=@TCL_LIBS@ @LIBS@'\
+	'TCLLIB=${TCLLIB}' 'RANLIB=@RANLIB@' 'STRIP=@STRIP@'
+
+eggdrop.h:
+	@echo You do not have the eggdrop source!
+	@exit 1
+
+OBJS = blowfish.o botcmd.o botnet.o chan.o chanprog.o chanset.o cmds.o\
+	dcc.o dccutil.o filedb.o fileq.o files.o gotdcc.o hash.o main.o\
+	match.o mem.o misc.o mode.o msgcmds.o msgnotice.o net.o notes.o\
+	tcl.o tclchan.o tcldcc.o tclhash.o tclmisc.o tcluser.o userrec.o\
+	users.o

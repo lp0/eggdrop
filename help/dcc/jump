@@ -1,0 +1,8 @@
+%{+m}
+###  jump [server [port]]
+   makes the bot jump to another server.  if you don't specify a
+   server, it will jump to the next server in its internal list (see
+   'help servers').  if you specify a server, it will jump to that
+   server (default port is 6667), and if that server is not in the
+   internal list already, it will add it.  jumping servers ALWAYS
+   makes the bot lose ops!

@@ -1,0 +1,7 @@
+%{+m}
+###  set share-users <0/1>
+   specifies whether the bot should ever share user data with another
+   bot.  if this is on, it will use each bot's 's' flag to determine
+   whether or not to share user data.  if this is off, all user data
+   requests are automatically refused.
+see also: set passive

@@ -1,0 +1,5 @@
+%{+m}
+###  set userfile <filename>
+   specifies the filename where eggdrop should store user
+   records.  you normally don't want to change this once you
+   have started using the bot.

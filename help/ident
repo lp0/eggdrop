@@ -1,0 +1,6 @@
+/MSG %B IDENT <password> [nickname]
+   This lets me recognize you from a new address.  You must
+   use your password (the one you set with PASS) so I know
+   it's really you.  If you're using a different nickname
+   than you were when you registered, you'll have to give
+   your original nickname too.

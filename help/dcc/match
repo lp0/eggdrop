@@ -1,0 +1,23 @@
+%{+o}
+###  match <attr> [channel] [[start] limit]
+   shows you user records with the attributes requested: <attr> must
+   start with a '+' or '-'.  records will be shown which have ALL of
+   the requested '+' attributes and NONE of the requested '-' ones.
+   if you specify a channel, the flags are assumed to be channel-
+   specific flags.  examples:
+      .match +b-h        (show all bots which aren't hubs)
+      .match -o #cat     (show everyone who's not an op on #cat)
+###  match <wildcard-string> [[start] limit]
+   shows you user records where the nickname or any of the hostmasks
+   match the wildcard string shown.
+
+   the default limit is 20, meaning that if more than 20 user records
+   match your requirements, only the first 20 will be shown.  you can
+   change this limit by specifying one on the command line, though.
+   if you include a limit, you may also include a starting place (the
+   default is 1).  for example, to list the first 15 users who have
+   hostmasks from clemson.edu:
+      .match *clemson.edu 15
+   to get the next 10 (if there are more than 15), you ask to list
+   numbers 16 thru 25:
+      .match *clemson.edu 16 25

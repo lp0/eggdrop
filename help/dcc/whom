@@ -1,0 +1,16 @@
+###  whom [channel]
+   will display a table of the users currently on the joint party
+   line (formed when you have two or more bots linked together).
+   it will show each user's nickname, preceded by a "*" if they
+   are the owner of their bot, "+" if they are a master, or "@"
+   if they are an op.  in other columns it will show which bot the
+   user is on, and his or her host.
+
+   if the user is away, the away message will be shown.  likewise,
+   if they are idle, the idle time will be displayed.
+
+   if you are on a different channel than the party line (channel
+   0), then this will show the people on every bot who are on
+   your current channel.  you can also optionally give the "channel"
+   option to list who is on a particular channel.
+see also: who, bots, chat

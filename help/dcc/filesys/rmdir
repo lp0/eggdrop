@@ -1,0 +1,4 @@
+%{+m}
+###  rmdir <dir>
+   removes an existing directory, if there are no files in it.
+see also: mkdir

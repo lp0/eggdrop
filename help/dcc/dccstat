@@ -1,0 +1,51 @@
+%{+m}
+###  dccstat
+   displays a table-format list of all the "dcc" connections the bot
+   is handling.  "dcc" means "direct client-to-client communication"
+   and eggdrop expands this to cover every open socket.  so any type
+   of network connection to the bot is considered a "dcc" connection.
+   the headings of the table are:
+      SOCK  the socket of this connection (always unique)
+      ADDR  the IP-number of the host the connection is to, if
+            applicable
+      PORT  the port number being used for communication
+      NICK  the nickname of the user or bot, if it's a user or bot
+      HOST  sometimes, the hostname corresponding to the IP address
+      TYPE  the type of dcc connection (see below)
+
+   the types of connection currently possible are as follows (but
+   more are being added literally all the time):
+      chat  user in dcc-chat command mode
+      pass  user entering dcc chat (being asked for her password)
+      send  raw data connection: user sending a file
+      get   raw data connection: sending a file to a user
+      getp  pending get (waiting for the user to acknowledge)
+      lstn  telnet listening port (in place of a hostname, it will
+              show the proc to call, or mask of acceptable nicks)
+      t-in  incoming telnet user (being asked for his nickname)
+      file  user in dcc-chat file area
+      bot   bot linked in (aka botnet connection)
+      bot*  pending bot link (waiting for acknowledgement)
+      rela  user in relay connection to another bot
+      >rly  bot being relay'd to (one for each "rela")
+      conn  pending telnet connection (chat, relay, bot-link, etc)
+      new   new user via telnet, entering a handle
+      newp  new user via telnet, entering a password
+ 
+   in addition, 'chat' and 'bot' have flags listed for each con-
+   nection.  capital letters mean the flag is on, and lowercase
+   letters mean the flag is off.  for 'chat', the flags are:
+      C     in file area, but allowed to return to party line
+      P     party line access only (no +o access)
+      T     telnet connection (instead of dcc chat)
+      E     echo is on
+   for 'bot', the flags are:
+      P     ping sent, waiting for reply
+      U     user-file sharing is active
+      C     this bot initiated the connection
+      O     user-file offered, waiting for reply
+      S     in the process of sending the user-file
+      G     in the process of getting the user-file
+      W     warned this bot to stop hubbing
+      L     leafed bot (not allowed to hub)
+   for 'chat' users, the party-line channel is also listed.

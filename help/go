@@ -1,0 +1,4 @@
+%{+o}
+/MSG %B GO <channel>
+   This makes me leave a channel if I'm not a channel op.
+   (It's useful for regaining ops.)

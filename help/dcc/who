@@ -1,0 +1,38 @@
+###  who [bot]
+   lists people on this bot, or bots connected to this bot.  the
+   first section is people on your current channel (the party
+   line, if you haven't changed channels) who are on the bot.
+   a '*' next to the nickname means that user is an owner; '+'
+   means they're a master; '@' means they're an op.  the user's
+   nickname, hostname, and possibly an idle time and/or away
+   message will be displayed:
+      *Robey      telnet: nowhere.com
+
+   the next section is bots directly linked to this one:
+      -> MagField   (14 Oct 01:16) eggdrop v1.0j
+   the arrow indicates who initiated the connection -- the right
+   arrow means this bot connected to MagField.  a left arrow
+   means they connected to us.  a '+' next to the arrow indicates
+   that the bot is sharing userfiles with us.  the connection
+   time (14 Oct 01:16) and bot version are also shown.
+
+   the final section is a list of users on this bot who are not
+   on your channel.  (this section may be omitted if everyone is
+   on the same channel as you.)
+
+   if you specify a bot's name, as in '.who valis', the who request
+   will be sent to that bot, as long as that bot is on the botnet.
+%{+m}
+  
+   masters may also see "(con)" and/or "(talk)" after a user's
+   entry -- "(con)" shows that user's console modes (see the
+   '.console' help page), and "(talk)" means that user is using
+   the enhanced talk ircII script.
+  
+   in the final section (users that aren't on this channel), masters
+   will see the actual channel other users are on.  also, peole in
+   the file system will be listed (as being in channel "files") -- 
+   a '+' next to the nickname here means the user has access to return
+   to the party line.
+%{-}
+see also: whom

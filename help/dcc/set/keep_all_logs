@@ -1,0 +1,9 @@
+%{+m}
+###  set keep-all-logs <0/1>
+   specifies whether to keep logs older than 48 hours or not.  if
+   this is set off, at midnight, the current logfile will be re-
+   named to "(logfile).yesterday" and a new logfile started.  the
+   old "(logfile).yesterday" will be erased.  if this is set on,
+   at midnight, the current logfile will be renamed to "(logfile).
+   (date)" and a new logfile started.  eventually your directory
+   will be full of files like "LameBot.log.14Jul94".

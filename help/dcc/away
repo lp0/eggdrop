@@ -1,0 +1,7 @@
+###  away [away-message]
+   marks you as "away" on the party line.  your away message will
+   show up in the '.who' list, and will be displayed to anyone who
+   tries to send you a note.  your notes will be stored, and then
+   displayed to you as soon as you are no longer away.  saying
+   something on the party line will automatically remove your "away"
+   status, or you can type '.away' by itself.

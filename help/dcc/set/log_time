@@ -1,0 +1,3 @@
+%{+m}
+###  set log-time <0/1>
+   specifies whether or not to time-stamp all log entries.

@@ -1,0 +1,25 @@
+"What are all these files for?"
+
+FEATURES
+   just tells you what eggdrop can do -- a kind of advertisement
+
+README
+   what you should read before trying to compile eggdrop -- contains
+   tips on compiling, and an explanation of what eggdrop does
+
+botchk*
+   a sample shell script, suitable for crontab, which will make sure
+   your bot is running
+
+doc/
+   lots of IMPORTANT DOCUMENTATION that you might want to read!
+
+eggdrop.conf
+   sample configuration for your bot
+
+eggstat*
+   a small (very old) Tcl script to give you simple statistics about
+   your user file
+
+motd
+   sample "message of the day" displayed to party-line users as they join

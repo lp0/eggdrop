@@ -1,0 +1,4 @@
+%{+O}
+###  say <text>
+   dumps the text to your current console channel, as if the bot
+   "said" it.

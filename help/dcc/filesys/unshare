@@ -1,0 +1,4 @@
+%{+m}
+###  unshare <file(s)>
+   removes the shared tag from a file.
+see also: share, lsa, ln

@@ -1,0 +1,31 @@
+%{+O}
+###  console [channel] [modes]
+   changes your console level, so that you will see only those types
+   of console messages that you want to.  your current console channel
+   is the channel (that the bot is on) which you can view from the
+   party line, and which channel-specific commands (like 'say' and
+   'op') take affect on.  valid levels are:
+      m  display private msgs/ctcps to the bot
+      p  display public talk and ctcps on the channel
+      k  display kicks/bans/mode changes on the channel
+      j  display joins/parts/nick changes/signoffs/etc on the channel
+      b  display bot links/unlinks/userfile-sharing
+      s  display server messages and connect/disconnects
+%{+M}
+      c  display user commands (dcc and msg)
+      o  display other bot notices [HIGHLY RECOMMENDED]
+%{+m}
+      x  display file transfers and file-area commands
+      r  display all raw text from the server (if compiled in!)
+      d  display debug messages that only coders would care about
+   (note that only masters may use 'c', 'x', 'r', 'o', or 'd'.)
+   -- there are also 5 user-defined console modes '1' thru '5' --
+%{+O}
+   the mode can also be a modifier like '+p' or '-jk' or '+mp-b'.  if
+   you omit the channel and modes, it will show your current console
+   channel and setting.
+%{+m}
+###  console <user> [channel] [modes]
+   is used to set the console level of another user.  this can even
+   be used on users who normally would not be able to set their own
+   console mode.

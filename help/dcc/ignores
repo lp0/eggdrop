@@ -1,0 +1,24 @@
+%{+m}
+###  ignores [wildcard]
+   lists the hostmasks that the bot is currently discarding msgs,
+   etc from.  the ignores are numbered, so they can be easily
+   removed with '-ignore' by number.  a permanent ignore looks
+   like this:
+      [  1] *!onaji@* (perm)
+            Xerxes: spamming me
+            Started 18:38
+   this kind of ignore can only be stopped by using '-ignore'.
+   Xerxes is the one who added it, and his comment is "spamming
+   me".  he added it at about 18:38 today.  a temporary ignore
+   looks like this:
+      [  2] *!*@shellx.best.com (expires at 19:59)
+            MyBot: msg/notice flood
+            Started 18:59
+   that means the ignore was made automatically by the bot at
+   18:59, because someone flooded it.  it can be removed with
+   '-ignore', or it will expire an hour after it started (this
+   is set in 'ignore-time').
+
+   if you use 'ignores <wildcard>' it will list all the ignores
+   that match against your wildcard.
+see also: +ignore, -ignore, set ignore-time

@@ -1,0 +1,9 @@
+###  desc <file> <description>
+   changes the description for a file.  if you are a master or
+   file janitor, you can change the description for any file.
+   otherwise you can only change the descriptions for files you
+   have uploaded.
+
+   the description is restricted to 5 lines of 60 characters
+   each, and is broken up between words.  you can force a line
+   break by putting a '|' in the comment.

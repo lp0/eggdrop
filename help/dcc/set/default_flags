@@ -1,0 +1,6 @@
+%{+m}
+###  set default-flags <flags>
+   specifies the flags to give to a user when they first
+   introduce themselves to the bot with /MSG HELLO.  obviously
+   this has no effect if you have 'learn-users' turned off.
+   for a list of the flags, see 'whois'.

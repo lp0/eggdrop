@@ -1,0 +1,5 @@
+Welcome to the %B file server!
+
+All file transfers will be sent to '%N' by default.
+(You can specify an alternate nick in the 'get' command.)
+Type 'help' for help.

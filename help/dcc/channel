@@ -1,0 +1,26 @@
+%{+O}
+###  channel [channel-name]
+   shows you an extensive display of the users on a channel, and
+   the current channel attributes.  by default, it shows you the
+   channel you are currently viewing on the console, but you can
+   specify another channel if you wish.
+ 
+   the first line will look like:
+      Channel #hiya, 8 members, 45 users, mode +tn:
+   this means that the bot is sitting on channel #hiya, where 8
+   other irc'ers are.  there are 45 people that the bot knows by
+   hostmask, and the channel mode is +tn.  if the bot isn't on
+   the channel it is supposed to be on, it will say "Desiring
+   channel #hiya" instead...  next is a list of the users on the
+   channel, with each entry looking like this:
+       NICKNAME  HANDLE    JOIN   IDLE  USER@HOST
+      @kantSF    kantSF    14:53 o  6m  josh@random.edu
+   the "@kantSF" means that the user's nickname is kantSF and that
+   he is a chanop.  the second "kantSF" is the nickname that the
+   bot knows him by.  sometimes this will differ from the nickname
+   a person is using.  the time displayed is the time the user
+   joined the channel.  the next field is the attributes:
+      m - bot master or owner            o - can get ops (+o)
+      b - another bot                    d - cannot get ops (+d)
+   the last field is the user@host he is using irc from.
+see also: status, whois

@@ -1,0 +1,6 @@
+%{+O}
+###  kick <nickname> [reason]
+   will kick a user off your current console channel with the
+   comment given.  if you omit the reason, the default kick
+   comment is "requested".
+see also: kickban, console

@@ -1,0 +1,18 @@
+%{+m}
+###  binds [type]
+   shows the Tcl bindings in effect, in a list similar to this:
+      Command bindings:
+        TYPE FLGS COMMAND              BINDING (TCL)
+        msg  -    rose                 msg_rose
+        msg  -    go                   msg_go
+        dcc  m    bind                 cmd_bind
+        pub  -    gross                pub_gross
+   the fields should be self-explanatory.  if not, go read the
+   file 'tcl-commands.doc' for help on the Tcl bind command.  note
+   that the builtin commands are now shown.  you may also specify
+   a type of binding to show (ie, '.binds msg') if you want to
+   narrow the field a bit.
+###  binds all
+   displays all the Tcl bindings of every type, including the
+   bindings for builtin commands such as:
+        msg  -    op                   *msg:op

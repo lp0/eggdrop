@@ -1,0 +1,7 @@
+%{+B}
+###  chaddr <bot> <address:botport#/userport#>
+   changes the internet address for a bot.  this is the address
+   your bot will try to telnet to in order to create a connection
+   and link up. If the bot has a seperate port for bots and users
+   they should be seperated with a slash (/).
+see also: link, +bot

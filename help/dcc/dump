@@ -1,0 +1,5 @@
+%{+m}
+###  dump <text>
+   dumps the text to the server.  keep in mind that this bot doesn't
+   run through ircII, so ircII commands will most likely not work this
+   way.  they need to be raw irc codes.

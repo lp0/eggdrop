@@ -1,0 +1,15 @@
+###  (the +c 'common' flag)
+   sometimes a lot of people use irc from the same account -- for
+   example, a telnet site.  in that case, a whole bunch of people
+   will have the same user@host.  so they can't use a traditional
+   user record because they will appear to all be the same person.
+  
+   in this case, you create a user record for the account, and mark
+   it +c, or "common access".  that means that it shouldn't be used
+   as a definitive address.  when someone introduces herself to the
+   bot (ie, by /msg'ing "hello"), if she matches as a +c user, she
+   will be given a new user record which identifies her BY NICKNAME.
+
+   obviously people with that kind of user record shouldn't be given
+   much special access, since when they change nicknames, the bot
+   will identify them as someone else.

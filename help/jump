@@ -1,0 +1,5 @@
+%{+m}
+/MSG %B JUMP <password> [server [port [server password]]]
+   This will make me jump to a new server.  You can
+   optionally tell me a server to jump to, in the form of
+   'new.server.com' or 'new.server.com 6667'.

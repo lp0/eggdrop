@@ -1,0 +1,6 @@
+%{+m}
+###  flush <bot>
+   clears the resync buffer for a share-bot.  this is useful if you
+   want to start over with a userfile transfer: you can unlink the
+   sharebots, flush the resync buffer, and relink.
+see also: link, chattr, unlink

@@ -1,0 +1,8 @@
+%{+n}
+### chanadd
+     lets you add another channel to the bot, this cause the bot to 
+     join the channel, and for you to make chagnes to it's settings.
+     this channel is not permanent unless "channel-file" has been
+     defined in the config file, and is saved everytime the userfile
+     is save, or by using '.chansave'
+see also: chanadd, chandel, chanload, chanset, chaninfo

@@ -1,0 +1,9 @@
+###  info [channel] [info-line]
+   sets your info line.  this is shown via /msg commands 'who' and
+   'whois', and possibly when you join the channel.  if you omit the
+   info line, it will just show you what your current info line is.
+   if you omit the channel name, your default info line will be
+   displayed/changed.  (this is the info line shown for channels
+   where you have no specific info line set.)
+###  info [channel] none
+   removes your info line.

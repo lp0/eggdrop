@@ -1,0 +1,10 @@
+%{+B}
+###  chpass <handle> [newpassword]
+   changes a user's password on the bot.  if you leave off the new
+   password, the user effectively no longer has a password set.  a
+   password is needed to get ops, join the party line, and other
+   things (but only required if one is set).
+ 
+   NOTE: in previous versions, setting a password to "nopass" would
+     clear a user's password -- with encrypted passwords, this no
+     longer works!

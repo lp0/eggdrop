@@ -1,0 +1,4 @@
+###  quit [comment]
+   removes you from the party line and disconnects your dcc chat
+   session with the bot.  if you specify a comment, it will be
+   displayed to other users as you leave.

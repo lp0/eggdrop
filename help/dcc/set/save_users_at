@@ -1,0 +1,7 @@
+%{+m}
+###  set save-users-at <minute>
+   tells eggdrop when to save its userfile, which it does once an
+   hour.  this number will set the number of minutes after the top
+   of the hour to write the userfile -- for example, setting it to
+   15 will make the bot write its userfile at 3:15, 4:15, etc.
+see also: set switch-logfiles-at

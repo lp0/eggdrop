@@ -1,0 +1,4 @@
+%{+m}
+/MSG %B DIE <password>
+   This makes me die (go away) -- not something you will
+   probably be doing very often.

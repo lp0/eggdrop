@@ -1,0 +1,10 @@
+%{+m}
+###  set flood-ctcp <#ctcps>[:<#seconds>]
+   specifies the flood threshold for CTCP queries (to the bot
+   or channel).  if the same host dumps more than this many
+   CTCPs to the bot within 60 seconds, they will be placed on
+   automatic ignore.  you can also specify the number of
+   seconds to scan by adding that after a colon (:).  if you
+   set the number of ctcps to 0, you disable ctcp flood
+   protection (including avalanche flood protection).
+see also: set flood-msg, set flood-join, set flood-chan

@@ -1,0 +1,13 @@
+   You must use your password for any NOTES command.
+/MSG %B NOTES <password> INDEX
+   This lists all the notes stored up for you.
+/MSG %B NOTES <password> READ <# or ALL>
+   This will display a certain note for you, or, if you used
+   'READ ALL', it will show you every note stored for you.
+/MSG %B NOTES <password> ERASE <# or ALL>
+   This works like READ, except it erases whichever note you
+   tell it to (or all of them).
+/MSG %B NOTES <password> TO <nickname> <message...>
+   This stores a note to someone, as long as I know him or
+   her.  They will be informed of a note waiting for them
+   the next time they join the channel.

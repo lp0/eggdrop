@@ -1,0 +1,6 @@
+%{+m}
+###  set owner <nickname-list>
+   specifies the user(s) who are to ALWAYS be bot owners.  it
+   is impossible to remove the +n flag from anyone listed here.
+   if the bot was compiled with the owner flag turned off, this
+   variable has no significance.

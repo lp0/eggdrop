@@ -1,0 +1,4 @@
+%{+B}
+###  -bot <bot>
+   is exactly the same as '-user', but is included for convenience.
+   it erases a user record.

@@ -1,0 +1,6 @@
+%{+m}
+###  set upload-to-pwd <0/1>
+   specifies whether uploads to the bot's file area go to the
+   user's current directory (1), or to the directory specified
+   in 'incoming-path' (0).
+see also: set incoming-path

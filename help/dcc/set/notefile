@@ -1,0 +1,7 @@
+%{+m}
+###  set notefile <filename>
+   specifies the filename where bots should store notes that
+   are sent to someone who isn't on the party line currently.
+   normally, you don't want to change this after the first
+   time you load the bot.  if you want to disable note storage,
+   set this to "" (blank).

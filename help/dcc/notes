@@ -1,0 +1,9 @@
+###  notes index
+###  notes read <# or ALL>
+###  notes erase <# or ALL>
+   lets you manipulate notes that have been stored up for you while
+   you were gone.  'notes index' gives a listing of all the notes
+   stored up: who they are from, and when they were left.  'notes
+   read' lets you read a particular note, or all of them at once.
+   and 'notes erase' erases notes after you are done with them.
+see also: note, whom

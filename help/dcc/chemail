@@ -1,0 +1,4 @@
+%{+m}
+###  chemail <user> [email address]
+   sets the email address for a user.  this info isn't really used by
+   the bot for any reason except to display.

@@ -1,0 +1,9 @@
+###  ls [filemask]
+   displays the files in the current directory.  subdirectories
+   are shown with "<DIR>" next to them, and other files will display
+   their size (typically in kilobytes), who uploaded them (and when),
+   and how many times each file has been downloaded.  if a descrip-
+   tion of the file exists, it is displayed below the filename.  you
+   can restrict the file listing by specifying a mask, just like in
+   unix.
+see also: cd, pwd, get

@@ -1,0 +1,41 @@
+You have two choices, the first is easiest and the second should
+only be used if the fist one doesn't work.
+
+Choice number 1:
+
+change the the root eggdrop directory (where 'addpatch' is)
+and type:
+
+chmod u+x addpatch 
+
+then type 
+
+addpatch file.patch
+
+and it will tell you what the last patches installed where
+and ask if you want to install the patch, if the patch you are
+installing is listed then press 'n' then enter if it's not then
+press 'y' and then enter.
+
+Choice number 2:
+
+In order to apply the patch files found on this site you must have a
+utility called patch, if you do not have it, then you can only manually
+apply these patches, which I wouldn't recommend.
+
+Here is the basic command, ungzip the patch file, and run the following
+command from your eggdrop directory (not the src directory):
+
+patch -p1 < file.patch
+
+Once this is complete, execute the following command:
+
+find . -name "*.rej" -print
+
+If it returns a list with filenames that end in the rej extension then the
+patch didn't apply properly, ensure that the patch is for the version
+intended, ensure that you have the original source, and ensure that the
+patch is not corrupted.
+
+If it turns out that the patch was successful then be sure to recompiling
+by running make again.

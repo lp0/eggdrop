@@ -1,0 +1,6 @@
+%{+O}
+###  op <nickname> [channel]
+   will grant chanop to the person you specify, so long as the bot
+   is opped on that channel, and the person you specify isn't being
+   actively deopped by the bot.
+see also: deop, console

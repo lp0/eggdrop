@@ -1,0 +1,5 @@
+%{+m}
+###  mv <source> <dest>
+   moves a file or group of files from one place to another.  (it
+   can also be used to rename files.)
+see also: mv

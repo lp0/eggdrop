@@ -1,0 +1,6 @@
+%{+m}
+###  lsa [filemask]
+   works just like ls, but hidden files are displayed too.
+   hidden files are displayed with a "(hid)" next to them, and
+   shared files are displayed with a "(shr)" next to them.
+see also: hide, share

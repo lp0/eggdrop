@@ -1,0 +1,7 @@
+%{+m}
+###  mkdir <dir> [flags]
+   creates a subdirectory from this one, with the given name.  if
+   flags are specified, then those flags are required to enter or
+   even see the directory.  you can use the 'mkdir' command again
+   to alter or remove those flags.
+see also: rmdir

@@ -1,0 +1,6 @@
+%{+m}
+###  share <file(s)>
+   marks a file as shared.  this means that other bots can get
+   the file remotely for users on their file systems.  by default,
+   files are marked as unshared.
+see also: unshare, lsa, ln

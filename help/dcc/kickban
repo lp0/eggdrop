@@ -1,0 +1,10 @@
+%{+O}
+###  kickban <nickname> [comment]
+   kicks a user off the channel and bans her by a reasonable host-
+   mask.  your nickname will be attached to the ban in the bot's
+   internal ban list, and the ban will last for one hour -- only
+   on this channel.  use '.+ban' for a more permanent ban which will
+   be activated on every channel the bot monitors.  if you use a
+   comment, that will also be attached to the ban in the ban list,
+   and used as the kick comment.
+see also: +ban, bans

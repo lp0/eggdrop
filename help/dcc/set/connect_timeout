@@ -1,0 +1,5 @@
+%{+m}
+###  set connect-timeout <seconds>
+   specifies how long to wait when connecting to a dcc chat, telnet,
+   relay, bot link, or anything like that.  if the connect doesn't
+   happen after this many seconds, the bot will just give up.

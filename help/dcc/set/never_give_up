@@ -1,0 +1,8 @@
+%{+m}
+###  set never-give-up <0/1>
+   specifies whether the bot should loop forever.  If never-give-up
+   is set false, then the bot will shut down if it goes through the
+   entire server list once without getting a connection.  This is to
+   keep eggdrop from going through an endless loop, if, for example,
+   your machine gets disconnected from the rest of the net.  However,
+   some people prefer their bot to never shut down, no matter what.

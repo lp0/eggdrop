@@ -1,0 +1,5 @@
+%{+B}
+###  chnick <oldnick> <newnick>
+   changes the handle/nickname of a user record.  for example, to
+   change the nickname of user 'gavroche' to 'jamie', you would
+   type: 'chnick gavroche jamie'

@@ -1,0 +1,28 @@
+%{+n}
+### chandel
+     this removes ALL information about a channel from the bot, it's not
+     made permanent unless a channel-file has been defined in the user
+     file, then it's saved each time the usefile is, or by using .chansave
+     
+     *** IMPORTANT ***
+     
+     this erases ALL information about the channel,
+     ALL information, channel settings, channel records for users
+     EVERYTHING.
+     
+     *** IMPORTANT ***
+
+     DO NOT use it just to make a bot depart for a channel, that wont 
+     work.
+
+     *** IMPORTANT ***
+     
+     even if you dont have channel-file definied, it will still erase
+     all the channel records for users on the next userfile save.
+      
+     *** IMPORTANT ***
+     
+     heck! don't use this unless you NEVER want the bot on the channel
+     again
+     
+see also: chanadd, chansave, chanload, chanset, chaninfo

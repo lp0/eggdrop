@@ -1,0 +1,17 @@
+%{+M}
+###  chattr <nickname> [attributes] [channel]
+   lets you view and change the attributes (flags) field for a user.
+   for example, to give Lamer the p and f flags:
+      .chattr Lamer +pf
+   or to remove Denali from the global op list:
+      .chattr Denali -o
+   you may also do any combination of the above:
+      .chattr Fred1 -m+xj-o
+   you can also change the flags for Usagi on a specific channel by
+   supplying the channel after the attributes:
+      .chattr Usagi -m+dk-o #blah
+   whether or not you change any flags, it will show you the user's
+   attributes afterwards.  if this bot uses the owner flag, only the
+   owner may add or remove the 'n' (owner), 'm' (master), 'B' (botnet
+   master), and 's' (bot: userfile share) flags.  to get a list of the
+   flags possible, do 'help whois'.

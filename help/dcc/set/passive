@@ -1,0 +1,12 @@
+%{+m}
+###  set passive <0/1>
+   specifies whether the user data sharing of this bot (set share-
+   users must be on) will be "passive" or "aggressive".  a passive
+   bot will always download the user file from another bot.  an
+   aggressive bot will always upload its user file to other bots.
+   therefore, two aggressive bots will be unable to share user data.
+   two passive bots will be able to share, however -- the bot that
+   did the actual link will be the one to download.  (setting both
+   bots passive allows the user file of the bot which has been
+   online longest to take precendence, usually.)
+see also: set share-users

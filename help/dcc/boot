@@ -1,0 +1,7 @@
+%{+B}
+###  boot <nickname> [reason]
+###  boot <nick@bot> [reason]
+   will kick a user off the party line, and display the reason if you
+   give one.  you can attempt to boot someone from another bot (in a
+   botnet), though it may be rejected if that bot does not allow remote
+   boots.

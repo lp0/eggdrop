@@ -1,0 +1,4 @@
+%{+m}
+###  cp <source> <dest>
+   copies a file or group of files from one place to another.
+see also: mv

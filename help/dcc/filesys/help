@@ -1,0 +1,17 @@
+%B file system commands:   (wildcard expressions are allowed)
+  get <file> [nick]     send a file over IRC (DCC send)
+  pending               list queued file transfers
+  cancel <file>         cancel a queued file transfer
+  ls [filemask]         show list of files in this directory
+  pwd                   display present working directory
+  cd <dir>              change current directory
+  desc <file> <desc>    set description of <file> to <desc>
+  stats                 see your upload/download statistics
+  quit                  leave the file system
+%{+m}
+Masters only:
+  hide      share     mkdir     cp        rm        lsa
+  unhide    unshare   rmdir     mv        ln
+%{-}
+You can get help on any command via:  help <command>
+(To upload a file, just start your dcc transfer.)

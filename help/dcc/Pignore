@@ -1,0 +1,8 @@
+%{+m}
+###  +ignore <hostmask> [note]
+   adds a hostmask to the ignore list, with your nickname and an
+   optional comment.  an ignore added manually like this becomes
+   "permenent", ie, it will not expire automatically.  to make
+   the bot stop ignoring this hostmask, you must eventually use
+   a '-ignore' command.
+see also: -ignore, ignores

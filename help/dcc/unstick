@@ -1,0 +1,4 @@
+%{+O}
+###  unstick <hostmask OR number>
+   turns a "sticky" ban normal again.
+see also: bans, stick

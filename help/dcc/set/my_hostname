@@ -1,0 +1,8 @@
+%{+m}
+###  set my-hostname <hostname>
+   overrides the network DNS name used by the bot to identify
+   itself on servers, etc.  this is only useful if your machine
+   has multiple hostnames and you would like the bot to use a
+   particular one, or if the bot has trouble detecting your
+   hostname automatically.
+see also: set my-ip
