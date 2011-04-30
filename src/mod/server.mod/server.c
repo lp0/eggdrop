@@ -161,12 +161,15 @@ static void deq_msg()
     ok = 1;
   }
 
+  if (msgrate < 0)
+    burst = 0;
+
   if (serv < 0)
     return;
 
   /* Send upto 4 msgs to server if the *critical queue* has anything in it */
   if (modeq.head) {
-    while (modeq.head && (burst < 4) && ((last_time - now) < MAXPENALTY)) {
+    while (modeq.head && (msgrate < 0 || ((burst < 4) && ((last_time - now) < MAXPENALTY)))) {
       if (deq_kick(DP_MODE)) {
         burst++;
         continue;
