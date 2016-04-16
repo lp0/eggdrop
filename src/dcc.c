@@ -1335,6 +1335,13 @@ static void dcc_telnet(int idx, char *buf, int i)
   dcc[i].u.dns->dns_type = RES_HOSTBYIP;
   dcc[i].u.dns->ibuf = dcc[idx].sock;
   dcc[i].u.dns->type = &DCC_IDENTWAIT;
+  if (1) {
+    char *hostn = iptostr(&dcc[i].sockname.addr.sa);
+    dcc[i].u.dns->host = get_data_ptr(strlen(hostn) + 1);
+    strcpy(dcc[i].u.dns->host, hostn);
+    dcc_telnet_hostresolved(i);
+    return;
+  }
   dcc_dnshostbyip(&dcc[i].sockname);
 }
 
