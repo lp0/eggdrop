@@ -47,7 +47,7 @@ struct flag_record {
  *
  * botflags:
  *   a?????ghi??l???p?rs??0123456789
- *   unused letters: bcdefjkmnoqtu
+ *   unused letters: bcdefjkmnoqu
  *   unusable letters: vwxyz
  *
  * chanflags:
@@ -56,7 +56,7 @@ struct flag_record {
  */
 #define USER_VALID 0x003fbfeff   /* Sum of all valid USER_ flags */
 #define CHAN_VALID 0x003677c79   /* Sum of all valid CHAN_ flags */
-#define BOT_VALID  0x07fe689c1   /* Sum of all valid BOT_  flags */
+#define BOT_VALID  0x07fee89c1   /* Sum of all valid BOT_  flags */
 
 
 #define USER_AUTOOP        0x00000001 /* a  auto-op                               */
@@ -107,7 +107,7 @@ struct flag_record {
 #define BOT_Q          0x00010000 /* q  unused                          */
 #define BOT_REJECT     0x00020000 /* r  automatically reject anywhere   */
 #define BOT_AGGRESSIVE 0x00040000 /* s  bot shares user files           */
-#define BOT_T          0x00080000 /* t  unused                          */
+#define BOT_TLS        0x00080000 /* t  attempt TLS                     */
 #define BOT_U          0x00100000 /* u  unused                          */
 /* BOT_V to BOT_Z not usable as they're bitflags 32-36 */
 #define BOT_FLAG0      0x00200000 /* 0  user-defined flag #0            */
