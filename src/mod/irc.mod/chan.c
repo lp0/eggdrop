@@ -1513,9 +1513,6 @@ static int gotinvite(char *from, char *msg)
   newsplit(&msg);
   fixcolon(msg);
   nick = splitnick(&from);
-  if (!rfc_casecmp(last_invchan, msg))
-    if (now - last_invtime < 30)
-      return 0; /* Two invites to the same channel in 30 seconds? */
   putlog(LOG_MISC, "*", "%s!%s invited me to %s", nick, from, msg);
   strlcpy(last_invchan, msg, sizeof last_invchan);
   last_invtime = now;
