@@ -1419,6 +1419,10 @@ static void dcc_telnet_hostresolved(int i)
   changeover_dcc(i, &DCC_IDENTWAIT, 0);
   dcc[i].timeval = now;
   dcc[i].u.ident_sock = dcc[idx].sock;
+  if (1) {
+    dcc_telnet_got_ident(i, userhost);
+    return;
+  }
   sock = -1;
   j = new_dcc(&DCC_IDENT, 0);
   if (j < 0)
