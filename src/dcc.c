@@ -1691,7 +1691,7 @@ static void dcc_telnet_pass(int idx, int atr)
    * text, until it replies with starttls itself. Bots which don't support ssl
    * will simply ignore the request and everything will go on as usual.
    */
-    if (!dcc[idx].ssl) {
+    if (!dcc[idx].ssl && (atr & BOT_TLS)) {
       dprintf(idx, "starttls\n");
       putlog(LOG_BOTS, "*", "Sent STARTTLS to %s...", dcc[idx].nick);
     }
