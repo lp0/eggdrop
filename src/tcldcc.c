@@ -973,7 +973,7 @@ static int tcl_listen STDVAR
       return TCL_ERROR;
     }
     /* Try to grab port */
-    j = port + 20;
+    j = port + 1;
     i = -2;
     while (port < j && i < 0) {
       i = open_listen(&port);
