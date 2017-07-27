@@ -34,8 +34,8 @@ static Function *global = NULL;
 
 static int dns_maxsends = 4;
 static int dns_retrydelay = 3;
-static int dns_cache = 86400;
-static int dns_negcache = 600;
+static int dns_cache = 0;
+static int dns_negcache = 0;
 
 static char dns_servers[121] = "";
 
