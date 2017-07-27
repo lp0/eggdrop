@@ -993,6 +993,9 @@ static void disconnect_server(int idx)
   dcc[idx].sock = -1;
   serv = -1;
   botuserhost[0] = 0;
+#ifdef IPV6
+  pref_af = !pref_af;
+#endif
 }
 
 static void eof_server(int idx)
