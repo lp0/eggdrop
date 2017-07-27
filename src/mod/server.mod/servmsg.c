@@ -1020,6 +1020,11 @@ static void kill_server(int idx, void *x)
   }
   /* A new server connection will be automatically initiated in
    * about 2 seconds. */
+#ifdef IPV6
+  putlog(LOG_SERV, "*", "pref_af=%d", pref_af);
+  pref_af = !pref_af;
+  putlog(LOG_SERV, "*", "pref_af=%d", pref_af);
+#endif
 }
 
 static void timeout_server(int idx)
